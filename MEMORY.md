@@ -8,3 +8,8 @@ Feishu：已打通通过“手机号解析”给尚未私聊过的用户发送 D
 - 用法：message tool 的 target 使用 `user:mobile:<手机号>`（例：`user:mobile:18027370767`）
 - 前置：飞书开放平台开通“通过手机号获取用户ID/open_id（contact-v3 user batch_get_id）”权限，并在 OpenClaw 配置启用 `channels.feishu.mobileLookup.enabled=true`（可选 cacheTtlMs/includeResigned）
 - 注意：插件代码更新后可能需要完整重启 OpenClaw 进程才能生效（仅热重载不一定刷新模块缓存）。
+
+Feishu：附件接收 MVP（默认方式）
+- 用户在飞书聊天里直接发送“附件文件”给机器人 → OpenClaw/Feishu 接入层以 inbound media 形式接收并自动落盘到本机：`/Users/guyuanyuan/.openclaw/media/inbound/<name>---<uuid>.<ext>`
+- 后续处理直接基于本地文件读取/解析/转换/总结；不依赖飞书云空间。
+- `file_key` JSON 属于后续增强场景（当未落盘或仅拿到 key 时可再做 OpenAPI 下载），MVP 不依赖它。
