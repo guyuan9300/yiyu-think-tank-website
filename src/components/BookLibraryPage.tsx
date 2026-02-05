@@ -5,7 +5,7 @@ import {
 import { getBooks, getCategories, type Book } from '../lib/dataService';
 import { useState, useEffect, useMemo } from 'react';
 
-export function BookLibraryPage() {
+export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string) => void }) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -71,7 +71,7 @@ export function BookLibraryPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <Header onNavigate={onNavigate} />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <RefreshCw className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
@@ -84,7 +84,7 @@ export function BookLibraryPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <Header onNavigate={onNavigate} />
       
       {/* Page Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-border/40">

@@ -16,9 +16,9 @@ import {
 import { getInsights, getCategories, type InsightArticle } from '../lib/dataService';
 
 // 文章卡片组件 - 网格视图
-function ArticleCardGrid({ article }: { article: InsightArticle }) {
+function ArticleCardGrid({ article, onClick }: { article: InsightArticle; onClick?: () => void }) {
   return (
-    <article className="group cursor-pointer">
+    <article className="group cursor-pointer" onClick={onClick}>
       <div className="relative bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-white/80 hover:border-border/60 hover:shadow-2xl hover:shadow-black/[0.04] hover:-translate-y-1">
         {/* 封面区域 */}
         <div className="relative aspect-[16/10] bg-gradient-to-br from-primary/[0.03] to-accent/[0.03] overflow-hidden">
@@ -93,9 +93,9 @@ function ArticleCardGrid({ article }: { article: InsightArticle }) {
 }
 
 // 文章列表项组件 - 列表视图
-function ArticleListItem({ article }: { article: InsightArticle }) {
+function ArticleListItem({ article, onClick }: { article: InsightArticle; onClick?: () => void }) {
   return (
-    <div className="group flex items-center gap-6 p-5 hover:bg-muted/20 transition-colors cursor-pointer rounded-2xl">
+    <div className="group flex items-center gap-6 p-5 hover:bg-muted/20 transition-colors cursor-pointer rounded-2xl" onClick={onClick}>
       {/* 封面 */}
       <div className="w-32 h-20 rounded-[12px] overflow-hidden flex-shrink-0 bg-gradient-to-br from-primary/[0.03] to-accent/[0.03]">
         {article.coverImage ? (
@@ -155,7 +155,13 @@ function ArticleListItem({ article }: { article: InsightArticle }) {
   );
 }
 
-export function ArticleCenterPage() {
+export function ArticleCenterPage({
+  onNavigate,
+  onNavigateToDetail,
+}: {
+  onNavigate?: (page: string) => void;
+  onNavigateToDetail?: (id: string) => void;
+}) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -226,7 +232,7 @@ export function ArticleCenterPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <Header onNavigate={onNavigate} />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4" />
@@ -239,7 +245,7 @@ export function ArticleCenterPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <Header onNavigate={onNavigate} />
 
       {/* Hero 区域 */}
       <section className="relative pt-32 pb-8 px-6 overflow-hidden">
@@ -346,7 +352,11 @@ export function ArticleCenterPage() {
           /* 网格视图 */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredArticles.map((article: InsightArticle) => (
-              <ArticleCardGrid key={article.id} article={article} />
+              <ArticleCardGrid
+                key={article.id}
+                article={article}
+                onClick={() => onNavigateToDetail?.(article.id)}
+              />
             ))}
           </div>
         ) : (
@@ -354,7 +364,11 @@ export function ArticleCenterPage() {
           <div className="bg-white/60 backdrop-blur-sm rounded-[20px] border border-border/40 overflow-hidden">
             <div className="divide-y divide-border/30">
               {filteredArticles.map((article: InsightArticle) => (
-                <ArticleListItem key={article.id} article={article} />
+                <ArticleListItem
+                  key={article.id}
+                  article={article}
+                  onClick={() => onNavigateToDetail?.(article.id)}
+                />
               ))}
             </div>
           </div>

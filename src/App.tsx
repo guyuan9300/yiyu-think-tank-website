@@ -377,7 +377,7 @@ export default function App() {
   if (currentPage === 'insights') {
     return (
       <>
-        <InsightsPage />
+        <InsightsPage onNavigate={(page) => handleNavigate(page as any)} />
         <PageSwitcher />
       </>
     );
@@ -413,7 +413,7 @@ export default function App() {
   if (currentPage === 'book-library') {
     return (
       <>
-        <BookLibraryPage />
+        <BookLibraryPage onNavigate={(page) => handleNavigate(page as any)} />
         <PageSwitcher />
       </>
     );
@@ -422,7 +422,7 @@ export default function App() {
   if (currentPage === 'report-library') {
     return (
       <>
-        <ReportLibraryPage />
+        <ReportLibraryPage onNavigate={(page) => handleNavigate(page as any)} onNavigateToDetail={(type, id) => handleNavigateToDetail(type as any, id)} />
         <PageSwitcher />
       </>
     );
@@ -432,7 +432,7 @@ export default function App() {
   if (currentPage === 'article-center') {
     return (
       <>
-        <ArticleCenterPage />
+        <ArticleCenterPage onNavigate={(page) => handleNavigate(page as any)} onNavigateToDetail={(id) => handleNavigateToDetail('article', id)} />
         <PageSwitcher />
       </>
     );

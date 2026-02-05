@@ -14,10 +14,11 @@ import {
 import { getReports, getCategories, type Report } from '../lib/dataService';
 
 // 报告卡片组件 - 网格视图
-function ReportCardGrid({ report }: { report: Report }) {
+function ReportCardGrid({ report, onClick }: { report: Report; onClick?: () => void }) {
   return (
     <article
       className="group cursor-pointer"
+      onClick={onClick}
     >
       <div className="relative bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-white/80 hover:border-border/60 hover:shadow-2xl hover:shadow-black/[0.04] hover:-translate-y-1">
         {/* 封面区域 */}
@@ -79,9 +80,12 @@ function ReportCardGrid({ report }: { report: Report }) {
 }
 
 // 报告列表项组件 - 列表视图
-function ReportListItem({ report }: { report: Report }) {
+function ReportListItem({ report, onClick }: { report: Report; onClick?: () => void }) {
   return (
-    <div className="group flex items-center gap-6 p-5 hover:bg-muted/20 transition-colors cursor-pointer rounded-2xl">
+    <div
+      className="group flex items-center gap-6 p-5 hover:bg-muted/20 transition-colors cursor-pointer rounded-2xl"
+      onClick={onClick}
+    >
       {/* 封面 */}
       <div className="w-32 h-20 rounded-[12px] overflow-hidden flex-shrink-0 bg-gradient-to-br from-success/[0.03] to-accent/[0.03]">
         <div className="w-full h-full flex items-center justify-center">
@@ -136,7 +140,13 @@ function ReportListItem({ report }: { report: Report }) {
   );
 }
 
-export function ReportLibraryPage() {
+export function ReportLibraryPage({
+  onNavigate,
+  onNavigateToDetail,
+}: {
+  onNavigate?: (page: string) => void;
+  onNavigateToDetail?: (type: 'report', id: string) => void;
+}) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -219,7 +229,7 @@ export function ReportLibraryPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <Header onNavigate={onNavigate} />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4" />
@@ -232,7 +242,7 @@ export function ReportLibraryPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <Header onNavigate={onNavigate} />
 
       {/* Hero 区域 */}
       <section className="relative pt-32 pb-8 px-6 overflow-hidden">
@@ -351,7 +361,11 @@ export function ReportLibraryPage() {
           /* 网格视图 */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredReports.map((report) => (
-              <ReportCardGrid key={report.id} report={report} />
+              <ReportCardGrid
+                key={report.id}
+                report={report}
+                onClick={() => onNavigateToDetail?.('report', report.id)}
+              />
             ))}
           </div>
         ) : (
@@ -359,7 +373,11 @@ export function ReportLibraryPage() {
           <div className="bg-white/60 backdrop-blur-sm rounded-[20px] border border-border/40 overflow-hidden">
             <div className="divide-y divide-border/30">
               {filteredReports.map((report) => (
-                <ReportListItem key={report.id} report={report} />
+                <ReportListItem
+                  key={report.id}
+                  report={report}
+                  onClick={() => onNavigateToDetail?.('report', report.id)}
+                />
               ))}
             </div>
           </div>

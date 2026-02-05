@@ -165,7 +165,7 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli' }: Boo
         '理解权力如何运作',
         '形成现实判断框架'
       ],
-      pdfUrl: '/what-is-power.pdf',
+      pdfUrl: `${import.meta.env.BASE_URL}what-is-power.pdf`,
       coverColor: 'from-blue-600 to-indigo-800'
     }
   };
