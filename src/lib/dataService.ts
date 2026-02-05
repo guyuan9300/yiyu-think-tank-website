@@ -242,6 +242,7 @@ const initDefaultInsights = (): InsightArticle[] => [
     id: 'i_brand_system_thinking',
     title: '公益品牌怎么做：不要“解决”，要“治理”',
     excerpt: '社会问题高度复杂。公益咨询的重点不只是对齐供需关系，而是重构社会关系，在认知—行为—习惯中创造新的需求平衡。',
+    coverImage: '/yiyu-think-tank-website/images/insights/brand-governance.png',
     content: `
 <h2>一句话结论</h2>
 <p>公益品牌不是“讲一个好故事”，而是<strong>让相关方能参与的场景</strong>，并把这种参与沉淀成持续的组织能力。</p>
@@ -281,6 +282,7 @@ const initDefaultInsights = (): InsightArticle[] => [
     id: 'i_org_system_design',
     title: '组织系统设计模型：从动机到运营的全局协同',
     excerpt: '组织战斗力来自系统性协同：动机、战略、项目、筹款、品牌、运营、组织彼此咬合，才能把战略变成持续行动。',
+    coverImage: '/yiyu-think-tank-website/images/insights/org-system-design.png',
     content: `
 <h2>框架</h2>
 <p>组织系统设计模型的目的，是优化全局运作，确保协同高效，实现全面战略目标。</p>
@@ -321,6 +323,7 @@ const initDefaultInsights = (): InsightArticle[] => [
     id: 'i_material_management',
     title: '素材管理机制：把“经验”变成团队可复用的资产',
     excerpt: '每一次服务沉淀为案例；每一个案例成为行业资产。关键不在收集文件，而在建立命名、版本、入口与复用流程。',
+    coverImage: '/yiyu-think-tank-website/images/insights/material-management.png',
     content: `
 <h2>目标</h2>
 <p>让团队在需要时<strong>找得到、用得上、能复用</strong>，而不是“文件夹越来越多”。</p>

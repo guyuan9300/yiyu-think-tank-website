@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Header } from './Header';
 import { ArrowRight, Brain, Target, Users, TrendingUp, BookOpen, FileText, Lightbulb, ChevronRight, Star, Zap, ChevronDown } from 'lucide-react';
+import { getInsights, getReports, type InsightArticle, type Report } from '../lib/dataService';
 
 // Quick Entry Card - Apple Style
 function QuickEntryCard({ 
@@ -162,6 +163,9 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
 
+  const [homeInsights, setHomeInsights] = useState<InsightArticle[]>([]);
+  const [homeReports, setHomeReports] = useState<Report[]>([]);
+
   // Track scroll for parallax and header effects
   useEffect(() => {
     const handleScroll = () => {
@@ -169,6 +173,30 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Load recommended content for Home (7:3 content:product)
+  useEffect(() => {
+    const load = () => {
+      const insights = getInsights()
+        .filter(i => i.status === 'published' && i.showOnHome)
+        .sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0))
+        .slice(0, 4);
+      const reports = getReports()
+        .filter(r => r.status === 'published' && r.showOnHome)
+        .slice(0, 4);
+      setHomeInsights(insights);
+      setHomeReports(reports);
+    };
+
+    load();
+    const onChange = () => load();
+    window.addEventListener('yiyu_data_change', onChange);
+    window.addEventListener('storage', onChange);
+    return () => {
+      window.removeEventListener('yiyu_data_change', onChange);
+      window.removeEventListener('storage', onChange);
+    };
   }, []);
 
   const hotTopics = [
@@ -206,68 +234,25 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
     },
   ];
 
-  const insights = [
-    {
-      id: 'insight-1',
-      title: '2026年公益行业数字化转型白皮书',
-      excerpt: '基于200+公益组织调研，深度解析数字化转型的挑战与机遇，为公益组织提供可落地的转型路径。',
-      tags: ['公益', '数字化'],
-      readTime: 25,
-      publishDate: '2026/01/25',
-      featured: true,
-    },
-    {
-      id: 'insight-2',
-      title: '供应链韧性评估框架2.0',
-      excerpt: '在不确定性成为常态的今天，如何构建既有效率又有韧性的供应链体系？',
-      tags: ['供应链', '风险管理'],
-      readTime: 15,
-      publishDate: '2026/01/23',
-    },
-    {
-      id: 'insight-3',
-      title: 'AI工具落地的三个误区',
-      excerpt: '为什么很多企业引入AI工具后效果不佳？从组织学习视角看AI落地。',
-      tags: ['AI落地', '组织学习'],
-      readTime: 10,
-      publishDate: '2026/01/20',
-    },
-    {
-      id: 'insight-4',
-      title: '战略规划的季度复盘方法',
-      excerpt: '从年度战略到季度OKR，如何建立有效的复盘机制？',
-      tags: ['战略管理', '方法论'],
-      readTime: 12,
-      publishDate: '2026/01/18',
-    },
-  ];
+  const insights = homeInsights.map(i => ({
+    id: i.id,
+    title: i.title,
+    excerpt: i.excerpt,
+    tags: i.tags,
+    readTime: i.readTime,
+    publishDate: i.publishDate.split('-').join('/'),
+    featured: i.featured,
+  }));
 
-  const reports = [
-    {
-      id: 'report-1',
-      title: '2026公益行业数字化现状报告',
-      tags: ['公益', '数字化', '行业研究'],
-      updateDate: '2026/01/20',
-      version: 'v2.1',
-      isPublic: true,
-    },
-    {
-      id: 'report-2',
-      title: '供应链韧性评估工具包',
-      tags: ['供应链', '风险管理', '工具'],
-      updateDate: '2026/01/15',
-      version: 'v1.5',
-      isMemberOnly: true,
-    },
-    {
-      id: 'report-3',
-      title: 'AI落地能力成熟度模型',
-      tags: ['AI落地', '评估框架'],
-      updateDate: '2026/01/10',
-      version: 'v3.0',
-      isMemberOnly: true,
-    },
-  ];
+  const reports = homeReports.map(r => ({
+    id: r.id,
+    title: r.title,
+    tags: r.tags,
+    updateDate: r.publishDate.split('-').join('/'),
+    version: r.version,
+    isPublic: true,
+    isMemberOnly: false,
+  }));
 
   const handleNavigate = (page: string) => {
     if (onNavigate) {

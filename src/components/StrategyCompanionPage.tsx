@@ -879,6 +879,8 @@ function MeetingCard({
 
 export function StrategyCompanionPage() {
   const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
+  const [clients, setClients] = useState<ClientProject[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
@@ -904,6 +906,26 @@ export function StrategyCompanionPage() {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [chatMessages]);
+
+  // Load clients for selector (from localStorage)
+  useEffect(() => {
+    const load = async () => {
+      const list = await getClientProjects();
+      setClients(list);
+      if (!selectedClientId && list.length > 0) {
+        setSelectedClientId(list[0].id);
+      }
+    };
+
+    load();
+    const onChange = () => load();
+    window.addEventListener('yiyu_data_change', onChange);
+    window.addEventListener('storage', onChange);
+    return () => {
+      window.removeEventListener('yiyu_data_change', onChange);
+      window.removeEventListener('storage', onChange);
+    };
+  }, []);
 
   // 从后台加载本季度重点目标
   useEffect(() => {
@@ -1081,19 +1103,48 @@ export function StrategyCompanionPage() {
       <main className="max-w-6xl mx-auto px-8 py-12 pt-24">
         {/* Page Header */}
         <div className="mb-10">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-1 h-8 bg-blue-500 rounded-full" />
-            <h1 className="text-[32px] font-semibold text-slate-900 tracking-tight">
-              益语智库
-            </h1>
-          </div>
-          <div className="flex items-center gap-3 ml-4">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-              <span className="text-[13px] text-slate-500">战略陪伴进行中</span>
+          <div className="flex items-center justify-between gap-6 flex-wrap">
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-1 h-8 bg-blue-500 rounded-full" />
+                <h1 className="text-[32px] font-semibold text-slate-900 tracking-tight">
+                  益语智库
+                </h1>
+              </div>
+              <div className="flex items-center gap-3 ml-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                  <span className="text-[13px] text-slate-500">战略陪伴进行中</span>
+                </div>
+                <span className="text-slate-300">·</span>
+                <span className="text-[13px] text-slate-500">第 3 阶段 / 共 5 阶段</span>
+              </div>
             </div>
-            <span className="text-slate-300">·</span>
-            <span className="text-[13px] text-slate-500">第 3 阶段 / 共 5 阶段</span>
+
+            {/* Client selector (Apple-ish, minimal) */}
+            <div className="min-w-[260px]">
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                当前客户
+              </label>
+              <div className="relative">
+                <select
+                  value={selectedClientId}
+                  onChange={(e) => setSelectedClientId(e.target.value)}
+                  className="w-full appearance-none px-4 py-3 pr-10 rounded-2xl bg-white border border-slate-100 text-[14px] font-medium text-slate-800 hover:shadow-md hover:shadow-slate-100/50 transition-all"
+                >
+                  {clients.length === 0 ? (
+                    <option value="">暂无客户（请先在后台添加）</option>
+                  ) : (
+                    clients.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.clientName}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              </div>
+            </div>
           </div>
         </div>
 

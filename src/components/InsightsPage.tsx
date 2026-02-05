@@ -92,10 +92,18 @@ function ArticleCard({ article, onClick }: { article: InsightArticle; onClick?: 
       <div className="relative bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-white/80 hover:border-border/60 hover:shadow-2xl hover:shadow-black/[0.04] hover:-translate-y-1">
         {/* 封面区域 */}
         <div className="relative aspect-[16/10] bg-gradient-to-br from-primary/[0.03] to-accent/[0.03] overflow-hidden">
-          {/* 封面图片占位 */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <FileText className="w-16 h-16 text-primary/10" />
-          </div>
+          {article.coverImage ? (
+            <img
+              src={article.coverImage}
+              alt={article.title}
+              className="absolute inset-0 w-full h-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <FileText className="w-16 h-16 text-primary/10" />
+            </div>
+          )}
 
           {/* 推荐标签 */}
           {article.featured && (

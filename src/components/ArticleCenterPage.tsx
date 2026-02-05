@@ -22,9 +22,18 @@ function ArticleCardGrid({ article }: { article: InsightArticle }) {
       <div className="relative bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-white/80 hover:border-border/60 hover:shadow-2xl hover:shadow-black/[0.04] hover:-translate-y-1">
         {/* 封面区域 */}
         <div className="relative aspect-[16/10] bg-gradient-to-br from-primary/[0.03] to-accent/[0.03] overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <FileText className="w-16 h-16 text-primary/10" />
-          </div>
+          {article.coverImage ? (
+            <img
+              src={article.coverImage}
+              alt={article.title}
+              className="absolute inset-0 w-full h-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <FileText className="w-16 h-16 text-primary/10" />
+            </div>
+          )}
           {article.featured && (
             <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-medium shadow-lg flex items-center gap-1.5">
               <Sparkles className="w-3 h-3" />
@@ -89,9 +98,18 @@ function ArticleListItem({ article }: { article: InsightArticle }) {
     <div className="group flex items-center gap-6 p-5 hover:bg-muted/20 transition-colors cursor-pointer rounded-2xl">
       {/* 封面 */}
       <div className="w-32 h-20 rounded-[12px] overflow-hidden flex-shrink-0 bg-gradient-to-br from-primary/[0.03] to-accent/[0.03]">
-        <div className="w-full h-full flex items-center justify-center">
-          <FileText className="w-8 h-8 text-primary/20" />
-        </div>
+        {article.coverImage ? (
+          <img
+            src={article.coverImage}
+            alt={article.title}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <FileText className="w-8 h-8 text-primary/20" />
+          </div>
+        )}
       </div>
 
       {/* 内容 */}

@@ -31,6 +31,7 @@ import AdminStrategyCompanionPage from './AdminStrategyCompanionPage';
 // Props
 interface AdminDashboardProps {
   onLogout?: () => void;
+  onNavigateHome?: () => void;
 }
 
 // 菜单项
@@ -41,7 +42,7 @@ interface MenuItem {
   badge?: number;
 }
 
-export function AdminDashboard({ onLogout }: AdminDashboardProps) {
+export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps) {
   const [activeMenu, setActiveMenu] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -602,6 +603,15 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
           </div>
           
           <div className="flex items-center gap-4">
+            <button
+              onClick={onNavigateHome}
+              className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+              title="回到首页"
+            >
+              <Globe className="w-4 h-4" />
+              <span className="text-sm font-medium">回到首页</span>
+            </button>
+
             <button 
               onClick={refreshAllData}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"

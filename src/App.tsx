@@ -474,10 +474,13 @@ export default function App() {
     
     return (
       <>
-        <AdminDashboard onLogout={() => {
-          localStorage.removeItem('yiyu_is_admin');
-          handleNavigate('login');
-        }} />
+        <AdminDashboard
+          onNavigateHome={() => handleNavigate('home')}
+          onLogout={() => {
+            localStorage.removeItem('yiyu_is_admin');
+            handleNavigate('login');
+          }}
+        />
         <PageSwitcher />
       </>
     );
