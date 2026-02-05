@@ -17,7 +17,7 @@ import { TopicDetailPage } from './components/TopicDetailPage';
 import { CaseDetailPage } from './components/CaseDetailPage';
 import { AdminDashboard } from './components/AdminDashboard';
 import UserCenterPage from './components/UserCenterPage';
-import StrategyCompanionPage from './components/StrategyCompanionPage';
+import { StrategyCompanionPage } from './components/StrategyCompanionPage';
 import AdminStrategyCompanionPage from './components/AdminStrategyCompanionPage';
 
 export default function App() {
@@ -386,7 +386,7 @@ export default function App() {
   if (currentPage === 'strategy') {
     return (
       <>
-        <StrategyPage />
+        <StrategyPage onNavigate={(page) => handleNavigate(page as any)} />
         <PageSwitcher />
       </>
     );
@@ -441,7 +441,7 @@ export default function App() {
   if (currentPage === 'book-reader') {
     return (
       <>
-        <BookReaderPage bookId={selectedBookId} />
+        <BookReaderPage bookId={selectedBookId} onNavigate={(page) => handleNavigate(page as any)} />
         <PageSwitcher />
       </>
     );
@@ -450,7 +450,7 @@ export default function App() {
   if (currentPage === 'my-learning') {
     return (
       <>
-        <MyLearningPage />
+        <MyLearningPage onNavigate={(page) => handleNavigate(page as any)} />
         <PageSwitcher />
       </>
     );
@@ -485,6 +485,16 @@ export default function App() {
           onNavigateHome={() => handleNavigate('home')}
           onLogout={() => {
             localStorage.removeItem('yiyu_is_admin');
+            localStorage.removeItem('yiyu_admin_email');
+            // 同时清理当前用户（管理员）
+            const u = localStorage.getItem('yiyu_current_user');
+            if (u) {
+              try {
+                const parsed = JSON.parse(u);
+                if (parsed?.id === 'admin') localStorage.removeItem('yiyu_current_user');
+              } catch {}
+            }
+            window.dispatchEvent(new Event('yiyu_user_updated'));
             handleNavigate('login');
           }}
         />
@@ -507,7 +517,7 @@ export default function App() {
   if (currentPage === 'strategy-companion') {
     return (
       <>
-        <StrategyCompanionPage />
+        <StrategyCompanionPage onNavigate={(page) => handleNavigate(page as any)} />
         <PageSwitcher />
       </>
     );

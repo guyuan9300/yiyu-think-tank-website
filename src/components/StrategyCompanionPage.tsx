@@ -877,7 +877,7 @@ function MeetingCard({
   );
 }
 
-export function StrategyCompanionPage() {
+export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: string) => void }) {
   const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
   const [clients, setClients] = useState<ClientProject[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
@@ -1097,7 +1097,7 @@ export function StrategyCompanionPage() {
       <Header
         isLoggedIn={true}
         userType="member"
-        onNavigate={() => {}}
+        onNavigate={onNavigate}
       />
 
       <main className="max-w-6xl mx-auto px-8 py-12 pt-24">

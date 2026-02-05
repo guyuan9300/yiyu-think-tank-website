@@ -59,7 +59,7 @@ interface StudyStat {
   color: string;
 }
 
-export function MyLearningPage() {
+export function MyLearningPage({ onNavigate }: { onNavigate?: (page: string) => void }) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'learning' | 'folders' | 'collections'>('learning');
@@ -127,7 +127,7 @@ export function MyLearningPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header isLoggedIn={true} userType="member" />
+      <Header isLoggedIn={true} userType="member" onNavigate={onNavigate} />
 
       {/* Hero Section */}
       <section className="pt-32 pb-10 px-4 sm:px-6 lg:px-8 border-b border-border/40">

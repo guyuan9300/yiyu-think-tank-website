@@ -51,7 +51,33 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
       if (isAdmin) {
         localStorage.setItem('yiyu_is_admin', 'true');
         localStorage.setItem('yiyu_admin_email', email);
-        
+
+        // 同时写入当前用户信息，确保从后台回到前台后依然保持“已登录/管理员”状态
+        const adminUser: User = {
+          id: 'admin',
+          email,
+          nickname: '超级管理员',
+          memberType: 'diamond',
+          status: 'active',
+          loginCount: 1,
+          commentsCount: 0,
+          favoritesCount: 0,
+          createdAt: new Date().toISOString(),
+          lastLoginAt: new Date().toISOString(),
+        };
+        localStorage.setItem('yiyu_current_user', JSON.stringify(adminUser));
+        window.dispatchEvent(new Event('yiyu_user_updated'));
+
+        // Prefer SPA navigation when available (avoid full reload / webview click issues)
+        if (onAdminLogin) {
+          onAdminLogin();
+          return;
+        }
+        if (onNavigate) {
+          onNavigate('admin');
+          return;
+        }
+
         const baseUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
         console.log('管理员登录成功，跳转URL:', baseUrl + '?page=admin');
         window.location.href = baseUrl + '?page=admin';

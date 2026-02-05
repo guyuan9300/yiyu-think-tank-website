@@ -56,9 +56,10 @@ interface FavoriteItem {
 
 interface BookReaderPageProps {
   bookId?: string;
+  onNavigate?: (page: string) => void;
 }
 
-export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli' }: BookReaderPageProps) {
+export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNavigate }: BookReaderPageProps) {
   // 从URL参数或全局状态获取书籍信息
   const [bookId, setBookId] = useState<string>(initialBookId);
   const [currentPage, setCurrentPage] = useState(1);
@@ -290,7 +291,7 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli' }: Boo
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header isLoggedIn={true} userType="member" />
+      <Header isLoggedIn={true} userType="member" onNavigate={onNavigate} />
 
       {/* 书籍信息头部 - 优化为紧凑布局 */}
       <div ref={bookInfoRef} className="bg-white border-b border-gray-200 pt-16">
