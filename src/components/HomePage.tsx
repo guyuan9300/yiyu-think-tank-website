@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Header } from './Header';
 import { ArrowRight, Brain, Target, Users, TrendingUp, BookOpen, FileText, Lightbulb, ChevronRight, Star, Zap, ChevronDown } from 'lucide-react';
 import { getInsights, getReports, type InsightArticle, type Report } from '../lib/dataService';
+import { SubscriptionSheet } from './SubscriptionSheet';
 
 // Quick Entry Card - Apple Style
 function QuickEntryCard({ 
@@ -165,6 +166,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
 
   const [homeInsights, setHomeInsights] = useState<InsightArticle[]>([]);
   const [homeReports, setHomeReports] = useState<Report[]>([]);
+  const [subscriptionOpen, setSubscriptionOpen] = useState(false);
 
   // Track scroll for parallax and header effects
   useEffect(() => {
@@ -270,6 +272,12 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <Header isLoggedIn={false} userType="visitor" onNavigate={handleNavigate} />
+
+      <SubscriptionSheet
+        open={subscriptionOpen}
+        onClose={() => setSubscriptionOpen(false)}
+        onGoUpgrade={() => handleNavigate('register')}
+      />
 
       {/* Hero Section - Apple Style with Depth */}
       <section 

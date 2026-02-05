@@ -25,13 +25,20 @@ export default function App() {
   const [selectedBookId, setSelectedBookId] = useState<string>('shimeshiquanli');
   const [selectedDetailId, setSelectedDetailId] = useState<string>('');
   const [selectedCaseId, setSelectedCaseId] = useState<string>('blue-letter');
-  const [showPageSwitcher, setShowPageSwitcher] = useState(true);
+  // Debug page switcher (dev only). Default OFF for production.
+  const [showPageSwitcher, setShowPageSwitcher] = useState(false);
 
   // 从URL参数读取当前页面，并在页面变化时更新URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const page = params.get('page');
     const detailId = params.get('id');
+    const debug = params.get('debug');
+
+    if (debug === '1') {
+      setShowPageSwitcher(true);
+    }
+
     if (page) {
       setCurrentPage(page);
       if (detailId) {
