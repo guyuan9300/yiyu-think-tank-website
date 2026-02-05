@@ -1253,6 +1253,191 @@ const AdminStrategyCompanionPage: React.FC = () => {
     }
   };
   
+  // 一键生成模拟数据（用于前台/后台联调演示）
+  const handleSeedDemoData = async () => {
+    try {
+      // 1) Milestones
+      const ms1 = await saveStrategicMilestone({
+        title: '战略启动',
+        description: '明确范围、角色与节奏，建立共识与沟通机制',
+        status: 'completed',
+        phaseOrder: 1,
+        participants: ['益语团队', '客户核心成员'],
+        outputs: ['项目章程', '沟通机制', '关键问题清单'],
+      } as any);
+      const ms2 = await saveStrategicMilestone({
+        title: '能力诊断',
+        description: '调研访谈 + 资料梳理 + 现状画像',
+        status: 'completed',
+        phaseOrder: 2,
+        participants: ['顾问', '业务负责人'],
+        outputs: ['诊断报告', '问题树', '机会清单'],
+      } as any);
+      const ms3 = await saveStrategicMilestone({
+        title: '战略共创',
+        description: '共创年度目标、战略地图与关键举措',
+        status: 'in-progress',
+        phaseOrder: 3,
+        participants: ['管理层', '项目负责人'],
+        outputs: ['战略地图', 'OKR草案', 'Q3关键举措'],
+      } as any);
+      const ms4 = await saveStrategicMilestone({
+        title: '执行赋能',
+        description: '将战略拆解到行动与运营体系，建立仪表盘',
+        status: 'pending',
+        phaseOrder: 4,
+        participants: ['运营负责人', '项目经理'],
+        outputs: ['执行仪表盘', '例会机制', '指标体系'],
+      } as any);
+      const ms5 = await saveStrategicMilestone({
+        title: '复盘迭代',
+        description: '季度复盘，调整策略与资源配置',
+        status: 'pending',
+        phaseOrder: 5,
+        participants: ['管理层', '顾问'],
+        outputs: ['复盘纪要', '下一季度优先级'],
+      } as any);
+
+      // 2) Goals + metrics
+      const g1 = await saveStrategicGoal({
+        title: '提升品牌影响力',
+        description: '形成稳定内容与传播节奏，提升行业认知',
+        progress: 65,
+        quarter: '2026Q1',
+        isActive: true,
+      } as any);
+      const g2 = await saveStrategicGoal({
+        title: '优化资源筹募能力',
+        description: '建立多元筹资管道与捐赠人运营机制',
+        progress: 45,
+        quarter: '2026Q1',
+        isActive: true,
+      } as any);
+      const g3 = await saveStrategicGoal({
+        title: '强化组织系统',
+        description: '明确组织结构、流程与关键岗位责任',
+        progress: 30,
+        quarter: '2026Q1',
+        isActive: true,
+      } as any);
+
+      if (g1?.id) {
+        await saveGoalMetric({ goalId: g1.id, label: '媒体曝光', value: 15, target: 20, unit: '次', sortOrder: 1 } as any);
+        await saveGoalMetric({ goalId: g1.id, label: '社交媒体增长', value: 2300, target: 3000, unit: '人', sortOrder: 2 } as any);
+      }
+      if (g2?.id) {
+        await saveGoalMetric({ goalId: g2.id, label: '新捐赠人', value: 32, target: 50, unit: '位', sortOrder: 1 } as any);
+        await saveGoalMetric({ goalId: g2.id, label: '月均筹款额', value: 28, target: 35, unit: '万', sortOrder: 2 } as any);
+      }
+      if (g3?.id) {
+        await saveGoalMetric({ goalId: g3.id, label: '流程梳理完成度', value: 4, target: 8, unit: '项', sortOrder: 1 } as any);
+        await saveGoalMetric({ goalId: g3.id, label: '岗位职责清晰度', value: 60, target: 85, unit: '%', sortOrder: 2 } as any);
+      }
+
+      // 3) Client project
+      const client = await saveClientProject({
+        clientName: '为爱黔行',
+        projectName: '战略陪伴（示例项目）',
+        status: 'active',
+        startDate: '2026-01-05',
+        description: '以“增长式咨询 / 学习型战略陪伴”为框架，建立组织系统与执行节奏。',
+        currentMilestoneId: (ms3 as any)?.id,
+        currentGoalId: (g1 as any)?.id,
+      } as any);
+
+      // 4) Project milestones mapping
+      if (client?.id) {
+        const ms = [ms1, ms2, ms3, ms4, ms5].filter(Boolean) as any[];
+        for (const m of ms) {
+          await saveProjectMilestone({
+            projectId: client.id,
+            milestoneId: m.id,
+            status: m.status,
+            startDate: '2026-01-05',
+            sortOrder: m.phaseOrder,
+          } as any);
+        }
+      }
+
+      // 5) Events
+      await saveProjectEvent({
+        type: 'meeting',
+        title: '第一次培训：做好公益的系统思考',
+        description: '核心概念对齐 + 案例拆解 + 练习反馈',
+        eventDate: '2026-01-05',
+        participants: 18,
+        sortOrder: 1,
+      } as any);
+      await saveProjectEvent({
+        type: 'deliverable',
+        title: '组织能力诊断报告（v1）交付',
+        description: '现状画像、问题树与机会清单',
+        eventDate: '2026-01-20',
+        sortOrder: 2,
+      } as any);
+      await saveProjectEvent({
+        type: 'milestone',
+        title: '战略共创工作坊（第 1 次）',
+        description: '年度目标/战略地图/关键举措初稿',
+        eventDate: '2026-02-02',
+        participants: 10,
+        sortOrder: 3,
+      } as any);
+
+      // 6) Documents
+      await saveProjectDocument({
+        category: 'assessment',
+        title: '组织能力诊断报告 v1.0',
+        description: '诊断结论、关键矛盾与优先级建议',
+        docDate: '2026-01-20',
+        meta: '42页',
+        fileType: 'pdf',
+        passwordProtected: false,
+        sortOrder: 1,
+      } as any);
+      await saveProjectDocument({
+        category: 'strategy',
+        title: '2026 战略地图（草案）',
+        description: '使命-战略主题-关键举措-指标体系',
+        docDate: '2026-02-02',
+        meta: '35页 PPT',
+        fileType: 'ppt',
+        passwordProtected: false,
+        sortOrder: 2,
+      } as any);
+      await saveProjectDocument({
+        category: 'tools',
+        title: '执行仪表盘模板',
+        description: '周节奏 + 指标看板 + 风险预警',
+        docDate: '2026-02-03',
+        meta: 'Excel',
+        fileType: 'xlsx',
+        passwordProtected: false,
+        sortOrder: 3,
+      } as any);
+
+      // 7) Meetings
+      await saveProjectMeeting({
+        title: '共创会：年度目标与边界',
+        meetingDate: '2026-02-02',
+        duration: '90min',
+        participantsCount: 9,
+        keyPoints: ['年度目标口径统一', '确认三条战略主线', '明确资源约束与边界'],
+        decisions: ['Q1 聚焦品牌与筹募', '每周固定例会周三上午'],
+        actionItems: ['客户：补齐历史数据', '益语：输出战略地图 v0.1'],
+        passwordProtected: false,
+        sortOrder: 1,
+      } as any);
+
+      // Reload UI
+      await loadAllData();
+      alert('✅ 已生成一套模拟战略客户数据（前台/后台均可查看）');
+    } catch (e: any) {
+      console.error(e);
+      alert('❌ 生成模拟数据失败：' + (e?.message || String(e)));
+    }
+  };
+
   // 会议操作
   const handleSaveMeeting = async (data: Partial<ProjectMeeting>) => {
     const saved = await saveProjectMeeting(data as ProjectMeeting);
@@ -1295,6 +1480,20 @@ const AdminStrategyCompanionPage: React.FC = () => {
             onEditClient={handleEditClient}
           />
           
+          {/* 快速操作 */}
+          <div className="mt-4 bg-white rounded-xl border border-gray-100 p-4">
+            <h3 className="text-sm font-medium text-gray-600 mb-3">快速操作</h3>
+            <button
+              onClick={handleSeedDemoData}
+              className="w-full px-4 py-3 rounded-xl bg-gray-900 text-white hover:bg-gray-800 transition-colors text-sm font-medium"
+            >
+              一键生成模拟数据
+            </button>
+            <p className="text-xs text-gray-500 mt-2">
+              用于把「里程碑/目标/事件/文档/会议」全部填满，验证前台展示。
+            </p>
+          </div>
+
           {/* 快速统计 */}
           <div className="mt-4 bg-white rounded-xl border border-gray-100 p-4">
             <h3 className="text-sm font-medium text-gray-600 mb-3">统计概览</h3>
