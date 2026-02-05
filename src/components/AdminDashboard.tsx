@@ -25,6 +25,7 @@ import {
 } from '../lib/dataService';
 import { isValidPdfFile, formatFileSize } from '../lib/pdfUtils';
 import { SettingsPage } from './SettingsPage';
+import { generateCoverImage, getHfModel, getHfToken, setHfModel, setHfToken } from '../lib/hfImageGen';
 import { UserManagementPage } from './UserManagementPage';
 import AdminStrategyCompanionPage from './AdminStrategyCompanionPage';
 
@@ -1443,7 +1444,81 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
           {/* 系统设置 */}
           {activeMenu === 'settings' && (
-            <SettingsPage onBack={() => setActiveMenu('dashboard')} />
+            <div className="space-y-6">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <div className="flex items-start justify-between gap-6">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">AI 封面生成设置</h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                      使用 Hugging Face Inference API（免费额度）为文章/报告生成封面。Token 仅保存在你的浏览器本地，不会提交到代码仓库。
+                    </p>
+                    <p className="text-xs text-amber-600 mt-2">
+                      注意：这是演示方案。若需更安全的生产方案，建议后续加服务端代理隐藏 Token。
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Hugging Face Token</label>
+                    <input
+                      type="password"
+                      defaultValue={getHfToken()}
+                      placeholder="hf_..."
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      onBlur={(e) => {
+                        setHfToken(e.target.value);
+                        setMessage({ type: 'success', text: 'HF Token 已保存到本机浏览器' });
+                      }}
+                    />
+                    <p className="text-xs text-gray-500 mt-2">粘贴后点击页面空白处即可保存（onBlur）。</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">生成模型（可选）</label>
+                    <input
+                      type="text"
+                      defaultValue={getHfModel()}
+                      placeholder="stabilityai/stable-diffusion-xl-base-1.0"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      onBlur={(e) => {
+                        setHfModel(e.target.value);
+                        setMessage({ type: 'success', text: 'HF 模型已保存到本机浏览器' });
+                      }}
+                    />
+                    <p className="text-xs text-gray-500 mt-2">默认：SDXL base。后续我们可换成更快/更写实的模型。</p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex items-center gap-3">
+                  <button
+                    className="px-4 py-2 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors text-sm font-medium"
+                    onClick={async () => {
+                      try {
+                        const dataUrl = await generateCoverImage({
+                          title: '测试封面：战略前哨周报',
+                          excerpt: '用于验证 Hugging Face 生图链路与封面比例适配。',
+                          tags: ['战略', '洞察', '周报'],
+                        });
+                        // quick preview
+                        const w = window.open('about:blank');
+                        if (w) {
+                          w.document.write(`<img src="${dataUrl}" style="max-width:100%" />`);
+                        }
+                        setMessage({ type: 'success', text: '测试生成成功（已打开预览窗口）' });
+                      } catch (e: any) {
+                        setMessage({ type: 'error', text: '测试生成失败：' + (e?.message || String(e)) });
+                      }
+                    }}
+                  >
+                    测试生成
+                  </button>
+                  <span className="text-xs text-gray-500">如果失败，通常是 Token/额度/模型不可用。</span>
+                </div>
+              </div>
+
+              <SettingsPage onBack={() => setActiveMenu('dashboard')} />
+            </div>
           )}
 
           {/* 其他菜单项显示占位符 */}
@@ -1968,6 +2043,40 @@ function ReportFormModal({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               封面图 <span className="text-gray-400 text-xs">(建议尺寸 1920x1080，16:9比例)</span>
             </label>
+
+            {/* AI 生成封面（使用 Hugging Face 免费额度；token 存在浏览器本地） */}
+            <div className="flex flex-wrap items-center gap-3 mb-3">
+              <button
+                type="button"
+                className="px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors text-sm font-medium"
+                onClick={async () => {
+                  try {
+                    const formEl = document.activeElement?.closest('form') as HTMLFormElement | null;
+                    // Best-effort: read title/excerpt/tags from current form fields
+                    const titleInput = document.querySelector('input[name="title"]') as HTMLInputElement | null;
+                    const summaryInput = document.querySelector('textarea[name="summary"]') as HTMLTextAreaElement | null;
+                    const tagsInput = document.querySelector('input[name="tags"]') as HTMLInputElement | null;
+
+                    const title = titleInput?.value || editingItem?.title || '报告封面';
+                    const excerpt = summaryInput?.value || editingItem?.summary || '';
+                    const tags = (tagsInput?.value || '').split(',').map(t => t.trim()).filter(Boolean);
+
+                    const dataUrl = await generateCoverImage({ title, excerpt, tags });
+                    setCoverImage(dataUrl);
+                    alert('✅ AI 封面已生成并填充（请记得保存报告）');
+                  } catch (e: any) {
+                    alert('❌ AI 生成封面失败：' + (e?.message || String(e)) + '\n\n请先到「系统设置」填写 Hugging Face Token。');
+                  }
+                }}
+              >
+                AI 生成封面
+              </button>
+
+              <div className="text-xs text-gray-500">
+                当前模型：<code className="px-1 py-0.5 bg-gray-100 rounded">{getHfModel()}</code>
+              </div>
+            </div>
+
             {coverImage ? (
               <div className="relative border-2 border-green-500 rounded-xl overflow-hidden group">
                 <img 
