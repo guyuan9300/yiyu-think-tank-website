@@ -205,19 +205,26 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
         <div className="relative max-w-3xl mx-auto">
           {/* Article Content */}
           <article className="prose prose-lg max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-muted-foreground/80 prose-p:leading-relaxed prose-a:text-primary hover:prose-a:text-primary/80">
-            <h2 className="text-2xl font-semibold mb-4 text-foreground">摘要</h2>
-            <p className="mb-8 text-[17px] leading-[1.8] font-light">
-              {displayArticle.excerpt}
-            </p>
+            {displayArticle.content?.trim() ? (
+              <div
+                className="text-[17px] leading-[1.8] font-light"
+                dangerouslySetInnerHTML={{ __html: displayArticle.content }}
+              />
+            ) : (
+              <>
+                <h2 className="text-2xl font-semibold mb-4 text-foreground">摘要</h2>
+                <p className="mb-8 text-[17px] leading-[1.8] font-light">
+                  {displayArticle.excerpt}
+                </p>
 
-            <h2 className="text-2xl font-semibold mb-4 text-foreground">引言</h2>
-            <p className="mb-6 text-[17px] leading-[1.8] font-light">
-              在数字化浪潮席卷全球的今天，公益行业正面临着前所未有的转型机遇与挑战。
-              本报告基于对200余家公益组织的深度调研，系统分析了数字化转型的现状、
-              痛点与发展路径，为行业从业者提供决策参考。
-            </p>
+                <h2 className="text-2xl font-semibold mb-4 text-foreground">引言</h2>
+                <p className="mb-6 text-[17px] leading-[1.8] font-light">
+                  在数字化浪潮席卷全球的今天，公益行业正面临着前所未有的转型机遇与挑战。
+                  本报告基于对200余家公益组织的深度调研，系统分析了数字化转型的现状、
+                  痛点与发展路径，为行业从业者提供决策参考。
+                </p>
 
-            <h2 className="text-2xl font-semibold mb-4 text-foreground">核心发现</h2>
+                <h2 className="text-2xl font-semibold mb-4 text-foreground">核心发现</h2>
             <p className="mb-6 text-[17px] leading-[1.8] font-light">
               调研显示，超过70%的公益组织已经启动或计划启动数字化转型项目，
               但在实际推进过程中普遍面临资金有限、技术人才匮乏、数字化认知不足等核心挑战。
@@ -252,6 +259,8 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
                 更好地服务于社会使命。
               </p>
             </div>
+              </>
+            )}
           </article>
 
           {/* Action Bar */}

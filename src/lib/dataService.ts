@@ -196,78 +196,159 @@ const defaultTags: Tag[] = [
 // 初始化默认报告数据
 const initDefaultReports = (): Report[] => [
   {
+    id: 'r_weiaiqianxing_training_20260105',
+    title: '为爱黔行｜第一次培训：做好公益的系统思考（课件）',
+    publisher: '益语智库（内部示例）',
+    category: '行业报告',
+    summary: '以“增长式咨询/学习型战略陪伴”为框架，讨论公益组织如何通过系统性认知与行动校准，提升组织战斗力与品牌影响力。',
+    tags: ['公益', '品牌', '组织系统', '培训'],
+    version: 'v1.0',
+    format: ['PDF'],
+    fileUrl: '/yiyu-think-tank-website/docs/weiaiqianxing-training-20260105.pdf',
+    fileSize: 31 * 1024 * 1024,
+    pages: 74,
+    publishDate: '2026-01-05',
+    status: 'published',
+    isHot: true,
+    showOnHome: true,
+    views: 2680,
+    downloads: 420,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
     id: '1',
-    title: '2026公益行业数字化现状报告',
+    title: '2026公益行业数字化现状报告（示例）',
     publisher: '益语智库研究中心',
     category: '行业报告',
-    summary: '深入分析公益行业数字化转型的现状、挑战与机遇',
+    summary: '用于演示报告库的内容结构与交互；后续可替换为真实研究报告。',
     tags: ['公益', '数字化', '行业洞察'],
     version: 'v2.1',
     format: ['PPT', 'PDF'],
     publishDate: '2026-01-20',
     status: 'published',
-    isHot: true,
-    showOnHome: true,
+    isHot: false,
+    showOnHome: false,
     views: 12340,
     downloads: 3456,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  {
-    id: '2',
-    title: '供应链韧性评估工具包',
-    publisher: '益语智库战略部',
-    category: '工具报告',
-    summary: '系统性评估供应链韧性的工具包',
-    tags: ['供应链', '风险评估', '工具'],
-    version: 'v1.5',
-    format: ['Excel', 'PPT'],
-    publishDate: '2026-01-15',
-    status: 'published',
-    isHot: false,
-    showOnHome: false,
-    views: 9876,
-    downloads: 2876,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
 ];
 
-// 初始化默认洞察文章
+// 初始化默认洞察文章（Apple 风格：更短、更清晰、更可执行）
 const initDefaultInsights = (): InsightArticle[] => [
   {
-    id: '1',
-    title: '2026年公益行业数字化转型白皮书',
-    excerpt: '基于200+公益组织调研，深度解析数字化转型的挑战与机遇',
-    content: '',
+    id: 'i_brand_system_thinking',
+    title: '公益品牌怎么做：不要“解决”，要“治理”',
+    excerpt: '社会问题高度复杂。公益咨询的重点不只是对齐供需关系，而是重构社会关系，在认知—行为—习惯中创造新的需求平衡。',
+    content: `
+<h2>一句话结论</h2>
+<p>公益品牌不是“讲一个好故事”，而是<strong>让相关方能参与的场景</strong>，并把这种参与沉淀成持续的组织能力。</p>
+
+<h2>为什么很多公益传播做不起来</h2>
+<ul>
+  <li>只看表面结果：把复杂问题当成单点问题。</li>
+  <li>只做一次性活动：没有形成可复用的方法与机制。</li>
+  <li>只强调“我们很善良”：忽略了相关方的真实动机与进入路径。</li>
+</ul>
+
+<h2>从“解决”到“治理”</h2>
+<p>社会问题极度复杂。公益的长期价值来自于：通过改变认知、行为、习惯，创造新的需求平衡。</p>
+
+<h2>可执行清单（30分钟内能做的）</h2>
+<ul>
+  <li>写清楚：我们希望谁参与？他/她为什么愿意参与？</li>
+  <li>设计入口：为资助方/企业/公众分别设计 1 个“最短路径”。</li>
+  <li>沉淀资产：把一次服务变成一个案例，把案例变成行业可借鉴的资产。</li>
+</ul>
+`.
+      trim(),
     category: '行业洞察',
-    tags: ['公益', '数字化'],
+    tags: ['公益', '品牌', '治理', '系统思考'],
     author: '益语智库',
-    readTime: 25,
-    publishDate: '2026-01-25',
+    readTime: 6,
+    publishDate: '2026-02-05',
     status: 'published',
     featured: true,
     showOnHome: true,
-    views: 1234,
-    likes: 89,
+    views: 680,
+    likes: 42,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
   {
-    id: '2',
-    title: '供应链韧性评估框架2.0',
-    excerpt: '在不确定性成为常态的今天，如何构建既有效率又有韧性的供应链体系？',
-    content: '',
+    id: 'i_org_system_design',
+    title: '组织系统设计模型：从动机到运营的全局协同',
+    excerpt: '组织战斗力来自系统性协同：动机、战略、项目、筹款、品牌、运营、组织彼此咬合，才能把战略变成持续行动。',
+    content: `
+<h2>框架</h2>
+<p>组织系统设计模型的目的，是优化全局运作，确保协同高效，实现全面战略目标。</p>
+
+<h2>七个模块（建议按顺序盘一遍）</h2>
+<ol>
+  <li><strong>动机</strong>：组织为何存在？成员为何投入？</li>
+  <li><strong>战略</strong>：要解决什么问题？选择与取舍是什么？</li>
+  <li><strong>项目</strong>：把战略拆成可交付的行动序列。</li>
+  <li><strong>筹款</strong>：资源结构与现金流的可持续。</li>
+  <li><strong>品牌</strong>：创造相关方可以参与的场景。</li>
+  <li><strong>运营</strong>：流程、数据、节奏与复盘。</li>
+  <li><strong>组织</strong>：结构、人才、激励与学习机制。</li>
+</ol>
+
+<h2>快速诊断问题</h2>
+<ul>
+  <li>项目做得多，但影响力不增长：通常是“品牌入口/参与路径”断了。</li>
+  <li>战略写得好，但执行变形：通常是“运营节奏/复盘机制”断了。</li>
+  <li>筹款靠单点资源：通常是“价值叙事/相关方协作”断了。</li>
+</ul>
+`.
+      trim(),
     category: '深度洞察',
-    tags: ['供应链', '风险管理'],
+    tags: ['组织设计', '战略', '运营', '协同'],
     author: '益语智库',
-    readTime: 15,
-    publishDate: '2026-01-23',
+    readTime: 8,
+    publishDate: '2026-02-05',
+    status: 'published',
+    featured: false,
+    showOnHome: true,
+    views: 420,
+    likes: 25,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'i_material_management',
+    title: '素材管理机制：把“经验”变成团队可复用的资产',
+    excerpt: '每一次服务沉淀为案例；每一个案例成为行业资产。关键不在收集文件，而在建立命名、版本、入口与复用流程。',
+    content: `
+<h2>目标</h2>
+<p>让团队在需要时<strong>找得到、用得上、能复用</strong>，而不是“文件夹越来越多”。</p>
+
+<h2>四件事就够了</h2>
+<ul>
+  <li><strong>命名规则</strong>：日期-项目-主题-版本（例：2026-01-05-为爱黔行-培训-v1）。</li>
+  <li><strong>入口清单</strong>：给不同相关方准备不同入口（资助方/企业/筹款/公众）。</li>
+  <li><strong>版本控制</strong>：谁改了、改了什么、为什么改。</li>
+  <li><strong>复用流程</strong>：每次交付后 30 分钟做一次“案例萃取”。</li>
+</ul>
+
+<h2>建议的最小表格字段</h2>
+<ul>
+  <li>标题 / 场景 / 适用对象 / 关键结论 / 证据来源 / 最佳用法 / 负责人</li>
+</ul>
+`.
+      trim(),
+    category: '数据洞察',
+    tags: ['知识管理', '素材管理', '案例萃取', '复用'],
+    author: '益语智库',
+    readTime: 6,
+    publishDate: '2026-02-05',
     status: 'published',
     featured: false,
     showOnHome: false,
-    views: 856,
-    likes: 45,
+    views: 260,
+    likes: 12,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
