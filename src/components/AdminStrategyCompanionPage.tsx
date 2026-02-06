@@ -879,6 +879,10 @@ const parseClientStrategyPaste = (raw: string): {
   const input = (raw || '').replace(/\r\n/g, '\n').trim();
   if (!input) return {};
 
+  // Support both "multi-line doc" and "inline single-line" paste.
+  // Many users paste like: "使命:...愿景:...价值观:..." without line breaks.
+  const normalizedInline = input.replace(/\s+/g, ' ').trim();
+
   const lines = input
     .split(/\n+/)
     .map(l => l.trim())
@@ -930,10 +934,23 @@ const parseClientStrategyPaste = (raw: string): {
     return collected.join('\n').trim();
   };
 
-  const mission = extractSection(headingMatchers.mission);
-  const vision = extractSection(headingMatchers.vision);
+  const extractInlineBetween = (startLabels: string[], endLabels: string[]) => {
+    const start = startLabels.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+    const end = endLabels.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+    const re = new RegExp(`(?:^|[\n\r\t\s])(?:${start})\s*[:：]\s*([\\s\\S]*?)(?=(?:${end})\s*[:：]|$)`, 'i');
+    const m = normalizedInline.match(re);
+    return (m?.[1] || '').trim();
+  };
 
-  const valuesText = extractSection(headingMatchers.values);
+  const missionInline = extractInlineBetween(['使命', 'Mission'], ['愿景', 'Vision', '价值观', 'Values', '核心价值观', '里程碑', 'Milestone', '阶段']);
+  const visionInline = extractInlineBetween(['愿景', 'Vision'], ['使命', 'Mission', '价值观', 'Values', '核心价值观', '里程碑', 'Milestone', '阶段']);
+  const valuesInline = extractInlineBetween(['价值观', '核心价值观', 'Values'], ['使命', 'Mission', '愿景', 'Vision', '里程碑', 'Milestone', '阶段']);
+  const milestonesInline = extractInlineBetween(['里程碑', 'Milestone', '阶段', 'Milestones'], ['使命', 'Mission', '愿景', 'Vision', '价值观', 'Values', '核心价值观']);
+
+  const mission = missionInline || extractSection(headingMatchers.mission);
+  const vision = visionInline || extractSection(headingMatchers.vision);
+
+  const valuesText = valuesInline || extractSection(headingMatchers.values);
   const values = valuesText
     ? valuesText
         .split(/[\n,，、；;\/\|]+/)
@@ -942,7 +959,7 @@ const parseClientStrategyPaste = (raw: string): {
         .slice(0, 8)
     : undefined;
 
-  const milestonesText = extractSection(headingMatchers.milestones);
+  const milestonesText = milestonesInline || extractSection(headingMatchers.milestones);
   const milestones = milestonesText
     ? milestonesText
         .split(/\n+/)
