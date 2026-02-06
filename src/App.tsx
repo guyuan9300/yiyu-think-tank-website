@@ -25,7 +25,7 @@ export default function App() {
   const [selectedBookId, setSelectedBookId] = useState<string>('shimeshiquanli');
   const [selectedDetailId, setSelectedDetailId] = useState<string>('');
   const [selectedCaseId, setSelectedCaseId] = useState<string>('blue-letter');
-  // Debug page switcher (dev only). Default OFF for production.
+  // Page switcher scaffolding (for building/testing). Default OFF, auto-ON for admin.
   const [showPageSwitcher, setShowPageSwitcher] = useState(false);
 
   // 从URL参数读取当前页面，并在页面变化时更新URL
@@ -35,8 +35,24 @@ export default function App() {
     const detailId = params.get('id');
     const debug = params.get('debug');
 
+    // Scaffolding controls:
+    // - ?debug=1 forces the page switcher on
+    // - Admin account sees it by default (until the site is fully built)
     if (debug === '1') {
       setShowPageSwitcher(true);
+    } else {
+      try {
+        const userStr = localStorage.getItem('yiyu_current_user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const adminEmails = ['guyuan9300@gmail.com'];
+          if (user?.email && adminEmails.includes(String(user.email).toLowerCase())) {
+            setShowPageSwitcher(true);
+          }
+        }
+      } catch {
+        // ignore
+      }
     }
 
     if (page) {
