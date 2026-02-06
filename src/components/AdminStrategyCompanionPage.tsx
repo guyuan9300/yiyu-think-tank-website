@@ -170,20 +170,70 @@ interface ProjectOverviewProps {
   milestones: StrategicMilestone[];
   goals: StrategicGoal[];
   goalMetrics: Record<string, GoalMetric[]>;
+  onAutoGenerateMilestones?: () => void;
 }
+
+const DEFAULT_MILESTONE_TEMPLATES: Array<Pick<StrategicMilestone, 'title' | 'phaseOrder'>> = [
+  { title: '战略启动', phaseOrder: 1 },
+  { title: '能力诊断', phaseOrder: 2 },
+  { title: '战略共创', phaseOrder: 3 },
+  { title: '执行赋能', phaseOrder: 4 },
+  { title: '复盘迭代', phaseOrder: 5 },
+];
 
 const ProjectOverview: React.FC<ProjectOverviewProps> = ({
   client,
   milestones,
   goals,
   goalMetrics,
+  onAutoGenerateMilestones,
 }) => {
+  const displayMilestones = useMemo(() => {
+    // If user hasn't generated milestones yet, still show the default 5-stage timeline.
+    if (!milestones || milestones.length === 0) {
+      return DEFAULT_MILESTONE_TEMPLATES.map((t) => ({
+        id: `template-${t.phaseOrder}`,
+        projectId: client.id,
+        title: t.title,
+        status: 'pending' as const,
+        phaseOrder: t.phaseOrder,
+        participants: [],
+        outputs: [],
+        sortOrder: t.phaseOrder,
+        isActive: true,
+        createdAt: '',
+        updatedAt: '',
+      }));
+    }
+
+    // Ensure timeline is always 5 stages even if only partial milestones are created.
+    const byTitle = new Map(milestones.map((m) => [m.title?.trim(), m]));
+    return DEFAULT_MILESTONE_TEMPLATES.map((t) => {
+      const found = byTitle.get(t.title);
+      if (found) return found;
+      return {
+        id: `template-${t.phaseOrder}`,
+        projectId: client.id,
+        title: t.title,
+        status: 'pending' as const,
+        phaseOrder: t.phaseOrder,
+        participants: [],
+        outputs: [],
+        sortOrder: t.phaseOrder,
+        isActive: true,
+        createdAt: '',
+        updatedAt: '',
+      };
+    });
+  }, [milestones, client.id]);
+
   // 计算里程碑进度（直接使用该客户的 milestones.status）
   const milestoneProgress = useMemo(() => {
-    if (milestones.length === 0) return 0;
-    const completed = milestones.filter(m => m.status === 'completed').length;
-    return Math.round((completed / milestones.length) * 100);
-  }, [milestones]);
+    const actual = milestones || [];
+    if (actual.length === 0) return 0;
+    const completed = actual.filter((m) => m.status === 'completed').length;
+    return Math.round((completed / displayMilestones.length) * 100);
+  }, [milestones, displayMilestones.length]);
 
   // 计算目标达成率
   const goalAchievement = useMemo(() => {
@@ -270,18 +320,28 @@ const ProjectOverview: React.FC<ProjectOverviewProps> = ({
 
       {/* 项目进度时间线 */}
       <div className="px-6 py-6 border-t border-gray-100">
-        <h3 className="text-sm font-medium text-gray-600 mb-4">项目进度时间线</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-medium text-gray-600">项目进度时间线</h3>
+          {milestones.length === 0 && onAutoGenerateMilestones && (
+            <button
+              onClick={onAutoGenerateMilestones}
+              className="text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100"
+            >
+              一键生成时间线
+            </button>
+          )}
+        </div>
         <div className="relative">
           {/* 时间线连接线 */}
           <div className="absolute top-4 left-4 right-4 h-0.5 bg-gray-200" />
           
           {/* 里程碑节点 */}
           <div className="flex justify-between relative">
-            {milestones.map((milestone, index) => {
+            {displayMilestones.map((milestone, index) => {
               const status = milestone.status;
               const isCompleted = status === 'completed';
               const isInProgress = status === 'in-progress';
-              
+
               return (
                 <div key={milestone.id} className="flex flex-col items-center relative z-10">
                   {/* 节点圆圈 */}
@@ -298,7 +358,7 @@ const ProjectOverview: React.FC<ProjectOverviewProps> = ({
                       <span className="text-sm font-medium">{index + 1}</span>
                     )}
                   </div>
-                  
+
                   {/* 里程碑名称 */}
                   <div className="text-center">
                     <p className={`text-xs font-medium ${isCompleted || isInProgress ? 'text-gray-900' : 'text-gray-400'}`}>
@@ -1461,6 +1521,7 @@ const AdminStrategyCompanionPage: React.FC = () => {
                 milestones={milestones}
                 goals={goals}
                 goalMetrics={goalMetrics}
+                onAutoGenerateMilestones={handleAutoGenerateMilestones}
               />
               
               {/* 数据管理标签页 */}
