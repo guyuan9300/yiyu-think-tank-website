@@ -330,6 +330,7 @@ interface DataManagementTabsProps {
   onEditMilestone: (m: StrategicMilestone) => void;
   onDeleteMilestone: (id: string) => void;
   onAddMilestone: () => void;
+  onAutoGenerateMilestones?: () => void;
   onUpdateMilestoneStatus: (milestoneId: string, status: 'pending' | 'in-progress' | 'completed') => void;
   onEditGoal: (g: StrategicGoal) => void;
   onDeleteGoal: (id: string) => void;
@@ -357,6 +358,7 @@ const DataManagementTabs: React.FC<DataManagementTabsProps> = ({
   onEditMilestone,
   onDeleteMilestone,
   onAddMilestone,
+  onAutoGenerateMilestones,
   onUpdateMilestoneStatus,
   onEditGoal,
   onDeleteGoal,
@@ -408,7 +410,19 @@ const DataManagementTabs: React.FC<DataManagementTabsProps> = ({
         {/* 里程碑管理 */}
         {activeTab === 'milestones' && (
           <div className="p-6">
-            <div className="flex justify-end mb-4">
+            <div className="flex items-center justify-end gap-3 mb-4">
+              {milestones.length === 0 && onAutoGenerateMilestones && (
+                <button
+                  onClick={onAutoGenerateMilestones}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors"
+                  title="按默认战略陪伴阶段（5阶段）一键生成里程碑"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v4m0 0v4m0-4h4m-4 0H8" />
+                  </svg>
+                  一键生成阶段里程碑
+                </button>
+              )}
               <button
                 onClick={onAddMilestone}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -1111,6 +1125,53 @@ const AdminStrategyCompanionPage: React.FC = () => {
     setShowProjectModal(true);
   };
   
+  // 一键生成默认战略陪伴阶段里程碑（5阶段）
+  const handleAutoGenerateMilestones = async () => {
+    if (!selectedClient?.id) return;
+    const projectId = selectedClient.id;
+
+    const templates: Array<Pick<StrategicMilestone, 'title' | 'phaseOrder' | 'coreGoal' | 'deliverable'>> = [
+      { title: '战略启动', phaseOrder: 1, coreGoal: '明确战略方向和项目范围', deliverable: '战略启动报告' },
+      { title: '能力诊断', phaseOrder: 2, coreGoal: '全面评估组织现状和能力', deliverable: '能力诊断报告' },
+      { title: '战略共创', phaseOrder: 3, coreGoal: '制定战略规划和实施路径', deliverable: '战略规划书' },
+      { title: '执行赋能', phaseOrder: 4, coreGoal: '支持战略落地和执行', deliverable: '执行手册和培训材料' },
+      { title: '复盘迭代', phaseOrder: 5, coreGoal: '评估成效并持续优化', deliverable: '复盘报告和优化方案' },
+    ];
+
+    const existing = await getStrategicMilestones(projectId);
+    if (existing.length > 0) {
+      alert('当前客户已存在里程碑，已取消一键生成（避免重复）。');
+      return;
+    }
+
+    const ok = window.confirm('将按默认“战略陪伴 5 阶段”自动生成里程碑（可后续编辑/删除）。是否继续？');
+    if (!ok) return;
+
+    await Promise.all(
+      templates.map((t, idx) =>
+        saveStrategicMilestone({
+          projectId,
+          title: t.title,
+          description: '',
+          status: 'pending',
+          phaseOrder: t.phaseOrder,
+          coreGoal: t.coreGoal,
+          deliverable: t.deliverable,
+          participants: [],
+          outputs: [],
+          milestoneDate: undefined,
+          sortOrder: idx,
+          isActive: true,
+        })
+      )
+    );
+
+    // Refresh list
+    const next = await getStrategicMilestones(projectId);
+    setMilestones(next);
+    setActiveTab('milestones');
+  };
+
   // 保存客户项目
   const handleSaveProject = async (data: Partial<ClientProject>) => {
     try {
@@ -1404,6 +1465,7 @@ const AdminStrategyCompanionPage: React.FC = () => {
                   setEditingMilestone(null);
                   setShowMilestoneModal(true);
                 }}
+                onAutoGenerateMilestones={handleAutoGenerateMilestones}
                 onUpdateMilestoneStatus={handleUpdateMilestoneStatus}
                 onEditGoal={(g) => {
                   setEditingGoal(g);
