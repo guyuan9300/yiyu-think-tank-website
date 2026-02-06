@@ -912,6 +912,16 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
     const load = async () => {
       const list = await getClientProjects();
       setClients(list);
+
+      // If URL provides clientId, select it; otherwise keep existing or default to first.
+      const params = new URLSearchParams(window.location.search);
+      const clientIdFromUrl = params.get('clientId');
+
+      if (clientIdFromUrl && list.some(c => c.id === clientIdFromUrl)) {
+        setSelectedClientId(clientIdFromUrl);
+        return;
+      }
+
       if (!selectedClientId && list.length > 0) {
         setSelectedClientId(list[0].id);
       }
