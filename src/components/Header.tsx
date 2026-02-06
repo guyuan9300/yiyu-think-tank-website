@@ -64,6 +64,11 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
 
   const navItems = getNavItems();
 
+  // Brand (logo/title) click -> always go home
+  const handleBrandClick = () => {
+    handleNavClick('home');
+  };
+
   // 导航点击处理 - 根据菜单项ID跳转到对应页面
   const handleNavClick = (id: string) => {
     // 统一映射：学习中心 -> library
@@ -187,13 +192,18 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
     <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/20">
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
+          {/* Logo / Brand (clickable -> Home) */}
+          <button
+            type="button"
+            onClick={handleBrandClick}
+            className="flex items-center gap-3 hover:opacity-90 transition-opacity"
+            aria-label="返回首页"
+          >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
               <span className="text-white font-bold text-lg">益</span>
             </div>
             <span className="font-semibold text-lg hidden sm:block">益语智库</span>
-          </div>
+          </button>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1">
