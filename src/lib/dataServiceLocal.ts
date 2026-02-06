@@ -116,6 +116,12 @@ export interface ClientProject {
   endDate?: string;
   status: 'active' | 'completed' | 'paused';
   description?: string;
+
+  // Client-specific page content
+  mission?: string;
+  vision?: string;
+  values?: string[]; // e.g. 4 tags
+
   currentMilestoneId?: string;
   currentGoalId?: string;
   sortOrder: number;
@@ -798,6 +804,11 @@ export const saveClientProject = async (
       endDate: project.endDate,
       status: project.status || 'active',
       description: project.description,
+
+      mission: project.mission,
+      vision: project.vision,
+      values: project.values,
+
       currentMilestoneId: project.currentMilestoneId,
       currentGoalId: project.currentGoalId,
       sortOrder: project.sortOrder || 0,

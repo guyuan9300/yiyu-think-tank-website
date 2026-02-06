@@ -1316,11 +1316,46 @@ const AdminStrategyCompanionPage: React.FC = () => {
 
       // 3) Seed 5 clients
       const seedClients = [
-        { clientName: '蓝信封', projectName: '战略陪伴（示例）- 蓝信封', status: 'active' as const },
-        { clientName: '日慈基金会', projectName: '战略陪伴（示例）- 日慈基金会', status: 'active' as const },
-        { clientName: '愿景资本', projectName: '战略陪伴（示例）- 愿景资本', status: 'active' as const },
-        { clientName: '贝壳公益基金会', projectName: '战略陪伴（示例）- 贝壳公益基金会', status: 'active' as const },
-        { clientName: '中国乡村发展基金会', projectName: '战略陪伴（示例）- 中国乡村发展基金会', status: 'active' as const },
+        {
+          clientName: '蓝信封',
+          projectName: '战略陪伴（示例）- 蓝信封',
+          status: 'active' as const,
+          mission: '通过持续的陪伴与沟通，支持乡村儿童心理健康成长，让每个孩子都被看见。',
+          vision: '形成可复制的公益陪伴网络，让乡村儿童获得稳定的情感支持与心理韧性。',
+          values: ['深度陪伴', '儿童优先', '长期主义', '循证复盘'],
+        },
+        {
+          clientName: '日慈基金会',
+          projectName: '战略陪伴（示例）- 日慈基金会',
+          status: 'active' as const,
+          mission: '推动青少年心智素养教育，提升心理健康与自我成长能力。',
+          vision: '让心理素养教育成为学校与家庭的基础能力，形成可持续的教育支持体系。',
+          values: ['尊重关怀', '专业安全', '教育普惠', '合作共创'],
+        },
+        {
+          clientName: '愿景资本',
+          projectName: '战略陪伴（示例）- 愿景资本',
+          status: 'active' as const,
+          mission: '以长期资本与专业陪伴支持创新企业成长，推动产业升级与价值创造。',
+          vision: '成为最值得创业者信赖的长期合作伙伴，持续发现并培育高质量创新。',
+          values: ['长期主义', '专业判断', '价值共创', '风险敬畏'],
+        },
+        {
+          clientName: '贝石公益基金会',
+          projectName: '战略陪伴（示例）- 贝石公益基金会',
+          status: 'active' as const,
+          mission: '连接社区资源与公众参与，让互助在社区里可持续发生。',
+          vision: '形成可复制的社区公益模型，让社区成为温暖而有效的互助网络。',
+          values: ['在地协作', '公众参与', '透明可信', '持续迭代'],
+        },
+        {
+          clientName: '中国乡村发展基金会',
+          projectName: '战略陪伴（示例）- 中国乡村发展基金会',
+          status: 'active' as const,
+          mission: '推动乡村发展与民生改善，促进资源有效配置与可持续发展。',
+          vision: '让乡村发展项目更有效、更可持续，形成可推广的乡村振兴解决方案。',
+          values: ['以人为本', '实效导向', '资源协同', '公开透明'],
+        },
       ];
 
       const ms = [ms1, ms2, ms3, ms4, ms5].filter(Boolean) as any[];
@@ -1333,6 +1368,9 @@ const AdminStrategyCompanionPage: React.FC = () => {
           status: c.status,
           startDate: '2026-01-05',
           description: '用于演示：管理员可下拉切换客户，验证前台战略客户页展示。',
+          mission: (c as any).mission,
+          vision: (c as any).vision,
+          values: (c as any).values,
           currentMilestoneId: (ms3 as any)?.id,
           currentGoalId: (g1 as any)?.id,
         } as any);
@@ -2255,10 +2293,17 @@ let attachmentUrl = editingGoal?.attachmentUrl;
             const submitData: Partial<ClientProject> = {
               id: editingProject?.id,
               clientName: formData.get('clientName') as string,
-              startDate: formData.get('startDate') as string || undefined,
-              endDate: formData.get('endDate') as string || undefined,
+              startDate: (formData.get('startDate') as string) || undefined,
+              endDate: (formData.get('endDate') as string) || undefined,
               status: (formData.get('status') as string) as 'active' | 'completed' | 'paused',
               description: formData.get('description') as string,
+              mission: (formData.get('mission') as string) || undefined,
+              vision: (formData.get('vision') as string) || undefined,
+              values: String(formData.get('values') || '')
+                .split(/[,，\n]/)
+                .map(s => s.trim())
+                .filter(Boolean)
+                .slice(0, 8),
             };
             handleSaveProject(submitData);
           }}
@@ -2315,6 +2360,40 @@ let attachmentUrl = editingGoal?.attachmentUrl;
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               placeholder="请输入客户描述"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Mission（使命）</label>
+            <textarea
+              name="mission"
+              defaultValue={editingProject?.mission}
+              rows={3}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="请输入使命（前台 Mission 区域展示）"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Vision（愿景）</label>
+            <textarea
+              name="vision"
+              defaultValue={editingProject?.vision}
+              rows={3}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="请输入愿景（前台 Vision 区域展示）"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Values（价值观标签）</label>
+            <textarea
+              name="values"
+              defaultValue={(editingProject?.values || []).join('，')}
+              rows={2}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="用逗号/中文逗号/换行分隔，例如：深度陪伴，系统思维，价值共创，长期主义"
+            />
+            <p className="text-xs text-gray-500 mt-1">建议 4 个标签；最多取前 8 个</p>
           </div>
           <div className="flex justify-end gap-3 pt-4">
             <button

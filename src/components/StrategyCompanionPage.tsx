@@ -881,6 +881,7 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
   const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
   const [clients, setClients] = useState<ClientProject[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const selectedClient = clients.find(c => c.id === selectedClientId) || null;
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
@@ -1118,7 +1119,7 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-1 h-8 bg-blue-500 rounded-full" />
                 <h1 className="text-[32px] font-semibold text-slate-900 tracking-tight">
-                  益语智库
+                  {selectedClient?.clientName || '战略客户'}
                 </h1>
               </div>
               <div className="flex items-center gap-3 ml-4">
@@ -1169,7 +1170,7 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
                 <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Mission</span>
               </div>
               <p className="text-[20px] font-medium text-slate-800 leading-relaxed max-w-[52ch]">
-                通过前沿洞察与系统性陪伴，助力公益组织建立可持续的战略能力，让社会创新真正发生。
+                {selectedClient?.mission || '（请在后台为该客户填写 Mission）'}
               </p>
             </div>
 
@@ -1180,7 +1181,7 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
                 <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Vision</span>
               </div>
               <p className="text-[20px] font-medium text-slate-800 leading-relaxed max-w-[52ch]">
-              成为中国公益行业最值得信赖的战略陪伴者，让每一个公益组织都能找到属于自己的增长路径。
+                {selectedClient?.vision || '（请在后台为该客户填写 Vision）'}
               </p>
             </div>
           </div>
@@ -1192,7 +1193,7 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
               <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Values</span>
             </div>
             <div className="flex flex-wrap gap-2.5">
-              {['深度陪伴', '系统思维', '价值共创', '长期主义'].map((value, idx) => (
+              {(selectedClient?.values && selectedClient.values.length > 0 ? selectedClient.values : ['深度陪伴', '系统思维', '价值共创', '长期主义']).map((value, idx) => (
                 <div 
                   key={idx}
                   className="px-4 py-2 rounded-full bg-white border border-slate-100 text-[14px] font-medium text-slate-700 hover:shadow-md hover:shadow-slate-100/50 transition-all duration-200 cursor-default"
