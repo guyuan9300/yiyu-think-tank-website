@@ -282,7 +282,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
       {/* Hero Section - Apple Style with Depth */}
       <section 
         ref={heroRef}
-        className="relative pt-32 pb-28 px-4 sm:px-6 lg:px-8 overflow-hidden"
+        className="relative pt-24 sm:pt-32 pb-20 sm:pb-28 px-4 sm:px-6 lg:px-8 overflow-hidden"
       >
         {/* Sophisticated Background Layers */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/4 via-transparent to-accent/4" />
@@ -299,7 +299,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
             </p>
 
             {/* Main Title - Typography Hierarchy */}
-            <h1 className="text-[44px] sm:text-[56px] md:text-[64px] lg:text-[72px] font-semibold leading-[1.05] tracking-tight mb-6 text-foreground">
+            <h1 className="text-[36px] sm:text-[56px] md:text-[64px] lg:text-[72px] font-semibold leading-[1.06] tracking-tight mb-6 text-foreground">
               战略驱动业务增长
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary to-accent">
@@ -369,7 +369,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
       </section>
 
       {/* Hot Content Section - Refined Layout */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section className="py-14 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1200px] mx-auto">
           {/* Section Header */}
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
@@ -404,7 +404,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
       </section>
 
       {/* Strategy Frontier Reports - Editorial Design */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-transparent to-muted/8">
+      <section className="py-14 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-transparent to-muted/8">
         <div className="max-w-[1200px] mx-auto">
           {/* Section Header */}
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
@@ -656,17 +656,33 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
       {/* Footer - Clean */}
       <footer className="py-16 px-4 sm:px-6 lg:px-8 border-t border-border/40 bg-muted/5">
         <div className="max-w-[1200px] mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
             {/* Brand */}
-            <div className="col-span-2 md:col-span-1">
+            <div className="md:col-span-1">
               <h4 className="font-semibold text-[15px] mb-4 text-foreground">益语智库</h4>
               <p className="text-[13px] text-muted-foreground/70 leading-relaxed">
                 助力企业持续增长的战略陪伴者
               </p>
+
+              {/* Mobile Quick Links */}
+              <div className="mt-4 flex flex-wrap gap-2 md:hidden">
+                <button onClick={() => handleNavigate('insights')} className="px-3 py-1.5 rounded-full bg-white/70 border border-border/40 text-[12px] text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors">
+                  前沿洞察
+                </button>
+                <button onClick={() => handleNavigate('learning')} className="px-3 py-1.5 rounded-full bg-white/70 border border-border/40 text-[12px] text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors">
+                  学习中心
+                </button>
+                <button onClick={() => handleNavigate('strategy')} className="px-3 py-1.5 rounded-full bg-white/70 border border-border/40 text-[12px] text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors">
+                  战略陪伴
+                </button>
+                <button onClick={() => handleNavigate('about')} className="px-3 py-1.5 rounded-full bg-white/70 border border-border/40 text-[12px] text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors">
+                  关于我们
+                </button>
+              </div>
             </div>
             
             {/* Insights */}
-            <div>
+            <div className="hidden md:block">
               <h4 className="font-medium text-[14px] mb-4 text-foreground">洞察</h4>
               <ul className="space-y-2.5 text-[13px] text-muted-foreground/70">
                 <li><a href="#" className="hover:text-primary transition-colors">行业洞察</a></li>
@@ -676,7 +692,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
             </div>
             
             {/* Learning */}
-            <div>
+            <div className="hidden md:block">
               <h4 className="font-medium text-[14px] mb-4 text-foreground">学习中心</h4>
               <ul className="space-y-2.5 text-[13px] text-muted-foreground/70">
                 <li><a href="#" className="hover:text-primary transition-colors">书库</a></li>
@@ -686,7 +702,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
             </div>
             
             {/* Contact */}
-            <div>
+            <div className="hidden md:block">
               <h4 className="font-medium text-[14px] mb-4 text-foreground">联系我们</h4>
               <ul className="space-y-2.5 text-[13px] text-muted-foreground/70">
                 <li><a href="#" className="hover:text-primary transition-colors">关于我们</a></li>
