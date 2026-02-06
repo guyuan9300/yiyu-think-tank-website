@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22c55e" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#2563eb" stop-opacity="0.16"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="200" rx="24" fill="url(#g)"/>
+  <circle cx="94" cy="108" r="44" fill="#2563eb" fill-opacity="0.14"/>
+  <circle cx="94" cy="108" r="26" fill="none" stroke="#2563eb" stroke-opacity="0.45" stroke-width="10"/>
+  <circle cx="94" cy="108" r="10" fill="#2563eb" fill-opacity="0.6"/>
+  <path d="M168 70h112" stroke="#0f172a" stroke-opacity="0.16" stroke-width="12" stroke-linecap="round"/>
+  <path d="M168 108h86" stroke="#0f172a" stroke-opacity="0.12" stroke-width="10" stroke-linecap="round"/>
+  <path d="M168 142h98" stroke="#0f172a" stroke-opacity="0.10" stroke-width="10" stroke-linecap="round"/>
+  <text x="24" y="34" font-family="ui-sans-serif, system-ui" font-size="14" fill="#0f172a" fill-opacity="0.45">Goal</text>
+</svg>

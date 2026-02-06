@@ -93,6 +93,36 @@ import {
   type ClientProject
 } from '../lib/dataServiceLocal';
 
+function getClientCoverImage(clientName?: string) {
+  const name = (clientName || '').trim();
+  // Prefer existing case images if name matches.
+  const map: Record<string, string> = {
+    '蓝信封': '/images/cases/blue-letter.png',
+    '中国乡村发展基金会': '/images/cases/china-rural-foundation.png',
+    '愿景资本': '/images/cases/vision-capital.png',
+    '日慈基金会': '/images/cases/rici-foundation.png',
+    '贝石公益基金会': '/images/cases/beike-foundation.png',
+    '贝壳公益基金会': '/images/cases/beike-foundation.png',
+    '蔚来汽车': '/images/cases/nio.png'
+  };
+  return map[name] || '/images/placeholders/client-default.svg';
+}
+
+function getSectionThumb(kind: 'goal' | 'event' | 'document' | 'meeting' | 'course') {
+  switch (kind) {
+    case 'goal':
+      return '/images/placeholders/goal.svg';
+    case 'event':
+      return '/images/placeholders/event.svg';
+    case 'document':
+      return '/images/placeholders/document.svg';
+    case 'meeting':
+      return '/images/placeholders/meeting.svg';
+    case 'course':
+      return '/images/placeholders/course.svg';
+  }
+}
+
 // Types
 interface Milestone {
   id: string;
@@ -586,27 +616,39 @@ function GoalCard({ goal, onDownload }: { goal: Goal; onDownload?: (goal: Goal) 
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-6 hover:shadow-lg hover:shadow-slate-100/50 transition-all duration-300">
-      <div className="flex items-start justify-between mb-2">
-        <h3 className="text-[15px] font-semibold text-slate-800 leading-tight flex-1">
-          {goal.title}
-        </h3>
-        <button
-          onClick={handleDownload}
-          disabled={!hasAttachment}
-          className={`shrink-0 ml-3 w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200 ${
-            hasAttachment 
-              ? 'bg-slate-900 text-white hover:bg-slate-800 hover:scale-105 cursor-pointer' 
-              : 'bg-slate-100 text-slate-300 cursor-not-allowed'
-          }`}
-          title={hasAttachment ? '下载目标方法文档' : '暂无附件'}
-        >
-          <Download className="w-4 h-4" />
-        </button>
+    <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden hover:shadow-lg hover:shadow-slate-100/50 transition-all duration-300">
+      {/* Thumb */}
+      <div className="h-20 bg-slate-50 relative">
+        <img
+          src={getSectionThumb('goal')}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+          loading="lazy"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-white/30 via-white/10 to-white/30" />
       </div>
-      <p className="text-[13px] text-slate-500 mb-5 leading-relaxed">
-        {goal.description}
-      </p>
+
+      <div className="p-6">
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="text-[15px] font-semibold text-slate-800 leading-tight flex-1">
+            {goal.title}
+          </h3>
+          <button
+            onClick={handleDownload}
+            disabled={!hasAttachment}
+            className={`shrink-0 ml-3 w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200 ${
+              hasAttachment 
+                ? 'bg-slate-900 text-white hover:bg-slate-800 hover:scale-105 cursor-pointer' 
+                : 'bg-slate-100 text-slate-300 cursor-not-allowed'
+            }`}
+            title={hasAttachment ? '下载目标方法文档' : '暂无附件'}
+          >
+            <Download className="w-4 h-4" />
+          </button>
+        </div>
+        <p className="text-[13px] text-slate-500 mb-5 leading-relaxed">
+          {goal.description}
+        </p>
       {/* Progress bar */}
       <div className="mb-5">
         <div className="flex items-center justify-between mb-2">
@@ -630,6 +672,7 @@ function GoalCard({ goal, onDownload }: { goal: Goal; onDownload?: (goal: Goal) 
             </span>
           </div>
         ))}
+      </div>
       </div>
     </div>
   );
@@ -766,7 +809,10 @@ function DocumentItem({
     <div className="p-4 hover:bg-slate-50 transition-colors cursor-pointer group">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <FileIcon className="w-4 h-4 text-slate-400 shrink-0" />
+          {/* thumb */}
+          <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-50 border border-slate-100 shrink-0">
+            <img src={getSectionThumb('document')} alt="" className="w-full h-full object-cover" loading="lazy" />
+          </div>
           <div className="flex-1 min-w-0">
             <p className="text-[14px] font-medium text-slate-800 truncate group-hover:text-blue-600 transition-colors">
               {document.title}
@@ -825,10 +871,22 @@ function MeetingCard({
   
   return (
     <div 
-      className="bg-white rounded-xl border border-slate-100 p-5 hover:shadow-lg hover:shadow-slate-100/50 transition-all duration-300 cursor-pointer group"
+      className="bg-white rounded-xl border border-slate-100 overflow-hidden hover:shadow-lg hover:shadow-slate-100/50 transition-all duration-300 cursor-pointer group"
       onClick={() => onClick?.(meeting)}
     >
-      <div className="flex items-start justify-between mb-3">
+      {/* thumb */}
+      <div className="h-20 bg-slate-50 relative">
+        <img
+          src={getSectionThumb('meeting')}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+          loading="lazy"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-white/25 via-white/10 to-white/25" />
+      </div>
+
+      <div className="p-5">
+        <div className="flex items-start justify-between mb-3">
         <h4 className="font-semibold text-slate-800 group-hover:text-blue-600 transition-colors leading-tight flex-1">
           {meeting.title}
         </h4>
@@ -875,6 +933,7 @@ function MeetingCard({
             {point}
           </span>
         ))}
+      </div>
       </div>
     </div>
   );
@@ -1207,6 +1266,15 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
           <div className="flex items-center justify-between gap-6 flex-wrap">
             <div>
               <div className="flex items-center gap-3 mb-3">
+                {/* client cover */}
+                <div className="w-12 h-12 rounded-2xl overflow-hidden border border-slate-100 bg-white shadow-sm shrink-0">
+                  <img
+                    src={getClientCoverImage(selectedClient?.clientName)}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
                 <div className="w-1 h-8 bg-blue-500 rounded-full" />
                 <h1 className="text-[32px] font-semibold text-slate-900 tracking-tight">
                   {selectedClient?.clientName || '战略客户'}
