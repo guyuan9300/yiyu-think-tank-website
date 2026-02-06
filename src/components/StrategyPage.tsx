@@ -573,15 +573,8 @@ challenge: '社区居民参与度低',
 
       {/* Cases Section - 16:9 Seamless Grid */}
       <section id="cases" className="py-0 px-0">
-        {/* Cases Grid - 16:9 Seamless Grid */}
-        <div 
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '0px',
-            width: '100%',
-          }}
-        >
+        {/* Cases Grid - responsive (avoid ultra-thin cards on mobile) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0 w-full">
           {cases.map((caseItem, index) => (
             <div
               key={index}
@@ -629,8 +622,8 @@ challenge: '社区居民参与度低',
             </div>
           </div>
 
-          {/* 4 Column Grid */}
-          <div className="grid grid-cols-4 gap-5">
+          {/* Responsive Grid (mobile: list, tablet: 2 cols, desktop: 4 cols) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
             {insights.slice(0, 4).map((insight, index) => (
               <article
                 key={index}
@@ -701,8 +694,8 @@ challenge: '社区居民参与度低',
             </div>
           </div>
 
-          {/* 4 Column Grid */}
-          <div className="grid grid-cols-4 gap-5">
+          {/* Responsive Grid (mobile: list, tablet: 2 cols, desktop: 4 cols) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
             {tools
               .filter(tool => toolCategory === 'all' || tool.category === toolCategory)
               .slice(0, 4)
