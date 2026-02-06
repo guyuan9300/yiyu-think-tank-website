@@ -171,6 +171,7 @@ interface ProjectOverviewProps {
   goals: StrategicGoal[];
   goalMetrics: Record<string, GoalMetric[]>;
   onAutoGenerateMilestones?: () => void;
+  onEditClient?: () => void;
 }
 
 const DEFAULT_MILESTONE_TEMPLATES: Array<Pick<StrategicMilestone, 'title' | 'phaseOrder'>> = [
@@ -187,6 +188,7 @@ const ProjectOverview: React.FC<ProjectOverviewProps> = ({
   goals,
   goalMetrics,
   onAutoGenerateMilestones,
+  onEditClient,
 }) => {
   const displayMilestones = useMemo(() => {
     // If user hasn't generated milestones yet, still show the default 5-stage timeline.
@@ -278,6 +280,16 @@ const ProjectOverview: React.FC<ProjectOverviewProps> = ({
           <span>
             {client.startDate || '未设置'} - {client.endDate || '未设置'}
           </span>
+          <button
+            type="button"
+            onClick={onEditClient}
+            className="ml-1 inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+            title="编辑组织名称 / 合作时间"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -1522,6 +1534,7 @@ const AdminStrategyCompanionPage: React.FC = () => {
                 goals={goals}
                 goalMetrics={goalMetrics}
                 onAutoGenerateMilestones={handleAutoGenerateMilestones}
+                onEditClient={() => handleEditClient(selectedClient)}
               />
               
               {/* 数据管理标签页 */}
