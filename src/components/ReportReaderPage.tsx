@@ -26,6 +26,7 @@ interface ReportReaderPageProps {
 
 export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
   const [report, setReport] = useState<Report | null>(null);
+  const [loadState, setLoadState] = useState<'loading' | 'loaded' | 'not_found'>('loading');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(50);
   const [activeTab, setActiveTab] = useState<'chat' | 'favorites' | 'feedback' | 'comments'>('chat');
@@ -58,11 +59,18 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
   // 加载报告数据
   useEffect(() => {
     const loadReport = () => {
+      setLoadState('loading');
       const reports = getReports();
       const foundReport = reports.find(r => r.id === reportId);
+
       if (foundReport) {
         setReport(foundReport);
         setTotalPages(foundReport.pages || 50);
+        setLoadState('loaded');
+      } else {
+        setReport(null);
+        setLoadState('not_found');
+        console.warn('Report not found:', { reportId, available: reports.map(r => r.id) });
       }
     };
 
@@ -250,11 +258,28 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
   if (!report) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header isLoggedIn={true} userType="member" />
+        <Header isLoggedIn={isLoggedIn} userType={isLoggedIn ? 'member' : 'visitor'} />
         <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
+          <div className="text-center max-w-md px-6">
             <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">报告加载中...</p>
+            {loadState === 'loading' && <p className="text-gray-500">报告加载中...</p>}
+            {loadState === 'not_found' && (
+              <>
+                <p className="text-gray-700 font-medium mb-2">未找到该报告</p>
+                <p className="text-gray-500 text-sm mb-6 break-all">reportId: {reportId}</p>
+                <button
+                  className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors"
+                  onClick={() => {
+                    const params = new URLSearchParams(window.location.search);
+                    params.set('page', 'report-library');
+                    params.delete('id');
+                    window.location.href = `${window.location.pathname}?${params.toString()}`;
+                  }}
+                >
+                  返回报告库
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
