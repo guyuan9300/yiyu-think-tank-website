@@ -45,7 +45,7 @@ export default function App() {
     }
 
     try {
-      const userStr = localStorage.getItem('yiyu_current_user');
+      const userStr = (localStorage.getItem('yiyu_current_user') ?? sessionStorage.getItem('yiyu_current_user'));
       if (userStr) {
         const user = JSON.parse(userStr);
         const adminEmails = ['guyuan9300@gmail.com'];
@@ -482,7 +482,7 @@ export default function App() {
   // Admin Dashboard - 需要登录验证
   if (currentPage === 'admin') {
     // 检查是否已登录管理员
-    const isAdmin = localStorage.getItem('yiyu_is_admin') === 'true';
+    const isAdmin = (localStorage.getItem('yiyu_is_admin') ?? sessionStorage.getItem('yiyu_is_admin')) === 'true';
     
     if (!isAdmin) {
       // 未登录，重定向到登录页
@@ -492,7 +492,9 @@ export default function App() {
             onNavigate={(page) => handleNavigate(page === 'login' ? 'home' : page as any)}
             onLoginSuccess={() => setCurrentPage('home')}
             onAdminLogin={() => {
+              // Fallback: ensure admin flag is set even if parent only reacts after reload.
               localStorage.setItem('yiyu_is_admin', 'true');
+              sessionStorage.setItem('yiyu_is_admin', 'true');
               // 强制刷新页面以确保状态更新
               window.location.reload();
             }}
@@ -508,13 +510,18 @@ export default function App() {
           onNavigateHome={() => handleNavigate('home')}
           onLogout={() => {
             localStorage.removeItem('yiyu_is_admin');
+            sessionStorage.removeItem('yiyu_is_admin');
             localStorage.removeItem('yiyu_admin_email');
+            sessionStorage.removeItem('yiyu_admin_email');
             // 同时清理当前用户（管理员）
-            const u = localStorage.getItem('yiyu_current_user');
+            const u = (localStorage.getItem('yiyu_current_user') ?? sessionStorage.getItem('yiyu_current_user'));
             if (u) {
               try {
                 const parsed = JSON.parse(u);
-                if (parsed?.id === 'admin') localStorage.removeItem('yiyu_current_user');
+                if (parsed?.id === 'admin') {
+                  localStorage.removeItem('yiyu_current_user');
+                  sessionStorage.removeItem('yiyu_current_user');
+                }
               } catch {}
             }
             window.dispatchEvent(new Event('yiyu_user_updated'));
@@ -549,7 +556,7 @@ export default function App() {
   // Admin Strategy Companion Page - 战略客户后台管理页面
   if (currentPage === 'admin-strategy-companion') {
     // 检查是否已登录管理员
-    const isAdmin = localStorage.getItem('yiyu_is_admin') === 'true';
+    const isAdmin = (localStorage.getItem('yiyu_is_admin') ?? sessionStorage.getItem('yiyu_is_admin')) === 'true';
     
     if (!isAdmin) {
       // 未登录，重定向到登录页
@@ -560,6 +567,7 @@ export default function App() {
             onLoginSuccess={() => setCurrentPage('home')}
             onAdminLogin={() => {
               localStorage.setItem('yiyu_is_admin', 'true');
+              sessionStorage.setItem('yiyu_is_admin', 'true');
               window.location.reload();
             }}
           />

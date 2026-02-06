@@ -65,7 +65,7 @@ export function canUseSubscription(): boolean {
   // Paid members + strategy companion clients.
   // For now: premium membership OR admin flag OR explicit strategy flag.
   // (We'll refine once the user model is clarified.)
-  const isAdmin = localStorage.getItem('yiyu_is_admin') === 'true';
+  const isAdmin = (localStorage.getItem('yiyu_is_admin') ?? sessionStorage.getItem('yiyu_is_admin')) === 'true';
   const isStrategy = localStorage.getItem('yiyu_is_strategy_client') === 'true';
   return isPremiumMember() || isAdmin || isStrategy;
 }

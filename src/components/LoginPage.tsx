@@ -3,6 +3,7 @@ import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { WeChatLoginModal } from './WeChatLoginModal';
 import { WeChatIcon } from './WeChatIcon';
 import { saveUser, getUserByEmail, recordUserLogin, type User } from '../lib/dataService';
+import { saveUserRaw, setSavedItem, ADMIN_FLAG_KEY, ADMIN_EMAIL_KEY } from '../lib/storage';
 
 // Admin credentials (global constant)
 const ADMIN_CREDENTIALS = {
@@ -29,6 +30,7 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showWeChatModal, setShowWeChatModal] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -49,8 +51,8 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
       await new Promise(resolve => setTimeout(resolve, 500));
       
       if (isAdmin) {
-        localStorage.setItem('yiyu_is_admin', 'true');
-        localStorage.setItem('yiyu_admin_email', email);
+        setSavedItem(ADMIN_FLAG_KEY, 'true', rememberMe);
+        setSavedItem(ADMIN_EMAIL_KEY, email, rememberMe);
 
         // 同时写入当前用户信息，确保从后台回到前台后依然保持“已登录/管理员”状态
         const adminUser: User = {
@@ -65,7 +67,7 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
           createdAt: new Date().toISOString(),
           lastLoginAt: new Date().toISOString(),
         };
-        localStorage.setItem('yiyu_current_user', JSON.stringify(adminUser));
+        saveUserRaw(JSON.stringify(adminUser), rememberMe);
         window.dispatchEvent(new Event('yiyu_user_updated'));
 
         // Prefer SPA navigation when available (avoid full reload / webview click issues)
@@ -112,7 +114,7 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
           console.log('用户登录成功，已更新登录记录:', user);
         }
         
-        localStorage.setItem('yiyu_current_user', JSON.stringify(user));
+        saveUserRaw(JSON.stringify(user), rememberMe);
         
         if (onLoginSuccess) {
           onLoginSuccess();
@@ -300,6 +302,8 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
               <input
                 type="checkbox"
                 id="remember"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
                 className="w-4 h-4 rounded border-border/60 text-primary focus:ring-primary/20"
               />
               <label htmlFor="remember" className="text-[13px] text-muted-foreground/70">

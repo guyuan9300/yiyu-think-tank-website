@@ -469,7 +469,7 @@ challenge: '社区居民参与度低',
                 {(() => {
                   let isAdmin = false;
                   try {
-                    const u = localStorage.getItem('yiyu_current_user');
+                    const u = (localStorage.getItem('yiyu_current_user') ?? sessionStorage.getItem('yiyu_current_user'));
                     if (u) {
                       const user = JSON.parse(u);
                       const adminEmails = ['guyuan9300@gmail.com'];

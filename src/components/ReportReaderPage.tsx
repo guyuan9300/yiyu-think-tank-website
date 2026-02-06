@@ -80,7 +80,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
   // 监听用户登录状态
   useEffect(() => {
     const checkUserStatus = () => {
-      const userStr = localStorage.getItem('yiyu_current_user');
+      const userStr = (localStorage.getItem('yiyu_current_user') ?? sessionStorage.getItem('yiyu_current_user'));
       if (userStr) {
         try {
           const user = JSON.parse(userStr);

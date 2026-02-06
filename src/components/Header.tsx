@@ -17,7 +17,7 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
   // 监听localStorage变化，实时获取当前登录用户
   useEffect(() => {
     const loadCurrentUser = () => {
-      const userStr = localStorage.getItem('yiyu_current_user');
+      const userStr = (localStorage.getItem('yiyu_current_user') ?? sessionStorage.getItem('yiyu_current_user'));
       if (userStr) {
         try {
           const user = JSON.parse(userStr);
@@ -122,6 +122,7 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
   // 退出登录
   const handleLogout = () => {
     localStorage.removeItem('yiyu_current_user');
+    sessionStorage.removeItem('yiyu_current_user');
     setCurrentUser(null);
     setIsLoggedIn(false);
     setIsUserMenuOpen(false);
