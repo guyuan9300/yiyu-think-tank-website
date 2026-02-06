@@ -93,6 +93,18 @@ export default function App() {
       if (currentPageParam !== currentPage) {
         window.history.replaceState({}, '', `?page=${currentPage}`);
       }
+    } else if (currentPage === 'strategy-companion') {
+      // Preserve clientId so direct links and switching context won't be wiped by the global URL sync.
+      const clientId = params.get('clientId');
+      const next = clientId ? `?page=${currentPage}&clientId=${encodeURIComponent(clientId)}` : `?page=${currentPage}`;
+      if (currentPageParam !== currentPage || (clientId && params.get('clientId') !== clientId)) {
+        window.history.replaceState({}, '', next);
+      }
+    } else if (currentPage === 'admin-strategy-companion') {
+      // Keep admin page stable
+      if (currentPageParam !== currentPage) {
+        window.history.replaceState({}, '', `?page=${currentPage}`);
+      }
     } else if (currentPage === 'test') {
       if (currentPageParam !== currentPage) {
         window.history.replaceState({}, '', `?page=${currentPage}`);
