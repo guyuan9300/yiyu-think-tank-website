@@ -21,6 +21,14 @@ import { StrategyCompanionPage } from './components/StrategyCompanionPage';
 import AdminStrategyCompanionPage from './components/AdminStrategyCompanionPage';
 
 export default function App() {
+  // Avoid browser trying to restore scroll position across in-app navigation.
+  // This app uses query-string based "routing" and React state, so we handle scroll ourselves.
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, []);
+
   // Initialize state from URL synchronously so we don't wipe query params (e.g. clientId)
   // before the first effect runs.
   const initialParams = new URLSearchParams(window.location.search);
@@ -112,6 +120,10 @@ export default function App() {
   }, [currentPage, selectedDetailId, selectedCaseId]);
 
   const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'case' | 'admin' | 'user-center' | 'test' | 'strategy-companion' | 'report-library' | 'article-center', bookId?: string, caseId?: string) => {
+    // Reset scroll on page-level navigation so detail pages always open from the top.
+    // (Otherwise the browser may keep the previous scroll position and look like it jumped to the bottom.)
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+
     if (page === 'home') {
       setCurrentPage('home');
     } else if (page === 'insights') {
@@ -144,6 +156,8 @@ export default function App() {
   };
 
   const handleNavigateToDetail = (type: 'article' | 'report' | 'topic', id: string) => {
+    // Ensure detail pages start at the top.
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
     setSelectedDetailId(id);
     setCurrentPage(type);
   };
