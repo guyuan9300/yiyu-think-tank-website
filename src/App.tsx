@@ -21,18 +21,19 @@ import { StrategyCompanionPage } from './components/StrategyCompanionPage';
 import AdminStrategyCompanionPage from './components/AdminStrategyCompanionPage';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<string>('home');
+  // Initialize state from URL synchronously so we don't wipe query params (e.g. clientId)
+  // before the first effect runs.
+  const initialParams = new URLSearchParams(window.location.search);
+  const [currentPage, setCurrentPage] = useState<string>(initialParams.get('page') || 'home');
   const [selectedBookId, setSelectedBookId] = useState<string>('shimeshiquanli');
-  const [selectedDetailId, setSelectedDetailId] = useState<string>('');
-  const [selectedCaseId, setSelectedCaseId] = useState<string>('blue-letter');
+  const [selectedDetailId, setSelectedDetailId] = useState<string>(initialParams.get('id') || '');
+  const [selectedCaseId, setSelectedCaseId] = useState<string>(initialParams.get('id') || 'blue-letter');
   // Page switcher scaffolding (for building/testing). Default OFF, auto-ON for admin.
   const [showPageSwitcher, setShowPageSwitcher] = useState(false);
 
-  // 从URL参数读取当前页面，并在页面变化时更新URL
+  // Read debug/admin-only scaffolding flags from URL/localStorage
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const page = params.get('page');
-    const detailId = params.get('id');
     const debug = params.get('debug');
 
     // Scaffolding controls:
@@ -40,26 +41,20 @@ export default function App() {
     // - Admin account sees it by default (until the site is fully built)
     if (debug === '1') {
       setShowPageSwitcher(true);
-    } else {
-      try {
-        const userStr = localStorage.getItem('yiyu_current_user');
-        if (userStr) {
-          const user = JSON.parse(userStr);
-          const adminEmails = ['guyuan9300@gmail.com'];
-          if (user?.email && adminEmails.includes(String(user.email).toLowerCase())) {
-            setShowPageSwitcher(true);
-          }
-        }
-      } catch {
-        // ignore
-      }
+      return;
     }
 
-    if (page) {
-      setCurrentPage(page);
-      if (detailId) {
-        setSelectedDetailId(detailId);
+    try {
+      const userStr = localStorage.getItem('yiyu_current_user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        const adminEmails = ['guyuan9300@gmail.com'];
+        if (user?.email && adminEmails.includes(String(user.email).toLowerCase())) {
+          setShowPageSwitcher(true);
+        }
       }
+    } catch {
+      // ignore
     }
   }, []);
 
