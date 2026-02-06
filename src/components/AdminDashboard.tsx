@@ -28,6 +28,14 @@ import { SettingsPage } from './SettingsPage';
 import { generateCoverImage, getHfModel, getHfToken, setHfModel, setHfToken } from '../lib/hfImageGen';
 import { UserManagementPage } from './UserManagementPage';
 import AdminStrategyCompanionPage from './AdminStrategyCompanionPage';
+import {
+  getClientProjects as getStrategyClients,
+  getCourseRecommendations,
+  saveCourseRecommendation,
+  deleteCourseRecommendation,
+  type ClientProject,
+  type CourseRecommendation,
+} from '../lib/dataServiceLocal';
 
 // Props
 interface AdminDashboardProps {
@@ -62,6 +70,10 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const [categories, setCategories] = useState<Category[]>([]);
   const [usedTags, setUsedTags] = useState<string[]>([]);
   
+  // 战略陪伴客户同步（写入 dataServiceLocal.course_recommendations）
+  const [strategyClients, setStrategyClients] = useState<ClientProject[]>([]);
+  const [syncClientIds, setSyncClientIds] = useState<string[]>([]);
+
   // 评论管理状态
   const [comments, setComments] = useState<Comment[]>([]);
   const [showCommentReplyModal, setShowCommentReplyModal] = useState(false);
@@ -133,6 +145,63 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       document.removeEventListener('paste', handlePaste);
     };
   }, [showReportForm]);
+
+  // 加载战略陪伴客户列表（用于内容同步）
+  useEffect(() => {
+    let canceled = false;
+
+    const load = async () => {
+      try {
+        const clients = await getStrategyClients();
+        if (!canceled) setStrategyClients(clients);
+      } catch (e) {
+        console.warn('加载战略客户失败:', e);
+      }
+    };
+
+    load();
+
+    const onChange = () => load();
+    window.addEventListener('yiyu_data_change', onChange);
+    window.addEventListener('storage', onChange);
+
+    return () => {
+      canceled = true;
+      window.removeEventListener('yiyu_data_change', onChange);
+      window.removeEventListener('storage', onChange);
+    };
+  }, []);
+
+  // 打开内容编辑表单时：自动读取已同步的客户勾选
+  useEffect(() => {
+    const internalType = showReportForm ? 'report' : showInsightForm ? 'article' : showBookForm ? 'book' : null;
+    const internalId = editingItem?.id;
+
+    if (!internalType) return;
+
+    if (!internalId) {
+      setSyncClientIds([]);
+      return;
+    }
+
+    let canceled = false;
+    (async () => {
+      try {
+        const all = await getCourseRecommendations();
+        const ids = (all || [])
+          .filter(r => r.type === 'internal' && r.internalType === internalType && r.internalId === internalId)
+          .map(r => r.projectId);
+        if (!canceled) setSyncClientIds(Array.from(new Set(ids)));
+      } catch (e) {
+        console.warn('读取同步信息失败:', e);
+        setSyncClientIds([]);
+      }
+    })();
+
+    return () => {
+      canceled = true;
+    };
+  }, [showReportForm, showInsightForm, showBookForm, editingItem]);
 
   // 当页数变化时自动计算阅读时间
   useEffect(() => {
@@ -387,8 +456,70 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     setTags(prev => prev.filter(t => t !== tag));
   };
 
+  // 同步站内内容 → 战略陪伴客户的「课程推荐」（dataServiceLocal.course_recommendations）
+  const syncInternalCourseRecommendations = useCallback(
+    async (params: {
+      internalType: 'article' | 'report' | 'book';
+      internalId: string;
+      title: string;
+      selectedProjectIds: string[];
+    }) => {
+      const { internalType, internalId, title, selectedProjectIds } = params;
+      const selected = new Set((selectedProjectIds || []).filter(Boolean));
+
+      const all = await getCourseRecommendations();
+      const existing = (all || []).filter(
+        (r) => r.type === 'internal' && r.internalType === internalType && r.internalId === internalId
+      );
+
+      const existingByProject = new Map<string, CourseRecommendation>();
+      existing.forEach((r) => existingByProject.set(r.projectId, r));
+
+      const tasks: Promise<any>[] = [];
+
+      // create/update
+      selected.forEach((projectId) => {
+        const hit = existingByProject.get(projectId);
+        if (hit) {
+          if (hit.title !== title) {
+            tasks.push(
+              saveCourseRecommendation({
+                id: hit.id,
+                title,
+                isActive: true,
+              })
+            );
+          }
+        } else {
+          tasks.push(
+            saveCourseRecommendation({
+              projectId,
+              title,
+              type: 'internal',
+              internalType,
+              internalId,
+              description: '',
+              sortOrder: 0,
+              isActive: true,
+            })
+          );
+        }
+      });
+
+      // delete
+      existing.forEach((r) => {
+        if (!selected.has(r.projectId)) {
+          tasks.push(deleteCourseRecommendation(r.id));
+        }
+      });
+
+      await Promise.all(tasks);
+    },
+    []
+  );
+
   // 保存报告
-  const handleSaveReport = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveReport = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
@@ -411,7 +542,14 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       fileSize: reportFile ? reportFile.size : (editingItem as Report)?.fileSize,
     };
 
-    saveReport(reportData);
+    const saved = saveReport(reportData);
+    // 同步到战略陪伴客户（多选）
+    await syncInternalCourseRecommendations({
+      internalType: 'report',
+      internalId: saved.id,
+      title: saved.title,
+      selectedProjectIds: syncClientIds,
+    });
     refreshAllData();
     setShowReportForm(false);
     setEditingItem(null);
@@ -424,27 +562,30 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   };
 
   // 删除报告
-  const handleDeleteReport = (id: string) => {
+  const handleDeleteReport = async (id: string) => {
     if (window.confirm('确定要删除这份报告吗？')) {
       deleteReportFromService(id);
+      await syncInternalCourseRecommendations({ internalType: 'report', internalId: id, title: '', selectedProjectIds: [] });
       refreshAllData();
       setMessage({ type: 'success', text: '报告已删除' });
     }
   };
 
   // 删除洞察文章
-  const handleDeleteInsight = (id: string) => {
+  const handleDeleteInsight = async (id: string) => {
     if (window.confirm('确定要删除这篇文章吗？')) {
       deleteInsightFromService(id);
+      await syncInternalCourseRecommendations({ internalType: 'article', internalId: id, title: '', selectedProjectIds: [] });
       refreshAllData();
       setMessage({ type: 'success', text: '文章已删除' });
     }
   };
 
   // 删除书籍
-  const handleDeleteBook = (id: string) => {
+  const handleDeleteBook = async (id: string) => {
     if (window.confirm('确定要删除这本书吗？')) {
       deleteBookFromService(id);
+      await syncInternalCourseRecommendations({ internalType: 'book', internalId: id, title: '', selectedProjectIds: [] });
       refreshAllData();
       setMessage({ type: 'success', text: '书籍已删除' });
     }
@@ -753,6 +894,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   <button
                     onClick={() => {
                       setEditingItem(null);
+                      setSyncClientIds([]);
                       setShowInsightForm(true);
                     }}
                     className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors"
@@ -827,6 +969,16 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
                                 onClick={() => {
                                   setEditingItem(article);
+                                  setSyncClientIds([]);
+                                  (async () => {
+                                    try {
+                                      const all = await getCourseRecommendations();
+                                      const ids = (all || [])
+                                        .filter(r => r.type === 'internal' && r.internalType === 'article' && r.internalId === article.id)
+                                        .map(r => r.projectId);
+                                      setSyncClientIds(ids);
+                                    } catch {}
+                                  })();
                                   setShowInsightForm(true);
                                 }}
                                 title="编辑"
@@ -909,6 +1061,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       setReportPages(0);
                       setCalculatedReadTime('');
                       setReportStatus('published');
+                      setSyncClientIds([]);
                       setShowReportForm(true);
                     }}
                     className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors"
@@ -984,6 +1137,16 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                   setCoverImage(report.coverImage);
                                   setReportPages(report.pages || 0);
                                   setCalculatedReadTime(report.pages ? calculateReadTime(report.pages) : '');
+                                  setSyncClientIds([]);
+                                  (async () => {
+                                    try {
+                                      const all = await getCourseRecommendations();
+                                      const ids = (all || [])
+                                        .filter(r => r.type === 'internal' && r.internalType === 'report' && r.internalId === report.id)
+                                        .map(r => r.projectId);
+                                      setSyncClientIds(ids);
+                                    } catch {}
+                                  })();
                                   setShowReportForm(true);
                                 }}
                                 title="编辑"
@@ -1063,6 +1226,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                     onClick={() => {
                       setEditingItem(null);
                       setBookCoverImage(null);
+                      setSyncClientIds([]);
                       setShowBookForm(true);
                     }}
                     className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors"
@@ -1135,6 +1299,16 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                 onClick={() => {
                                   setEditingItem(book);
                                   setBookCoverImage(book.coverImage || null);
+                                  setSyncClientIds([]);
+                                  (async () => {
+                                    try {
+                                      const all = await getCourseRecommendations();
+                                      const ids = (all || [])
+                                        .filter(r => r.type === 'internal' && r.internalType === 'book' && r.internalId === book.id)
+                                        .map(r => r.projectId);
+                                      setSyncClientIds(ids);
+                                    } catch {}
+                                  })();
                                   setShowBookForm(true);
                                 }}
                                 title="编辑"
@@ -1751,6 +1925,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               handleCoverImageSelect={handleCoverImageSelect}
               handleAddTag={handleAddTag}
               handleRemoveTag={handleRemoveTag}
+              strategyClients={strategyClients}
+              syncClientIds={syncClientIds}
+              setSyncClientIds={setSyncClientIds}
               reportFile={reportFile}
               setReportFile={setReportFile}
               setCalculatedReadTime={setCalculatedReadTime}
@@ -1772,7 +1949,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setShowInsightForm(false);
                 setEditingItem(null);
               }}
-              onSave={(e: React.FormEvent<HTMLFormElement>) => {
+              onSave={async (e: React.FormEvent<HTMLFormElement>) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
                 const tags = (formData.get('tags') as string)?.split(',').map(t => t.trim()).filter(Boolean) || [];
@@ -1791,7 +1968,13 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   featured: formData.get('featured') === 'on',
                 };
                 
-                saveInsight(articleData);
+                const saved = saveInsight(articleData);
+                await syncInternalCourseRecommendations({
+                  internalType: 'article',
+                  internalId: saved.id,
+                  title: saved.title,
+                  selectedProjectIds: syncClientIds,
+                });
                 refreshAllData();
                 setShowInsightForm(false);
                 setEditingItem(null);
@@ -1799,6 +1982,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               }}
               handleAddTag={handleAddTag}
               handleRemoveTag={handleRemoveTag}
+              strategyClients={strategyClients}
+              syncClientIds={syncClientIds}
+              setSyncClientIds={setSyncClientIds}
             />
           )}
 
@@ -1813,7 +1999,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setEditingItem(null);
                 setBookCoverImage(null);
               }}
-              onSave={(e: React.FormEvent<HTMLFormElement>) => {
+              onSave={async (e: React.FormEvent<HTMLFormElement>) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
                 const tags = (formData.get('tags') as string)?.split(',').map(t => t.trim()).filter(Boolean) || [];
@@ -1835,7 +2021,13 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   status: formData.get('status') as 'draft' | 'published',
                 };
                 
-                saveBook(bookData);
+                const saved = saveBook(bookData);
+                await syncInternalCourseRecommendations({
+                  internalType: 'book',
+                  internalId: saved.id,
+                  title: saved.title,
+                  selectedProjectIds: syncClientIds,
+                });
                 refreshAllData();
                 setShowBookForm(false);
                 setEditingItem(null);
@@ -1844,6 +2036,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               }}
               handleAddTag={handleAddTag}
               handleRemoveTag={handleRemoveTag}
+              strategyClients={strategyClients}
+              syncClientIds={syncClientIds}
+              setSyncClientIds={setSyncClientIds}
               bookCoverImage={bookCoverImage}
               setBookCoverImage={setBookCoverImage}
               bookCoverFileInputRef={bookCoverFileInputRef}
@@ -1953,6 +2148,10 @@ interface ReportFormModalProps {
   reportFileInputRef: React.RefObject<HTMLInputElement>;
   handleReportFileButtonClick: () => void;
   handleReportFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  strategyClients: ClientProject[];
+  syncClientIds: string[];
+  setSyncClientIds: React.Dispatch<React.SetStateAction<string[]>>;
+
 }
 
 function ReportFormModal({
@@ -1981,6 +2180,9 @@ function ReportFormModal({
   reportFileInputRef,
   handleReportFileButtonClick,
   handleReportFileSelect,
+  strategyClients,
+  syncClientIds,
+  setSyncClientIds,
 }: ReportFormModalProps) {
   const [tags, setTags] = useState<string[]>(editingItem?.tags || []);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
@@ -2322,6 +2524,59 @@ function ReportFormModal({
               defaultValue={editingItem?.summary || ''}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
             />
+
+
+          {/* 同步到战略陪伴客户 */}
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-800">同步到战略陪伴客户</label>
+                <p className="text-xs text-gray-600 mt-1">勾选后，保存时将把该内容写入对应客户的「课程推荐」（站内）。</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSyncClientIds(strategyClients.map(c => c.id))}
+                  className="px-3 py-1.5 text-xs bg-white border rounded-lg hover:bg-gray-100"
+                >
+                  全选
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSyncClientIds([])}
+                  className="px-3 py-1.5 text-xs bg-white border rounded-lg hover:bg-gray-100"
+                >
+                  清空
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2 max-h-40 overflow-auto">
+              {strategyClients.length === 0 ? (
+                <div className="text-xs text-gray-500">暂无战略陪伴客户（请先在「战略客户」菜单添加）</div>
+              ) : (
+                strategyClients.map((c) => {
+                  const checked = syncClientIds.includes(c.id);
+                  return (
+                    <label key={c.id} className="flex items-center gap-2 text-sm text-gray-800">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          const on = e.target.checked;
+                          setSyncClientIds((prev) =>
+                            on ? Array.from(new Set([...prev, c.id])) : prev.filter((x) => x !== c.id)
+                          );
+                        }}
+                        className="w-4 h-4 text-green-600 rounded"
+                      />
+                      <span>{c.clientName}</span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+          </div>
           </div>
           
           {/* 需求2：标签自动完成和历史记录 */}
@@ -2508,6 +2763,10 @@ interface InsightFormModalProps {
   onSave: (e: React.FormEvent<HTMLFormElement>) => void;
   handleAddTag: (tag: string, input: HTMLInputElement, setTags: React.Dispatch<React.SetStateAction<string[]>>) => void;
   handleRemoveTag: (tag: string, setTags: React.Dispatch<React.SetStateAction<string[]>>) => void;
+  strategyClients: ClientProject[];
+  syncClientIds: string[];
+  setSyncClientIds: React.Dispatch<React.SetStateAction<string[]>>;
+
 }
 
 function InsightFormModal({
@@ -2518,6 +2777,9 @@ function InsightFormModal({
   onSave,
   handleAddTag,
   handleRemoveTag,
+  strategyClients,
+  syncClientIds,
+  setSyncClientIds,
 }: InsightFormModalProps) {
   const [tags, setTags] = useState<string[]>(editingItem?.tags || []);
   const tagInputRef = useRef<HTMLInputElement>(null);
@@ -2615,6 +2877,59 @@ function InsightFormModal({
             />
           </div>
           
+
+
+          {/* 同步到战略陪伴客户 */}
+          <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-800">同步到战略陪伴客户</label>
+                <p className="text-xs text-gray-600 mt-1">保存时将把该文章写入对应客户的「课程推荐」（站内）。</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSyncClientIds(strategyClients.map(c => c.id))}
+                  className="px-3 py-1.5 text-xs bg-white border rounded-lg hover:bg-gray-100"
+                >
+                  全选
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSyncClientIds([])}
+                  className="px-3 py-1.5 text-xs bg-white border rounded-lg hover:bg-gray-100"
+                >
+                  清空
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2 max-h-40 overflow-auto">
+              {strategyClients.length === 0 ? (
+                <div className="text-xs text-gray-500">暂无战略陪伴客户（请先在「战略客户」菜单添加）</div>
+              ) : (
+                strategyClients.map((c) => {
+                  const checked = syncClientIds.includes(c.id);
+                  return (
+                    <label key={c.id} className="flex items-center gap-2 text-sm text-gray-800">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          const on = e.target.checked;
+                          setSyncClientIds((prev) =>
+                            on ? Array.from(new Set([...prev, c.id])) : prev.filter((x) => x !== c.id)
+                          );
+                        }}
+                        className="w-4 h-4 text-purple-600 rounded"
+                      />
+                      <span>{c.clientName}</span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+          </div>
           {/* 阅读时间和发布日期 */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -2814,6 +3129,10 @@ interface BookFormModalProps {
   bookCoverFileInputRef: React.RefObject<HTMLInputElement>;
   handleBookCoverButtonClick: () => void;
   handleBookCoverImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  strategyClients: ClientProject[];
+  syncClientIds: string[];
+  setSyncClientIds: React.Dispatch<React.SetStateAction<string[]>>;
+
 }
 
 function BookFormModal({
@@ -2829,6 +3148,9 @@ function BookFormModal({
   bookCoverFileInputRef,
   handleBookCoverButtonClick,
   handleBookCoverImageSelect,
+  strategyClients,
+  syncClientIds,
+  setSyncClientIds,
 }: BookFormModalProps) {
   const [tags, setTags] = useState<string[]>(editingItem?.tags || []);
   const tagInputRef = useRef<HTMLInputElement>(null);
@@ -3078,6 +3400,59 @@ function BookFormModal({
             </div>
           </div>
           
+
+
+          {/* 同步到战略陪伴客户 */}
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-800">同步到战略陪伴客户</label>
+                <p className="text-xs text-gray-600 mt-1">保存时将把该书写入对应客户的「课程推荐」（站内）。</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSyncClientIds(strategyClients.map(c => c.id))}
+                  className="px-3 py-1.5 text-xs bg-white border rounded-lg hover:bg-gray-100"
+                >
+                  全选
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSyncClientIds([])}
+                  className="px-3 py-1.5 text-xs bg-white border rounded-lg hover:bg-gray-100"
+                >
+                  清空
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2 max-h-40 overflow-auto">
+              {strategyClients.length === 0 ? (
+                <div className="text-xs text-gray-500">暂无战略陪伴客户（请先在「战略客户」菜单添加）</div>
+              ) : (
+                strategyClients.map((c) => {
+                  const checked = syncClientIds.includes(c.id);
+                  return (
+                    <label key={c.id} className="flex items-center gap-2 text-sm text-gray-800">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          const on = e.target.checked;
+                          setSyncClientIds((prev) =>
+                            on ? Array.from(new Set([...prev, c.id])) : prev.filter((x) => x !== c.id)
+                          );
+                        }}
+                        className="w-4 h-4 text-amber-600 rounded"
+                      />
+                      <span>{c.clientName}</span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+          </div>
           {/* 标签 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">

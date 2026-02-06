@@ -30,9 +30,6 @@ import {
   getProjectMeetings,
   saveProjectMeeting,
   deleteProjectMeeting,
-  getCourseRecommendations,
-  saveCourseRecommendation,
-  deleteCourseRecommendation,
   getClientProjects,
   saveClientProject,
   deleteClientProject,
@@ -42,7 +39,6 @@ import {
   ProjectEvent,
   ProjectDocument,
   ProjectMeeting,
-  CourseRecommendation,
   ClientProject,
 } from '../lib/dataServiceLocal';
 
@@ -330,7 +326,6 @@ interface DataManagementTabsProps {
   events: ProjectEvent[];
   documents: ProjectDocument[];
   meetings: ProjectMeeting[];
-  courses: CourseRecommendation[];
   goalMetrics: Record<string, GoalMetric[]>;
   onEditMilestone: (m: StrategicMilestone) => void;
   onDeleteMilestone: (id: string) => void;
@@ -348,9 +343,6 @@ interface DataManagementTabsProps {
   onEditMeeting: (m: ProjectMeeting) => void;
   onDeleteMeeting: (id: string) => void;
   onAddMeeting: () => void;
-  onEditCourse: (c: CourseRecommendation) => void;
-  onDeleteCourse: (id: string) => void;
-  onAddCourse: () => void;
 }
 
 const DataManagementTabs: React.FC<DataManagementTabsProps> = ({
@@ -361,7 +353,6 @@ const DataManagementTabs: React.FC<DataManagementTabsProps> = ({
   events,
   documents,
   meetings,
-  courses,
   goalMetrics,
   onEditMilestone,
   onDeleteMilestone,
@@ -379,9 +370,6 @@ const DataManagementTabs: React.FC<DataManagementTabsProps> = ({
   onEditMeeting,
   onDeleteMeeting,
   onAddMeeting,
-  onEditCourse,
-  onDeleteCourse,
-  onAddCourse,
 }) => {
   const tabs = [
     { id: 'milestones', label: '里程碑', count: milestones.length },
@@ -389,7 +377,6 @@ const DataManagementTabs: React.FC<DataManagementTabsProps> = ({
     { id: 'events', label: '事件', count: events.length },
     { id: 'documents', label: '文档', count: documents.length },
     { id: 'meetings', label: '会议', count: meetings.length },
-    { id: 'courses', label: '课程推荐', count: courses.length },
   ];
 
   return (
@@ -837,80 +824,6 @@ const DataManagementTabs: React.FC<DataManagementTabsProps> = ({
           </div>
         )}
 
-        {/* 课程推荐管理 */}
-        {activeTab === 'courses' && (
-          <div className="p-6">
-            <div className="flex justify-end mb-4">
-              <button
-                onClick={onAddCourse}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                添加推荐
-              </button>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">标题</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">类型</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">来源/链接</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {courses.map((c) => (
-                    <tr key={c.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm text-gray-900">{c.title}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {c.type === 'internal' ? `站内（${c.internalType || 'article'}）` : '外部链接'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {c.type === 'external' ? (
-                          c.url ? (
-                            <a
-                              href={c.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-800"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {c.sourceName ? `${c.sourceName} · ` : ''}{c.url}
-                            </a>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )
-                        ) : (
-                          <span className="text-gray-500">internalId: {c.internalId || '-'}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => onEditCourse(c)}
-                            className="text-blue-600 hover:text-blue-800 text-sm"
-                          >
-                            编辑
-                          </button>
-                          <button
-                            onClick={() => onDeleteCourse(c.id)}
-                            className="text-red-600 hover:text-red-800 text-sm"
-                          >
-                            删除
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -940,6 +853,97 @@ const Modal: React.FC<{
       </div>
     </div>
   );
+};
+
+
+const parseClientStrategyPaste = (raw: string): {
+  mission?: string;
+  vision?: string;
+  values?: string[];
+  milestones?: string[];
+} => {
+  const input = (raw || '').replace(/\r\n/g, '\n').trim();
+  if (!input) return {};
+
+  const lines = input
+    .split(/\n+/)
+    .map(l => l.trim())
+    .filter(Boolean);
+
+  const cleanBullet = (s: string) =>
+    s
+      .replace(/^[\u2022\u25CF\u25A0\-\*\+]+\s*/, '')
+      .replace(/^\(?\d+\)?[\.、\)]\s*/, '')
+      .replace(/^（\d+）\s*/, '')
+      .trim();
+
+  const takeAfterColon = (line: string) => {
+    const m = line.match(/[:：]\s*(.+)$/);
+    return m?.[1]?.trim() || '';
+  };
+
+  const headingMatchers = {
+    mission: [/使命/i, /\bmission\b/i],
+    vision: [/愿景/i, /\bvision\b/i],
+    values: [/价值观/i, /核心价值观/i, /\bvalues\b/i],
+    milestones: [/里程碑/i, /\bmilestones?\b/i, /阶段/i],
+  } as const;
+
+  const isHeadingLine = (line: string) => {
+    const t = line.trim();
+    const patterns = [
+      ...headingMatchers.mission,
+      ...headingMatchers.vision,
+      ...headingMatchers.values,
+      ...headingMatchers.milestones,
+    ];
+    return patterns.some(r => r.test(t));
+  };
+
+  const extractSection = (patterns: readonly RegExp[]) => {
+    const idx = lines.findIndex(l => patterns.some(r => r.test(l)));
+    if (idx === -1) return '';
+
+    const sameLine = takeAfterColon(lines[idx]);
+    if (sameLine) return sameLine;
+
+    const collected: string[] = [];
+    for (let i = idx + 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (isHeadingLine(line)) break;
+      collected.push(line);
+    }
+    return collected.join('\n').trim();
+  };
+
+  const mission = extractSection(headingMatchers.mission);
+  const vision = extractSection(headingMatchers.vision);
+
+  const valuesText = extractSection(headingMatchers.values);
+  const values = valuesText
+    ? valuesText
+        .split(/[\n,，、；;\/\|]+/)
+        .map(s => cleanBullet(s))
+        .filter(Boolean)
+        .slice(0, 8)
+    : undefined;
+
+  const milestonesText = extractSection(headingMatchers.milestones);
+  const milestones = milestonesText
+    ? milestonesText
+        .split(/\n+/)
+        .map(s => cleanBullet(s))
+        .filter(Boolean)
+        .filter(s => s.length >= 2)
+        .slice(0, 10)
+    : undefined;
+
+  return {
+    mission: mission || undefined,
+    vision: vision || undefined,
+    values: values && values.length ? values : undefined,
+    milestones: milestones && milestones.length ? milestones : undefined,
+  };
 };
 
 const AdminStrategyCompanionPage: React.FC = () => {
@@ -974,15 +978,42 @@ const AdminStrategyCompanionPage: React.FC = () => {
   const [editingMeeting, setEditingMeeting] = useState<ProjectMeeting | null>(null);
   const [showMeetingModal, setShowMeetingModal] = useState(false);
 
-  // 课程推荐
-  const [courses, setCourses] = useState<CourseRecommendation[]>([]);
-  const [editingCourse, setEditingCourse] = useState<CourseRecommendation | null>(null);
-  const [showCourseModal, setShowCourseModal] = useState(false);
-  
   // 客户项目数据
   const [editingProject, setEditingProject] = useState<ClientProject | null>(null);
   const [showProjectModal, setShowProjectModal] = useState(false);
-  
+
+  // 客户编辑表单（用于“粘贴自动识别”）
+  const [clientForm, setClientForm] = useState({
+    clientName: '',
+    startDate: '',
+    endDate: '',
+    status: 'active' as 'active' | 'completed' | 'paused',
+    description: '',
+    mission: '',
+    vision: '',
+    valuesText: '',
+    pasteText: '',
+  });
+  const [parsedMilestoneTitles, setParsedMilestoneTitles] = useState<string[]>([]);
+  const [applyParsedMilestones, setApplyParsedMilestones] = useState(true);
+
+  useEffect(() => {
+    if (!showProjectModal) return;
+    setClientForm({
+      clientName: editingProject?.clientName || '',
+      startDate: editingProject?.startDate || '',
+      endDate: editingProject?.endDate || '',
+      status: (editingProject?.status || 'active') as 'active' | 'completed' | 'paused',
+      description: editingProject?.description || '',
+      mission: editingProject?.mission || '',
+      vision: editingProject?.vision || '',
+      valuesText: (editingProject?.values || []).join('，'),
+      pasteText: '',
+    });
+    setParsedMilestoneTitles([]);
+    setApplyParsedMilestones(true);
+  }, [showProjectModal, editingProject]);
+
   // 加载数据
   // 1) 加载客户列表
   useEffect(() => {
@@ -1015,7 +1046,6 @@ const AdminStrategyCompanionPage: React.FC = () => {
       setEvents([]);
       setDocuments([]);
       setMeetings([]);
-      setCourses([]);
       setGoalMetrics({});
       return;
     }
@@ -1024,13 +1054,12 @@ const AdminStrategyCompanionPage: React.FC = () => {
     let canceled = false;
 
     const loadProjectData = async () => {
-      const [milesData, goalsData, eventsData, docsData, meetingsData, coursesData] = await Promise.all([
+      const [milesData, goalsData, eventsData, docsData, meetingsData] = await Promise.all([
         getStrategicMilestones(projectId),
         getStrategicGoals(projectId),
         getProjectEvents(projectId),
         getProjectDocuments(projectId),
         getProjectMeetings(projectId),
-        getCourseRecommendations(projectId),
       ]);
 
       if (canceled) return;
@@ -1040,7 +1069,6 @@ const AdminStrategyCompanionPage: React.FC = () => {
       setEvents(eventsData);
       setDocuments(docsData);
       setMeetings(meetingsData);
-      setCourses(coursesData);
 
       // 加载当前客户目标的指标
       const metricsResults = await Promise.all(
@@ -1094,8 +1122,41 @@ const AdminStrategyCompanionPage: React.FC = () => {
             : [...prev, saved]
         );
         
+        // 粘贴自动识别：可选地把识别出的里程碑写入该客户
+        if (applyParsedMilestones && parsedMilestoneTitles.length > 0) {
+          try {
+            const existing = await getStrategicMilestones(saved.id);
+            const existingTitles = new Set((existing || []).map(m => (m.title || '').trim()).filter(Boolean));
+            const toCreate = parsedMilestoneTitles
+              .map(t => (t || '').trim())
+              .filter(Boolean)
+              .filter(t => !existingTitles.has(t));
+
+            await Promise.all(
+              toCreate.map((title, i) =>
+                saveStrategicMilestone({
+                  projectId: saved.id,
+                  title,
+                  description: '',
+                  status: 'pending',
+                  phaseOrder: (existing?.length || 0) + i + 1,
+                  coreGoal: '',
+                  deliverable: '',
+                  participants: [],
+                  outputs: [],
+                  milestoneDate: undefined,
+                  sortOrder: (existing?.length || 0) + i,
+                  isActive: true,
+                } as any)
+              )
+            );
+          } catch (e) {
+            console.warn('自动添加里程碑失败（已忽略）:', e);
+          }
+        }
+
         //（Iteration2）项目状态变化不再联动里程碑（里程碑已按客户独立维护）
-setShowProjectModal(false);
+        setShowProjectModal(false);
         setEditingProject(null);
         // 如果是新添加的客户，自动选中
         if (!data.id) {
@@ -1269,34 +1330,6 @@ setShowProjectModal(false);
     }
   };
 
-  // 课程推荐操作
-  const handleSaveCourse = async (data: Partial<CourseRecommendation>) => {
-    if (!selectedClient) {
-      alert('请先选择一个客户');
-      return;
-    }
-
-    const saved = await saveCourseRecommendation({
-      ...data,
-      projectId: data.projectId || selectedClient.id,
-    } as CourseRecommendation);
-
-    if (saved) {
-      setCourses(prev => (data.id ? prev.map(c => (c.id === data.id ? saved : c)) : [...prev, saved]));
-      setShowCourseModal(false);
-      setEditingCourse(null);
-    }
-  };
-
-  const handleDeleteCourse = async (id: string) => {
-    if (window.confirm('确定要删除这条课程推荐吗？')) {
-      const success = await deleteCourseRecommendation(id);
-      if (success) {
-        setCourses(prev => prev.filter(c => c.id !== id));
-      }
-    }
-  };
-  
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       {/* 页面标题 */}
@@ -1361,7 +1394,6 @@ setShowProjectModal(false);
                 events={events}
                 documents={documents}
                 meetings={meetings}
-                courses={courses}
                 goalMetrics={goalMetrics}
                 onEditMilestone={(m) => {
                   setEditingMilestone(m);
@@ -1408,15 +1440,6 @@ setShowProjectModal(false);
                 onAddMeeting={() => {
                   setEditingMeeting(null);
                   setShowMeetingModal(true);
-                }}
-                onEditCourse={(c) => {
-                  setEditingCourse(c);
-                  setShowCourseModal(true);
-                }}
-                onDeleteCourse={handleDeleteCourse}
-                onAddCourse={() => {
-                  setEditingCourse(null);
-                  setShowCourseModal(true);
                 }}
               />
             </>
@@ -2134,17 +2157,16 @@ let attachmentUrl = editingGoal?.attachmentUrl;
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            const formData = new FormData(e.currentTarget);
             const submitData: Partial<ClientProject> = {
               id: editingProject?.id,
-              clientName: formData.get('clientName') as string,
-              startDate: (formData.get('startDate') as string) || undefined,
-              endDate: (formData.get('endDate') as string) || undefined,
-              status: (formData.get('status') as string) as 'active' | 'completed' | 'paused',
-              description: formData.get('description') as string,
-              mission: (formData.get('mission') as string) || undefined,
-              vision: (formData.get('vision') as string) || undefined,
-              values: String(formData.get('values') || '')
+              clientName: clientForm.clientName,
+              startDate: clientForm.startDate || undefined,
+              endDate: clientForm.endDate || undefined,
+              status: clientForm.status,
+              description: clientForm.description,
+              mission: clientForm.mission || undefined,
+              vision: clientForm.vision || undefined,
+              values: String(clientForm.valuesText || '')
                 .split(/[,，\n]/)
                 .map(s => s.trim())
                 .filter(Boolean)
@@ -2152,13 +2174,15 @@ let attachmentUrl = editingGoal?.attachmentUrl;
             };
             handleSaveProject(submitData);
           }}
+
           className="space-y-4"
         >
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">客户名称</label>
             <input
               name="clientName"
-              defaultValue={editingProject?.clientName}
+              value={clientForm.clientName}
+              onChange={(e) => setClientForm(prev => ({ ...prev, clientName: e.target.value }))}
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               placeholder="请输入客户名称"
               required
@@ -2170,7 +2194,8 @@ let attachmentUrl = editingGoal?.attachmentUrl;
               <input
                 name="startDate"
                 type="date"
-                defaultValue={editingProject?.startDate}
+                value={clientForm.startDate}
+                onChange={(e) => setClientForm(prev => ({ ...prev, startDate: e.target.value }))}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -2179,7 +2204,8 @@ let attachmentUrl = editingGoal?.attachmentUrl;
               <input
                 name="endDate"
                 type="date"
-                defaultValue={editingProject?.endDate}
+                value={clientForm.endDate}
+                onChange={(e) => setClientForm(prev => ({ ...prev, endDate: e.target.value }))}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -2188,7 +2214,8 @@ let attachmentUrl = editingGoal?.attachmentUrl;
             <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
             <select
               name="status"
-              defaultValue={editingProject?.status || 'active'}
+              value={clientForm.status}
+              onChange={(e) => setClientForm(prev => ({ ...prev, status: e.target.value as any }))}
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
             >
               <option value="active">进行中</option>
@@ -2200,18 +2227,68 @@ let attachmentUrl = editingGoal?.attachmentUrl;
             <label className="block text-sm font-medium text-gray-700 mb-1">描述</label>
             <textarea
               name="description"
-              defaultValue={editingProject?.description}
+              value={clientForm.description}
+              onChange={(e) => setClientForm(prev => ({ ...prev, description: e.target.value }))}
               rows={3}
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               placeholder="请输入客户描述"
             />
           </div>
 
+
+
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">粘贴自动识别</label>
+              <button
+                type="button"
+                onClick={() => {
+                  const parsed = parseClientStrategyPaste(clientForm.pasteText);
+                  setClientForm(prev => ({
+                    ...prev,
+                    mission: parsed.mission ?? prev.mission,
+                    vision: parsed.vision ?? prev.vision,
+                    valuesText: parsed.values?.join('，') ?? prev.valuesText,
+                  }));
+                  setParsedMilestoneTitles(parsed.milestones || []);
+                }}
+                className="px-3 py-1.5 text-sm bg-white border rounded-lg hover:bg-gray-100"
+              >
+                识别并填充
+              </button>
+            </div>
+            <textarea
+              value={clientForm.pasteText}
+              onChange={(e) => setClientForm(prev => ({ ...prev, pasteText: e.target.value }))}
+              rows={4}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="把客户的战略材料粘贴到这里（包含 Mission / Vision / Values / 里程碑等），点击“识别并填充”即可自动拆分到下方字段。"
+            />
+            {parsedMilestoneTitles.length > 0 && (
+              <div className="mt-2">
+                <label className="flex items-center gap-2 text-xs text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={applyParsedMilestones}
+                    onChange={(e) => setApplyParsedMilestones(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 rounded"
+                  />
+                  <span>保存时自动添加识别出的里程碑（{parsedMilestoneTitles.length} 条）</span>
+                </label>
+                <ul className="mt-1 list-disc pl-5 text-xs text-gray-600">
+                  {parsedMilestoneTitles.slice(0, 5).map((t, i) => (
+                    <li key={i}>{t}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Mission（使命）</label>
             <textarea
               name="mission"
-              defaultValue={editingProject?.mission}
+              value={clientForm.mission}
+              onChange={(e) => setClientForm(prev => ({ ...prev, mission: e.target.value }))}
               rows={3}
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               placeholder="请输入使命（前台 Mission 区域展示）"
@@ -2222,7 +2299,8 @@ let attachmentUrl = editingGoal?.attachmentUrl;
             <label className="block text-sm font-medium text-gray-700 mb-1">Vision（愿景）</label>
             <textarea
               name="vision"
-              defaultValue={editingProject?.vision}
+              value={clientForm.vision}
+              onChange={(e) => setClientForm(prev => ({ ...prev, vision: e.target.value }))}
               rows={3}
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               placeholder="请输入愿景（前台 Vision 区域展示）"
@@ -2233,7 +2311,8 @@ let attachmentUrl = editingGoal?.attachmentUrl;
             <label className="block text-sm font-medium text-gray-700 mb-1">Values（价值观标签）</label>
             <textarea
               name="values"
-              defaultValue={(editingProject?.values || []).join('，')}
+              value={clientForm.valuesText}
+              onChange={(e) => setClientForm(prev => ({ ...prev, valuesText: e.target.value }))}
               rows={2}
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               placeholder="用逗号/中文逗号/换行分隔，例如：深度陪伴，系统思维，价值共创，长期主义"
@@ -2261,140 +2340,6 @@ let attachmentUrl = editingGoal?.attachmentUrl;
         </form>
       </Modal>
 
-      {/* 课程推荐编辑弹窗 */}
-      <Modal
-        isOpen={showCourseModal}
-        onClose={() => {
-          setShowCourseModal(false);
-          setEditingCourse(null);
-        }}
-        title={editingCourse ? '编辑课程推荐' : '添加课程推荐'}
-      >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const formData = new FormData(e.currentTarget);
-            const type = (formData.get('type') as string) as 'internal' | 'external';
-            handleSaveCourse({
-              id: editingCourse?.id,
-              title: (formData.get('title') as string) || '',
-              description: (formData.get('description') as string) || '',
-              type,
-              internalType: type === 'internal' ? ((formData.get('internalType') as string) as any) : undefined,
-              internalId: type === 'internal' ? ((formData.get('internalId') as string) || undefined) : undefined,
-              url: type === 'external' ? ((formData.get('url') as string) || undefined) : undefined,
-              sourceName: type === 'external' ? ((formData.get('sourceName') as string) || undefined) : undefined,
-              sortOrder: parseInt((formData.get('sortOrder') as string) || '0', 10) || 0,
-              isActive: true,
-            });
-          }}
-          className="space-y-4"
-        >
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">标题</label>
-            <input
-              name="title"
-              defaultValue={editingCourse?.title}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">描述</label>
-            <textarea
-              name="description"
-              defaultValue={editingCourse?.description}
-              rows={3}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">类型</label>
-              <select
-                name="type"
-                defaultValue={editingCourse?.type || 'external'}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="external">外部链接</option>
-                <option value="internal">站内引用</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">排序</label>
-              <input
-                name="sortOrder"
-                type="number"
-                defaultValue={editingCourse?.sortOrder ?? 0}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">internalType（站内）</label>
-              <select
-                name="internalType"
-                defaultValue={editingCourse?.internalType || 'article'}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="article">article</option>
-                <option value="report">report</option>
-                <option value="book">book</option>
-              </select>
-              <p className="text-xs text-gray-500 mt-1">仅当类型为“站内引用”时有效</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">internalId（站内）</label>
-              <input
-                name="internalId"
-                defaultValue={editingCourse?.internalId}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">外部链接 URL</label>
-              <input
-                name="url"
-                defaultValue={editingCourse?.url}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="https://..."
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">来源名称</label>
-              <input
-                name="sourceName"
-                defaultValue={editingCourse?.sourceName}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="如：Coursera / 腾讯课堂"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={() => {
-                setShowCourseModal(false);
-                setEditingCourse(null);
-              }}
-              className="px-4 py-2 text-gray-700 border rounded-lg hover:bg-gray-50"
-            >
-              取消
-            </button>
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              保存
-            </button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 };
