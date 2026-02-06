@@ -93,33 +93,39 @@ import {
   type ClientProject
 } from '../lib/dataServiceLocal';
 
+function withBase(path: string) {
+  // Assets are served from Vite BASE_URL (important for GitHub Pages subpaths)
+  const base = import.meta.env.BASE_URL || '/';
+  return `${base}${path.replace(/^\//, '')}`;
+}
+
 function getClientCoverImage(clientName?: string) {
   const name = (clientName || '').trim();
   // Prefer existing case images if name matches.
   const map: Record<string, string> = {
-    '蓝信封': '/images/cases/blue-letter.png',
-    '中国乡村发展基金会': '/images/cases/china-rural-foundation.png',
-    '愿景资本': '/images/cases/vision-capital.png',
-    '日慈基金会': '/images/cases/rici-foundation.png',
-    '贝石公益基金会': '/images/cases/beike-foundation.png',
-    '贝壳公益基金会': '/images/cases/beike-foundation.png',
-    '蔚来汽车': '/images/cases/nio.png'
+    '蓝信封': 'images/cases/blue-letter.png',
+    '中国乡村发展基金会': 'images/cases/china-rural-foundation.png',
+    '愿景资本': 'images/cases/vision-capital.png',
+    '日慈基金会': 'images/cases/rici-foundation.png',
+    '贝石公益基金会': 'images/cases/beike-foundation.png',
+    '贝壳公益基金会': 'images/cases/beike-foundation.png',
+    '蔚来汽车': 'images/cases/nio.png'
   };
-  return map[name] || '/images/placeholders/client-default.svg';
+  return withBase(map[name] || 'images/placeholders/client-default.svg');
 }
 
 function getSectionThumb(kind: 'goal' | 'event' | 'document' | 'meeting' | 'course') {
   switch (kind) {
     case 'goal':
-      return '/images/placeholders/goal.svg';
+      return withBase('images/placeholders/goal.svg');
     case 'event':
-      return '/images/placeholders/event.svg';
+      return withBase('images/placeholders/event.svg');
     case 'document':
-      return '/images/placeholders/document.svg';
+      return withBase('images/placeholders/document.svg');
     case 'meeting':
-      return '/images/placeholders/meeting.svg';
+      return withBase('images/placeholders/meeting.svg');
     case 'course':
-      return '/images/placeholders/course.svg';
+      return withBase('images/placeholders/course.svg');
   }
 }
 
@@ -1320,9 +1326,9 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
         </div>
 
         {/* Mission & Vision & Values */}
-        <div className="grid grid-cols-12 gap-12 mb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 mb-12">
           {/* Left: Mission & Vision */}
-          <div className="col-span-8 space-y-8">
+          <div className="lg:col-span-8 space-y-8">
             {/* Mission */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
@@ -1347,7 +1353,7 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
           </div>
 
           {/* Right: Values */}
-          <div className="col-span-4">
+          <div className="lg:col-span-4">
             <div className="flex items-center gap-2 mb-4">
               <Star className="w-4 h-4 text-amber-500" />
               <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Values</span>
@@ -1368,7 +1374,7 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
         {/* Milestones Timeline */}
         <div className="mb-12">
           <h2 className="text-[18px] font-semibold text-slate-800 mb-6">战略里程碑</h2>
-          <div className="bg-white rounded-2xl border border-slate-100 p-8">
+          <div className="bg-white rounded-2xl border border-slate-100 p-6 sm:p-8 overflow-x-auto">
             <MilestoneTimeline 
               milestones={milestones}
               onMilestoneClick={setSelectedMilestone}
@@ -1384,7 +1390,7 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
               <div className="text-slate-400">加载中...</div>
             </div>
           ) : goals.length > 0 ? (
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {goals.map((goal) => (
                 <GoalCard key={goal.id} goal={goal} onDownload={(goal) => { alert(`正在下载目标方法文档\n\n目标: ${goal.title}\n\n这是一份帮助您达成本季度重点目标的方法论文档。`); }} />
               ))}
@@ -1411,7 +1417,7 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
         </div>
 
         {/* Documents & Meetings - Two Column Layout */}
-        <div className="grid grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
           {/* Documents */}
           <div>
             <h2 className="text-[18px] font-semibold text-slate-800 mb-6">文档资源</h2>
