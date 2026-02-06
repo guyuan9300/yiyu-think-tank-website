@@ -976,6 +976,64 @@ export const deleteCourseRecommendation = async (id: string): Promise<boolean> =
 
 export const getClientProjects = async (): Promise<ClientProject[]> => {
   const items = getData<ClientProject>(STORAGE_KEYS.client_projects);
+
+  // Migration/ensure: add “为爱黔行” demo client + downloadable interview docs when missing.
+  // This runs even if localStorage was already initialized, so users don’t have to clear cache.
+  const hasWeiai = items.some(p => (p.clientName || '').trim() === '为爱黔行');
+  if (!hasWeiai) {
+    const now = nowIso();
+    const weiaiId = uuidv4();
+
+    items.push({
+      id: weiaiId,
+      clientName: '为爱黔行',
+      projectName: '战略陪伴（演示）',
+      startDate: '2026-02-01',
+      endDate: '2026-12-31',
+      status: 'active',
+      description: '新建客户（可在后台继续补全 Mission/Vision/Values 与里程碑）',
+      mission: '',
+      vision: '',
+      values: [],
+      sortOrder: (Math.max(0, ...items.map(x => x.sortOrder ?? 0)) + 1) || 3,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+    saveData(STORAGE_KEYS.client_projects, items);
+
+    // Seed “整理稿”下载文档（可在后台再编辑分类/描述）
+    const docs = getData<ProjectDocument>(STORAGE_KEYS.project_documents);
+    const base = '/yiyu-think-tank-website/docs/weiaiqianxing';
+    const seed = [
+      { title: '项目三姐妹（访谈整理稿）', file: '为爱黔行_项目三姐妹（整理稿）.docx' },
+      { title: '吴老师（创始人）第一次访谈（整理稿）', file: '为爱黔行_吴老师_创始人_第一次访谈（整理稿）.docx' },
+      { title: '陶老师专访（整理稿）', file: '为爱黔行_陶老师专访（整理稿）.docx' },
+    ];
+
+    seed.forEach((s, idx) => {
+      docs.push({
+        id: uuidv4(),
+        projectId: weiaiId,
+        category: 'assessment',
+        title: s.title,
+        description: '访谈文字整理稿（可下载）',
+        docDate: '2026-02-06',
+        meta: 'DOCX',
+        fileType: 'doc',
+        fileUrl: `${base}/${encodeURIComponent(s.file)}`,
+        passwordProtected: false,
+        sortOrder: idx + 1,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    saveData(STORAGE_KEYS.project_documents, docs);
+    emitChange();
+  }
+
   return items
     .filter(p => p.isActive !== false)
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || (a.createdAt || '').localeCompare(b.createdAt || ''));

@@ -1129,28 +1129,30 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
     // 检查是否需要密码
     if (doc.passwordProtected && doc.password) {
       const userPassword = prompt(`文档「${doc.title}」已设置密码保护\n\n请输入6位数字下载密码：`);
-      
-      if (!userPassword) {
-        // 用户取消输入
-        return;
-      }
-      
+
+      if (!userPassword) return;
+
       if (userPassword !== doc.password) {
         alert('❌ 密码错误，无法下载\n\n请联系管理员获取正确的下载密码');
         return;
       }
-      
-      // 密码正确，继续下载
+
       alert('✅ 密码验证成功');
     }
-    
+
+    // Prefer real link/file
+    const url = doc.documentLink || doc.fileUrl;
+    if (url) {
+      window.open(url, '_blank');
+      return;
+    }
+
+    // Fallback
     setDownloadingDoc(doc.id);
-    
-    // Simulate download
     setTimeout(() => {
       setDownloadingDoc(null);
-      alert(`正在下载: ${doc.title}\n\n文件类型: ${doc.fileType?.toUpperCase() || '未知'}\n大小: ${doc.meta}`);
-    }, 1000);
+      alert(`暂无可下载链接：${doc.title}\n\n请在后台为该文档填写 fileUrl 或 documentLink。`);
+    }, 400);
   };
 
 
