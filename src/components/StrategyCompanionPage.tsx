@@ -99,8 +99,9 @@ function withBase(path: string) {
   return `${base}${path.replace(/^\//, '')}`;
 }
 
-function getClientCoverImage(clientName?: string) {
-  const name = (clientName || '').trim();
+function getClientCoverImage(client: { clientName?: string; logoUrl?: string } | null | undefined) {
+  if (client?.logoUrl) return client.logoUrl;
+  const name = (client?.clientName || '').trim();
   // Prefer existing case images if name matches.
   const map: Record<string, string> = {
     '蓝信封': 'images/cases/blue-letter.png',
@@ -1277,7 +1278,7 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
                 {/* client cover */}
                 <div className="w-12 h-12 rounded-2xl overflow-hidden border border-slate-100 bg-white shadow-sm shrink-0">
                   <img
-                    src={getClientCoverImage(selectedClient?.clientName)}
+                    src={getClientCoverImage(selectedClient)}
                     alt=""
                     className="w-full h-full object-cover"
                     loading="lazy"

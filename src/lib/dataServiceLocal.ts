@@ -140,6 +140,9 @@ export interface ClientProject {
   status: 'active' | 'completed' | 'paused';
   description?: string;
 
+  // Branding
+  logoUrl?: string; // URL or data: URI
+
   // Client-specific page content
   mission?: string;
   vision?: string;
@@ -1061,6 +1064,7 @@ export const saveClientProject = async (project: Partial<ClientProject>): Promis
     endDate: project.endDate,
     status: project.status || 'active',
     description: project.description,
+    logoUrl: project.logoUrl,
     mission: project.mission,
     vision: project.vision,
     values: project.values || [],

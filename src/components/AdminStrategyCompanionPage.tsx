@@ -1092,6 +1092,7 @@ const AdminStrategyCompanionPage: React.FC = () => {
     endDate: '',
     status: 'active' as 'active' | 'completed' | 'paused',
     description: '',
+    logoUrl: '',
     mission: '',
     vision: '',
     valuesText: '',
@@ -1108,6 +1109,7 @@ const AdminStrategyCompanionPage: React.FC = () => {
       endDate: editingProject?.endDate || '',
       status: (editingProject?.status || 'active') as 'active' | 'completed' | 'paused',
       description: editingProject?.description || '',
+      logoUrl: editingProject?.logoUrl || '',
       mission: editingProject?.mission || '',
       vision: editingProject?.vision || '',
       valuesText: (editingProject?.values || []).join('，'),
@@ -2317,6 +2319,7 @@ let attachmentUrl = editingGoal?.attachmentUrl;
               endDate: clientForm.endDate || undefined,
               status: clientForm.status,
               description: clientForm.description,
+              logoUrl: clientForm.logoUrl || undefined,
               mission: clientForm.mission || undefined,
               vision: clientForm.vision || undefined,
               values: String(clientForm.valuesText || '')
@@ -2388,7 +2391,65 @@ let attachmentUrl = editingGoal?.attachmentUrl;
             />
           </div>
 
-
+          {/* Logo */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Logo（可选）</label>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-lg border border-gray-200 bg-white overflow-hidden flex items-center justify-center">
+                {clientForm.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={clientForm.logoUrl} alt="logo" className="w-full h-full object-contain" />
+                ) : (
+                  <span className="text-xs text-gray-400">无</span>
+                )}
+              </div>
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={clientForm.logoUrl}
+                  onChange={(e) => setClientForm(prev => ({ ...prev, logoUrl: e.target.value }))}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="粘贴图片URL，或上传图片生成"
+                />
+                <div className="mt-2 flex items-center gap-2">
+                  <label className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-white border rounded-lg hover:bg-gray-100 cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        if (f.size > 2 * 1024 * 1024) {
+                          alert('图片不能超过 2MB');
+                          return;
+                        }
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          const result = reader.result;
+                          if (typeof result === 'string') {
+                            setClientForm(prev => ({ ...prev, logoUrl: result }));
+                          }
+                        };
+                        reader.readAsDataURL(f);
+                      }}
+                    />
+                    上传图片
+                  </label>
+                  {clientForm.logoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setClientForm(prev => ({ ...prev, logoUrl: '' }))}
+                      className="text-sm text-red-600 hover:text-red-700"
+                    >
+                      清除
+                    </button>
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-gray-500">支持 URL 或上传图片（会存为 dataURI，建议 ≤2MB）</p>
+              </div>
+            </div>
+          </div>
 
           <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
             <div className="flex items-center justify-between mb-2">
