@@ -53,6 +53,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const bookInfoRef = useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState('calc(100vh - 280px)');
+  const [isMobile, setIsMobile] = useState(false);
 
   // 加载报告数据
   useEffect(() => {
@@ -104,6 +105,19 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
       window.removeEventListener('yiyu_user_updated', checkUserStatus);
       window.removeEventListener('storage', checkUserStatus);
     };
+  }, []);
+
+  // Mobile layout: avoid embedding PDF <object> (often blocks touch scrolling in WebView)
+  // and avoid fixed-height containers that can make the page feel "stuck".
+  useEffect(() => {
+    const apply = () => {
+      const mobile = window.matchMedia('(max-width: 768px)').matches;
+      setIsMobile(mobile);
+      setContentHeight(mobile ? 'auto' : 'calc(100vh - 280px)');
+    };
+    apply();
+    window.addEventListener('resize', apply);
+    return () => window.removeEventListener('resize', apply);
   }, []);
 
   // 检查用户是否有付费会员资格
@@ -287,9 +301,9 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
       </div>
 
       {/* 内容区域 */}
-      <div className="flex" style={{ height: contentHeight }}>
+      <div className={isMobile ? "flex flex-col" : "flex"} style={isMobile ? undefined : { height: contentHeight }}>
         {/* PDF阅读区域 */}
-        <div className="flex-1 flex flex-col border-r border-gray-200 bg-white min-w-0">
+        <div className={isMobile ? "w-full flex flex-col bg-white" : "flex-1 flex flex-col border-r border-gray-200 bg-white min-w-0"}>
           {/* PDF工具条 */}
           <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
             <div className="flex items-center gap-4">
@@ -339,18 +353,35 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
           </div>
 
           {/* PDF查看器 */}
-          <div className="w-full h-full bg-white">
+          <div className={isMobile ? "w-full bg-white" : "w-full h-full bg-white"}>
             {report.fileUrl ? (
-              <object
-                data={`${report.fileUrl}#view=FitH`}
-                type="application/pdf"
-                className="w-full h-full"
-                style={{ width: '100%', height: '100%', display: 'block' }}
-              >
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-gray-500">PDF加载失败，请尝试使用其他浏览器</p>
+              isMobile ? (
+                <div className="p-6">
+                  <p className="text-sm text-gray-600 mb-4">
+                    手机端为避免 PDF 预览组件拦截手势（导致无法下滑），这里改为使用系统自带的 PDF 查看器打开。
+                  </p>
+                  <a
+                    href={report.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span className="text-sm font-medium">打开 PDF 阅读/下载</span>
+                  </a>
                 </div>
-              </object>
+              ) : (
+                <object
+                  data={`${report.fileUrl}#view=FitH`}
+                  type="application/pdf"
+                  className="w-full h-full"
+                  style={{ width: '100%', height: '100%', display: 'block' }}
+                >
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-gray-500">PDF加载失败，请尝试使用其他浏览器</p>
+                  </div>
+                </object>
+              )
             ) : (
               <div className="text-center py-12">
                 <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -362,7 +393,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
         </div>
 
         {/* AI助手区域 */}
-        <div className="w-[400px] flex flex-col bg-white flex-shrink-0">
+        <div className={isMobile ? "w-full flex flex-col bg-white" : "w-[400px] flex flex-col bg-white flex-shrink-0"}>
           <div className="flex border-b border-gray-200">
             <button
               onClick={() => setActiveTab('chat')}
