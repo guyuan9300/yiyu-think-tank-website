@@ -628,6 +628,7 @@ challenge: '社区居民参与度低',
               <article
                 key={index}
                 className="group bg-white rounded-[20px] border border-[rgba(15,23,42,0.06)] p-6 hover:shadow-lg hover:shadow-[rgba(99,102,241,0.08)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
+                onClick={() => onNavigate?.('insights')}
               >
                 {/* Date Tag */}
                 <div className="flex items-center gap-2 mb-4">
@@ -703,6 +704,7 @@ challenge: '社区居民参与度低',
                 <article
                   key={index}
                   className="group bg-white rounded-[20px] border border-[rgba(15,23,42,0.06)] p-6 hover:shadow-lg hover:shadow-[rgba(99,102,241,0.08)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
+                  onClick={() => onNavigate?.('learning')}
                 >
                   {/* Icon */}
                   <div className="flex items-start justify-between mb-4">
@@ -737,7 +739,13 @@ challenge: '社区居民参与度低',
                   </div>
 
                   {/* Button */}
-                  <button className="w-full py-2.5 rounded-[12px] border border-[rgba(15,23,42,0.08)] text-[rgba(15,23,42,0.75)] text-[13px] font-medium hover:border-[rgba(99,102,241,0.40)] hover:text-[rgba(99,102,241,0.85)] hover:bg-[rgba(99,102,241,0.04)] transition-all duration-200 flex items-center justify-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onNavigate?.('learning');
+                    }}
+                    className="w-full py-2.5 rounded-[12px] border border-[rgba(15,23,42,0.08)] text-[rgba(15,23,42,0.75)] text-[13px] font-medium hover:border-[rgba(99,102,241,0.40)] hover:text-[rgba(99,102,241,0.85)] hover:bg-[rgba(99,102,241,0.04)] transition-all duration-200 flex items-center justify-center gap-2"
+                  >
                     <Download className="w-4 h-4" />
                     <span>查看样例</span>
                   </button>

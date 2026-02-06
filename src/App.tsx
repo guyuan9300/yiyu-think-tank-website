@@ -414,7 +414,15 @@ export default function App() {
   if (currentPage === 'insights') {
     return (
       <>
-        <InsightsPage onNavigate={(page) => handleNavigate(page as any)} />
+        <InsightsPage
+          onNavigate={(page, id) => {
+            if ((page === 'article' || page === 'report' || page === 'topic') && id) {
+              handleNavigateToDetail(page as any, id);
+              return;
+            }
+            handleNavigate(page as any, id);
+          }}
+        />
         <PageSwitcher />
       </>
     );
