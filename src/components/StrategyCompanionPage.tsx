@@ -88,13 +88,9 @@ import {
 } from 'lucide-react';
 import { Header } from './Header';
 import { 
-  getClientProjects, 
-  getStrategyCompanionData, 
-  getStrategicGoals,
-  getGoalMetrics,
-  type ClientProject,
-  type StrategicGoal,
-  type GoalMetric
+  getClientProjects,
+  getStrategyCompanionData,
+  type ClientProject
 } from '../lib/dataServiceLocal';
 
 // Types
@@ -158,7 +154,9 @@ interface Meeting {
   password?: string;
 }
 
-// Mock data based on Figma design
+/*
+// Mock data based on Figma design (DEPRECATED in Iteration 2)
+// 数据已改为从 localStorage 按 projectId 加载，保留此段仅供历史参考。
 const mockMilestones: Milestone[] = [
   { 
     id: 'm1', 
@@ -343,6 +341,8 @@ const mockMeetings: Meeting[] = [
   }
 ];
 
+*/
+
 // Learning Resource Interface
 interface LearningResource {
   id: string;
@@ -351,9 +351,11 @@ interface LearningResource {
   description: string;
   date: string;
   category: string;
+  url?: string;
 }
 
-// Mock Learning Resources for Empowerment Academy
+/*
+// Mock Learning Resources for Empowerment Academy (DEPRECATED in Iteration 2)
 const mockLearningResources: LearningResource[] = [
   {
     id: 'lr1',
@@ -388,6 +390,7 @@ const mockLearningResources: LearningResource[] = [
     category: '实践指南'
   }
 ];
+*/
 
 // Helper functions
 const getStatusColor = (status: string): string => {
@@ -887,9 +890,14 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
   
-  // 从后台加载本季度重点目标
+  // 从后台加载（按 projectId=当前客户 隔离）
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
-  const [isLoadingGoals, setIsLoadingGoals] = useState(true);
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [courseRecommendations, setCourseRecommendations] = useState<LearningResource[]>([]);
+  const [isLoadingProjectData, setIsLoadingProjectData] = useState(true);
   
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string; time: string }[]>([
     { 
@@ -938,42 +946,124 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
     };
   }, []);
 
-  // 从后台加载本季度重点目标
+  // 从后台加载战略陪伴数据（按 selectedClientId 过滤）
   useEffect(() => {
-    const loadGoals = async () => {
+    if (!selectedClientId) return;
+
+    let canceled = false;
+
+    const loadProjectData = async () => {
       try {
-        setIsLoadingGoals(true);
-        const strategicGoals = await getStrategicGoals();
-        
-        // 转换为前台所需的Goal格式
-        const goalsWithMetrics = await Promise.all(
-          strategicGoals.map(async (goal) => {
-            const metrics = await getGoalMetrics(goal.id);
-            return {
-              id: goal.id,
-              title: goal.title,
-              description: goal.description || '',
-              attachmentUrl: goal.attachmentUrl,
-              progress: goal.progress,
-              metrics: metrics.map(m => ({
-                label: m.label,
-                value: m.value ? (m.unit === '%' || m.unit === '次' || m.unit === '个' ? `${m.value}${m.unit}` : m.unit === '万元' ? `¥${m.value}万` : m.unit === '人' ? `+${(m.value / 1000).toFixed(1)}K` : `${m.value}${m.unit}`) : '0',
-                target: m.target ? (m.unit === '%' || m.unit === '次' || m.unit === '个' ? `${m.target}${m.unit}` : m.unit === '万元' ? `¥${m.target}万` : m.unit === '人' ? `+${(m.target / 1000).toFixed(1)}K` : `${m.target}${m.unit}`) : '0',
-              }))
-            };
-          })
+        setIsLoadingProjectData(true);
+        const data = await getStrategyCompanionData(selectedClientId);
+        if (canceled) return;
+
+        setMilestones(
+          (data.milestones || []).map((m: any) => ({
+            id: m.id,
+            title: m.title,
+            status: m.status,
+            date: m.milestoneDate || '',
+            coreGoal: m.coreGoal,
+            deliverable: m.deliverable,
+            description: m.description,
+            participants: m.participants,
+            output: m.outputs,
+          }))
         );
-        
-        setGoals(goalsWithMetrics);
-        setIsLoadingGoals(false);
+
+        setGoals(
+          (data.goals || []).map((g: any) => ({
+            id: g.id,
+            title: g.title,
+            description: g.description || '',
+            attachmentUrl: g.attachmentUrl,
+            progress: g.progress || 0,
+            metrics: (g.metrics || []).map((met: any) => ({
+              label: met.label,
+              value: met.value == null ? '0' : `${met.value}${met.unit || ''}`,
+              target: met.target == null ? '0' : `${met.target}${met.unit || ''}`,
+            })),
+          }))
+        );
+
+        setEvents(
+          (data.events || []).map((e: any) => ({
+            id: e.id,
+            type: e.type,
+            title: e.title,
+            date: e.eventDate,
+            description: e.description || '',
+            participants: e.participants,
+            details: e.details,
+          }))
+        );
+
+        setDocuments(
+          (data.documents || []).map((d: any) => ({
+            id: d.id,
+            category: d.category,
+            title: d.title,
+            date: d.docDate || '',
+            meta: d.meta || '',
+            fileType: d.fileType,
+            fileUrl: d.fileUrl,
+            documentLink: d.documentLink,
+            passwordProtected: d.passwordProtected,
+            password: d.password,
+          }))
+        );
+
+        setMeetings(
+          (data.meetings || []).map((m: any) => ({
+            id: m.id,
+            title: m.title,
+            date: m.meetingDate,
+            duration: m.duration || '',
+            participants: m.participantsCount || 0,
+            keyPoints: m.keyPoints || [],
+            attendees: m.attendees,
+            decisions: m.decisions,
+            actionItems: m.actionItems,
+            attachmentUrl: m.attachmentUrl,
+            meetingLink: m.meetingLink,
+            passwordProtected: m.passwordProtected,
+            password: m.password,
+          }))
+        );
+
+        setCourseRecommendations(
+          (data.courseRecommendations || []).map((r: any) => ({
+            id: r.id,
+            type: r.type === 'internal' ? (r.internalType === 'report' ? 'report' : r.internalType === 'book' ? 'book' : 'article') : 'article',
+            title: r.title,
+            description: r.description || '',
+            date: (r.createdAt || '').slice(0, 10),
+            category: r.sourceName || (r.type === 'internal' ? '站内' : '外部'),
+            url: r.url,
+          }))
+        );
+
+        setIsLoadingProjectData(false);
       } catch (error) {
-        console.error('加载目标数据失败:', error);
-        setIsLoadingGoals(false);
+        console.error('加载战略陪伴数据失败:', error);
+        if (canceled) return;
+        setIsLoadingProjectData(false);
       }
     };
-    
-    loadGoals();
-  }, []);
+
+    loadProjectData();
+
+    const onChange = () => loadProjectData();
+    window.addEventListener('yiyu_data_change', onChange);
+    window.addEventListener('storage', onChange);
+
+    return () => {
+      canceled = true;
+      window.removeEventListener('yiyu_data_change', onChange);
+      window.removeEventListener('storage', onChange);
+    };
+  }, [selectedClientId]);
 
   // Handle document download
   const handleDocumentDownload = (doc: Document) => {
@@ -1210,7 +1300,7 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
           <h2 className="text-[18px] font-semibold text-slate-800 mb-6">战略里程碑</h2>
           <div className="bg-white rounded-2xl border border-slate-100 p-8">
             <MilestoneTimeline 
-              milestones={mockMilestones}
+              milestones={milestones}
               onMilestoneClick={setSelectedMilestone}
             />
           </div>
@@ -1219,7 +1309,7 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
         {/* Strategic Goals */}
         <div className="mb-12">
           <h2 className="text-[18px] font-semibold text-slate-800 mb-6">本季度重点目标</h2>
-          {isLoadingGoals ? (
+          {isLoadingProjectData ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-slate-400">加载中...</div>
             </div>
@@ -1240,7 +1330,7 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
         <div className="mb-12">
           <h2 className="text-[18px] font-semibold text-slate-800 mb-6">最近动态</h2>
           <div className="bg-white rounded-2xl border border-slate-100 divide-y divide-slate-50">
-            {mockEvents.map((event) => (
+            {events.map((event) => (
               <EventItem 
                 key={event.id} 
                 event={event}
@@ -1256,7 +1346,7 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
           <div>
             <h2 className="text-[18px] font-semibold text-slate-800 mb-6">文档资源</h2>
             <div className="bg-white rounded-2xl border border-slate-100 divide-y divide-slate-50">
-              {mockDocuments.map((doc) => (
+              {documents.map((doc) => (
                 <DocumentItem 
                   key={doc.id} 
                   document={doc}
@@ -1270,7 +1360,7 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
           <div>
             <h2 className="text-[18px] font-semibold text-slate-800 mb-6">会议记录</h2>
             <div className="space-y-4">
-              {mockMeetings.map((meeting) => (
+              {meetings.map((meeting) => (
                 <MeetingCard 
                   key={meeting.id} 
                   meeting={meeting}
@@ -1287,8 +1377,8 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
             <h2 className="text-[18px] font-semibold text-slate-800">赋能学院</h2>
             <span className="text-[13px] text-slate-500">为您精选的学习资源</span>
           </div>
-          <div className="grid grid-cols-4 gap-6">
-            {mockLearningResources.map((resource) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+            {courseRecommendations.map((resource) => (
               <LearningResourceCard key={resource.id} resource={resource} />
             ))}
           </div>

@@ -13,7 +13,7 @@
 ## 记录格式（每条）
 
 - 客户：
-- 字段：Mission / Vision / Values / 里程碑 / 目标 / 课程推荐
+- 字段：Mission / Vision / Values / 里程碑 / 目标 / 课程推荐（external URL / internal 站内引用）
 - 来源URL：
 - 摘要（引用/提炼说明）：
 

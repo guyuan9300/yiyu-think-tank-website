@@ -30,19 +30,20 @@ import {
   getProjectMeetings,
   saveProjectMeeting,
   deleteProjectMeeting,
+  getCourseRecommendations,
+  saveCourseRecommendation,
+  deleteCourseRecommendation,
   getClientProjects,
   saveClientProject,
   deleteClientProject,
-  getProjectMilestones,
-  saveProjectMilestone,
   StrategicMilestone,
   StrategicGoal,
   GoalMetric,
   ProjectEvent,
   ProjectDocument,
   ProjectMeeting,
+  CourseRecommendation,
   ClientProject,
-  ProjectMilestone,
 } from '../lib/dataServiceLocal';
 
 // 客户选择下拉组件
@@ -171,7 +172,6 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({
 interface ProjectOverviewProps {
   client: ClientProject;
   milestones: StrategicMilestone[];
-  projectMilestones: ProjectMilestone[];
   goals: StrategicGoal[];
   goalMetrics: Record<string, GoalMetric[]>;
 }
@@ -179,16 +179,15 @@ interface ProjectOverviewProps {
 const ProjectOverview: React.FC<ProjectOverviewProps> = ({
   client,
   milestones,
-  projectMilestones,
   goals,
   goalMetrics,
 }) => {
-  // 计算里程碑进度
+  // 计算里程碑进度（直接使用该客户的 milestones.status）
   const milestoneProgress = useMemo(() => {
-    if (projectMilestones.length === 0) return 0;
-    const completed = projectMilestones.filter(pm => pm.status === 'completed').length;
-    return Math.round((completed / projectMilestones.length) * 100);
-  }, [projectMilestones]);
+    if (milestones.length === 0) return 0;
+    const completed = milestones.filter(m => m.status === 'completed').length;
+    return Math.round((completed / milestones.length) * 100);
+  }, [milestones]);
 
   // 计算目标达成率
   const goalAchievement = useMemo(() => {
@@ -196,13 +195,6 @@ const ProjectOverview: React.FC<ProjectOverviewProps> = ({
     const totalProgress = goals.reduce((sum, goal) => sum + goal.progress, 0);
     return Math.round(totalProgress / goals.length);
   }, [goals]);
-
-  // 获取里程碑状态
-  const getMilestoneStatus = (milestone: StrategicMilestone) => {
-    const pm = projectMilestones.find(p => p.milestoneId === milestone.id);
-    if (!pm) return 'pending';
-    return pm.status;
-  };
 
   // 获取状态标签样式
   const getStatusBadge = (status: string) => {
@@ -258,7 +250,7 @@ const ProjectOverview: React.FC<ProjectOverviewProps> = ({
             />
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            {projectMilestones.filter(pm => pm.status === 'completed').length} / {projectMilestones.length} 阶段已完成
+            {milestones.filter(m => m.status === 'completed').length} / {milestones.length} 阶段已完成
           </p>
         </div>
 
@@ -290,7 +282,7 @@ const ProjectOverview: React.FC<ProjectOverviewProps> = ({
           {/* 里程碑节点 */}
           <div className="flex justify-between relative">
             {milestones.map((milestone, index) => {
-              const status = getMilestoneStatus(milestone);
+              const status = milestone.status;
               const isCompleted = status === 'completed';
               const isInProgress = status === 'in-progress';
               
@@ -338,9 +330,8 @@ interface DataManagementTabsProps {
   events: ProjectEvent[];
   documents: ProjectDocument[];
   meetings: ProjectMeeting[];
-  projectMilestones: Record<string, ProjectMilestone[]>;
+  courses: CourseRecommendation[];
   goalMetrics: Record<string, GoalMetric[]>;
-  selectedClientId?: string;
   onEditMilestone: (m: StrategicMilestone) => void;
   onDeleteMilestone: (id: string) => void;
   onAddMilestone: () => void;
@@ -357,6 +348,9 @@ interface DataManagementTabsProps {
   onEditMeeting: (m: ProjectMeeting) => void;
   onDeleteMeeting: (id: string) => void;
   onAddMeeting: () => void;
+  onEditCourse: (c: CourseRecommendation) => void;
+  onDeleteCourse: (id: string) => void;
+  onAddCourse: () => void;
 }
 
 const DataManagementTabs: React.FC<DataManagementTabsProps> = ({
@@ -367,9 +361,8 @@ const DataManagementTabs: React.FC<DataManagementTabsProps> = ({
   events,
   documents,
   meetings,
-  projectMilestones,
+  courses,
   goalMetrics,
-  selectedClientId,
   onEditMilestone,
   onDeleteMilestone,
   onAddMilestone,
@@ -386,6 +379,9 @@ const DataManagementTabs: React.FC<DataManagementTabsProps> = ({
   onEditMeeting,
   onDeleteMeeting,
   onAddMeeting,
+  onEditCourse,
+  onDeleteCourse,
+  onAddCourse,
 }) => {
   const tabs = [
     { id: 'milestones', label: '里程碑', count: milestones.length },
@@ -393,6 +389,7 @@ const DataManagementTabs: React.FC<DataManagementTabsProps> = ({
     { id: 'events', label: '事件', count: events.length },
     { id: 'documents', label: '文档', count: documents.length },
     { id: 'meetings', label: '会议', count: meetings.length },
+    { id: 'courses', label: '课程推荐', count: courses.length },
   ];
 
   return (
@@ -449,11 +446,8 @@ const DataManagementTabs: React.FC<DataManagementTabsProps> = ({
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {milestones.map((milestone) => {
-                    // 关键修复：使用 selectedClientId 从正确的数组中查找
-                    const clientMilestones = projectMilestones[selectedClientId || ''] || [];
-                    const pm = clientMilestones.find(p => p.milestoneId === milestone.id);
-                    const currentStatus = pm?.status || 'pending';
-                    
+                    const currentStatus = milestone.status || 'pending';
+
                     return (
                       <tr key={milestone.id} className="hover:bg-gray-50">
                         <td className="px-4 py-3 text-sm text-gray-900">第 {milestone.phaseOrder} 阶段</td>
@@ -842,6 +836,81 @@ const DataManagementTabs: React.FC<DataManagementTabsProps> = ({
             </div>
           </div>
         )}
+
+        {/* 课程推荐管理 */}
+        {activeTab === 'courses' && (
+          <div className="p-6">
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={onAddCourse}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                添加推荐
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">标题</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">类型</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">来源/链接</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {courses.map((c) => (
+                    <tr key={c.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm text-gray-900">{c.title}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {c.type === 'internal' ? `站内（${c.internalType || 'article'}）` : '外部链接'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {c.type === 'external' ? (
+                          c.url ? (
+                            <a
+                              href={c.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {c.sourceName ? `${c.sourceName} · ` : ''}{c.url}
+                            </a>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )
+                        ) : (
+                          <span className="text-gray-500">internalId: {c.internalId || '-'}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => onEditCourse(c)}
+                            className="text-blue-600 hover:text-blue-800 text-sm"
+                          >
+                            编辑
+                          </button>
+                          <button
+                            onClick={() => onDeleteCourse(c.id)}
+                            className="text-red-600 hover:text-red-800 text-sm"
+                          >
+                            删除
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -904,63 +973,98 @@ const AdminStrategyCompanionPage: React.FC = () => {
   const [meetings, setMeetings] = useState<ProjectMeeting[]>([]);
   const [editingMeeting, setEditingMeeting] = useState<ProjectMeeting | null>(null);
   const [showMeetingModal, setShowMeetingModal] = useState(false);
+
+  // 课程推荐
+  const [courses, setCourses] = useState<CourseRecommendation[]>([]);
+  const [editingCourse, setEditingCourse] = useState<CourseRecommendation | null>(null);
+  const [showCourseModal, setShowCourseModal] = useState(false);
   
   // 客户项目数据
   const [editingProject, setEditingProject] = useState<ClientProject | null>(null);
   const [showProjectModal, setShowProjectModal] = useState(false);
-  const [projectMilestones, setProjectMilestones] = useState<Record<string, ProjectMilestone[]>>({});
   
   // 加载数据
+  // 1) 加载客户列表
   useEffect(() => {
-    loadAllData();
+    const loadClients = async () => {
+      const projects = await getClientProjects();
+      setClients(projects);
+      if (projects.length > 0 && !selectedClient) {
+        setSelectedClient(projects[0]);
+      }
+    };
+
+    loadClients();
+
+    const onChange = () => loadClients();
+    window.addEventListener('yiyu_data_change', onChange);
+    window.addEventListener('storage', onChange);
+
+    return () => {
+      window.removeEventListener('yiyu_data_change', onChange);
+      window.removeEventListener('storage', onChange);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  
-  const loadAllData = async () => {
-    const [milesData, goalsData, eventsData, docsData, meetingsData, projectsData] = await Promise.all([
-      getStrategicMilestones(),
-      getStrategicGoals(),
-      getProjectEvents(),
-      getProjectDocuments(),
-      getProjectMeetings(),
-      getClientProjects(),
-    ]);
-    
-    setMilestones(milesData);
-    setGoals(goalsData);
-    setEvents(eventsData);
-    setDocuments(docsData);
-    setMeetings(meetingsData);
-    setClients(projectsData);
-    
-    // 加载每个目标的指标
-    const metricsPromises = goalsData.map(async (goal) => {
-      const metrics = await getGoalMetrics(goal.id);
-      return { goalId: goal.id, metrics };
-    });
-    const metricsResults = await Promise.all(metricsPromises);
-    const metricsMap = metricsResults.reduce((acc, { goalId, metrics }) => {
-      acc[goalId] = metrics;
-      return acc;
-    }, {} as Record<string, GoalMetric[]>);
-    setGoalMetrics(metricsMap);
-    
-    // 加载每个项目的里程碑关联
-    const projectMilestonesPromises = projectsData.map(async (project) => {
-      const pms = await getProjectMilestones(project.id);
-      return { projectId: project.id, pms };
-    });
-    const projectMilestonesResults = await Promise.all(projectMilestonesPromises);
-    const pmsMap = projectMilestonesResults.reduce((acc, { projectId, pms }) => {
-      acc[projectId] = pms;
-      return acc;
-    }, {} as Record<string, ProjectMilestone[]>);
-    setProjectMilestones(pmsMap);
-    
-    // 如果有客户，自动选中第一个
-    if (projectsData.length > 0 && !selectedClient) {
-      setSelectedClient(projectsData[0]);
+
+  // 2) 加载当前客户的数据（全部按 projectId 隔离）
+  useEffect(() => {
+    if (!selectedClient?.id) {
+      setMilestones([]);
+      setGoals([]);
+      setEvents([]);
+      setDocuments([]);
+      setMeetings([]);
+      setCourses([]);
+      setGoalMetrics({});
+      return;
     }
-  };
+
+    const projectId = selectedClient.id;
+    let canceled = false;
+
+    const loadProjectData = async () => {
+      const [milesData, goalsData, eventsData, docsData, meetingsData, coursesData] = await Promise.all([
+        getStrategicMilestones(projectId),
+        getStrategicGoals(projectId),
+        getProjectEvents(projectId),
+        getProjectDocuments(projectId),
+        getProjectMeetings(projectId),
+        getCourseRecommendations(projectId),
+      ]);
+
+      if (canceled) return;
+
+      setMilestones(milesData);
+      setGoals(goalsData);
+      setEvents(eventsData);
+      setDocuments(docsData);
+      setMeetings(meetingsData);
+      setCourses(coursesData);
+
+      // 加载当前客户目标的指标
+      const metricsResults = await Promise.all(
+        goalsData.map(async (goal) => ({ goalId: goal.id, metrics: await getGoalMetrics(goal.id) }))
+      );
+      const metricsMap = metricsResults.reduce((acc, { goalId, metrics }) => {
+        acc[goalId] = metrics;
+        return acc;
+      }, {} as Record<string, GoalMetric[]>);
+      setGoalMetrics(metricsMap);
+    };
+
+    loadProjectData();
+
+    const onChange = () => loadProjectData();
+    window.addEventListener('yiyu_data_change', onChange);
+    window.addEventListener('storage', onChange);
+
+    return () => {
+      canceled = true;
+      window.removeEventListener('yiyu_data_change', onChange);
+      window.removeEventListener('storage', onChange);
+    };
+  }, [selectedClient?.id]);
   
   // 选择客户
   const handleSelectClient = (client: ClientProject) => {
@@ -990,86 +1094,8 @@ const AdminStrategyCompanionPage: React.FC = () => {
             : [...prev, saved]
         );
         
-        // 🔥 关键修复：项目状态变化时同步更新里程碑状态
-        if (data.id && data.status) {
-          console.log('🔄 项目状态已更改，同步更新里程碑状态...', {
-            projectId: data.id,
-            newProjectStatus: data.status,
-          });
-          
-          // 获取该项目的所有里程碑关联
-          const clientMilestones = projectMilestones[data.id] || [];
-          const updatedMilestones: ProjectMilestone[] = [];
-          
-          // 根据项目状态批量更新里程碑状态
-          if (data.status === 'completed') {
-            // 项目完成 → 所有里程碑标记为已完成
-            console.log('  ℹ️ 项目已完成，将所有里程碑标记为已完成');
-            for (const pm of clientMilestones) {
-              if (pm.status !== 'completed') {
-                const updated = await saveProjectMilestone({
-                  ...pm,
-                  status: 'completed',
-                });
-                if (updated) {
-                  updatedMilestones.push(updated);
-                }
-              }
-            }
-          } else if (data.status === 'active') {
-            // 项目激活 → 如果所有里程碑都是待开始，将第一个设为进行中
-            const allPending = clientMilestones.every(pm => pm.status === 'pending');
-            if (allPending && clientMilestones.length > 0) {
-              console.log('  ℹ️ 项目激活，将第一个里程碑标记为进行中');
-              const firstMilestone = milestones
-                .sort((a, b) => a.phaseOrder - b.phaseOrder)[0];
-              if (firstMilestone) {
-                const firstPM = clientMilestones.find(
-                  pm => pm.milestoneId === firstMilestone.id
-                );
-                if (firstPM) {
-                  const updated = await saveProjectMilestone({
-                    ...firstPM,
-                    status: 'in-progress',
-                  });
-                  if (updated) {
-                    updatedMilestones.push(updated);
-                  }
-                }
-              }
-            }
-          } else if (data.status === 'paused') {
-            // 项目暂停 → 将所有进行中的里程碑改为待开始
-            console.log('  ℹ️ 项目暂停，将进行中的里程碑改为待开始');
-            for (const pm of clientMilestones) {
-              if (pm.status === 'in-progress') {
-                const updated = await saveProjectMilestone({
-                  ...pm,
-                  status: 'pending',
-                });
-                if (updated) {
-                  updatedMilestones.push(updated);
-                }
-              }
-            }
-          }
-          
-          // 批量更新 React 状态（只调用一次 setState）
-          if (updatedMilestones.length > 0) {
-            setProjectMilestones(prev => {
-              const updatedMap = new Map(updatedMilestones.map(um => [um.id, um]));
-              return {
-                ...prev,
-                [data.id!]: prev[data.id!].map(p => 
-                  updatedMap.has(p.id) ? updatedMap.get(p.id)! : p
-                ),
-              };
-            });
-            console.log('✅ 里程碑状态同步完成，共更新', updatedMilestones.length, '个里程碑');
-          }
-        }
-        
-        setShowProjectModal(false);
+        //（Iteration2）项目状态变化不再联动里程碑（里程碑已按客户独立维护）
+setShowProjectModal(false);
         setEditingProject(null);
         // 如果是新添加的客户，自动选中
         if (!data.id) {
@@ -1086,7 +1112,14 @@ const AdminStrategyCompanionPage: React.FC = () => {
   
   // 里程碑操作
   const handleSaveMilestone = async (data: Partial<StrategicMilestone>) => {
-    const saved = await saveStrategicMilestone(data as StrategicMilestone);
+    if (!selectedClient) {
+      alert('请先选择一个客户');
+      return;
+    }
+    const saved = await saveStrategicMilestone({
+      ...data,
+      projectId: data.projectId || selectedClient.id,
+    } as StrategicMilestone);
     if (saved) {
       setMilestones(prev => 
         data.id 
@@ -1101,77 +1134,9 @@ const AdminStrategyCompanionPage: React.FC = () => {
   
   // 直接更新里程碑状态（用于表格下拉菜单）
   const handleUpdateMilestoneStatus = async (milestoneId: string, status: 'pending' | 'in-progress' | 'completed') => {
-    if (!selectedClient) {
-      console.error('❌ 没有选中的客户');
-      return;
-    }
-    
-    console.log('🔄 开始更新里程碑状态...');
-    console.log('  - 里程碑ID:', milestoneId);
-    console.log('  - 新状态:', status);
-    console.log('  - 客户ID:', selectedClient.id);
-    console.log('  - 当前projectMilestones:', projectMilestones[selectedClient.id]);
-    
-    // 检查是否已存在该客户-里程碑关联
-    const existingPM = projectMilestones[selectedClient.id]?.find(
-      pm => pm.milestoneId === milestoneId
-    );
-    
-    console.log('  - 现有关联:', existingPM);
-    
-    if (existingPM) {
-      console.log('📝 更新现有关联...');
-      // 更新现有关联的状态
-      const updatedPM = await saveProjectMilestone({
-        ...existingPM,
-        status,
-      });
-      
-      console.log('  - 保存结果:', updatedPM);
-      
-      if (updatedPM) {
-        console.log('✅ 更新React状态...');
-        setProjectMilestones(prev => {
-          console.log('  - 旧状态:', prev[selectedClient.id]);
-          const newState = {
-            ...prev,
-            [selectedClient.id]: prev[selectedClient.id].map(
-              pm => pm.id === updatedPM.id ? updatedPM : pm
-            ),
-          };
-          console.log('  - 新状态:', newState[selectedClient.id]);
-          return newState;
-        });
-        console.log('✅ 状态更新完成');
-      } else {
-        console.error('❌ 保存失败');
-      }
-    } else {
-      console.log('📝 创建新关联...');
-      // 创建新的关联
-      const newPM = await saveProjectMilestone({
-        projectId: selectedClient.id,
-        milestoneId,
-        status,
-      });
-      
-      console.log('  - 创建结果:', newPM);
-      
-      if (newPM) {
-        console.log('✅ 更新React状态...');
-        setProjectMilestones(prev => {
-          console.log('  - 旧状态:', prev[selectedClient.id]);
-          const newState = {
-            ...prev,
-            [selectedClient.id]: [...(prev[selectedClient.id] || []), newPM],
-          };
-          console.log('  - 新状态:', newState[selectedClient.id]);
-          return newState;
-        });
-        console.log('✅ 状态更新完成');
-      } else {
-        console.error('❌ 创建失败');
-      }
+    const updated = await saveStrategicMilestone({ id: milestoneId, status });
+    if (updated) {
+      setMilestones(prev => prev.map(m => (m.id === milestoneId ? updated : m)));
     }
   };
   
@@ -1186,7 +1151,14 @@ const AdminStrategyCompanionPage: React.FC = () => {
   
   // 目标操作
   const handleSaveGoal = async (data: Partial<StrategicGoal>) => {
-    const saved = await saveStrategicGoal(data as StrategicGoal);
+    if (!selectedClient) {
+      alert('请先选择一个客户');
+      return;
+    }
+    const saved = await saveStrategicGoal({
+      ...data,
+      projectId: data.projectId || selectedClient.id,
+    } as StrategicGoal);
     if (saved) {
       setGoals(prev => 
         data.id 
@@ -1209,7 +1181,14 @@ const AdminStrategyCompanionPage: React.FC = () => {
   
   // 事件操作
   const handleSaveEvent = async (data: Partial<ProjectEvent>) => {
-    const saved = await saveProjectEvent(data as ProjectEvent);
+    if (!selectedClient) {
+      alert('请先选择一个客户');
+      return;
+    }
+    const saved = await saveProjectEvent({
+      ...data,
+      projectId: data.projectId || selectedClient.id,
+    } as ProjectEvent);
     if (saved) {
       setEvents(prev => 
         data.id 
@@ -1232,7 +1211,14 @@ const AdminStrategyCompanionPage: React.FC = () => {
   
   // 文档操作
   const handleSaveDocument = async (data: Partial<ProjectDocument>) => {
-    const saved = await saveProjectDocument(data as ProjectDocument);
+    if (!selectedClient) {
+      alert('请先选择一个客户');
+      return;
+    }
+    const saved = await saveProjectDocument({
+      ...data,
+      projectId: data.projectId || selectedClient.id,
+    } as ProjectDocument);
     if (saved) {
       setDocuments(prev => 
         data.id 
@@ -1253,178 +1239,16 @@ const AdminStrategyCompanionPage: React.FC = () => {
     }
   };
   
-  // 一键生成模拟数据（用于前台/后台联调演示）
-  // 说明：当前前台战略客户页的数据结构里，事件/文档/会议是“全局共享”的（未按客户隔离）。
-  // 为了满足“可切换 5 个客户页面”的演示，我们主要生成：5 个 ClientProject + 对应 ProjectMilestone 映射。
-  const handleSeedDemoData = async () => {
-    try {
-      // 1) Milestones (shared)
-      const ms1 = await saveStrategicMilestone({
-        title: '战略启动',
-        description: '明确范围、角色与节奏，建立共识与沟通机制',
-        status: 'completed',
-        phaseOrder: 1,
-        participants: ['益语团队', '客户核心成员'],
-        outputs: ['项目章程', '沟通机制', '关键问题清单'],
-      } as any);
-      const ms2 = await saveStrategicMilestone({
-        title: '能力诊断',
-        description: '调研访谈 + 资料梳理 + 现状画像',
-        status: 'completed',
-        phaseOrder: 2,
-        participants: ['顾问', '业务负责人'],
-        outputs: ['诊断报告', '问题树', '机会清单'],
-      } as any);
-      const ms3 = await saveStrategicMilestone({
-        title: '战略共创',
-        description: '共创年度目标、战略地图与关键举措',
-        status: 'in-progress',
-        phaseOrder: 3,
-        participants: ['管理层', '项目负责人'],
-        outputs: ['战略地图', 'OKR草案', 'Q3关键举措'],
-      } as any);
-      const ms4 = await saveStrategicMilestone({
-        title: '执行赋能',
-        description: '将战略拆解到行动与运营体系，建立仪表盘',
-        status: 'pending',
-        phaseOrder: 4,
-        participants: ['运营负责人', '项目经理'],
-        outputs: ['执行仪表盘', '例会机制', '指标体系'],
-      } as any);
-      const ms5 = await saveStrategicMilestone({
-        title: '复盘迭代',
-        description: '季度复盘，调整策略与资源配置',
-        status: 'pending',
-        phaseOrder: 5,
-        participants: ['管理层', '顾问'],
-        outputs: ['复盘纪要', '下一季度优先级'],
-      } as any);
-
-      // 2) Goals + metrics (shared)
-      const g1 = await saveStrategicGoal({
-        title: '提升品牌影响力',
-        description: '形成稳定内容与传播节奏，提升行业认知',
-        progress: 65,
-        quarter: '2026Q1',
-        isActive: true,
-      } as any);
-
-      if (g1?.id) {
-        await saveGoalMetric({ goalId: g1.id, label: '媒体曝光', value: 15, target: 20, unit: '次', sortOrder: 1 } as any);
-        await saveGoalMetric({ goalId: g1.id, label: '社交媒体增长', value: 2300, target: 3000, unit: '人', sortOrder: 2 } as any);
-      }
-
-      // 3) Seed 5 clients
-      const seedClients = [
-        {
-          clientName: '蓝信封',
-          projectName: '战略陪伴（示例）- 蓝信封',
-          status: 'active' as const,
-          mission: '通过持续的陪伴与沟通，支持乡村儿童心理健康成长，让每个孩子都被看见。',
-          vision: '形成可复制的公益陪伴网络，让乡村儿童获得稳定的情感支持与心理韧性。',
-          values: ['深度陪伴', '儿童优先', '长期主义', '循证复盘'],
-        },
-        {
-          clientName: '日慈基金会',
-          projectName: '战略陪伴（示例）- 日慈基金会',
-          status: 'active' as const,
-          mission: '推动青少年心智素养教育，提升心理健康与自我成长能力。',
-          vision: '让心理素养教育成为学校与家庭的基础能力，形成可持续的教育支持体系。',
-          values: ['尊重关怀', '专业安全', '教育普惠', '合作共创'],
-        },
-        {
-          clientName: '愿景资本',
-          projectName: '战略陪伴（示例）- 愿景资本',
-          status: 'active' as const,
-          mission: '以长期资本与专业陪伴支持创新企业成长，推动产业升级与价值创造。',
-          vision: '成为最值得创业者信赖的长期合作伙伴，持续发现并培育高质量创新。',
-          values: ['长期主义', '专业判断', '价值共创', '风险敬畏'],
-        },
-        {
-          clientName: '贝石公益基金会',
-          projectName: '战略陪伴（示例）- 贝石公益基金会',
-          status: 'active' as const,
-          mission: '连接社区资源与公众参与，让互助在社区里可持续发生。',
-          vision: '形成可复制的社区公益模型，让社区成为温暖而有效的互助网络。',
-          values: ['在地协作', '公众参与', '透明可信', '持续迭代'],
-        },
-        {
-          clientName: '中国乡村发展基金会',
-          projectName: '战略陪伴（示例）- 中国乡村发展基金会',
-          status: 'active' as const,
-          mission: '推动乡村发展与民生改善，促进资源有效配置与可持续发展。',
-          vision: '让乡村发展项目更有效、更可持续，形成可推广的乡村振兴解决方案。',
-          values: ['以人为本', '实效导向', '资源协同', '公开透明'],
-        },
-      ];
-
-      const ms = [ms1, ms2, ms3, ms4, ms5].filter(Boolean) as any[];
-      let createdCount = 0;
-
-      for (const c of seedClients) {
-        const client = await saveClientProject({
-          clientName: c.clientName,
-          projectName: c.projectName,
-          status: c.status,
-          startDate: '2026-01-05',
-          description: '用于演示：管理员可下拉切换客户，验证前台战略客户页展示。',
-          mission: (c as any).mission,
-          vision: (c as any).vision,
-          values: (c as any).values,
-          currentMilestoneId: (ms3 as any)?.id,
-          currentGoalId: (g1 as any)?.id,
-        } as any);
-
-        if (client?.id) {
-          createdCount += 1;
-          for (const m of ms) {
-            await saveProjectMilestone({
-              projectId: client.id,
-              milestoneId: m.id,
-              status: m.status,
-              startDate: '2026-01-05',
-              sortOrder: m.phaseOrder,
-            } as any);
-          }
-        }
-      }
-
-      // 4) Shared sample items (keep minimal, avoid duplicates explosion)
-      await saveProjectDocument({
-        category: 'assessment',
-        title: '组织能力诊断报告（示例）',
-        description: '示例数据：用于联调展示',
-        docDate: '2026-01-20',
-        meta: '42页',
-        fileType: 'pdf',
-        passwordProtected: false,
-        sortOrder: 1,
-      } as any);
-
-      await saveProjectMeeting({
-        title: '共创会（示例）',
-        meetingDate: '2026-02-02',
-        duration: '90min',
-        participantsCount: 9,
-        keyPoints: ['年度目标口径统一', '确认三条战略主线'],
-        decisions: ['每周固定例会'],
-        actionItems: ['输出战略地图 v0.1'],
-        passwordProtected: false,
-        sortOrder: 1,
-      } as any);
-
-      // Reload UI
-      await loadAllData();
-      alert(`✅ 已生成 ${createdCount} 个模拟战略客户（可用于前台切换展示）`);
-    } catch (e: any) {
-      console.error(e);
-      alert('❌ 生成模拟数据失败：' + (e?.message || String(e)));
-    }
-  };
-
   // 会议操作
   const handleSaveMeeting = async (data: Partial<ProjectMeeting>) => {
-    const saved = await saveProjectMeeting(data as ProjectMeeting);
+    if (!selectedClient) {
+      alert('请先选择一个客户');
+      return;
+    }
+    const saved = await saveProjectMeeting({
+      ...data,
+      projectId: data.projectId || selectedClient.id,
+    } as ProjectMeeting);
     if (saved) {
       setMeetings(prev => 
         data.id 
@@ -1441,6 +1265,34 @@ const AdminStrategyCompanionPage: React.FC = () => {
       const success = await deleteProjectMeeting(id);
       if (success) {
         setMeetings(prev => prev.filter(m => m.id !== id));
+      }
+    }
+  };
+
+  // 课程推荐操作
+  const handleSaveCourse = async (data: Partial<CourseRecommendation>) => {
+    if (!selectedClient) {
+      alert('请先选择一个客户');
+      return;
+    }
+
+    const saved = await saveCourseRecommendation({
+      ...data,
+      projectId: data.projectId || selectedClient.id,
+    } as CourseRecommendation);
+
+    if (saved) {
+      setCourses(prev => (data.id ? prev.map(c => (c.id === data.id ? saved : c)) : [...prev, saved]));
+      setShowCourseModal(false);
+      setEditingCourse(null);
+    }
+  };
+
+  const handleDeleteCourse = async (id: string) => {
+    if (window.confirm('确定要删除这条课程推荐吗？')) {
+      const success = await deleteCourseRecommendation(id);
+      if (success) {
+        setCourses(prev => prev.filter(c => c.id !== id));
       }
     }
   };
@@ -1464,20 +1316,6 @@ const AdminStrategyCompanionPage: React.FC = () => {
             onEditClient={handleEditClient}
           />
           
-          {/* 快速操作 */}
-          <div className="mt-4 bg-white rounded-xl border border-gray-100 p-4">
-            <h3 className="text-sm font-medium text-gray-600 mb-3">快速操作</h3>
-            <button
-              onClick={handleSeedDemoData}
-              className="w-full px-4 py-3 rounded-xl bg-gray-900 text-white hover:bg-gray-800 transition-colors text-sm font-medium"
-            >
-              一键生成模拟数据
-            </button>
-            <p className="text-xs text-gray-500 mt-2">
-              用于把「里程碑/目标/事件/文档/会议」全部填满，验证前台展示。
-            </p>
-          </div>
-
           {/* 快速统计 */}
           <div className="mt-4 bg-white rounded-xl border border-gray-100 p-4">
             <h3 className="text-sm font-medium text-gray-600 mb-3">统计概览</h3>
@@ -1510,7 +1348,6 @@ const AdminStrategyCompanionPage: React.FC = () => {
               <ProjectOverview
                 client={selectedClient}
                 milestones={milestones}
-                projectMilestones={projectMilestones[selectedClient.id] || []}
                 goals={goals}
                 goalMetrics={goalMetrics}
               />
@@ -1524,9 +1361,8 @@ const AdminStrategyCompanionPage: React.FC = () => {
                 events={events}
                 documents={documents}
                 meetings={meetings}
-                projectMilestones={projectMilestones}
+                courses={courses}
                 goalMetrics={goalMetrics}
-                selectedClientId={selectedClient?.id}
                 onEditMilestone={(m) => {
                   setEditingMilestone(m);
                   setShowMilestoneModal(true);
@@ -1572,6 +1408,15 @@ const AdminStrategyCompanionPage: React.FC = () => {
                 onAddMeeting={() => {
                   setEditingMeeting(null);
                   setShowMeetingModal(true);
+                }}
+                onEditCourse={(c) => {
+                  setEditingCourse(c);
+                  setShowCourseModal(true);
+                }}
+                onDeleteCourse={handleDeleteCourse}
+                onAddCourse={() => {
+                  setEditingCourse(null);
+                  setShowCourseModal(true);
                 }}
               />
             </>
@@ -2410,6 +2255,141 @@ let attachmentUrl = editingGoal?.attachmentUrl;
               type="submit"
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
+              保存
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* 课程推荐编辑弹窗 */}
+      <Modal
+        isOpen={showCourseModal}
+        onClose={() => {
+          setShowCourseModal(false);
+          setEditingCourse(null);
+        }}
+        title={editingCourse ? '编辑课程推荐' : '添加课程推荐'}
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            const type = (formData.get('type') as string) as 'internal' | 'external';
+            handleSaveCourse({
+              id: editingCourse?.id,
+              title: (formData.get('title') as string) || '',
+              description: (formData.get('description') as string) || '',
+              type,
+              internalType: type === 'internal' ? ((formData.get('internalType') as string) as any) : undefined,
+              internalId: type === 'internal' ? ((formData.get('internalId') as string) || undefined) : undefined,
+              url: type === 'external' ? ((formData.get('url') as string) || undefined) : undefined,
+              sourceName: type === 'external' ? ((formData.get('sourceName') as string) || undefined) : undefined,
+              sortOrder: parseInt((formData.get('sortOrder') as string) || '0', 10) || 0,
+              isActive: true,
+            });
+          }}
+          className="space-y-4"
+        >
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">标题</label>
+            <input
+              name="title"
+              defaultValue={editingCourse?.title}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">描述</label>
+            <textarea
+              name="description"
+              defaultValue={editingCourse?.description}
+              rows={3}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">类型</label>
+              <select
+                name="type"
+                defaultValue={editingCourse?.type || 'external'}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="external">外部链接</option>
+                <option value="internal">站内引用</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">排序</label>
+              <input
+                name="sortOrder"
+                type="number"
+                defaultValue={editingCourse?.sortOrder ?? 0}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">internalType（站内）</label>
+              <select
+                name="internalType"
+                defaultValue={editingCourse?.internalType || 'article'}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="article">article</option>
+                <option value="report">report</option>
+                <option value="book">book</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">仅当类型为“站内引用”时有效</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">internalId（站内）</label>
+              <input
+                name="internalId"
+                defaultValue={editingCourse?.internalId}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">外部链接 URL</label>
+              <input
+                name="url"
+                defaultValue={editingCourse?.url}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="https://..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">来源名称</label>
+              <input
+                name="sourceName"
+                defaultValue={editingCourse?.sourceName}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="如：Coursera / 腾讯课堂"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setShowCourseModal(false);
+                setEditingCourse(null);
+              }}
+              className="px-4 py-2 text-gray-700 border rounded-lg hover:bg-gray-50"
+            >
+              取消
+            </button>
+            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
               保存
             </button>
           </div>

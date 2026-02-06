@@ -13,13 +13,14 @@
   - 战略客户：后台一键生成 5 客户（演示用）
   - ✅ **迭代1-部分完成**：ClientProject 增加 mission/vision/values，后台可编辑，前台（strategy-companion）显示客户名+Mission/Vision/Values（随切换）
 
+- ✅ 已完成：
+  - 迭代2（P0）：里程碑/目标/会议/文档/动态/课程推荐全部按 `projectId` 客户隔离；后台在“当前客户”上下文下维护；前台按 `clientId` 过滤展示
+
 - ⏳ 进行中：
-  - 迭代1 验收截图与验证步骤补齐
+  - 截图补齐（战略陪伴页 & 客户专区页）
 
 - ❌ 未完成（P0）：
-  - 里程碑/目标/会议/文档/动态/课程推荐按客户隔离（projectId）
-  - 后台缺少：客户里程碑/课程推荐/按客户目标等完整维护入口
-  - “按钮无功能”统一处理
+  - “按钮无功能”统一处理（全站巡检）
 
 ---
 
@@ -29,12 +30,12 @@
 |---|---|---|---|---:|---|---|---|---|
 | strategy-companion | 顶部客户名 | 已随 selectedClient 切换 | 客户编辑弹窗（clientName） | ✅ | — | 已实现 | P0 | 切换客户后标题=客户名 |
 | strategy-companion | Mission/Vision/Values | 已读取 ClientProject 字段；为空提示“请在后台填写” | 客户编辑弹窗新增 mission/vision/values | ✅ | — | 已实现 | P0 | 后台修改 → 前台切换客户可见 |
-| strategy-companion | 战略里程碑 | 仍使用 mockMilestones（写死） | 仅有全局战略里程碑 + 项目里程碑映射（不支持每客户自定义阶段） | ❌ | A/C | 新增“客户里程碑”实体（带 projectId），后台可维护；前台按客户展示 | P0 | 每客户里程碑名称/数量不同且可后台改 |
-| strategy-companion | 本季度重点目标 | 当前为全局 strategic_goals（未按客户过滤） | 目标管理（全局） | ❌ | A | goals 增加 projectId；后台按当前客户新增/编辑；前台过滤 | P0 | 切换客户目标列表不同 |
-| strategy-companion | 文档资源 | 当前 documents 全局共享 | 文档管理（全局） | ❌ | A | documents 增加 projectId；后台写入；前台过滤 | P0 | 不同客户看到不同文档 |
-| strategy-companion | 会议记录 | 当前 meetings 全局共享 | 会议管理（全局） | ❌ | A | meetings 增加 projectId；后台写入；前台过滤 | P0 | 不同客户看到不同会议 |
-| strategy-companion | 最近动态(events) | 当前 events 全局共享 | 动态管理（全局） | ❌ | A | events 增加 projectId；后台写入；前台过滤 | P0 | 不同客户看到不同动态 |
-| strategy-companion | 课程推荐（赋能学院） | 当前写死/全局 | 无 | ❌ | A/C | 新增 course_recommendations（internal/external）；后台可维护；前台过滤 | P0 | 每客户不同推荐，可含外链 |
+| strategy-companion | 战略里程碑 | 从 localStorage 按 `projectId` 加载 milestones；前台按当前 clientId 展示 | 后台（AdminStrategyCompanionPage）选中客户后可新增/编辑/改状态/删除 | ✅ | — | 已实现：StrategicMilestone 增加 projectId，前台过滤展示 | P0 | 不同客户里程碑可不同；后台改动刷新后可见 |
+| strategy-companion | 本季度重点目标 | 从 localStorage 按 `projectId` 加载 goals+metrics；前台按当前 clientId 展示 | 后台选中客户后可新增/编辑/删除；指标随 goalId 维护 | ✅ | — | 已实现：StrategicGoal 增加 projectId，getStrategicGoals(projectId) | P0 | 切换客户目标列表不同且互不串数据 |
+| strategy-companion | 文档资源 | 从 localStorage 按 `projectId` 加载 documents；前台按当前 clientId 展示 | 后台选中客户后可新增/编辑/删除（含密码保护字段） | ✅ | — | 已实现：ProjectDocument 增加 projectId，getProjectDocuments(projectId) | P0 | 不同客户看到不同文档；无 projectId 不展示 |
+| strategy-companion | 会议记录 | 从 localStorage 按 `projectId` 加载 meetings；前台按当前 clientId 展示 | 后台选中客户后可新增/编辑/删除（含附件URL/会议链接/密码保护字段） | ✅ | — | 已实现：ProjectMeeting 增加 projectId，getProjectMeetings(projectId) | P0 | 不同客户看到不同会议；无 projectId 不展示 |
+| strategy-companion | 最近动态(events) | 从 localStorage 按 `projectId` 加载 events；前台按当前 clientId 展示 | 后台选中客户后可新增/编辑/删除 | ✅ | — | 已实现：ProjectEvent 增加 projectId，getProjectEvents(projectId) | P0 | 不同客户看到不同动态；无 projectId 不展示 |
+| strategy-companion | 课程推荐（赋能学院） | 从 localStorage 按 `projectId` 加载 course_recommendations；前台按当前 clientId 展示 | 后台选中客户后可新增/编辑/删除（internal/external） | ✅ | — | 已实现：CourseRecommendation(projectId) CRUD + 前台过滤 | P0 | 每客户不同推荐（含外链）；无 projectId 不展示 |
 | strategy | 管理员客户下拉 | 已存在下拉，但依赖本地客户列表 | 无（仅从 localStorage 读取） | ✅ | B | 继续；后续改为从统一数据源 | P1 | 下拉选择→进入 companion 并带 clientId |
 | strategy | “了解合作方式”按钮 | admin 下替换为下拉 | — | — | — | 已实现 | P1 | admin 显示下拉，非 admin 显示按钮 |
 | all | 按钮无功能 | 多处存在 placeholder | 不一 | — | C | 统一三态：已实现/未开放提示/权限不足提示；补 TODO | P0 | 任何按钮点击都有反馈 |
@@ -50,8 +51,8 @@
 - [x] 前台显示客户名 + Mission/Vision/Values
 - [ ] 补齐验证步骤与截图（修复前后）
 
-### Iteration 2（下一步，P0）
-- [ ] 里程碑/目标/会议/文档/动态/课程推荐全部增加 projectId 并按客户隔离
-- [ ] 后台各模块在“当前客户”上下文下维护
-- [ ] `SOURCES.md`：为 5 客户补齐真实互联网来源与内容
+### Iteration 2（P0，已完成）
+- [x] 里程碑/目标/会议/文档/动态/课程推荐全部增加 projectId 并按客户隔离
+- [x] 后台各模块在“当前客户”上下文下维护（AdminStrategyCompanionPage）
+- [ ] `SOURCES.md`：为 5 客户补齐真实互联网来源与内容（内容工作流待执行）
 
