@@ -66,19 +66,42 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
 
   // 导航点击处理 - 根据菜单项ID跳转到对应页面
   const handleNavClick = (id: string) => {
+    // 统一映射：学习中心 -> library
+    const pageMap: Record<string, string> = {
+      home: 'home',
+      insights: 'insights',
+      learning: 'library',
+      strategy: 'strategy',
+      about: 'about'
+    };
+
+    const page = pageMap[id] || id;
+
     if (onNavigate) {
-      // 根据导航项ID映射到页面类型
-      const pageMap: Record<string, 'home' | 'insights' | 'library' | 'strategy' | 'about' | 'login' | 'register'> = {
-        'home': 'home',
-        'insights': 'insights',
-        'learning': 'library', // 学习中心跳转到library页面
-        'strategy': 'strategy',
-        'about': 'about'
-      };
-      
-      const page = pageMap[id] || id as any;
+      // 优先走 SPA 内部跳转（不刷新）
       onNavigate(page);
+    } else {
+      // 兜底：当某些页面没有把 onNavigate 传给 Header 时，仍然保证导航可用
+      try {
+        const params = new URLSearchParams(window.location.search);
+
+        if (page === 'home') {
+          // 回首页：清空 query，避免一直卡在 ?page=library
+          window.history.replaceState({}, '', window.location.pathname);
+          window.location.reload();
+        } else {
+          params.set('page', page);
+          window.history.replaceState({}, '', `?${params.toString()}`);
+          window.location.reload();
+        }
+      } catch (e) {
+        // 最差兜底
+        window.location.href = page === 'home'
+          ? window.location.pathname
+          : `${window.location.pathname}?page=${encodeURIComponent(page)}`;
+      }
     }
+
     setIsMenuOpen(false);
   };
 
