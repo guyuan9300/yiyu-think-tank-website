@@ -300,7 +300,7 @@ onClick={() => handleNavClick(item.id)}
                       className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-muted/30 transition-all flex items-center gap-2"
                       onClick={() => {
                         setIsUserMenuOpen(false);
-                        if (onNavigate) onNavigate('settings');
+                        if (onNavigate) onNavigate('user-center');
                       }}
                     >
                       <SettingsIcon className="w-4 h-4 text-gray-500" />
@@ -391,7 +391,7 @@ onClick={() => handleNavClick(item.id)}
                   }}
                   className="w-full px-4 py-3 rounded-xl hover:bg-muted/30 transition-all text-left"
                 >
-                  个人中心
+                  个人中心 / 设置
                 </button>
                 
                 <button 
