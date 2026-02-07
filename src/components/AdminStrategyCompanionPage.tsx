@@ -1099,6 +1099,14 @@ const AdminStrategyCompanionPage: React.FC = () => {
     vision: '',
     valuesText: '',
     pasteText: '',
+
+    northStarMetric: '',
+    yearlyDeliverablesText: '',
+    next14DaysText: '',
+    q1PlanText: '',
+    q2PlanText: '',
+    q3PlanText: '',
+    q4PlanText: '',
   });
   const [parsedMilestoneTitles, setParsedMilestoneTitles] = useState<string[]>([]);
   const [applyParsedMilestones, setApplyParsedMilestones] = useState(true);
@@ -1116,6 +1124,14 @@ const AdminStrategyCompanionPage: React.FC = () => {
       vision: editingProject?.vision || '',
       valuesText: (editingProject?.values || []).join('，'),
       pasteText: '',
+
+      northStarMetric: editingProject?.northStarMetric || '',
+      yearlyDeliverablesText: (editingProject?.yearlyDeliverables || []).join('\n'),
+      next14DaysText: (editingProject?.next14Days || []).join('\n'),
+      q1PlanText: (editingProject?.quarterlyPlan?.q1 || []).join('\n'),
+      q2PlanText: (editingProject?.quarterlyPlan?.q2 || []).join('\n'),
+      q3PlanText: (editingProject?.quarterlyPlan?.q3 || []).join('\n'),
+      q4PlanText: (editingProject?.quarterlyPlan?.q4 || []).join('\n'),
     });
     setParsedMilestoneTitles([]);
     setApplyParsedMilestones(true);
@@ -2361,6 +2377,40 @@ let attachmentUrl = editingGoal?.attachmentUrl;
                 .map(s => s.trim())
                 .filter(Boolean)
                 .slice(0, 8),
+
+              northStarMetric: (clientForm as any).northStarMetric || undefined,
+              yearlyDeliverables: String((clientForm as any).yearlyDeliverablesText || '')
+                .split(/\n+/)
+                .map(s => s.trim())
+                .filter(Boolean)
+                .slice(0, 10),
+              next14Days: String((clientForm as any).next14DaysText || '')
+                .split(/\n+/)
+                .map(s => s.trim())
+                .filter(Boolean)
+                .slice(0, 10),
+              quarterlyPlan: {
+                q1: String((clientForm as any).q1PlanText || '')
+                  .split(/\n+/)
+                  .map(s => s.trim())
+                  .filter(Boolean)
+                  .slice(0, 20),
+                q2: String((clientForm as any).q2PlanText || '')
+                  .split(/\n+/)
+                  .map(s => s.trim())
+                  .filter(Boolean)
+                  .slice(0, 20),
+                q3: String((clientForm as any).q3PlanText || '')
+                  .split(/\n+/)
+                  .map(s => s.trim())
+                  .filter(Boolean)
+                  .slice(0, 20),
+                q4: String((clientForm as any).q4PlanText || '')
+                  .split(/\n+/)
+                  .map(s => s.trim())
+                  .filter(Boolean)
+                  .slice(0, 20),
+              },
             };
             handleSaveProject(submitData);
           }}
@@ -2566,6 +2616,87 @@ let attachmentUrl = editingGoal?.attachmentUrl;
               placeholder="用逗号/中文逗号/换行分隔，例如：深度陪伴，系统思维，价值共创，长期主义"
             />
             <p className="text-xs text-gray-500 mt-1">建议 4 个标签；最多取前 8 个</p>
+          </div>
+
+          <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+            <div className="text-sm font-medium text-blue-900 mb-2">年度终点任务（让客户一眼看到今年要交付什么）</div>
+
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">年度北极星指标</label>
+              <textarea
+                value={(clientForm as any).northStarMetric}
+                onChange={(e) => setClientForm(prev => ({ ...(prev as any), northStarMetric: e.target.value }))}
+                rows={2}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="例如：18-28岁目标人群有效触达人数（口径：...）/ 闭环完成率（口径：...）"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">年度关键交付物（每行一条，建议 ≤5 条）</label>
+                <textarea
+                  value={(clientForm as any).yearlyDeliverablesText}
+                  onChange={(e) => setClientForm(prev => ({ ...(prev as any), yearlyDeliverablesText: e.target.value }))}
+                  rows={4}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="使命愿景定稿&战略共识\n战略仪表盘上线\n心盛全链路闭环..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">未来14天必做（每行一条）</label>
+                <textarea
+                  value={(clientForm as any).next14DaysText}
+                  onChange={(e) => setClientForm(prev => ({ ...(prev as any), next14DaysText: e.target.value }))}
+                  rows={4}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="本周：使命愿景提案初稿\n下周：会议体系重构方案..."
+                />
+              </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Q1 关键DDL（每行一条）</label>
+                <textarea
+                  value={(clientForm as any).q1PlanText}
+                  onChange={(e) => setClientForm(prev => ({ ...(prev as any), q1PlanText: e.target.value }))}
+                  rows={4}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="2月中旬：使命愿景提案\n3月上旬：使命愿景定稿..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Q2 关键DDL（每行一条）</label>
+                <textarea
+                  value={(clientForm as any).q2PlanText}
+                  onChange={(e) => setClientForm(prev => ({ ...(prev as any), q2PlanText: e.target.value }))}
+                  rows={4}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="3-4月：心盛全链路闭环\n4月中旬：系统上线测试..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Q3 关键DDL（每行一条）</label>
+                <textarea
+                  value={(clientForm as any).q3PlanText}
+                  onChange={(e) => setClientForm(prev => ({ ...(prev as any), q3PlanText: e.target.value }))}
+                  rows={4}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="7月：数据资产复盘\n8月：心松松MVP复盘..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Q4 关键DDL（每行一条）</label>
+                <textarea
+                  value={(clientForm as any).q4PlanText}
+                  onChange={(e) => setClientForm(prev => ({ ...(prev as any), q4PlanText: e.target.value }))}
+                  rows={4}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="（可选）"
+                />
+              </div>
+            </div>
           </div>
           <div className="flex items-center justify-between gap-3 pt-4">
             {editingProject?.id ? (

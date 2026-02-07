@@ -1326,6 +1326,77 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
           </div>
         </div>
 
+        {/* Annual Finish Line / 北极星指标 & 关键交付物 */}
+        <div className="mb-12">
+          <div className="flex items-end justify-between gap-4 mb-5">
+            <div>
+              <h2 className="text-[18px] font-semibold text-slate-800">年度终点任务</h2>
+              <p className="text-[13px] text-slate-500 mt-1">先看今年要交付什么，再看过程与证据</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-100 p-6">
+              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">North Star</div>
+              <div className="text-[16px] font-semibold text-slate-800 leading-relaxed">
+                {selectedClient?.northStarMetric || '（请在后台为该客户填写年度北极星指标）'}
+              </div>
+            </div>
+
+            <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-100 p-6">
+              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-3">年度关键交付物</div>
+              <ol className="list-decimal pl-5 space-y-2 text-[14px] text-slate-700">
+                {(selectedClient?.yearlyDeliverables && selectedClient.yearlyDeliverables.length > 0
+                  ? selectedClient.yearlyDeliverables
+                  : ['（请在后台填写 3-5 条关键交付物）']
+                ).slice(0, 7).map((t, i) => (
+                  <li key={i} className="leading-relaxed">{t}</li>
+                ))}
+              </ol>
+            </div>
+
+            <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-100 p-6">
+              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-3">未来14天必做</div>
+              <ul className="space-y-2 text-[14px] text-slate-700">
+                {(selectedClient?.next14Days && selectedClient.next14Days.length > 0
+                  ? selectedClient.next14Days
+                  : ['（请在后台填写接下来 14 天的 3 件必做事项）']
+                ).slice(0, 5).map((t, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className="mt-2 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                    <span className="leading-relaxed">{t}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-5 bg-white rounded-2xl border border-slate-100 p-6 overflow-x-auto">
+            <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-4">季度路线图（DDL）</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 min-w-[900px] md:min-w-0">
+              {([
+                { key: 'q1', title: 'Q1', items: selectedClient?.quarterlyPlan?.q1 || [] },
+                { key: 'q2', title: 'Q2', items: selectedClient?.quarterlyPlan?.q2 || [] },
+                { key: 'q3', title: 'Q3', items: selectedClient?.quarterlyPlan?.q3 || [] },
+                { key: 'q4', title: 'Q4', items: selectedClient?.quarterlyPlan?.q4 || [] },
+              ] as const).map((q) => (
+                <div key={q.key} className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4">
+                  <div className="text-[13px] font-semibold text-slate-800 mb-3">{q.title}</div>
+                  {q.items.length > 0 ? (
+                    <ul className="space-y-2 text-[13px] text-slate-700">
+                      {q.items.slice(0, 6).map((t, i) => (
+                        <li key={i} className="leading-relaxed">• {t}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="text-[13px] text-slate-400">（待填写）</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* Mission & Vision & Values */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 mb-12">
           {/* Left: Mission & Vision */}

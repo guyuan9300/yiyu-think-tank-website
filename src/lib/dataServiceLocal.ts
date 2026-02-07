@@ -148,6 +148,17 @@ export interface ClientProject {
   vision?: string;
   values?: string[];
 
+  // Annual plan (to make "终点任务" explicit on the client portal)
+  northStarMetric?: string; // e.g. 北极星指标（完成定义+口径）
+  yearlyDeliverables?: string[]; // 3-7 items
+  next14Days?: string[]; // 1-5 items
+  quarterlyPlan?: {
+    q1?: string[];
+    q2?: string[];
+    q3?: string[];
+    q4?: string[];
+  };
+
   sortOrder: number;
   isActive: boolean;
   createdAt: string;
