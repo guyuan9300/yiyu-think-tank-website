@@ -3,6 +3,8 @@
  * 使用localStorage存储前后台数据，实现数据同步
  */
 
+import defaultInsightsJson from '../content/defaultInsights.json';
+
 // 数据类型定义
 export interface Report {
   id: string;
@@ -43,6 +45,14 @@ export interface InsightArticle {
   showOnHome: boolean;      // 是否显示在首页（手动选择）
   views: number;
   likes: number;
+
+  // Share (WeChat Moments, etc.)
+  shareEnabled?: boolean;
+  shareSlug?: string; // used to generate static share page url
+  shareTitle?: string;
+  shareDescription?: string;
+  shareImage?: string;
+
   createdAt: string;
   updatedAt: string;
 }
@@ -236,8 +246,22 @@ const initDefaultReports = (): Report[] => [
   },
 ];
 
-// 初始化默认洞察文章（Apple 风格：更短、更清晰、更可执行）
-const initDefaultInsights = (): InsightArticle[] => [
+// 初始化默认洞察文章
+// NOTE: we load defaults from JSON so build-time scripts (e.g. static share pages) can reuse the same source.
+const initDefaultInsights = (): InsightArticle[] => {
+  const now = new Date().toISOString();
+  return (defaultInsightsJson as any[]).map((i) => ({
+    ...i,
+    createdAt: i.createdAt || now,
+    updatedAt: i.updatedAt || now,
+  })) as InsightArticle[];
+};
+
+/*
+ * Legacy inline defaults (migrated to src/content/defaultInsights.json)
+ * Kept as a comment for reference.
+ */
+/*
   {
     id: 'i_brand_system_thinking',
     title: '公益品牌怎么做：不要“解决”，要“治理”',
@@ -356,6 +380,7 @@ const initDefaultInsights = (): InsightArticle[] => [
     updatedAt: new Date().toISOString(),
   },
 ];
+*/
 
 // 初始化默认书籍
 const initDefaultBooks = (): Book[] => [

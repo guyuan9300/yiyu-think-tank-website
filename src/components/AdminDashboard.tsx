@@ -1966,6 +1966,14 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   publishDate: formData.get('publishDate') as string,
                   status: formData.get('status') as 'draft' | 'published',
                   featured: formData.get('featured') === 'on',
+                  showOnHome: formData.get('showOnHome') === 'on',
+
+                  // Share settings (WeChat Moments etc.)
+                  shareEnabled: formData.get('shareEnabled') === 'on',
+                  shareSlug: (formData.get('shareSlug') as string) || undefined,
+                  shareTitle: (formData.get('shareTitle') as string) || undefined,
+                  shareDescription: (formData.get('shareDescription') as string) || undefined,
+                  shareImage: (formData.get('shareImage') as string) || undefined,
                 };
                 
                 const saved = saveInsight(articleData);
@@ -3036,6 +3044,68 @@ function InsightFormModal({
             )}
           </div>
           
+          {/* 分享设置（用于微信朋友圈卡片） */}
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium text-gray-900">分享设置（朋友圈/微信卡片）</div>
+                <div className="text-xs text-gray-600 mt-1">用于生成静态分享页：/share/article/&lt;slug&gt;</div>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-gray-800">
+                <input
+                  type="checkbox"
+                  name="shareEnabled"
+                  defaultChecked={editingItem?.shareEnabled !== false}
+                  className="rounded text-green-600 focus:ring-green-500"
+                />
+                启用分享
+              </label>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">分享链接 Slug（必填，建议英文/数字/短横线）</label>
+                <input
+                  type="text"
+                  name="shareSlug"
+                  placeholder="例如：ai-enterprise-practice"
+                  defaultValue={editingItem?.shareSlug || editingItem?.id || ''}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">分享封面图 URL（可选）</label>
+                <input
+                  type="text"
+                  name="shareImage"
+                  placeholder="留空则使用文章封面"
+                  defaultValue={editingItem?.shareImage || ''}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">分享标题（可选）</label>
+                <input
+                  type="text"
+                  name="shareTitle"
+                  placeholder="留空则使用文章标题"
+                  defaultValue={editingItem?.shareTitle || ''}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">分享摘要（可选）</label>
+                <textarea
+                  name="shareDescription"
+                  rows={2}
+                  placeholder="留空则使用文章摘要"
+                  defaultValue={editingItem?.shareDescription || ''}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* 状态和推荐 */}
           <div className="grid grid-cols-2 gap-6">
             <div>

@@ -190,9 +190,22 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
                   <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
                   <span>{isBookmarked ? '已收藏' : '收藏'}</span>
                 </button>
-                <button className="flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-muted/40 text-muted-foreground/70 text-[15px] font-medium hover:bg-muted/60 transition-all hover:scale-[1.02]">
+                <button
+                  onClick={async () => {
+                    const slug = (displayArticle as any)?.shareSlug || displayArticle.id;
+                    const base = window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, '');
+                    const shareUrl = `${base}/share/article/${encodeURIComponent(slug)}/`;
+                    try {
+                      await navigator.clipboard.writeText(shareUrl);
+                      alert('已复制分享链接，可直接粘贴到微信/朋友圈');
+                    } catch {
+                      window.prompt('复制下面链接分享到微信/朋友圈：', shareUrl);
+                    }
+                  }}
+                  className="flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-muted/40 text-muted-foreground/70 text-[15px] font-medium hover:bg-muted/60 transition-all hover:scale-[1.02]"
+                >
                   <Share2 className="w-4 h-4" />
-                  <span>分享</span>
+                  <span>分享到朋友圈</span>
                 </button>
               </div>
             </div>
@@ -285,9 +298,22 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
                   <Bookmark className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`} />
                   <span className="font-medium">{isBookmarked ? '已收藏' : '收藏'}</span>
                 </button>
-                <button className="flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-all duration-300 hover:scale-[1.02]">
+                <button
+                  onClick={async () => {
+                    const slug = (displayArticle as any)?.shareSlug || displayArticle.id;
+                    const base = window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, '');
+                    const shareUrl = `${base}/share/article/${encodeURIComponent(slug)}/`;
+                    try {
+                      await navigator.clipboard.writeText(shareUrl);
+                      alert('已复制分享链接，可直接粘贴到微信/朋友圈');
+                    } catch {
+                      window.prompt('复制下面链接分享到微信/朋友圈：', shareUrl);
+                    }
+                  }}
+                  className="flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-all duration-300 hover:scale-[1.02]"
+                >
                   <Share2 className="w-5 h-5" />
-                  <span className="font-medium">分享</span>
+                  <span className="font-medium">分享到朋友圈</span>
                 </button>
               </div>
             </div>
