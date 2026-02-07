@@ -30,7 +30,8 @@ body {
 
   /* Mobile: feel more like an app */
   -webkit-tap-highlight-color: transparent;
-  overscroll-behavior-y: none;
+  /* Avoid blocking native pickers/select option scrolling on mobile */
+  overscroll-behavior-y: auto;
 }
 
 /* iOS Safe Area helpers */
