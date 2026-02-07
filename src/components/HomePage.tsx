@@ -417,7 +417,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
               </p>
             </div>
             <button
-              onClick={() => handleNavigate('insights')}
+              onClick={() => setSubscriptionOpen(true)}
               className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-all duration-300 text-[14px]"
             >
               <span>订阅前沿</span>
