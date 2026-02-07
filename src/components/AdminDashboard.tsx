@@ -3050,6 +3050,7 @@ function InsightFormModal({
               <div>
                 <div className="text-sm font-medium text-gray-900">分享设置（朋友圈/微信卡片）</div>
                 <div className="text-xs text-gray-600 mt-1">用于生成静态分享页：/share/article/&lt;slug&gt;</div>
+                <div className="text-[11px] text-gray-500 mt-1">注意：当前站点部署在 GitHub Pages（纯静态）。分享卡片读取的是“构建时生成的分享页”。在后台修改文章后，如需更新朋友圈卡片信息，需要触发一次重新构建/发布。</div>
               </div>
               <label className="flex items-center gap-2 text-sm text-gray-800">
                 <input
