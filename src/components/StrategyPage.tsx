@@ -134,6 +134,8 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
     { title: '效果导向', desc: '用目标与指标衡量成果' }
   ];
 
+  const withBase = (p: string) => `${import.meta.env.BASE_URL}${String(p || '').replace(/^\//, '')}`;
+
   // Cases data - 9 grid
   const cases = [
     {
@@ -144,7 +146,7 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       action: '通过书信交流建立长期陪伴关系',
       results: ['服务10万+留守儿童', '中国社会组织5A评级'],
       tags: ['公益', '教育'],
-      coverImage: '/images/cases/blue-letter.png'
+      coverImage: withBase('/images/cases/blue-letter.png')
     },
     {
       industry: '金融/投资',
@@ -154,7 +156,7 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       action: '聚焦早中期投资，陪伴创业者成长',
       results: ['管理规模数十亿元', '投资多个明星项目'],
       tags: ['投资', '创投'],
-      coverImage: '/images/cases/vision-capital.png'
+      coverImage: withBase('/images/cases/vision-capital.png')
     },
     {
       industry: '公益/房地产',
@@ -164,7 +166,7 @@ challenge: '社区居民参与度低',
       action: '打造互助互利的社区公益平台',
       results: ['覆盖全国主要城市', '百万志愿者参与'],
       tags: ['社区', '公益'],
-      coverImage: '/images/cases/beike-foundation.png'
+      coverImage: withBase('/images/cases/beike-foundation.png')
     },
     {
       industry: '公益/教育',
@@ -174,7 +176,7 @@ challenge: '社区居民参与度低',
       action: '专注心智素养教育项目设计与推广',
       results: ['覆盖20+省市', '受益学生50万+'],
       tags: ['教育', '心理'],
-      coverImage: '/images/cases/rici-foundation.png'
+      coverImage: withBase('/images/cases/rici-foundation.png')
     },
     {
       industry: '公益/教育',
@@ -184,7 +186,7 @@ challenge: '社区居民参与度低',
       action: '开展乡土人本教育模式探索',
       results: ['创办兴隆实验小学', '惠及上千名学生'],
       tags: ['乡村', '教育'],
-      coverImage: '/images/cases/tianzige.png'
+      coverImage: withBase('/images/cases/tianzige.png')
     },
     {
       industry: '公益/咨询',
@@ -194,7 +196,7 @@ challenge: '社区居民参与度低',
       action: '为NGO提供战略、运营等专业咨询',
       results: ['服务110+公益组织', '志愿者17万+小时'],
       tags: ['咨询', 'NGO'],
-      coverImage: '/images/cases/abc-consulting.png'
+      coverImage: withBase('/images/cases/abc-consulting.png')
     },
     {
       industry: '教育/科技',
@@ -204,7 +206,7 @@ challenge: '社区居民参与度低',
       action: '通过AI和大数据提供个性化方案',
       results: ['服务百所院校', '提效显著'],
       tags: ['AI', '教育'],
-      coverImage: '/images/cases/lithium-sodium-krypton-strontium.png'
+      coverImage: withBase('/images/cases/lithium-sodium-krypton-strontium.png')
     },
     {
       industry: '公益/乡村振兴',
@@ -214,7 +216,7 @@ challenge: '社区居民参与度低',
       action: '实施扶贫开发、乡村振兴项目',
       results: ['30+年公益经验', '惠及千万农户'],
       tags: ['乡村', '扶贫'],
-      coverImage: '/images/cases/china-rural-foundation.png'
+      coverImage: withBase('/images/cases/china-rural-foundation.png')
     },
     {
       industry: '汽车/新能源',
@@ -224,7 +226,7 @@ challenge: '社区居民参与度低',
       action: '创造愉悦的用户生活方式',
       results: ['全球用户社群', '换电网络覆盖全国'],
       tags: ['汽车', '新能源'],
-      coverImage: '/images/cases/nio.png'
+      coverImage: withBase('/images/cases/nio.png')
     }
   ];
 
