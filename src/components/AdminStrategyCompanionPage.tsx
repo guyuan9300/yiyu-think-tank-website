@@ -1049,6 +1049,8 @@ const parseClientStrategyPaste = (raw: string): {
   };
 };
 
+const ADMIN_PASSWORD = 'Guyuan9300';
+
 const AdminStrategyCompanionPage: React.FC = () => {
   // 状态管理
   const [selectedClient, setSelectedClient] = useState<ClientProject | null>(null);
@@ -1208,6 +1210,38 @@ const AdminStrategyCompanionPage: React.FC = () => {
   const handleAddClient = () => {
     setEditingProject(null);
     setShowProjectModal(true);
+  };
+
+  const handleDeleteClient = async (id: string) => {
+    const ok = window.confirm('确定要删除该客户吗？此操作将同时删除其里程碑/目标/事件/文档/会议等数据，且不可恢复。');
+    if (!ok) return;
+
+    const pwd = window.prompt('请输入管理员登录密码以确认删除');
+    if (pwd !== ADMIN_PASSWORD) {
+      alert('密码错误，已取消删除');
+      return;
+    }
+
+    const success = await deleteClientProject(id);
+    if (!success) {
+      alert('删除失败：未找到该客户或数据异常');
+      return;
+    }
+
+    // update UI state
+    setClients((prev) => prev.filter((c) => c.id !== id));
+    if (selectedClient?.id === id) {
+      setSelectedClient(null);
+      setMilestones([]);
+      setGoals([]);
+      setEvents([]);
+      setDocuments([]);
+      setMeetings([]);
+      setGoalMetrics({});
+    }
+
+    setShowProjectModal(false);
+    setEditingProject(null);
   };
   
   // 编辑客户
@@ -2533,23 +2567,37 @@ let attachmentUrl = editingGoal?.attachmentUrl;
             />
             <p className="text-xs text-gray-500 mt-1">建议 4 个标签；最多取前 8 个</p>
           </div>
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={() => {
-                setShowProjectModal(false);
-                setEditingProject(null);
-              }}
-              className="px-4 py-2 text-gray-700 border rounded-lg hover:bg-gray-50"
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              保存
-            </button>
+          <div className="flex items-center justify-between gap-3 pt-4">
+            {editingProject?.id ? (
+              <button
+                type="button"
+                onClick={() => handleDeleteClient(editingProject.id!)}
+                className="px-4 py-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 border border-red-200"
+              >
+                删除客户
+              </button>
+            ) : (
+              <span />
+            )}
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowProjectModal(false);
+                  setEditingProject(null);
+                }}
+                className="px-4 py-2 text-gray-700 border rounded-lg hover:bg-gray-50"
+              >
+                取消
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                保存
+              </button>
+            </div>
           </div>
         </form>
       </Modal>
