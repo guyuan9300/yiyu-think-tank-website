@@ -31,6 +31,7 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
 }
 
 export type CoverStyle = 'semi-realistic';
+export type AvatarStyle = 'minimalist';
 
 export function buildCoverPrompt(params: {
   title: string;
@@ -52,27 +53,39 @@ export function buildCoverPrompt(params: {
     excerpt ? `Context: ${excerpt}.` : '',
     tagLine ? `Keywords: ${tagLine}.` : '',
     'Use a coherent color palette with subtle gradients (blue/indigo/violet accents) and lots of whitespace.',
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(' ');
 }
 
-export async function generateCoverImage(params: {
-  title: string;
-  excerpt?: string;
+export function buildAvatarPrompt(params: {
+  keywords: string;
   tags?: string[];
-}): Promise<string> {
+  style?: AvatarStyle;
+}): string {
+  const { keywords, tags } = params;
+  const tagLine = (tags || []).slice(0, 8).join(', ');
+
+  // Minimalist avatar: flat vector-ish, no text, square composition
+  return [
+    'Create a minimalist avatar icon for a professional knowledge / think tank website user profile.',
+    'Style: clean, flat, minimalist, subtle gradients, soft pastel palette, modern UI icon style.',
+    'Square 1:1 composition, centered subject, lots of whitespace, crisp edges.',
+    'No text, no letters, no logos, no watermarks, no real person photo.',
+    `Keywords: ${keywords}.`,
+    tagLine ? `Preference tags: ${tagLine}.` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+async function callHfImageModel(prompt: string): Promise<string> {
   const token = getHfToken();
   if (!token) {
     throw new Error('缺少 Hugging Face Token（请在后台设置里填写）');
   }
 
   const model = getHfModel();
-  const prompt = buildCoverPrompt({
-    title: params.title,
-    excerpt: params.excerpt,
-    tags: params.tags,
-    style: 'semi-realistic',
-  });
-
   const url = `https://api-inference.huggingface.co/models/${encodeURIComponent(model)}`;
 
   const resp = await fetch(url, {
@@ -114,4 +127,32 @@ export async function generateCoverImage(params: {
 
   const blob = await resp.blob();
   return await blobToDataUrl(blob);
+}
+
+export async function generateCoverImage(params: {
+  title: string;
+  excerpt?: string;
+  tags?: string[];
+}): Promise<string> {
+  const prompt = buildCoverPrompt({
+    title: params.title,
+    excerpt: params.excerpt,
+    tags: params.tags,
+    style: 'semi-realistic',
+  });
+
+  return await callHfImageModel(prompt);
+}
+
+export async function generateAvatarImage(params: {
+  keywords: string;
+  tags?: string[];
+}): Promise<string> {
+  const prompt = buildAvatarPrompt({
+    keywords: params.keywords,
+    tags: params.tags,
+    style: 'minimalist',
+  });
+
+  return await callHfImageModel(prompt);
 }

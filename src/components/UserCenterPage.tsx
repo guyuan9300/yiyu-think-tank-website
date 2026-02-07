@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Header } from './Header';
 import { SettingsPage } from './SettingsPage';
-import { clearUser, getSavedUserRaw } from '../lib/storage';
+import { clearUser, getSavedUserRaw, saveUserRaw, USER_KEY } from '../lib/storage';
+import { generateAvatarImage } from '../lib/hfImageGen';
 import {
   User as UserIcon,
   Crown,
@@ -19,6 +20,8 @@ type LocalUser = {
   nickname?: string;
   memberType?: MemberType;
   status?: string;
+  avatarUrl?: string;
+  preferences?: string[];
 };
 
 type UserCenterPageProps = {
@@ -28,6 +31,9 @@ type UserCenterPageProps = {
 export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
   const [user, setUser] = useState<LocalUser | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'settings'>('profile');
+  const [avatarKeywords, setAvatarKeywords] = useState('');
+  const [prefInput, setPrefInput] = useState('');
+  const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
 
   const isAdmin = useMemo(() => {
     const flag = localStorage.getItem('yiyu_is_admin') ?? sessionStorage.getItem('yiyu_is_admin');
@@ -42,7 +48,10 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
         return;
       }
       try {
-        setUser(JSON.parse(raw));
+        const u = JSON.parse(raw);
+        setUser(u);
+        // prefill
+        setAvatarKeywords(u?.nickname || u?.email || '');
       } catch {
         setUser(null);
       }
@@ -56,6 +65,25 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
       window.removeEventListener('yiyu_user_updated', load as any);
     };
   }, []);
+
+  const persistUserPatch = (patch: Partial<LocalUser>) => {
+    const raw = getSavedUserRaw();
+    if (!raw) return;
+    let current: any = null;
+    try {
+      current = JSON.parse(raw);
+    } catch {
+      return;
+    }
+
+    const next = { ...current, ...patch };
+
+    // Decide remember mode by where the user is stored.
+    const remember = localStorage.getItem(USER_KEY) != null;
+    saveUserRaw(JSON.stringify(next), remember);
+    setUser(next);
+    window.dispatchEvent(new Event('yiyu_user_updated'));
+  };
 
   const memberBadge = useMemo(() => {
     const t = user?.memberType || 'regular';
@@ -110,8 +138,12 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
         {/* Top card */}
         <div className="bg-white/70 backdrop-blur rounded-3xl border border-border/40 p-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-xl font-bold">
-              {(user.nickname || user.email || '益').slice(0, 1).toUpperCase()}
+            <div className="w-14 h-14 rounded-2xl overflow-hidden border border-border/40 bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-xl font-bold">
+              {user.avatarUrl ? (
+                <img src={user.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                (user.nickname || user.email || '益').slice(0, 1).toUpperCase()
+              )}
             </div>
             <div>
               <div className="text-xl font-semibold">{user.nickname || '用户'}</div>
@@ -184,6 +216,145 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
                   去设置
                   <ChevronRight className="w-4 h-4" />
                 </button>
+              </div>
+            </div>
+
+            {/* Avatar & Preferences */}
+            <div className="lg:col-span-2 bg-white/70 backdrop-blur rounded-3xl border border-border/40 p-6">
+              <h3 className="text-base font-semibold mb-4">头像与偏好</h3>
+
+              <div className="flex flex-col sm:flex-row gap-6">
+                <div className="shrink-0">
+                  <div className="w-24 h-24 rounded-3xl overflow-hidden border border-border/40 bg-white flex items-center justify-center">
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-3xl font-semibold text-slate-600">{(user.nickname || user.email || '益').slice(0, 1).toUpperCase()}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex-1 space-y-3">
+                  <div className="text-sm text-muted-foreground/70">支持上传头像，或输入关键词用 AI 生成（极简风）。</div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="px-4 py-2 rounded-2xl border border-border/50 hover:bg-muted/30 transition text-sm cursor-pointer">
+                      上传头像
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const f = e.target.files?.[0];
+                          if (!f) return;
+                          if (f.size > 2 * 1024 * 1024) {
+                            alert('图片过大，建议 ≤ 2MB');
+                            return;
+                          }
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            const url = String(reader.result || '');
+                            if (url) persistUserPatch({ avatarUrl: url });
+                          };
+                          reader.readAsDataURL(f);
+                        }}
+                      />
+                    </label>
+
+                    <button
+                      className="px-4 py-2 rounded-2xl bg-foreground text-white hover:bg-foreground/90 transition text-sm disabled:opacity-60"
+                      disabled={isGeneratingAvatar || !avatarKeywords.trim()}
+                      onClick={async () => {
+                        try {
+                          setIsGeneratingAvatar(true);
+                          const dataUrl = await generateAvatarImage({
+                            keywords: avatarKeywords.trim(),
+                            tags: user.preferences || [],
+                          });
+                          persistUserPatch({ avatarUrl: dataUrl });
+                        } catch (e: any) {
+                          alert('AI 生成头像失败：' + (e?.message || String(e)) + '\n\n提示：请先在后台「系统设置」里填写 Hugging Face Token。');
+                        } finally {
+                          setIsGeneratingAvatar(false);
+                        }
+                      }}
+                    >
+                      {isGeneratingAvatar ? '生成中…' : 'AI 生成头像'}
+                    </button>
+
+                    {user.avatarUrl && (
+                      <button
+                        className="px-4 py-2 rounded-2xl bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition text-sm"
+                        onClick={() => persistUserPatch({ avatarUrl: undefined })}
+                      >
+                        移除头像
+                      </button>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">关键词（用于 AI 生成）</label>
+                    <input
+                      value={avatarKeywords}
+                      onChange={(e) => setAvatarKeywords(e.target.value)}
+                      placeholder="例如：极简、专业、理性、蓝紫渐变"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">偏好标签</label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {(user.preferences || []).map((t, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs hover:bg-slate-200"
+                          onClick={() => {
+                            const next = (user.preferences || []).filter((_, idx) => idx !== i);
+                            persistUserPatch({ preferences: next });
+                          }}
+                          title="点击删除"
+                        >
+                          {t} ×
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <input
+                        value={prefInput}
+                        onChange={(e) => setPrefInput(e.target.value)}
+                        placeholder="回车/点击添加，例如：AI、组织学习、公益"
+                        className="flex-1 px-4 py-2 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const v = prefInput.trim();
+                            if (!v) return;
+                            const next = Array.from(new Set([...(user.preferences || []), v])).slice(0, 12);
+                            persistUserPatch({ preferences: next });
+                            setPrefInput('');
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="px-4 py-2 rounded-2xl border border-border/50 hover:bg-muted/30 transition text-sm"
+                        onClick={() => {
+                          const v = prefInput.trim();
+                          if (!v) return;
+                          const next = Array.from(new Set([...(user.preferences || []), v])).slice(0, 12);
+                          persistUserPatch({ preferences: next });
+                          setPrefInput('');
+                        }}
+                      >
+                        添加
+                      </button>
+                    </div>
+                    <div className="text-[11px] text-muted-foreground/70 mt-2">这些标签会作为 AI 生成头像/后续订阅推荐的偏好输入。</div>
+                  </div>
+                </div>
               </div>
             </div>
 
