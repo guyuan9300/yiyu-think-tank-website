@@ -2,10 +2,17 @@ import { useState, useEffect } from 'react';
 import { Menu, X, ChevronDown, Crown, Award, User as UserIcon, LogOut, Settings as SettingsIcon } from 'lucide-react';
 import type { User } from '../lib/dataService';
 
+// React props 里的回调在 TS 下容易触发“参数逆变”导致不好传（尤其 page 是 union 的时候）。
+// 这里用 bivariant hack，让调用方可以传更窄的 union 函数，也可以传 (page: string) => void。
+// 参考：React 自带的 EventHandler 类型处理方式。
+type BivariantCallback<T extends (...args: any[]) => any> = {
+  bivarianceHack: T;
+}["bivarianceHack"];
+
 interface HeaderProps {
   isLoggedIn?: boolean;
   userType?: 'visitor' | 'member' | 'client';
-  onNavigate?: (page: string) => void;
+  onNavigate?: BivariantCallback<(page: string) => void>;
 }
 
 export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor', onNavigate }: HeaderProps) {
@@ -71,11 +78,11 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
 
   // 导航点击处理 - 根据菜单项ID跳转到对应页面
   const handleNavClick = (id: string) => {
-    // 统一映射：学习中心 -> library
+    // 统一映射：这里用 App 侧的导航语义（learning），避免类型/语义分裂。
     const pageMap: Record<string, string> = {
       home: 'home',
       insights: 'insights',
-      learning: 'library',
+      learning: 'learning',
       strategy: 'strategy',
       about: 'about'
     };
@@ -86,25 +93,12 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
       // 优先走 SPA 内部跳转（不刷新）
       onNavigate(page);
     } else {
-      // 兜底：当某些页面没有把 onNavigate 传给 Header 时，仍然保证导航可用
-      try {
-        const params = new URLSearchParams(window.location.search);
-
-        if (page === 'home') {
-          // 回首页：清空 query，避免一直卡在 ?page=library
-          window.history.replaceState({}, '', window.location.pathname);
-          window.location.reload();
-        } else {
-          params.set('page', page);
-          window.history.replaceState({}, '', `?${params.toString()}`);
-          window.location.reload();
-        }
-      } catch (e) {
-        // 最差兜底
-        window.location.href = page === 'home'
-          ? window.location.pathname
-          : `${window.location.pathname}?page=${encodeURIComponent(page)}`;
-      }
+      // 兜底：如果某些页面没传 onNavigate，则退化为“真正跳转”。
+      // URL 参数用实际渲染页名（learning -> library），避免 App 初始化读到不认识的 page。
+      const path = window.location.pathname;
+      const pageParam = page === 'learning' ? 'library' : page;
+      const target = pageParam === 'home' ? path : `${path}?page=${encodeURIComponent(pageParam)}`;
+      window.location.assign(target);
     }
 
     setIsMenuOpen(false);
@@ -210,7 +204,7 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
             {navItems.map((item) => (
               <button
                 key={item.id}
-onClick={() => handleNavClick(item.id)}
+                onClick={() => handleNavClick(item.id)}
                 className="px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-all"
               >
                 {item.label}

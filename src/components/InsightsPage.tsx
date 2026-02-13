@@ -91,18 +91,37 @@ function ArticleCard({ article, onClick }: { article: InsightArticle; onClick?: 
     >
       <div className="relative bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-white/80 hover:border-border/60 hover:shadow-2xl hover:shadow-black/[0.04] hover:-translate-y-1">
         {/* 封面区域 */}
-        <div className="relative aspect-[16/10] bg-gradient-to-br from-primary/[0.03] to-accent/[0.03] overflow-hidden">
-          {article.coverImage ? (
+        <div className="relative aspect-[16/10] bg-gradient-to-br from-primary/[0.06] to-accent/[0.06] overflow-hidden">
+          {/* 默认封面（无封面图或加载失败时展示） */}
+          <div className="absolute inset-0 p-6 flex flex-col justify-between">
+            <div className="w-12 h-12 rounded-2xl bg-white/60 flex items-center justify-center">
+              <FileText className="w-6 h-6 text-primary/40" />
+            </div>
+            <div>
+              <p className="text-white/90 text-[11px] font-medium bg-black/35 inline-block px-2 py-1 rounded-full mb-2">
+                {article.category}
+              </p>
+              <h4 className="text-[16px] font-semibold leading-snug text-foreground line-clamp-3">
+                {article.title}
+              </h4>
+              {article.author && (
+                <p className="text-[12px] text-muted-foreground/70 mt-2 line-clamp-1">
+                  {article.author}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {article.coverImage && (
             <img
               src={article.coverImage}
               alt={article.title}
               className="absolute inset-0 w-full h-full object-cover"
               loading="lazy"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = 'none';
+              }}
             />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <FileText className="w-16 h-16 text-primary/10" />
-            </div>
           )}
 
           {/* 推荐标签 */}
@@ -225,31 +244,26 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
   const navigateToReportLibrary = () => {
     if (onNavigate) {
       onNavigate('report-library');
-    } else {
-      const params = new URLSearchParams(window.location.search);
-      params.set('page', 'report-library');
-      window.history.replaceState({}, '', `?${params.toString()}`);
-      window.location.reload();
+      return;
     }
+    // 兜底：直接跳转一次（不做 replaceState + reload）
+    window.location.assign(`${window.location.pathname}?page=report-library`);
   };
 
   // 跳转到文章中心
   const navigateToArticleCenter = () => {
     if (onNavigate) {
       onNavigate('article-center');
-    } else {
-      const params = new URLSearchParams(window.location.search);
-      params.set('page', 'article-center');
-      window.history.replaceState({}, '', `?${params.toString()}`);
-      window.location.reload();
+      return;
     }
+    window.location.assign(`${window.location.pathname}?page=article-center`);
   };
 
   // 加载状态
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <Header onNavigate={onNavigate} />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4" />
@@ -263,7 +277,7 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* 头部 */}
-      <Header />
+      <Header onNavigate={onNavigate} />
 
       {/* Hero 区域 - Apple 风格设计 */}
       <section className="relative pt-32 pb-20 px-6 overflow-hidden">

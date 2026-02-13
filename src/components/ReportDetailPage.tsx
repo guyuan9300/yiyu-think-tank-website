@@ -55,7 +55,7 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <Header onNavigate={(p) => onNavigate(p)} />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4" />
@@ -69,7 +69,7 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
   if (!report) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <Header onNavigate={(p) => onNavigate(p)} />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <FileText className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
@@ -89,7 +89,7 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
   return (
     <div className="min-h-screen bg-background">
       {/* 头部 */}
-      <Header />
+      <Header onNavigate={(p) => onNavigate(p)} />
 
       {/* Hero 区域 - 左图右文布局 */}
       <section className="relative pt-32 pb-20 px-6 overflow-hidden">

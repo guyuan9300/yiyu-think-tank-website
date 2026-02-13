@@ -21,7 +21,26 @@ interface Book {
 }
 
 interface LibraryPageProps {
-  onNavigate?: (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader', bookId?: string) => void;
+  onNavigate?: (
+    page:
+      | 'home'
+      | 'insights'
+      | 'learning'
+      | 'strategy'
+      | 'about'
+      | 'book-reader'
+      | 'login'
+      | 'register'
+      | 'case'
+      | 'admin'
+      | 'user-center'
+      | 'test'
+      | 'strategy-companion'
+      | 'report-library'
+      | 'article-center',
+    bookId?: string,
+    caseId?: string
+  ) => void;
 }
 
 export function LibraryPage({ onNavigate }: LibraryPageProps) {
@@ -327,7 +346,7 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header isLoggedIn={false} userType="visitor" />
+      <Header isLoggedIn={false} userType="visitor" onNavigate={(p) => onNavigate?.(p as any)} />
 
       {/* Hero Section */}
       <section className="pt-32 pb-12 px-4 sm:px-6 lg:px-8 border-b border-border/40">
