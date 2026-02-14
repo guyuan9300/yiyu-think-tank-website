@@ -378,7 +378,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
           </div>
 
           {/* PDF查看器 */}
-          <div className={isMobile ? "w-full bg-white" : "w-full h-full bg-white"}>
+          <div className={isMobile ? "w-full bg-white" : "flex-1 min-h-0 w-full bg-white"}>
             {report.fileUrl ? (
               isMobile ? (
                 <div className="p-6">
