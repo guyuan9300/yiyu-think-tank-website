@@ -10,6 +10,8 @@ import {
   loginWithWechat
 } from '../lib/auth';
 
+// NOTE: 邮箱验证邮件的跳转地址由 auth.ts 内的 emailRedirectTo 控制（需包含 BASE_URL 子路径）。
+
 type RegisterTab = 'phone' | 'email' | 'wechat';
 
 interface RegisterPageProps {

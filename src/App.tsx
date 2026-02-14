@@ -12,6 +12,8 @@ import { ReportReaderPage } from './components/ReportReaderPage';
 import { MyLearningPage } from './components/MyLearningPage';
 import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
+import { ForgotPasswordPage } from './components/ForgotPasswordPage';
+import { ResetPasswordPage } from './components/ResetPasswordPage';
 import { ArticleDetailPage } from './components/ArticleDetailPage';
 import { TopicDetailPage } from './components/TopicDetailPage';
 import { CaseDetailPage } from './components/CaseDetailPage';
@@ -76,7 +78,7 @@ export default function App() {
       if (currentPageParam !== 'home') {
         window.history.replaceState({}, '', window.location.pathname);
       }
-    } else if (currentPage === 'login' || currentPage === 'register') {
+    } else if (currentPage === 'login' || currentPage === 'register' || currentPage === 'forgot-password' || currentPage === 'reset-password') {
       if (currentPageParam !== currentPage) {
         window.history.replaceState({}, '', `?page=${currentPage}`);
       }
@@ -119,7 +121,7 @@ export default function App() {
     }
   }, [currentPage, selectedDetailId, selectedCaseId]);
 
-  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'case' | 'admin' | 'user-center' | 'test' | 'strategy-companion' | 'report-library' | 'article-center', bookId?: string, caseId?: string) => {
+  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'case' | 'admin' | 'user-center' | 'test' | 'strategy-companion' | 'report-library' | 'article-center', bookId?: string, caseId?: string) => {
     // Reset scroll on page-level navigation so detail pages always open from the top.
     // (Otherwise the browser may keep the previous scroll position and look like it jumped to the bottom.)
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
@@ -351,6 +353,26 @@ export default function App() {
           onNavigate={(page) => handleNavigate(page === 'register' ? 'home' : page as any)}
           onRegisterSuccess={() => setCurrentPage('home')}
         />
+        <PageSwitcher />
+      </>
+    );
+  }
+
+  // Forgot Password Page
+  if (currentPage === 'forgot-password') {
+    return (
+      <>
+        <ForgotPasswordPage onNavigate={(page) => handleNavigate(page as any)} />
+        <PageSwitcher />
+      </>
+    );
+  }
+
+  // Reset Password Page
+  if (currentPage === 'reset-password') {
+    return (
+      <>
+        <ResetPasswordPage onNavigate={(page) => handleNavigate(page as any)} />
         <PageSwitcher />
       </>
     );

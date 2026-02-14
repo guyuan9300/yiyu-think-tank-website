@@ -258,7 +258,9 @@ export async function registerWithEmail(
         data: {
           nickname: nickname || `用户${email.split('@')[0]}`,
         },
-        emailRedirectTo: `${window.location.origin}?page=login&verified=true`
+        // GitHub Pages 部署在子路径（/yiyu-think-tank-website/），不能只用 origin。
+        // 必须包含 BASE_URL，否则邮箱验证跳转会落到 https://guyuan9300.github.io/?page=... 导致打不开。
+        emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}?page=login&verified=true`
       }
     });
     
