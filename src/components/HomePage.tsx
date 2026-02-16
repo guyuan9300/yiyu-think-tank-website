@@ -300,17 +300,17 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
 
             {/* Main Title - Typography Hierarchy */}
             <h1 className="text-[34px] sm:text-[54px] md:text-[62px] lg:text-[70px] font-semibold leading-[1.06] tracking-tight mb-6 text-foreground">
-              让战略落到组织与行动
+              用战略把增长变成可执行的路径
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary to-accent">
-                在 AI 时代持续升级认知
+                在 AI 时代持续升级认知与协作
               </span>
             </h1>
 
             {/* Subtitle - Value Proposition */}
             <p className="text-[16px] sm:text-[18px] text-muted-foreground/80 mb-8 max-w-3xl mx-auto leading-relaxed">
-              我们面向公益组织从业者、中小企业高管与创始人，以及积极学习的人群——
-              提供专业战略咨询、前瞻洞察与可复用的学习内容；战略陪伴客户可登录进入专属工作台，快速回看目标、会议纪要与过程文件。
+              益语智库是一家战略咨询公司：服务中小企业高管与创始人、公益组织从业者，以及对 AI 与未来发展保持学习的人。
+              我们提供战略咨询、前瞻洞察与可复用的学习内容；战略陪伴客户可登录进入专属工作台，快速回看目标、会议纪要与过程文件。
             </p>
 
             {/* CTA Buttons */}
@@ -327,7 +327,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
                 onClick={() => handleNavigate('insights')}
                 className="group inline-flex items-center gap-2 px-8 py-4 rounded-full border border-border/60 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 ease-out hover:scale-[1.02] active:scale-[0.98]"
               >
-                <span className="font-medium text-[15px]">先看洞察与观点</span>
+                <span className="font-medium text-[15px]">查看最新洞察</span>
                 <Lightbulb className="w-4 h-4 transition-transform duration-300 group-hover:-rotate-12" />
               </button>
             </div>
