@@ -294,37 +294,41 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
           {/* Hero Content - Refined Typography */}
           <div className="max-w-4xl mx-auto text-center">
             {/* Eyebrow Text - Apple Style */}
-            <p className="text-[13px] font-medium text-muted-foreground/70 tracking-[0.15em] uppercase mb-6 opacity-0 animate-fade-in-up">
-              From Ideation to Incarnation
+            <p className="text-[13px] font-medium text-muted-foreground/70 tracking-[0.18em] uppercase mb-6 opacity-0 animate-fade-in-up">
+              益语智库 · 战略咨询 × 行业洞察 × 学习平台
             </p>
 
             {/* Main Title - Typography Hierarchy */}
-            <h1 className="text-[36px] sm:text-[56px] md:text-[64px] lg:text-[72px] font-semibold leading-[1.06] tracking-tight mb-6 text-foreground">
-              战略驱动业务增长
+            <h1 className="text-[34px] sm:text-[54px] md:text-[62px] lg:text-[70px] font-semibold leading-[1.06] tracking-tight mb-6 text-foreground">
+              让战略落到组织与行动
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary to-accent">
-                科技赋能组织成长
+                在 AI 时代持续升级认知
               </span>
             </h1>
 
             {/* Subtitle - Value Proposition */}
-            <p className="text-[17px] sm:text-[19px] text-muted-foreground/80 mb-10 max-w-2xl mx-auto leading-relaxed">
-              用洞察、工具与长期陪伴，把蓝图变成行动
-            </p>
-            
-            {/* English Tagline - Subtle */}
-            <p className="text-[13px] text-muted-foreground/50 tracking-[0.08em] mb-12">
-              Turning Strategy into Action, Fueling Sustainable Growth
+            <p className="text-[16px] sm:text-[18px] text-muted-foreground/80 mb-8 max-w-3xl mx-auto leading-relaxed">
+              我们面向公益组织从业者、中小企业高管与创始人，以及积极学习的人群——
+              提供专业战略咨询、前瞻洞察与可复用的学习内容；战略陪伴客户可登录进入专属工作台，快速回看目标、会议纪要与过程文件。
             </p>
 
-            {/* CTA Buttons - Apple Style */}
+            {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
-                onClick={() => handleNavigate('strategy')}
-                className="group px-8 py-4 rounded-full border border-border/60 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 ease-out hover:scale-[1.02] active:scale-[0.98]"
+                onClick={() => handleNavigate('consult-apply')}
+                className="group inline-flex items-center gap-2 px-8 py-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/25"
               >
-                <span className="font-medium text-[15px]">预约诊断对话</span>
-                <Target className="inline ml-2 w-4 h-4 transition-transform duration-300 group-hover:rotate-90" />
+                <span className="font-medium text-[15px]">申请战略咨询</span>
+                <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+              </button>
+
+              <button
+                onClick={() => handleNavigate('insights')}
+                className="group inline-flex items-center gap-2 px-8 py-4 rounded-full border border-border/60 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 ease-out hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <span className="font-medium text-[15px]">先看洞察与观点</span>
+                <Lightbulb className="w-4 h-4 transition-transform duration-300 group-hover:-rotate-12" />
               </button>
             </div>
           </div>
@@ -359,8 +363,8 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
             <QuickEntryCard
               icon={<Users className="w-6 h-6" />}
               title="我是战略陪伴客户"
-              subtitle="Client Portal"
-              onClick={() => handleNavigate('strategy')}
+              subtitle="Client Workspace"
+              onClick={() => handleNavigate('strategy-companion')}
               gradient="from-accent/15 to-accent/5"
               borderColor="hover:border-accent/30"
             />
