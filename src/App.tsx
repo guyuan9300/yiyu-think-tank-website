@@ -21,6 +21,7 @@ import { AdminDashboard } from './components/AdminDashboard';
 import UserCenterPage from './components/UserCenterPage';
 import { StrategyCompanionPage } from './components/StrategyCompanionPage';
 import AdminStrategyCompanionPage from './components/AdminStrategyCompanionPage';
+import { ConsultApplyPage } from './components/ConsultApplyPage';
 
 export default function App() {
   // Avoid browser trying to restore scroll position across in-app navigation.
@@ -105,6 +106,10 @@ export default function App() {
       if (currentPageParam !== currentPage || (clientId && params.get('clientId') !== clientId)) {
         window.history.replaceState({}, '', next);
       }
+    } else if (currentPage === 'consult-apply') {
+      if (currentPageParam !== currentPage) {
+        window.history.replaceState({}, '', `?page=${currentPage}`);
+      }
     } else if (currentPage === 'admin-strategy-companion') {
       // Keep admin page stable
       if (currentPageParam !== currentPage) {
@@ -121,7 +126,7 @@ export default function App() {
     }
   }, [currentPage, selectedDetailId, selectedCaseId]);
 
-  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'case' | 'admin' | 'user-center' | 'test' | 'strategy-companion' | 'report-library' | 'article-center', bookId?: string, caseId?: string) => {
+  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'case' | 'admin' | 'user-center' | 'test' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply', bookId?: string, caseId?: string) => {
     // Reset scroll on page-level navigation so detail pages always open from the top.
     // (Otherwise the browser may keep the previous scroll position and look like it jumped to the bottom.)
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
@@ -152,6 +157,8 @@ export default function App() {
       setCurrentPage('article-center');
     } else if (page === 'strategy-companion') {
       setCurrentPage('strategy-companion');
+    } else if (page === 'consult-apply') {
+      setCurrentPage('consult-apply');
     } else {
       setCurrentPage(page);
     }
@@ -592,6 +599,16 @@ export default function App() {
     return (
       <>
         <StrategyCompanionPage onNavigate={(page) => handleNavigate(page as any)} />
+        <PageSwitcher />
+      </>
+    );
+  }
+
+  // Consult Apply Page - 申请战略咨询（高门槛表单）
+  if (currentPage === 'consult-apply') {
+    return (
+      <>
+        <ConsultApplyPage onBack={() => handleNavigate('home')} />
         <PageSwitcher />
       </>
     );
