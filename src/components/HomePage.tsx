@@ -258,7 +258,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
 
   const handleNavigate = (page: string) => {
     if (onNavigate) {
-      onNavigate(page as 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'login' | 'register');
+      onNavigate(page as any);
     }
   };
 
@@ -631,10 +631,10 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
           {/* CTA */}
           <div className={`text-center mt-12 transition-all duration-500 ${hoveredModule ? 'opacity-0' : 'opacity-100'}`}>
             <button
-              onClick={() => handleNavigate('strategy')}
+              onClick={() => handleNavigate('consult-apply')}
               className="group inline-flex items-center gap-2 px-8 py-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/25"
             >
-              <span className="font-medium text-[15px]">了解更多</span>
+              <span className="font-medium text-[15px]">申请战略咨询</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
             </button>
           </div>

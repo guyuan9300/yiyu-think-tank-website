@@ -163,6 +163,33 @@ export interface User {
   favoritesCount: number;         // 收藏数量
 }
 
+// 咨询申请（用于“申请战略咨询”筛选表单）
+export interface ConsultRequest {
+  id: string;
+  createdAt: string;
+
+  // Contact
+  name: string;
+  organization?: string;
+  role?: string;
+  email?: string;
+  wechat?: string;
+  phone?: string;
+
+  // Qualification
+  topic: string;                 // 想解决的核心问题
+  background?: string;           // 背景信息
+  goals?: string;                // 3个月目标
+  constraints?: string;          // 最大阻力/约束
+  commitment?: string;           // 每周投入/预算区间等
+  notes?: string;
+
+  // Status
+  status: 'new' | 'reviewing' | 'accepted' | 'rejected';
+  reviewedBy?: string;
+  reviewedAt?: string;
+}
+
 // 存储键
 const STORAGE_KEYS = {
   reports: 'yiyu_reports',
@@ -174,6 +201,7 @@ const STORAGE_KEYS = {
   comments: 'yiyu_comments', // 评论数据
   systemSettings: 'yiyu_system_settings', // 系统设置
   users: 'yiyu_users', // 用户数据
+  consultRequests: 'yiyu_consult_requests', // 咨询申请表单
 };
 
 // 初始化默认分类
@@ -1197,6 +1225,44 @@ export const getUserStats = () => {
   };
 };
 
+// ========== 咨询申请（战略咨询申请表单） ==========
+
+const initDefaultConsultRequests = (): ConsultRequest[] => [];
+
+export const getConsultRequests = (): ConsultRequest[] => {
+  return loadFromStorage(STORAGE_KEYS.consultRequests, initDefaultConsultRequests());
+};
+
+export const saveConsultRequest = (
+  req: Omit<ConsultRequest, 'id' | 'createdAt'> | ConsultRequest
+): ConsultRequest => {
+  const list = getConsultRequests();
+  const now = new Date().toISOString();
+
+  if ((req as ConsultRequest).id) {
+    const r = req as ConsultRequest;
+    const idx = list.findIndex(x => x.id === r.id);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...r };
+      saveToStorage(STORAGE_KEYS.consultRequests, list);
+      notifyDataChange();
+      return list[idx];
+    }
+  }
+
+  const next: ConsultRequest = {
+    ...(req as any),
+    id: (req as any).id || `cr_${Date.now()}`,
+    createdAt: (req as any).createdAt || now,
+    status: (req as any).status || 'new',
+  };
+
+  list.unshift(next);
+  saveToStorage(STORAGE_KEYS.consultRequests, list);
+  notifyDataChange();
+  return next;
+};
+
 export default {
   // 报告
   getReports,
@@ -1259,6 +1325,10 @@ export default {
   deleteUser,
   searchUsers,
   getUserStats,
+
+  // 咨询申请
+  getConsultRequests,
+  saveConsultRequest,
   
   // 工具
   calculateReadTime,
