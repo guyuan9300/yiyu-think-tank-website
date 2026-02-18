@@ -1,0 +1,21 @@
+[
+  {
+    "category": "smoke",
+    "description": "Home page loads and renders top navigation",
+    "steps": [
+      "Open base URL",
+      "Top nav contains: 首页/前沿洞察/战略陪伴/学习中心/关于我们",
+      "No blocking console errors"
+    ],
+    "passes": false
+  },
+  {
+    "category": "assets",
+    "description": "No same-origin asset 404s (except known template artifacts)",
+    "steps": [
+      "App JS/CSS load 200",
+      "Template /vite.svg should be removed or served"
+    ],
+    "passes": false
+  }
+]
