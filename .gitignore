@@ -1,3 +1,8 @@
+# OpenClaw workspace noise
+.DS_Store
+__pycache__/
+*.pyc
+
 # Dependencies
 node_modules/
 .pnp
@@ -10,8 +15,7 @@ coverage/
 dist/
 build/
 
-# Misc
-.DS_Store
+# Env
 .env
 .env.local
 .env.development.local
@@ -43,5 +47,28 @@ Thumbs.db
 *.zip
 *.tar.gz
 
-# Package lock files (optional, based on team preference)
-# package-lock.json
+# Temp outputs
+_tmp_*/
+_tmp_*.log
+_screenshots/
+_downloads/
+_feishu/
+_ingest/
+_projects/
+
+# Large / generated / vendor
+**/node_modules/
+**/dist/
+**/.venv/
+**/.venv-*/
+
+# Workspace project clones / submodules (keep untracked here)
+yiyu-site-src/
+
+# Databases / WAL
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Media
+media/
