@@ -63,7 +63,13 @@ def check_dom_and_console() -> Result:
             w for w in NAV_WORDS if page.get_by_role("button", name=w, exact=True).count() == 0
         ]
 
-        vite = page.request.get("https://guyuan9300.github.io/vite.svg")
+        # Check template artifact /vite.svg under the *site base path* (GitHub Pages project site).
+        # Previously we checked the user/organization root (https://guyuan9300.github.io/vite.svg),
+        # which is expected to 404 and produced a false alarm.
+        from urllib.parse import urljoin
+
+        vite_url = urljoin(BASE, "vite.svg")
+        vite = page.request.get(vite_url)
         vite_status = vite.status
 
         browser.close()
@@ -71,6 +77,7 @@ def check_dom_and_console() -> Result:
     details = {
         "status": status,
         "missing_nav": missing,
+        "vite_svg_url": vite_url,
         "vite_svg_status": vite_status,
         "console_error_count": len(console_errors),
         "failed_request_count": len(failed_requests),

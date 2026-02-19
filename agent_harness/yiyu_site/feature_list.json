@@ -16,6 +16,6 @@
       "App JS/CSS load 200",
       "Template /vite.svg should be removed or served"
     ],
-    "passes": false
+    "passes": true
   }
 ]

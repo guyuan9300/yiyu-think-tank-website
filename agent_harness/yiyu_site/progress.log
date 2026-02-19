@@ -882,3 +882,14 @@
 }
 ```
 
+## 2026-02-19 10:41:37
+- action: init+smoke
+- result:
+
+
+
+
+## 2026-02-19 10:46:30
+- action: fix smoke check false-positive for vite.svg (check BASE/vite.svg) + mark assets feature pass
+- result: pending rerun
+- rerun: check_site.py ok; vite_svg_status=200
