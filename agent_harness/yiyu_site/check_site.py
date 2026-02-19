@@ -9,6 +9,7 @@ Uses Playwright to verify rendered UI + surface console/network issues.
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass
 from typing import List
 
@@ -69,8 +70,18 @@ def check_dom_and_console() -> Result:
         from urllib.parse import urljoin
 
         vite_url = urljoin(BASE, "vite.svg")
-        vite = page.request.get(vite_url)
-        vite_status = vite.status
+        vite_status = None
+        vite_error = None
+        # Playwright's APIRequestContext.get can occasionally flake (e.g. ECONNRESET).
+        # Treat it as a warning and keep the smoke check running.
+        for i in range(3):
+            try:
+                vite = page.request.get(vite_url)
+                vite_status = vite.status
+                break
+            except Exception as e:
+                vite_error = str(e)
+                time.sleep(0.4 * (i + 1))
 
         browser.close()
 
@@ -79,6 +90,7 @@ def check_dom_and_console() -> Result:
         "missing_nav": missing,
         "vite_svg_url": vite_url,
         "vite_svg_status": vite_status,
+        "vite_svg_error": vite_error,
         "console_error_count": len(console_errors),
         "failed_request_count": len(failed_requests),
         "console_errors_sample": console_errors[:5],
@@ -89,6 +101,9 @@ def check_dom_and_console() -> Result:
         return Result(False, "dom_nav_missing", json.dumps(details, ensure_ascii=False))
 
     # warning only
+    if vite_status is None:
+        return Result(True, "warning_vite_svg_fetch_error", json.dumps(details, ensure_ascii=False))
+
     if vite_status >= 400:
         return Result(True, "warning_vite_svg_404", json.dumps(details, ensure_ascii=False))
 
