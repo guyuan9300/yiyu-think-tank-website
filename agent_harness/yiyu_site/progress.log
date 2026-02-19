@@ -6,3 +6,879 @@
 
 
 
+## 2026-02-18 15:26:35
+- action: init+smoke
+- result:
+
+
+
+## 2026-02-18 15:27:58
+- action: init+smoke
+- result:
+
+
+
+## 2026-02-18 15:28:18
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-18 15:58:49
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-18 16:29:20
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-18 16:59:50
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-18 17:30:25
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-18 18:02:21
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-18 18:33:01
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-18 19:03:50
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-18 19:48:38
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-18 20:19:27
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-18 20:51:14
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-18 21:22:43
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-18 21:53:37
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-18 22:24:34
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-18 23:04:39
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-18 23:36:30
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 00:07:43
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 00:39:03
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 01:10:38
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 01:42:15
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 02:13:35
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 02:44:41
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 03:15:38
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 03:46:30
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 04:18:24
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 04:49:37
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 05:21:06
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 05:53:20
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 06:25:28
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 06:56:56
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 07:27:45
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 07:59:13
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 08:30:24
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 09:01:26
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 09:32:43
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+
+## 2026-02-19 10:08:30
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "warning_vite_svg_404",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_status\": 404, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+

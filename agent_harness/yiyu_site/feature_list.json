@@ -7,7 +7,7 @@
       "Top nav contains: 首页/前沿洞察/战略陪伴/学习中心/关于我们",
       "No blocking console errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "assets",
