@@ -893,3 +893,160 @@
 - action: fix smoke check false-positive for vite.svg (check BASE/vite.svg) + mark assets feature pass
 - result: pending rerun
 - rerun: check_site.py ok; vite_svg_status=200
+## 2026-02-19 11:15:53
+- action: init+smoke
+- result:
+
+
+
+
+## 2026-02-19 11:16:25
+- action: e2e_check --feature one (Playwright real-click)
+- feature: P0-F01 (top nav clickable)
+- result: PASS (all nav targets reachable; console_errors=0)
+- evidence: evidence/20260219-111607 (home.png + nav-*.png + summary.json)
+## 2026-02-19 11:47:28
+- action: init+smoke
+- result: run_one_cycle.sh completed but printed shell error: `echo [init]: command not found` (needs quoting; non-blocking)
+
+## 2026-02-19 11:47:47
+- action: e2e_check --feature one (Playwright real-click)
+- feature: P0-F01 (top nav clickable)
+- result: PASS (all nav targets reachable; console_errors=0)
+- evidence: evidence/20260219-114747 (home.png + nav-*.png + summary.json)
+
+
+
+## 2026-02-19 12:19:07
+- action: init+smoke
+- result:
+
+
+
+## 2026-02-19 12:20:14
+- action: e2e_check --feature one (P0-F01)
+- evidence: evidence/20260219-121928
+- result: pass (console_errors=0)
+
+## 2026-02-19 12:51:01
+- action: init+smoke
+- result:
+
+
+
+
+## 2026-02-19 12:51:14
+- action: e2e_check --feature one (P0-F01)
+- evidence: evidence/20260219-125114
+- result: pass (console_errors=0)
+## 2026-02-19 13:22:41
+- action: init+smoke
+- result:
+
+
+
+
+## 2026-02-19 13:23:40
+- action: e2e_check --feature one (Playwright real-click)
+- feature: P0-F01 (top nav clickable)
+- result: PASS (all nav targets reachable; console_errors=0)
+- evidence: evidence/20260219-132302 (home.png + nav-*.png + summary.json)
+## 2026-02-19 13:54:02
+- action: init+smoke
+- result:
+
+
+
+## 2026-02-19 14:25:57
+- action: init+smoke
+- result:
+
+
+
+## 2026-02-19 14:27:03
+- action: e2e_check --feature one
+- feature: P0-F01
+- result: pass
+- evidence_dir: evidence/20260219-142629
+- notes: nav clicks ok; console_errors=0
+
+## 2026-02-19 14:57:31
+- action: init+smoke
+- result:
+
+
+
+## 2026-02-19 14:58:50
+- action: init+smoke
+- result:
+
+
+
+## 2026-02-19 14:59:44
+- action: init+smoke
+- result:
+
+set -x[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "dom_ok",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_url\": \"https://guyuan9300.github.io/yiyu-think-tank-website/vite.svg\", \"vite_svg_status\": 200, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+
+## 2026-02-19 15:00:05
+- action: init+smoke
+- result:
+
+set -x[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "dom_ok",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_url\": \"https://guyuan9300.github.io/yiyu-think-tank-website/vite.svg\", \"vite_svg_status\": 200, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+
+## 2026-02-19 15:00:31
+- action: init+smoke
+- result:
+
+```
+[init] env ok
+{
+  "ok": true,
+  "base": "https://guyuan9300.github.io/yiyu-think-tank-website/",
+  "results": [
+    {
+      "ok": true,
+      "name": "home_http",
+      "details": "status=200"
+    },
+    {
+      "ok": true,
+      "name": "dom_ok",
+      "details": "{\"status\": 200, \"missing_nav\": [], \"vite_svg_url\": \"https://guyuan9300.github.io/yiyu-think-tank-website/vite.svg\", \"vite_svg_status\": 200, \"console_error_count\": 0, \"failed_request_count\": 0, \"console_errors_sample\": [], \"failed_requests_sample\": []}"
+    }
+  ]
+}
+```
+

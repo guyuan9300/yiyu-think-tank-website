@@ -7,7 +7,8 @@
       "Top nav contains: 首页/前沿洞察/战略陪伴/学习中心/关于我们",
       "No blocking console errors"
     ],
-    "passes": true
+    "passes": true,
+    "status": "pass"
   },
   {
     "category": "assets",
@@ -16,6 +17,7 @@
       "App JS/CSS load 200",
       "Template /vite.svg should be removed or served"
     ],
-    "passes": true
+    "passes": true,
+    "status": "pass"
   }
 ]

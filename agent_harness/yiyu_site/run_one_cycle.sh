@@ -10,9 +10,14 @@ OUT=$(./init.sh 2>&1 || true)
   echo "- action: init+smoke"
   echo "- result:"
   echo ""
-  echo "```"
-  echo "${OUT}" | tail -n 120
-  echo "```"
+  echo '```'
+  # NOTE: piping multi-line JSON through echo can get weird in some shells;
+  # write to a temp file then tail for stability.
+  _tmp_out="$(mktemp)"
+  printf '%s\n' "${OUT}" > "${_tmp_out}"
+  tail -n 120 "${_tmp_out}"
+  rm -f "${_tmp_out}"
+  echo '```'
   echo ""
 } >> progress.log
 
