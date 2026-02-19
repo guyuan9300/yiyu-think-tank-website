@@ -11,7 +11,8 @@ import {
   RefreshCw,
   ArrowRight
 } from 'lucide-react';
-import { getReports, getCategories, type Report } from '../lib/dataService';
+import { getReports as getReportsLocal, getCategories as getCategoriesLocal, type Report } from '../lib/dataService';
+import { getReports as getReportsRemote } from '../lib/dataServiceSupabase';
 
 // 报告卡片组件 - 网格视图
 function ReportCardGrid({ report, onClick }: { report: Report; onClick?: () => void }) {
@@ -157,38 +158,48 @@ export function ReportLibraryPage({
 
   // 加载数据
   useEffect(() => {
-    const loadData = () => {
-      const reportsData = getReports();
-      const categoriesData = getCategories();
+    let cancelled = false;
+    const useRemote = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
-      setReports(reportsData.filter(r => r.status === 'published'));
-      setCategories(categoriesData.filter(c => c.type === 'report'));
-      setIsLoading(false);
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const categoriesData = getCategoriesLocal(); // categories 先沿用本地（不阻断）
+        const reportsData = useRemote ? await getReportsRemote() : getReportsLocal();
+
+        if (cancelled) return;
+        setReports(reportsData.filter((r: any) => r.status === 'published'));
+        setCategories(categoriesData.filter(c => c.type === 'report'));
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
     };
 
     loadData();
 
-    const handleStorageChange = () => {
-      loadData();
-    };
-
-    const pollInterval = setInterval(() => {
-      const newReports = getReports();
-      const publishedReports = newReports.filter(r => r.status === 'published');
-
-      if (publishedReports.length !== reports.length ||
-          (publishedReports.length > 0 && publishedReports[0].id !== (reports[0]?.id))) {
+    if (!useRemote) {
+      const handleStorageChange = () => {
         loadData();
-      }
-    }, 1000);
+      };
 
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('yiyu_data_change', handleStorageChange);
+      const pollInterval = setInterval(() => {
+        loadData();
+      }, 1000);
 
+      window.addEventListener('storage', handleStorageChange);
+      window.addEventListener('yiyu_data_change', handleStorageChange);
+
+      return () => {
+        cancelled = true;
+        clearInterval(pollInterval);
+        window.removeEventListener('storage', handleStorageChange);
+        window.removeEventListener('yiyu_data_change', handleStorageChange);
+      };
+    }
+
+    // Remote mode: rely on manual refresh for now
     return () => {
-      clearInterval(pollInterval);
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('yiyu_data_change', handleStorageChange);
+      cancelled = true;
     };
   }, []);
 
@@ -218,11 +229,15 @@ export function ReportLibraryPage({
   }, [reports, searchQuery, selectedCategory, selectedYear]);
 
   // 刷新数据
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
+    const useRemote = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
     setIsLoading(true);
-    const reportsData = getReports();
-    setReports(reportsData.filter(r => r.status === 'published'));
-    setIsLoading(false);
+    try {
+      const reportsData = useRemote ? await getReportsRemote() : getReportsLocal();
+      setReports(reportsData.filter((r: any) => r.status === 'published'));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // 加载状态
