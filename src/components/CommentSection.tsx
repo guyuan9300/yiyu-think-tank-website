@@ -220,8 +220,12 @@ export function CommentSection({
               {comment.reply && (
                 <div className="ml-13 mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border-l-4 border-purple-500">
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
-                      管
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      <img
+                        src={`${import.meta.env.BASE_URL}yiyu-avatar.png`}
+                        alt="益语智库"
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-purple-900 mb-1">管理员回复：</p>

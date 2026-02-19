@@ -152,8 +152,12 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
         {/* Content */}
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-10">
-            <div className="w-12 h-12 rounded-[12px] bg-white/20 backdrop-blur-sm flex items-center justify-center">
-              <span className="text-white font-bold text-xl">益</span>
+            <div className="w-12 h-12 rounded-[12px] bg-white/20 backdrop-blur-sm flex items-center justify-center overflow-hidden">
+              <img
+                src={`${import.meta.env.BASE_URL}yiyu-avatar.png`}
+                alt="益语智库"
+                className="w-full h-full object-cover"
+              />
             </div>
             <span className="text-white text-xl font-semibold">益语智库</span>
           </div>
@@ -195,8 +199,12 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <div className="w-12 h-12 rounded-[12px] bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-              <span className="text-white font-bold text-xl">益</span>
+            <div className="w-12 h-12 rounded-[12px] bg-gradient-to-br from-primary to-accent flex items-center justify-center overflow-hidden">
+              <img
+                src={`${import.meta.env.BASE_URL}yiyu-avatar.png`}
+                alt="益语智库"
+                className="w-full h-full object-cover"
+              />
             </div>
             <span className="text-xl font-semibold text-foreground">益语智库</span>
           </div>

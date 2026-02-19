@@ -193,8 +193,12 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
             className="flex items-center gap-3 hover:opacity-90 transition-opacity"
             aria-label="返回首页"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-              <span className="text-white font-bold text-lg">益</span>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center overflow-hidden">
+              <img
+                src={`${import.meta.env.BASE_URL}yiyu-avatar.png`}
+                alt="益语智库"
+                className="w-full h-full object-cover"
+              />
             </div>
             <span className="font-semibold text-lg hidden sm:block">益语智库</span>
           </button>

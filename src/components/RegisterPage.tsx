@@ -205,8 +205,12 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
         <div className="relative z-10">
           {/* Logo */}
           <div className="flex items-center gap-3 mb-12">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 shadow-lg">
-              <span className="text-white font-bold text-2xl">益</span>
+            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 shadow-lg overflow-hidden">
+              <img
+                src={`${import.meta.env.BASE_URL}yiyu-avatar.png`}
+                alt="益语智库"
+                className="w-full h-full object-cover"
+              />
             </div>
             <span className="text-white text-2xl font-semibold tracking-wide">益语智库</span>
           </div>
@@ -259,8 +263,12 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
         <div className="w-full max-w-md py-4">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
-              <span className="text-white font-bold text-xl">益</span>
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20 overflow-hidden">
+              <img
+                src={`${import.meta.env.BASE_URL}yiyu-avatar.png`}
+                alt="益语智库"
+                className="w-full h-full object-cover"
+              />
             </div>
             <span className="text-xl font-semibold">益语智库</span>
           </div>
