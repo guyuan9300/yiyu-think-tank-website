@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowLeft, CheckCircle2, ChevronRight, FileText, Lock, Sparkles } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ChevronRight, ExternalLink, FileText, Lock, Sparkles } from 'lucide-react';
 import { Header } from './Header';
 import { saveConsultRequest, type ConsultRequest } from '../lib/dataService';
 
@@ -13,6 +13,9 @@ export function ConsultApplyPage({ onBack }: ConsultApplyPageProps) {
   const [step, setStep] = useState<StepId>('intro');
   const [submitting, setSubmitting] = useState(false);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+
+  // Preferred: Feishu form (configured via Vite env). Keep in-app form as fallback.
+  const feishuFormUrl = (import.meta as any).env?.VITE_FEISHU_FORM_URL as string | undefined;
 
   const [form, setForm] = useState({
     name: '',
@@ -153,6 +156,43 @@ export function ConsultApplyPage({ onBack }: ConsultApplyPageProps) {
             {/* Step content */}
             {step === 'intro' && (
               <div className="space-y-4">
+                <div className="p-5 rounded-2xl bg-primary/5 border border-primary/15">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                      <ExternalLink className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-medium mb-1">推荐：通过飞书表单提交（更快）</h3>
+                      <p className="text-sm text-muted-foreground/80 leading-relaxed">
+                        为了让申请“有落点、可追踪”，我们优先使用飞书表单收集信息。提交后会提示你下一步。
+                      </p>
+                      <div className="mt-3 flex flex-col sm:flex-row gap-3">
+                        {feishuFormUrl ? (
+                          <a
+                            href={feishuFormUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition"
+                          >
+                            打开飞书表单
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        ) : (
+                          <div className="p-3 rounded-2xl bg-muted/20 border border-border/30 text-sm text-muted-foreground/80">
+                            飞书表单链接尚未配置。你仍可先使用本页的备用表单提交（或稍后补链接）。
+                          </div>
+                        )}
+                        <button
+                          onClick={goNext}
+                          className="px-5 py-3 rounded-2xl border border-border/60 hover:border-primary/40 hover:bg-primary/5 transition text-sm font-medium"
+                        >
+                          使用备用表单
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="p-5 rounded-2xl bg-muted/20 border border-border/30">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
@@ -181,15 +221,6 @@ export function ConsultApplyPage({ onBack }: ConsultApplyPageProps) {
                       </p>
                     </div>
                   </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <button
-                    onClick={goNext}
-                    className="px-6 py-3 rounded-2xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition"
-                  >
-                    开始填写
-                  </button>
                 </div>
               </div>
             )}

@@ -18,10 +18,10 @@
     "user_value": "用户能完成咨询预约/留资，不迷路",
     "acceptance": "点击‘申请战略咨询/预约策略咨询’后：跳转成功且有下一步（表单/外链/联系方式），并有明确反馈",
     "test_method": "Playwright 点击 CTA + 截图 + 复现步骤",
-    "status": "todo",
+    "status": "doing",
     "evidence": "",
     "owner": "百佑星际",
-    "notes": "默认先做站内 consult 闭环页"
+    "notes": "默认先做站内 consult 闭环页 | 用户确认使用飞书表单，待配置表单链接"
   },
   {
     "id": "P0-F03",
