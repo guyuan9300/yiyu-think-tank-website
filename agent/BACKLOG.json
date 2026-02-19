@@ -1,0 +1,122 @@
+[
+  {
+    "id": "P0-F01",
+    "title": "顶部导航/登录入口可点击可到达",
+    "priority": "P0",
+    "user_value": "用户能从首页到达各核心页面",
+    "acceptance": "依次点击：首页/前沿洞察/战略陪伴/学习中心/关于我们/登录，均渲染非空且无 console error",
+    "test_method": "Playwright e2e_check.py P0-F01 + 截图证据",
+    "status": "done",
+    "evidence": "agent_harness/yiyu_site/evidence/*/nav-*.png",
+    "owner": "百佑星际",
+    "notes": "已通过一次线上 E2E"
+  },
+  {
+    "id": "P0-F02",
+    "title": "预约/申请战略咨询 CTA 有明确落点与反馈",
+    "priority": "P0",
+    "user_value": "用户能完成咨询预约/留资，不迷路",
+    "acceptance": "点击‘申请战略咨询/预约策略咨询’后：跳转成功且有下一步（表单/外链/联系方式），并有明确反馈",
+    "test_method": "Playwright 点击 CTA + 截图 + 复现步骤",
+    "status": "todo",
+    "evidence": "",
+    "owner": "百佑星际",
+    "notes": "默认先做站内 consult 闭环页"
+  },
+  {
+    "id": "P0-F03",
+    "title": "热门内容卡片可进对应专题/列表；查看全部可达洞察列表",
+    "priority": "P0",
+    "user_value": "用户能从首页进入内容",
+    "acceptance": "热门内容区：卡片点击进入有效页面；‘查看全部’进入洞察列表",
+    "test_method": "Playwright 点击卡片/查看全部",
+    "status": "todo",
+    "evidence": "",
+    "owner": "百佑星际",
+    "notes": ""
+  },
+  {
+    "id": "P0-F04",
+    "title": "战略前沿报告：卡片→详情可读/可下载或可解释空状态；订阅周报可提交并反馈",
+    "priority": "P0",
+    "user_value": "用户能获取报告/订阅",
+    "acceptance": "报告路径闭环；订阅提交有反馈并有落点",
+    "test_method": "Playwright + network 证据",
+    "status": "todo",
+    "evidence": "",
+    "owner": "百佑星际",
+    "notes": "订阅落点待确认，默认先用外部表单占位"
+  },
+  {
+    "id": "P0-F06",
+    "title": "前沿洞察：列表→详情不白屏不404",
+    "priority": "P0",
+    "user_value": "用户能读到洞察内容",
+    "acceptance": "任取3篇：列表进入详情可读，返回可用",
+    "test_method": "Playwright 选前3篇",
+    "status": "todo",
+    "evidence": "",
+    "owner": "百佑星际",
+    "notes": ""
+  },
+  {
+    "id": "P0-F14",
+    "title": "学习中心：书库列表→阅读/下载不空白",
+    "priority": "P0",
+    "user_value": "用户能学习/下载资料",
+    "acceptance": "至少1本书：打开阅读器成功；失败时有可解释空状态+下一步",
+    "test_method": "Playwright + 截图",
+    "status": "todo",
+    "evidence": "",
+    "owner": "百佑星际",
+    "notes": ""
+  },
+  {
+    "id": "P0-F18",
+    "title": "关于我们：联系表单可提交并有落点（或明确替代路径）",
+    "priority": "P0",
+    "user_value": "用户能联系到益语",
+    "acceptance": "提交后有明确反馈；数据可追踪（表单服务/邮箱/飞书）",
+    "test_method": "Playwright 提交 + 落点验证",
+    "status": "todo",
+    "evidence": "",
+    "owner": "百佑星际",
+    "notes": "默认先用飞书表单/mailto 兜底闭环"
+  },
+  {
+    "id": "P0-F21",
+    "title": "登录入口不留死路（真实登录或申请开通闭环）",
+    "priority": "P0",
+    "user_value": "客户不会迷路",
+    "acceptance": "登录页能说明下一步；无后台时提供申请开通/联系",
+    "test_method": "Playwright 点击登录",
+    "status": "todo",
+    "evidence": "",
+    "owner": "百佑星际",
+    "notes": "待你确认真实登录 or 占位"
+  },
+  {
+    "id": "P0-F22",
+    "title": "上传功能不误导：要么闭环落点，要么明确引导",
+    "priority": "P0",
+    "user_value": "避免用户上传后无结果",
+    "acceptance": "上传入口有明确落点/反馈；无后台则引导到可执行下一步",
+    "test_method": "Playwright + network",
+    "status": "todo",
+    "evidence": "",
+    "owner": "百佑星际",
+    "notes": "需要你确认上传场景"
+  },
+  {
+    "id": "P1-UX01",
+    "title": "统一空状态与下一步引导文案",
+    "priority": "P1",
+    "user_value": "减少迷路",
+    "acceptance": "关键空页面都有原因+下一步",
+    "test_method": "人工巡检+截图",
+    "status": "todo",
+    "evidence": "",
+    "owner": "百佑星际",
+    "notes": "P0 清完后做"
+  }
+]
