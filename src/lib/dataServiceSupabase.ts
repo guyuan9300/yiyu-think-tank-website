@@ -1,20 +1,13 @@
 /**
  * Supabase 数据服务层
  * 使用Supabase替代localStorage进行数据持久化
+ *
+ * 注意：为避免在同一浏览器上下文创建多个 GoTrueClient（会触发 console warning），
+ * 这里复用 src/lib/supabase.ts 中的单例客户端。
  */
-import { createClient } from '@supabase/supabase-js';
+import { supabase, createServerClient } from './supabase';
 
-// 从环境变量获取配置（GitHub Pages 通过 .env.production 注入）
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '');
-
-// 服务端专用客户端（使用service_role_key）
-export const createServerClient = (serviceRoleKey: string) => {
-  return createClient(supabaseUrl, serviceRoleKey);
-};
-
+export { supabase, createServerClient };
 export default supabase;
 
 // 数据类型定义
