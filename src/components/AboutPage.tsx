@@ -61,6 +61,35 @@ function AnimatedNumber({ value, duration = 2000 }: { value: string; duration?: 
 export function AboutPage({ onNavigate }: AboutPageProps) {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [showIntroVideoModal, setShowIntroVideoModal] = useState(false);
+
+  const closeIntroVideoModal = () => {
+    setShowIntroVideoModal(false);
+    // If opened via deep-link (?intro=1), remove the flag after closing so it won't reopen on refresh.
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('intro') === '1') {
+        params.delete('intro');
+        const qs = params.toString();
+        const next = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+        window.history.replaceState({}, '', next);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  // Deep-link: ?page=about&intro=1 opens the intro video placeholder modal
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('intro') === '1') {
+        setShowIntroVideoModal(true);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const [showContactSentModal, setShowContactSentModal] = useState(false);
   const [contactForm, setContactForm] = useState({ name: '', company: '', email: '', message: '' });
 
@@ -748,7 +777,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
         >
           <div
             className="absolute inset-0 bg-black/50"
-            onClick={() => setShowIntroVideoModal(false)}
+            onClick={closeIntroVideoModal}
           />
           <div className="relative w-full max-w-[560px] rounded-[20px] bg-white p-6 border border-border/40 shadow-xl">
             <div className="flex items-start justify-between gap-4">
@@ -762,7 +791,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
               </div>
               <button
                 className="px-3 py-1.5 rounded-full text-[13px] border border-border/60 hover:bg-muted/30 transition-colors"
-                onClick={() => setShowIntroVideoModal(false)}
+                onClick={closeIntroVideoModal}
                 aria-label="关闭"
               >
                 关闭
@@ -773,7 +802,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
               <button
                 className="flex-1 px-4 py-3 rounded-[14px] bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-[14px] font-medium"
                 onClick={() => {
-                  setShowIntroVideoModal(false);
+                  closeIntroVideoModal();
                   handleNavigate('strategy');
                 }}
               >
@@ -781,7 +810,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
               </button>
               <button
                 className="flex-1 px-4 py-3 rounded-[14px] border border-border/60 hover:bg-muted/30 transition-colors text-[14px] font-medium"
-                onClick={() => setShowIntroVideoModal(false)}
+                onClick={closeIntroVideoModal}
               >
                 稍后再看
               </button>
