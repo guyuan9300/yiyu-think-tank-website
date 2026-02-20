@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Mail, CheckCircle2 } from 'lucide-react';
 import { isPremiumMember, getCurrentUser } from '../lib/auth';
 
@@ -79,7 +79,7 @@ export function SubscriptionSheet({
   onClose: () => void;
   onGoUpgrade?: () => void;
 }) {
-  const eligible = useMemo(() => canUseSubscription(), []);
+  const eligible = canUseSubscription();
 
   const [prefs, setPrefs] = useState<SubscriptionPrefs>(() => loadSubscriptionPrefs() || defaultPrefs());
   const [saved, setSaved] = useState(false);
