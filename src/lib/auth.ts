@@ -359,7 +359,7 @@ export async function loginWithEmail(email: string, password: string): Promise<A
       id: data.user.id,
       email: data.user.email || email,
       nickname: data.user.user_metadata?.nickname || `用户${email.split('@')[0]}`,
-      avatarUrl: data.user.user_metadata?.avatar_url,
+      avatarUrl: data.user.user_metadata?.avatar_url || undefined,
       membershipType: 'free',
       inviteCodeUsed: false,
       createdAt: data.user.created_at || new Date().toISOString(),
@@ -371,7 +371,7 @@ export async function loginWithEmail(email: string, password: string): Promise<A
     authToken = data.session.access_token;
     saveAuthState();
     
-    return { success: true, user: mockUser, token: authToken };
+    return { success: true, user: mockUser, token: authToken || undefined };
   } catch (error: any) {
     console.error('邮箱登录异常:', error);
     return { success: false, error: error.message || '登录失败，请稍后重试' };

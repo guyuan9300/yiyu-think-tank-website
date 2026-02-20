@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { ArrowRight, Users, Target, Zap, BookOpen, Phone, Mail, MapPin, Calendar, Play, TrendingUp, ChevronRight } from 'lucide-react';
@@ -61,6 +61,8 @@ function AnimatedNumber({ value, duration = 2000 }: { value: string; duration?: 
 export function AboutPage({ onNavigate }: AboutPageProps) {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [showIntroVideoModal, setShowIntroVideoModal] = useState(false);
+  const [showContactSentModal, setShowContactSentModal] = useState(false);
+  const [contactForm, setContactForm] = useState({ name: '', company: '', email: '', message: '' });
 
   useEffect(() => {
     const loadSettings = () => {
@@ -202,6 +204,27 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
     if (onNavigate) {
       onNavigate(page as 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'login' | 'register');
     }
+  };
+
+  const handleSubmitContact = (e: FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const key = 'yiyu_contact_messages';
+      const raw = localStorage.getItem(key);
+      const arr = raw ? JSON.parse(raw) : [];
+      const next = Array.isArray(arr) ? arr : [];
+      next.unshift({
+        id: `msg_${Date.now()}`,
+        ...contactForm,
+        createdAt: new Date().toISOString(),
+      });
+      localStorage.setItem(key, JSON.stringify(next));
+    } catch {
+      // ignore storage errors in build-phase GitHub Pages
+    }
+
+    setShowContactSentModal(true);
   };
 
   return (
@@ -574,13 +597,15 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
             {/* Contact Form */}
             <div className="bg-white/80 backdrop-blur-sm rounded-[24px] p-7 border border-border/40">
               <h3 className="text-[18px] font-semibold mb-6 text-foreground">发送消息</h3>
-              <form className="space-y-4">
+              <form className="space-y-4" onSubmit={handleSubmitContact}>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[13px] font-medium mb-2 text-muted-foreground/70">姓名</label>
                     <input
                       type="text"
                       placeholder="您的姓名"
+                      value={contactForm.name}
+                      onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
                       className="w-full px-4 py-2.5 rounded-[12px] bg-muted/30 border border-border/40 text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
                     />
                   </div>
@@ -589,6 +614,8 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
                     <input
                       type="text"
                       placeholder="您的公司"
+                      value={contactForm.company}
+                      onChange={(e) => setContactForm({ ...contactForm, company: e.target.value })}
                       className="w-full px-4 py-2.5 rounded-[12px] bg-muted/30 border border-border/40 text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
                     />
                   </div>
@@ -599,6 +626,8 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
                   <input
                     type="email"
                     placeholder="your@email.com"
+                    value={contactForm.email}
+                    onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
                     className="w-full px-4 py-2.5 rounded-[12px] bg-muted/30 border border-border/40 text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
                   />
                 </div>
@@ -608,6 +637,8 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
                   <textarea
                     rows={3}
                     placeholder="请描述您的需求..."
+                    value={contactForm.message}
+                    onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
                     className="w-full px-4 py-2.5 rounded-[12px] bg-muted/30 border border-border/40 text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 resize-none transition-all"
                   />
                 </div>
@@ -654,6 +685,58 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
           </div>
         </div>
       </section>
+
+      {/* Contact Sent Modal (build-phase placeholder) */}
+      {showContactSentModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="消息已发送"
+        >
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowContactSentModal(false)}
+          />
+          <div className="relative w-full max-w-[520px] rounded-[20px] bg-white p-6 border border-border/40 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-[18px] font-semibold text-foreground">消息已发送（建设中）</h3>
+                <p className="mt-2 text-[13px] text-muted-foreground/70 leading-relaxed">
+                  我们已收到你的留言（当前会暂存在本地浏览器）。
+                  <br />
+                  建造期联调模式下，我们会逐步接入真实的消息/工单系统。
+                </p>
+              </div>
+              <button
+                className="px-3 py-1.5 rounded-full text-[13px] border border-border/60 hover:bg-muted/30 transition-colors"
+                onClick={() => setShowContactSentModal(false)}
+                aria-label="关闭"
+              >
+                关闭
+              </button>
+            </div>
+
+            <div className="mt-5 flex flex-col sm:flex-row gap-3">
+              <button
+                className="flex-1 px-4 py-3 rounded-[14px] bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-[14px] font-medium"
+                onClick={() => {
+                  setShowContactSentModal(false);
+                  handleNavigate('strategy');
+                }}
+              >
+                去战略陪伴页
+              </button>
+              <button
+                className="flex-1 px-4 py-3 rounded-[14px] border border-border/60 hover:bg-muted/30 transition-colors text-[14px] font-medium"
+                onClick={() => setShowContactSentModal(false)}
+              >
+                知道了
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Intro Video Modal (build-phase placeholder) */}
       {showIntroVideoModal && (
