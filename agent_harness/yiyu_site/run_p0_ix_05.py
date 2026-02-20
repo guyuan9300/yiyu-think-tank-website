@@ -79,6 +79,30 @@ def main() -> int:
         )
 
         page.goto(BASE, wait_until="networkidle", timeout=60000)
+
+        # Ensure eligibility + seed prefs again in page context (defensive against init-script timing)
+        page.evaluate(
+            """
+            (seedEmail) => {
+              try {
+                localStorage.setItem('yiyu_is_admin', 'true');
+                sessionStorage.setItem('yiyu_is_admin', 'true');
+                const prefs = {
+                  enabled: true,
+                  email: seedEmail,
+                  frequency: 'weekly',
+                  topics: { insights: true, reports: true, tools: false, strategyUpdates: true },
+                  formats: { digest: true, keyTakeaways: true, actionChecklist: false },
+                  updatedAt: new Date().toISOString(),
+                };
+                localStorage.setItem('yiyu_subscription_prefs', JSON.stringify(prefs));
+                window.dispatchEvent(new Event('yiyu_data_change'));
+              } catch (e) {}
+            }
+            """,
+            seed_email,
+        )
+
         page.screenshot(path=str(evidence_root / "ix05-home.png"), full_page=True)
 
         # Front action: open subscription modal
