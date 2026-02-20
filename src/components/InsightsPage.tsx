@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Header } from './Header';
+import { AccessInfoCard } from './AccessInfoCard';
 import {
   TrendingUp,
   FileText,
@@ -340,6 +341,11 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
 <span>查看更多</span>
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
             </button>
+          </div>
+
+          {/* Access rule card (always visible) */}
+          <div className="mb-8">
+            <AccessInfoCard />
           </div>
 
           {/* 报告网格 */}

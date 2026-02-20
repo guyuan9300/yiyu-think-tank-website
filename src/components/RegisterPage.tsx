@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, User, Smartphone, CheckCircle } from 'lucide-react';
 import { WeChatLoginModal } from './WeChatLoginModal';
 import { WeChatIcon } from './WeChatIcon';
+import { AccessInfoCard } from './AccessInfoCard';
 import {
   sendSMSCode,
   sendEmailCode,
@@ -229,7 +230,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
           </div>
 
           {/* Benefits */}
-          <div className="space-y-5">
+          <div className="space-y-5 mb-8">
             {[
               { icon: '✓', text: '手机号快速注册' },
               { icon: '✓', text: '邮箱注册更安全' },
@@ -249,6 +250,11 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                 </span>
               </div>
             ))}
+          </div>
+
+          {/* Access rule card (always visible) */}
+          <div className="max-w-md">
+            <AccessInfoCard className="bg-white/10 border-white/20 text-white shadow-none" />
           </div>
         </div>
 
@@ -276,11 +282,16 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
           {/* Back Button */}
           <button
             onClick={() => onNavigate?.('home')}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors duration-200 mb-8 group"
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors duration-200 mb-6 group"
           >
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-200" />
             <span className="text-sm font-medium">返回首页</span>
           </button>
+
+          {/* Access rule card (always visible, mobile) */}
+          <div className="mb-6">
+            <AccessInfoCard compact />
+          </div>
 
           {/* Title Section */}
           <div className="mb-8">

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Header } from './Header';
+import { AccessInfoCard } from './AccessInfoCard';
 import { getClientProjects, type ClientProject } from '../lib/dataServiceLocal';
 import {
   ArrowRight,
@@ -695,6 +696,11 @@ challenge: '社区居民参与度低',
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Access rule card (always visible) */}
+          <div className="mb-8">
+            <AccessInfoCard />
           </div>
 
           {/* Responsive Grid (mobile: list, tablet: 2 cols, desktop: 4 cols) */}

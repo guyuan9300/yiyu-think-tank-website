@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Header } from './Header';
+import { AccessInfoCard } from './AccessInfoCard';
 import {
   ArrowLeft,
   Clock,
@@ -177,6 +178,11 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
                     {tag}
                   </span>
                 ))}
+              </div>
+
+              {/* Access rule card (always visible) */}
+              <div className="mb-7">
+                <AccessInfoCard compact />
               </div>
 
               {/* 操作按钮 */}

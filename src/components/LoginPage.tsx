@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { AccessInfoCard } from './AccessInfoCard';
 import { WeChatLoginModal } from './WeChatLoginModal';
 import { WeChatIcon } from './WeChatIcon';
 import { saveUser, getUserByEmail, recordUserLogin, type User } from '../lib/dataService';
@@ -172,7 +173,7 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
           </p>
           
           {/* Features */}
-          <div className="space-y-4">
+          <div className="space-y-4 mb-8">
             {[
               '解锁专属会员内容与报告',
               '订阅个性化洞察推送',
@@ -185,6 +186,11 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
                 <span className="text-[14px]">{feature}</span>
               </div>
             ))}
+          </div>
+
+          {/* Access rule card (always visible) */}
+          <div className="max-w-md">
+            <AccessInfoCard className="bg-white/10 border-white/20 text-white shadow-none" />
           </div>
         </div>
         
@@ -212,11 +218,16 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
           {/* Back Button */}
           <button
             onClick={() => onNavigate?.('home')}
-            className="flex items-center gap-2 text-muted-foreground/70 hover:text-foreground transition-colors mb-8 text-[14px]"
+            className="flex items-center gap-2 text-muted-foreground/70 hover:text-foreground transition-colors mb-6 text-[14px]"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>返回首页</span>
           </button>
+
+          {/* Access rule card (always visible, mobile) */}
+          <div className="mb-6">
+            <AccessInfoCard compact />
+          </div>
 
           {/* Title */}
           <h2 className="text-[26px] font-semibold text-foreground mb-2">欢迎回来</h2>

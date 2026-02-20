@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Header } from './Header';
+import { AccessInfoCard } from './AccessInfoCard';
 import {
   FileText,
   Search,
@@ -285,6 +286,11 @@ export function ReportLibraryPage({
           <p className="text-[21px] text-muted-foreground/70 leading-[1.5] max-w-3xl font-light">
             汇集行业研究报告、市场分析和政策解读，助力科学决策
           </p>
+
+          {/* Access rule card (always visible) */}
+          <div className="mt-10 max-w-5xl">
+            <AccessInfoCard />
+          </div>
         </div>
       </section>
 
