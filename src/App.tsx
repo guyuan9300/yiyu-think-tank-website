@@ -35,7 +35,11 @@ export default function App() {
   // Initialize state from URL synchronously so we don't wipe query params (e.g. clientId)
   // before the first effect runs.
   const initialParams = new URLSearchParams(window.location.search);
-  const [currentPage, setCurrentPage] = useState<string>(initialParams.get('page') || 'home');
+  // Back-compat route aliases: keep URL flexible while rendering canonical pages.
+  // NOTE: Header's semantic navigation uses "learning" but App renders "library".
+  const initialPageRaw = initialParams.get('page') || 'home';
+  const initialPage = initialPageRaw === 'learning' ? 'library' : initialPageRaw;
+  const [currentPage, setCurrentPage] = useState<string>(initialPage);
   const [selectedBookId, setSelectedBookId] = useState<string>('shimeshiquanli');
   const [selectedDetailId, setSelectedDetailId] = useState<string>(initialParams.get('id') || '');
   const [selectedCaseId, setSelectedCaseId] = useState<string>(initialParams.get('id') || 'blue-letter');
