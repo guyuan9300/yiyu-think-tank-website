@@ -93,23 +93,6 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
   const [showContactSentModal, setShowContactSentModal] = useState(false);
   const [contactForm, setContactForm] = useState({ name: '', company: '', email: '', message: '' });
 
-  const closeIntroVideoModal = () => {
-    setShowIntroVideoModal(false);
-
-    // P0-IX-06: deep link cleanup – close modal should remove intro=1 from URL.
-    try {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('intro') === '1') {
-        params.delete('intro');
-        const next = params.toString();
-        const nextUrl = next ? `${window.location.pathname}?${next}` : window.location.pathname;
-        window.history.replaceState({}, '', nextUrl);
-      }
-    } catch {
-      // ignore
-    }
-  };
-
   useEffect(() => {
     const loadSettings = () => {
       setSettings(getSystemSettings());
@@ -126,18 +109,6 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
     return () => {
       window.removeEventListener('yiyu_data_change', handleDataChange);
     };
-  }, []);
-
-  // P0-IX-06: deep link opening – About page should auto-open the intro modal when ?intro=1.
-  useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('intro') === '1') {
-        setShowIntroVideoModal(true);
-      }
-    } catch {
-      // ignore
-    }
   }, []);
 
   const coreValues = [

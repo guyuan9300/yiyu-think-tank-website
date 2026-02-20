@@ -140,6 +140,11 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
     }
   };
 
+  const handleNotOpenYet = (label: string) => {
+    // P0: 按钮/链接必须有结果（已实现/未开放/权限不足）
+    alert(`「${label}」暂未开放\n\n当前为建造期联调模式（vBuild-1.0），如需提前获取内容请联系管理员。`);
+  };
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Left Side - Branding */}
@@ -350,9 +355,27 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
           {/* Terms */}
           <p className="mt-8 text-center text-[12px] text-muted-foreground/60">
             登录即表示您同意{' '}
-            <a href="#" className="text-primary hover:underline">服务条款</a>
+            <a
+              href="#"
+              className="text-primary hover:underline"
+              onClick={(e) => {
+                e.preventDefault();
+                handleNotOpenYet('服务条款');
+              }}
+            >
+              服务条款
+            </a>
             {' '}和{' '}
-            <a href="#" className="text-primary hover:underline">隐私政策</a>
+            <a
+              href="#"
+              className="text-primary hover:underline"
+              onClick={(e) => {
+                e.preventDefault();
+                handleNotOpenYet('隐私政策');
+              }}
+            >
+              隐私政策
+            </a>
           </p>
         </div>
       </div>
