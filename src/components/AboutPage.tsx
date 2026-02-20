@@ -60,6 +60,7 @@ function AnimatedNumber({ value, duration = 2000 }: { value: string; duration?: 
 
 export function AboutPage({ onNavigate }: AboutPageProps) {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
+  const [showIntroVideoModal, setShowIntroVideoModal] = useState(false);
 
   useEffect(() => {
     const loadSettings = () => {
@@ -243,7 +244,10 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
                 <span className="font-medium text-[15px]">了解更多服务</span>
                 <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
               </button>
-              <button className="group px-8 py-4 rounded-full border border-border/60 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 ease-out hover:scale-[1.02] flex items-center gap-2">
+              <button 
+                onClick={() => setShowIntroVideoModal(true)}
+                className="group px-8 py-4 rounded-full border border-border/60 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 ease-out hover:scale-[1.02] flex items-center gap-2"
+              >
                 <Play className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" />
                 <span className="font-medium text-[15px]">观看介绍视频</span>
               </button>
@@ -650,6 +654,58 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
           </div>
         </div>
       </section>
+
+      {/* Intro Video Modal (build-phase placeholder) */}
+      {showIntroVideoModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="介绍视频"
+        >
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowIntroVideoModal(false)}
+          />
+          <div className="relative w-full max-w-[560px] rounded-[20px] bg-white p-6 border border-border/40 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-[18px] font-semibold text-foreground">介绍视频（建设中）</h3>
+                <p className="mt-2 text-[13px] text-muted-foreground/70 leading-relaxed">
+                  建造期联调模式下，视频位将用于放置 1-3 分钟的服务介绍。
+                  <br />
+                  现在你可以先查看「战略陪伴」页面了解服务框架。
+                </p>
+              </div>
+              <button
+                className="px-3 py-1.5 rounded-full text-[13px] border border-border/60 hover:bg-muted/30 transition-colors"
+                onClick={() => setShowIntroVideoModal(false)}
+                aria-label="关闭"
+              >
+                关闭
+              </button>
+            </div>
+
+            <div className="mt-5 flex flex-col sm:flex-row gap-3">
+              <button
+                className="flex-1 px-4 py-3 rounded-[14px] bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-[14px] font-medium"
+                onClick={() => {
+                  setShowIntroVideoModal(false);
+                  handleNavigate('strategy');
+                }}
+              >
+                去战略陪伴页
+              </button>
+              <button
+                className="flex-1 px-4 py-3 rounded-[14px] border border-border/60 hover:bg-muted/30 transition-colors text-[14px] font-medium"
+                onClick={() => setShowIntroVideoModal(false)}
+              >
+                稍后再看
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <Footer onNavigate={handleNavigate} />
