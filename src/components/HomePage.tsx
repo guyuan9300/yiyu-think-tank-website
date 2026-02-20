@@ -689,9 +689,21 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
             <div className="hidden md:block">
               <h4 className="font-medium text-[14px] mb-4 text-foreground">洞察</h4>
               <ul className="space-y-2.5 text-[13px] text-muted-foreground/70">
-                <li><a href="#" className="hover:text-primary transition-colors">行业洞察</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">数据洞察</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">深度洞察</a></li>
+                <li>
+                  <button type="button" onClick={() => handleNavigate('insights')} className="hover:text-primary transition-colors">
+                    行业洞察
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => handleNavigate('insights')} className="hover:text-primary transition-colors">
+                    数据洞察
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => handleNavigate('insights')} className="hover:text-primary transition-colors">
+                    深度洞察
+                  </button>
+                </li>
               </ul>
             </div>
             
@@ -699,9 +711,21 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
             <div className="hidden md:block">
               <h4 className="font-medium text-[14px] mb-4 text-foreground">学习中心</h4>
               <ul className="space-y-2.5 text-[13px] text-muted-foreground/70">
-                <li><a href="#" className="hover:text-primary transition-colors">书库</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">报告库</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">工具与模板</a></li>
+                <li>
+                  <button type="button" onClick={() => handleNavigate('learning')} className="hover:text-primary transition-colors">
+                    书库
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => handleNavigate('learning')} className="hover:text-primary transition-colors">
+                    报告库
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => handleNavigate('learning')} className="hover:text-primary transition-colors">
+                    工具与模板
+                  </button>
+                </li>
               </ul>
             </div>
             
@@ -709,9 +733,21 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
             <div className="hidden md:block">
               <h4 className="font-medium text-[14px] mb-4 text-foreground">联系我们</h4>
               <ul className="space-y-2.5 text-[13px] text-muted-foreground/70">
-                <li><a href="#" className="hover:text-primary transition-colors">关于我们</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">战略陪伴</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">预约对话</a></li>
+                <li>
+                  <button type="button" onClick={() => handleNavigate('about')} className="hover:text-primary transition-colors">
+                    关于我们
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => handleNavigate('strategy')} className="hover:text-primary transition-colors">
+                    战略陪伴
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => handleNavigate('consult-apply')} className="hover:text-primary transition-colors">
+                    预约对话
+                  </button>
+                </li>
               </ul>
             </div>
           </div>
