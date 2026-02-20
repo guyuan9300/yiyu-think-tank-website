@@ -115,7 +115,12 @@ export function SubscriptionSheet({
     <div className="fixed inset-0 z-[60]">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
-      <div className="absolute left-1/2 top-[10vh] w-[92vw] max-w-[680px] -translate-x-1/2 rounded-[28px] bg-white/90 backdrop-blur-xl border border-border/40 shadow-2xl shadow-black/10 overflow-hidden">
+      <div
+        className="absolute left-1/2 top-[10vh] w-[92vw] max-w-[680px] -translate-x-1/2 rounded-[28px] bg-white/90 backdrop-blur-xl border border-border/40 shadow-2xl shadow-black/10 overflow-hidden"
+        role="dialog"
+        aria-label="订阅前沿更新"
+        aria-modal="true"
+      >
         <div className="p-6 sm:p-8 border-b border-border/40 flex items-start justify-between gap-6">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-[12px] font-medium border border-primary/20">
