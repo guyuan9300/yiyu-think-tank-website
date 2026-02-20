@@ -17,6 +17,8 @@ export function ConsultApplyPage({ onBack }: ConsultApplyPageProps) {
   // Preferred: Feishu form (configured via Vite env). Keep in-app form as fallback.
   const feishuFormUrl = (import.meta as any).env?.VITE_FEISHU_FORM_URL as string | undefined;
 
+  // mailto href is derived from current form + submitted id (computed after form state init)
+
   const [form, setForm] = useState({
     name: '',
     organization: '',
@@ -31,6 +33,40 @@ export function ConsultApplyPage({ onBack }: ConsultApplyPageProps) {
     commitment: '',
     notes: '',
   });
+
+  const mailtoHref = useMemo(() => {
+    const to = 'hello@yiyu.ink';
+    const subject = `【战略咨询申请】${form.name || '未署名'}${submittedId ? ` (${submittedId})` : ''}`;
+    const lines = [
+      `申请编号：${submittedId || '（未生成）'}`,
+      `称呼：${form.name || '—'}`,
+      `机构：${form.organization || '—'}`,
+      `角色：${form.role || '—'}`,
+      `邮箱：${form.email || '—'}`,
+      `微信：${form.wechat || '—'}`,
+      `手机：${form.phone || '—'}`,
+      '',
+      '核心问题：',
+      form.topic || '—',
+      '',
+      '背景：',
+      form.background || '—',
+      '',
+      '目标：',
+      form.goals || '—',
+      '',
+      '约束：',
+      form.constraints || '—',
+      '',
+      '投入/匹配：',
+      form.commitment || '—',
+      '',
+      '补充：',
+      form.notes || '—',
+    ];
+    const body = lines.join('\n');
+    return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }, [form, submittedId]);
 
   const steps = useMemo(() => ([
     { id: 'intro' as const, title: '申请说明' },
@@ -92,6 +128,18 @@ export function ConsultApplyPage({ onBack }: ConsultApplyPageProps) {
 
       const saved = saveConsultRequest(payload);
       setSubmittedId(saved.id);
+
+      // Add a lightweight, user-visible landing marker in URL so users can
+      // bookmark/share a “submitted” state, and so E2E can assert the closed loop.
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('submitted', '1');
+        url.searchParams.set('rid', saved.id);
+        window.history.replaceState({}, '', url.toString());
+      } catch {
+        // ignore
+      }
+
       setStep('done');
     } finally {
       setSubmitting(false);
@@ -349,10 +397,37 @@ export function ConsultApplyPage({ onBack }: ConsultApplyPageProps) {
                   <CheckCircle2 className="w-7 h-7" />
                 </div>
                 <h2 className="text-xl font-semibold mb-2">已提交，我们会尽快处理</h2>
-                <p className="text-sm text-muted-foreground/70 mb-6">
+                <p className="text-sm text-muted-foreground/70 mb-4">
                   {submittedId ? `你的申请编号：${submittedId}` : '你的申请已记录。'}
                 </p>
-                <div className="flex justify-center">
+
+                <div className="max-w-xl mx-auto text-left p-5 rounded-2xl bg-muted/20 border border-border/30 mb-6">
+                  <div className="text-sm font-medium mb-2">下一步（确保有落点）</div>
+                  <ul className="text-sm text-muted-foreground/80 leading-relaxed list-disc pl-5 space-y-1">
+                    <li>我们会在 1 个工作日内通过你提供的联系方式联系你</li>
+                    <li>
+                      如果你希望“提交后立刻可追踪”：
+                      {feishuFormUrl ? (
+                        <a href={feishuFormUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline ml-1">
+                          打开飞书表单
+                        </a>
+                      ) : (
+                        <a href={mailtoHref} className="text-primary hover:underline ml-1">
+                          发送邮件给我们
+                        </a>
+                      )}
+                    </li>
+                    <li className="text-xs text-muted-foreground/60">提示：当前“备用表单”会在本地设备保存一份记录（用于演示/联调）。</li>
+                  </ul>
+                </div>
+
+                <div className="flex flex-col sm:flex-row justify-center gap-3">
+                  <a
+                    href={mailtoHref}
+                    className="px-6 py-3 rounded-2xl border border-border/60 hover:border-primary/40 hover:bg-primary/5 transition text-sm font-medium"
+                  >
+                    发送邮件（备选落点）
+                  </a>
                   <button onClick={onBack} className="px-6 py-3 rounded-2xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition">
                     返回首页
                   </button>
