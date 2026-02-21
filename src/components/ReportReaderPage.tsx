@@ -139,6 +139,14 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
   const handleDownloadClick = () => {
     if (!report) return;
 
+    // Guard: only paid members can download reports in vBuild-1.0.
+    // This avoids "button does nothing" for non-members and prevents accidental download counter bumps.
+    if (!hasPaidMembership()) {
+      setDownloadFeedback('需要开通会员后才可下载报告');
+      window.setTimeout(() => setDownloadFeedback(null), 3500);
+      return;
+    }
+
     if (!report.fileUrl) {
       setDownloadFeedback('PDF 文件暂未上传，无法下载');
       window.setTimeout(() => setDownloadFeedback(null), 3500);

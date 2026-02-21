@@ -48,6 +48,18 @@ async function main() {
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const page = await context.newPage();
 
+  // Ensure download button is actionable (simulate logged-in paid member)
+  await page.addInitScript(() => {
+    const user = {
+      id: 'e2e_user_gold',
+      name: 'E2E Gold',
+      memberType: 'gold',
+      status: 'active',
+    };
+    try { window.localStorage.setItem('yiyu_current_user', JSON.stringify(user)); } catch {}
+    try { window.sessionStorage.setItem('yiyu_current_user', JSON.stringify(user)); } catch {}
+  });
+
   page.on('console', (msg) => {
     if (msg.type() === 'error') consoleErrors.push(msg.text());
     else if (msg.type() === 'warning') consoleWarnings.push(msg.text());
@@ -63,7 +75,7 @@ async function main() {
   const before = parseDownloads(beforeText);
 
   // Click download and capture popup
-  const downloadBtn = page.getByRole('button', { name: '下载报告' });
+  const downloadBtn = page.getByRole('button', { name: /下载(PDF|报告)/ });
 
   const popupPromise = page.waitForEvent('popup', { timeout: 20_000 }).catch(() => null);
   await downloadBtn.click({ timeout: 20_000 });
