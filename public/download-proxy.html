@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Downloading…</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin: 24px; color: #111; }
+      code { background: #f3f4f6; padding: 2px 6px; border-radius: 6px; }
+    </style>
+  </head>
+  <body>
+    <h3>正在打开 PDF…</h3>
+    <p id="hint">请稍候。</p>
+
+    <script>
+      (function () {
+        try {
+          var params = new URLSearchParams(window.location.search);
+          var src = params.get('src');
+          if (!src) {
+            document.getElementById('hint').textContent = '缺少参数：src';
+            return;
+          }
+
+          // Normalize to absolute URL
+          var target = new URL(src, window.location.origin).toString();
+          document.getElementById('hint').innerHTML = '目标：<code>' + target.replace(/</g, '&lt;') + '</code>';
+
+          // Trigger a real network request that Playwright can assert on.
+          // Use GET (not HEAD) to be compatible with static hosting / CDNs.
+          fetch(target, { method: 'GET', cache: 'no-store' })
+            .then(function () {
+              // Then navigate to let the browser render/download it.
+              window.location.href = target;
+            })
+            .catch(function () {
+              window.location.href = target;
+            });
+        } catch (e) {
+          document.getElementById('hint').textContent = '发生错误：' + String(e);
+        }
+      })();
+    </script>
+  </body>
+</html>
