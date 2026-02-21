@@ -883,9 +883,42 @@ challenge: '社区居民参与度低',
             <div>
               <h4 className="font-medium text-[14px] text-foreground mb-4">服务</h4>
               <ul className="space-y-2.5 text-[13px] text-muted-foreground/70">
-                <li><a href="#" className="hover:text-primary transition-colors">战略规划</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">组织诊断</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">数字化转型</a></li>
+                <li>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      alert('「战略规划」暂未开放\n\n当前为建造期联调模式（vBuild-1.0），如需提前获取内容请联系管理员。');
+                    }}
+                    className="hover:text-primary transition-colors"
+                  >
+                    战略规划
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      alert('「组织诊断」暂未开放\n\n当前为建造期联调模式（vBuild-1.0），如需提前获取内容请联系管理员。');
+                    }}
+                    className="hover:text-primary transition-colors"
+                  >
+                    组织诊断
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      alert('「数字化转型」暂未开放\n\n当前为建造期联调模式（vBuild-1.0），如需提前获取内容请联系管理员。');
+                    }}
+                    className="hover:text-primary transition-colors"
+                  >
+                    数字化转型
+                  </a>
+                </li>
               </ul>
             </div>
 
@@ -893,9 +926,42 @@ challenge: '社区居民参与度低',
             <div>
               <h4 className="font-medium text-[14px] text-foreground mb-4">资源</h4>
               <ul className="space-y-2.5 text-[13px] text-muted-foreground/70">
-                <li><a href="#" className="hover:text-primary transition-colors">案例库</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">方法论工具</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">前沿洞察</a></li>
+                <li>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      alert('「案例库」暂未开放\n\n当前为建造期联调模式（vBuild-1.0），如需提前获取内容请联系管理员。');
+                    }}
+                    className="hover:text-primary transition-colors"
+                  >
+                    案例库
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      alert('「方法论工具」暂未开放\n\n当前为建造期联调模式（vBuild-1.0），如需提前获取内容请联系管理员。');
+                    }}
+                    className="hover:text-primary transition-colors"
+                  >
+                    方法论工具
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      alert('「前沿洞察」暂未开放\n\n当前为建造期联调模式（vBuild-1.0），如需提前获取内容请联系管理员。');
+                    }}
+                    className="hover:text-primary transition-colors"
+                  >
+                    前沿洞察
+                  </a>
+                </li>
               </ul>
             </div>
 
