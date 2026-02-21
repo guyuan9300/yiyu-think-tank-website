@@ -92,7 +92,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
 
   const [showContactSentModal, setShowContactSentModal] = useState(false);
   const [contactForm, setContactForm] = useState({ name: '', company: '', email: '', message: '' });
-
+  // (deduped)
   useEffect(() => {
     const loadSettings = () => {
       setSettings(getSystemSettings());
@@ -110,7 +110,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
       window.removeEventListener('yiyu_data_change', handleDataChange);
     };
   }, []);
-
+  // (deduped)
   const coreValues = [
     {
       icon: Target,

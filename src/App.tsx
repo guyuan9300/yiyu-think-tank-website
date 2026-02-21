@@ -35,8 +35,8 @@ export default function App() {
   // Initialize state from URL synchronously so we don't wipe query params (e.g. clientId)
   // before the first effect runs.
   const initialParams = new URLSearchParams(window.location.search);
-  // Back-compat route aliases: keep URL flexible while rendering canonical pages.
-  // NOTE: Header's semantic navigation uses "learning" but App renders "library".
+  // P0-IX-10: route alias normalization. Keep backward compatibility for old links.
+  // `?page=learning` should behave as `?page=library`.
   const initialPageRaw = initialParams.get('page') || 'home';
   const initialPage = initialPageRaw === 'learning' ? 'library' : initialPageRaw;
   const [currentPage, setCurrentPage] = useState<string>(initialPage);
