@@ -22,6 +22,7 @@ import UserCenterPage from './components/UserCenterPage';
 import { StrategyCompanionPage } from './components/StrategyCompanionPage';
 import AdminStrategyCompanionPage from './components/AdminStrategyCompanionPage';
 import { ConsultApplyPage } from './components/ConsultApplyPage';
+import { NotFoundPage } from './components/NotFoundPage';
 
 export default function App() {
   // Avoid browser trying to restore scroll position across in-app navigation.
@@ -35,11 +36,46 @@ export default function App() {
   // Initialize state from URL synchronously so we don't wipe query params (e.g. clientId)
   // before the first effect runs.
   const initialParams = new URLSearchParams(window.location.search);
+
+  // P0-IX-12: handle unknown `?page=` gracefully.
+  // If a user opens an old/typo link, show a friendly 404 page instead of silently rendering Home with a wrong URL.
+  const ALLOWED_PAGES = new Set([
+    'home',
+    'insights',
+    'library',
+    'book-library',
+    'report-library',
+    'article-center',
+    'book-reader',
+    'report',
+    'my-learning',
+    'strategy',
+    'about',
+    'login',
+    'register',
+    'forgot-password',
+    'reset-password',
+    'article',
+    'topic',
+    'case',
+    'admin',
+    'user-center',
+    'strategy-companion',
+    'consult-apply',
+    'admin-strategy-companion',
+    'test',
+    '404',
+  ]);
+
   // P0-IX-10: route alias normalization. Keep backward compatibility for old links.
   // `?page=learning` should behave as `?page=library`.
   const initialPageRaw = initialParams.get('page') || 'home';
-  const initialPage = initialPageRaw === 'learning' ? 'library' : initialPageRaw;
+  const normalized = initialPageRaw === 'learning' ? 'library' : initialPageRaw;
+  const initialUnknown = ALLOWED_PAGES.has(normalized) ? null : normalized;
+  const initialPage = initialUnknown ? '404' : normalized;
+
   const [currentPage, setCurrentPage] = useState<string>(initialPage);
+  const [unknownPage, setUnknownPage] = useState<string | null>(initialUnknown);
   const [selectedBookId, setSelectedBookId] = useState<string>('shimeshiquanli');
   const [selectedDetailId, setSelectedDetailId] = useState<string>(initialParams.get('id') || '');
   const [selectedCaseId, setSelectedCaseId] = useState<string>(initialParams.get('id') || 'blue-letter');
@@ -82,6 +118,12 @@ export default function App() {
     if (currentPage === 'home') {
       if (currentPageParam !== 'home') {
         window.history.replaceState({}, '', window.location.pathname);
+      }
+    } else if (currentPage === '404') {
+      const from = unknownPage || params.get('from');
+      const next = from ? `?page=404&from=${encodeURIComponent(from)}` : `?page=404`;
+      if (currentPageParam !== '404' || (from && params.get('from') !== from)) {
+        window.history.replaceState({}, '', next);
       }
     } else if (currentPage === 'login' || currentPage === 'register' || currentPage === 'forgot-password' || currentPage === 'reset-password') {
       if (currentPageParam !== currentPage) {
@@ -128,7 +170,7 @@ export default function App() {
         window.history.replaceState({}, '', `?page=${currentPage}`);
       }
     }
-  }, [currentPage, selectedDetailId, selectedCaseId]);
+  }, [currentPage, selectedDetailId, selectedCaseId, unknownPage]);
 
   const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'case' | 'admin' | 'user-center' | 'test' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply', bookId?: string, caseId?: string) => {
     // Reset scroll on page-level navigation so detail pages always open from the top.
@@ -341,6 +383,22 @@ export default function App() {
       </div>
     );
   };
+
+  // Not Found Page (unknown `?page=`)
+  if (currentPage === '404') {
+    return (
+      <>
+        <NotFoundPage
+          unknownPage={unknownPage ?? undefined}
+          onGoHome={() => {
+            setUnknownPage(null);
+            handleNavigate('home');
+          }}
+        />
+        <PageSwitcher />
+      </>
+    );
+  }
 
   // Login Page
   if (currentPage === 'login') {
