@@ -60,6 +60,11 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
     setSuccess('');
   };
 
+  const handleUnavailableLink = (label: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    alert(`「${label}」暂未开放\n\n当前为建造期联调模式（vBuild-1.0），如需提前获取内容请联系管理员。`);
+  };
+
   // 发送验证码
   const handleSendCode = async () => {
     setError('');
@@ -296,7 +301,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
           {/* Title Section */}
           <div className="mb-8">
             <h2 className="text-[32px] font-semibold text-foreground mb-2 tracking-tight">
-              创建账号
+              创建账户
             </h2>
             <p className="text-muted-foreground text-[15px]">
               已有账号？{' '}
@@ -565,11 +570,19 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
               </div>
               <label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
                 我已阅读并同意
-                <a href="#" className="text-primary hover:text-primary/80 font-medium transition-colors duration-200 mx-1">
+                <a
+                  href="#"
+                  onClick={handleUnavailableLink('服务条款')}
+                  className="text-primary hover:text-primary/80 font-medium transition-colors duration-200 mx-1"
+                >
                   服务条款
                 </a>
                 和
-                <a href="#" className="text-primary hover:text-primary/80 font-medium transition-colors duration-200 ml-1">
+                <a
+                  href="#"
+                  onClick={handleUnavailableLink('隐私政策')}
+                  className="text-primary hover:text-primary/80 font-medium transition-colors duration-200 ml-1"
+                >
                   隐私政策
                 </a>
               </label>
