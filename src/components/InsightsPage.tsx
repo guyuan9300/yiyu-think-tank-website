@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Header } from './Header';
+import { Footer } from './Footer';
 import { AccessInfoCard } from './AccessInfoCard';
 import {
   TrendingUp,
@@ -398,6 +399,8 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
           </div>
         </section>
       </div>
+
+      <Footer onNavigate={(p) => onNavigate?.(p)} />
     </div>
   );
 }

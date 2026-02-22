@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Header } from './Header';
+import { Footer } from './Footer';
 import { CommentSection } from './CommentSection';
 import {
   BookOpen,
@@ -309,7 +310,7 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
   }, [chatMessages]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header isLoggedIn={true} userType="member" onNavigate={onNavigate} />
 
       {/* 书籍信息头部 - 优化为紧凑布局 */}
@@ -677,6 +678,12 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
           </div>
         </div>
       </div>
+
+      {/* Reader End Bar + Unified Footer */}
+      <div className="mt-8 h-10 bg-black border-t border-white/10 flex items-center justify-center text-[12px] text-white/60">
+        — 阅读结束 —
+      </div>
+      <Footer onNavigate={(p) => onNavigate?.(p)} />
 
       {/* 升级会员弹窗 */}
       {showUpgradeModal && (

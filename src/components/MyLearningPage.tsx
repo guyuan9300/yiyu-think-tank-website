@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Header } from './Header';
+import { Footer } from './Footer';
 import {
   Star,
   FolderOpen,
@@ -467,11 +468,9 @@ export function MyLearningPage({ onNavigate }: { onNavigate?: (page: string) => 
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-border/40 bg-muted/5 mt-8">
-        <div className="max-w-[1200px] mx-auto text-center">
-          <p className="text-[12px] text-muted-foreground/60">© 2026 益语智库 Yiyu Think Tank. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer onNavigate={(p) => onNavigate?.(p)} />
+
+
     </div>
   );
 }

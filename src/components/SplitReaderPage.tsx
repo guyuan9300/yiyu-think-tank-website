@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Header } from './Header';
+import { Footer } from './Footer';
 import {
   BookOpen,
   MessageSquare,
@@ -246,7 +247,7 @@ export function SplitReaderPage() {
   }, [chatMessages]);
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-gray-900 flex flex-col">
       <Header isLoggedIn={true} userType="member" />
 
       {/* 主容器：PDF占3/4(75%)，AI占1/4(25%)，左右并列 */}
@@ -573,6 +574,12 @@ export function SplitReaderPage() {
           )}
         </div>
       </div>
+
+      {/* Reader End Bar + Unified Footer */}
+      <div className="h-10 bg-black border-t border-white/10 flex items-center justify-center text-[12px] text-white/60">
+        — 阅读结束 —
+      </div>
+      <Footer />
     </div>
   );
 }

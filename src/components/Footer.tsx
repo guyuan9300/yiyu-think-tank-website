@@ -1,188 +1,158 @@
-/**
- * Footer 组件
- * 网站页脚，显示联系信息和导航链接
- */
-import { useState, useEffect } from 'react';
-import { Mail, Phone, MapPin, Globe } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Mail, Phone } from 'lucide-react';
 import { getSystemSettings, type SystemSettings } from '../lib/dataService';
 
 interface FooterProps {
   onNavigate?: (page: 'about' | 'home' | 'insights' | 'learning' | 'strategy') => void;
 }
 
+/**
+ * 统一底部信息栏（基于 HomePage 的 clean footer 结构统一版）
+ * 视觉：黑底白字；层级：标语最大 / 栏目次大 / 条目更小 / 版权&备案最小。
+ */
 export function Footer({ onNavigate }: FooterProps) {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
 
   useEffect(() => {
-    const loadSettings = () => {
-      setSettings(getSystemSettings());
-    };
-
-    loadSettings();
-
-    // 监听数据变化
-    const handleDataChange = () => {
-      loadSettings();
-    };
-
-    window.addEventListener('yiyu_data_change', handleDataChange);
-
-    return () => {
-      window.removeEventListener('yiyu_data_change', handleDataChange);
-    };
+    const load = () => setSettings(getSystemSettings());
+    load();
+    const onData = () => load();
+    window.addEventListener('yiyu_data_change', onData);
+    return () => window.removeEventListener('yiyu_data_change', onData);
   }, []);
-
-  const handleNavClick = (page: 'about' | 'home' | 'insights' | 'learning' | 'strategy') => {
-    if (onNavigate) {
-      onNavigate(page);
-    }
-  };
 
   const currentYear = new Date().getFullYear();
 
+  const nav = (page: 'about' | 'home' | 'insights' | 'learning' | 'strategy') => {
+    onNavigate?.(page);
+  };
+
   return (
-    <footer className="bg-gradient-to-b from-gray-900 to-gray-950 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* 关于我们 */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4">
+    <footer className="py-16 px-4 sm:px-6 lg:px-8 border-t border-white/10 bg-black text-white">
+      <div className="max-w-[1200px] mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
+          {/* Brand + Slogan (largest) */}
+          <div className="md:col-span-1">
+            <h4 className="font-semibold text-[18px] mb-3 text-white">
               {settings?.siteName || '益语智库'}
-            </h3>
-            <p className="text-gray-400 text-sm mb-4">
-              {settings?.siteDescription || '致力于为公益组织、社会企业提供专业的战略咨询和能力建设服务'}
+            </h4>
+            <p className="text-[16px] text-white/90 leading-relaxed">
+              助力企业持续增长的战略陪伴者
             </p>
-            <button
-              onClick={() => handleNavClick('about')}
-              className="text-purple-400 hover:text-purple-300 text-sm font-medium transition-colors"
-            >
-              了解更多 →
-            </button>
+
+            {/* Mobile Quick Links */}
+            <div className="mt-5 flex flex-wrap gap-2 md:hidden">
+              <button
+                type="button"
+                onClick={() => nav('insights')}
+                className="px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[12px] text-white/80 hover:text-white hover:border-white/30 transition-colors"
+              >
+                前沿洞察
+              </button>
+              <button
+                type="button"
+                onClick={() => nav('learning')}
+                className="px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[12px] text-white/80 hover:text-white hover:border-white/30 transition-colors"
+              >
+                学习中心
+              </button>
+              <button
+                type="button"
+                onClick={() => nav('strategy')}
+                className="px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[12px] text-white/80 hover:text-white hover:border-white/30 transition-colors"
+              >
+                战略陪伴
+              </button>
+              <button
+                type="button"
+                onClick={() => nav('about')}
+                className="px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[12px] text-white/80 hover:text-white hover:border-white/30 transition-colors"
+              >
+                关于我们
+              </button>
+            </div>
           </div>
 
-          {/* 快速导航 */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4">快速导航</h3>
-            <ul className="space-y-2">
+          {/* Insights (second largest heading) */}
+          <div className="hidden md:block">
+            <h4 className="font-medium text-[15px] mb-4 text-white">洞察</h4>
+            <ul className="space-y-2.5 text-[13px] text-white/70">
               <li>
-                <button
-                  onClick={() => handleNavClick('home')}
-                  className="text-gray-400 hover:text-white text-sm transition-colors"
-                >
-                  首页
+                <button type="button" onClick={() => nav('insights')} className="hover:text-white transition-colors">
+                  行业洞察
                 </button>
               </li>
               <li>
-                <button
-                  onClick={() => handleNavClick('insights')}
-                  className="text-gray-400 hover:text-white text-sm transition-colors"
-                >
-                  洞察
+                <button type="button" onClick={() => nav('insights')} className="hover:text-white transition-colors">
+                  数据洞察
                 </button>
               </li>
               <li>
-                <button
-                  onClick={() => handleNavClick('learning')}
-                  className="text-gray-400 hover:text-white text-sm transition-colors"
-                >
-                  学习中心
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => handleNavClick('strategy')}
-                  className="text-gray-400 hover:text-white text-sm transition-colors"
-                >
-                  战略陪伴
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => handleNavClick('about')}
-                  className="text-gray-400 hover:text-white text-sm transition-colors"
-                >
-                  关于我们
+                <button type="button" onClick={() => nav('insights')} className="hover:text-white transition-colors">
+                  深度洞察
                 </button>
               </li>
             </ul>
           </div>
 
-          {/* 联系我们 */}
+          {/* Learning */}
+          <div className="hidden md:block">
+            <h4 className="font-medium text-[15px] mb-4 text-white">学习中心</h4>
+            <ul className="space-y-2.5 text-[13px] text-white/70">
+              <li>
+                <button type="button" onClick={() => nav('learning')} className="hover:text-white transition-colors">
+                  书库
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => nav('learning')} className="hover:text-white transition-colors">
+                  我的学习
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => nav('learning')} className="hover:text-white transition-colors">
+                  学习路径（建设中）
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          {/* Contact */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">联系我们</h3>
-            <ul className="space-y-3">
-              {settings?.contactEmail && (
-                <li className="flex items-start gap-2 text-gray-400 text-sm">
-                  <Mail className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <a
-                    href={`mailto:${settings.contactEmail}`}
-                    className="hover:text-white transition-colors break-all"
-                  >
+            <h4 className="font-medium text-[15px] mb-4 text-white">联系我们</h4>
+            <ul className="space-y-2.5 text-[13px] text-white/70">
+              {settings?.contactEmail ? (
+                <li className="flex items-start gap-2">
+                  <Mail className="w-4 h-4 mt-0.5 flex-shrink-0 text-white/60" />
+                  <a href={`mailto:${settings.contactEmail}`} className="hover:text-white transition-colors break-all">
                     {settings.contactEmail}
                   </a>
                 </li>
+              ) : (
+                <li className="text-white/60">邮箱：待补充</li>
               )}
-              {settings?.contactPhone && (
-                <li className="flex items-start gap-2 text-gray-400 text-sm">
-                  <Phone className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <a
-                    href={`tel:${settings.contactPhone}`}
-                    className="hover:text-white transition-colors"
-                  >
+              {settings?.contactPhone ? (
+                <li className="flex items-start gap-2">
+                  <Phone className="w-4 h-4 mt-0.5 flex-shrink-0 text-white/60" />
+                  <a href={`tel:${settings.contactPhone}`} className="hover:text-white transition-colors">
                     {settings.contactPhone}
                   </a>
                 </li>
+              ) : (
+                <li className="text-white/60">电话：待补充</li>
               )}
             </ul>
           </div>
-
-          {/* 关注我们 */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4">关注我们</h3>
-            <div className="flex gap-3">
-              <a
-                href="#"
-                className="w-10 h-10 bg-gray-800 hover:bg-purple-600 rounded-lg flex items-center justify-center transition-colors"
-                title="微信公众号"
-              >
-                <Globe className="w-5 h-5" />
-              </a>
-              <a
-                href="#"
-                className="w-10 h-10 bg-gray-800 hover:bg-purple-600 rounded-lg flex items-center justify-center transition-colors"
-                title="微博"
-              >
-                <Globe className="w-5 h-5" />
-              </a>
-              <a
-                href="#"
-                className="w-10 h-10 bg-gray-800 hover:bg-purple-600 rounded-lg flex items-center justify-center transition-colors"
-                title="LinkedIn"
-              >
-                <Globe className="w-5 h-5" />
-              </a>
-            </div>
-          </div>
         </div>
 
-        {/* 底部版权信息 */}
-        <div className="border-t border-gray-800 mt-8 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-gray-400 text-sm text-center md:text-left">
-              © {currentYear} {settings?.siteName || '益语智库'}. All rights reserved.
-            </p>
-            <div className="flex gap-6 text-sm">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                隐私政策
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                使用条款
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                网站地图
-              </a>
-            </div>
-          </div>
+        {/* Bottom (smallest) */}
+        <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row justify-between items-center gap-3">
+          <p className="text-[11px] text-white/55 text-center sm:text-left">
+            © {currentYear} 益语智库 Yiyu Think Tank. All rights reserved.
+          </p>
+          <p className="text-[11px] text-white/55 text-center sm:text-right">
+            ICP备案号：待提交
+          </p>
         </div>
       </div>
     </footer>

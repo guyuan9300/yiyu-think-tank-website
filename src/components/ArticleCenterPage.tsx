@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Header } from './Header';
+import { Footer } from './Footer';
 import {
   FileText,
   Search,
@@ -244,7 +245,7 @@ export function ArticleCenterPage({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header onNavigate={onNavigate} />
 
       {/* Hero 区域 */}
@@ -374,6 +375,8 @@ export function ArticleCenterPage({
           </div>
         )}
       </div>
+
+      <Footer onNavigate={(p) => onNavigate?.(p)} />
     </div>
   );
 }

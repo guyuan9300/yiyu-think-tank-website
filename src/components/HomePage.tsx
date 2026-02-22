@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Header } from './Header';
+import { Footer } from './Footer';
 import { ArrowRight, Brain, Target, Users, TrendingUp, BookOpen, FileText, Lightbulb, ChevronRight, Star, Zap, ChevronDown } from 'lucide-react';
 import { getInsights, getReports, type InsightArticle, type Report } from '../lib/dataService';
 import { SubscriptionSheet } from './SubscriptionSheet';
@@ -657,108 +658,10 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
         </div>
       </section>
 
-      {/* Footer - Clean */}
-      <footer className="py-16 px-4 sm:px-6 lg:px-8 border-t border-border/40 bg-muted/5">
-        <div className="max-w-[1200px] mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
-            {/* Brand */}
-            <div className="md:col-span-1">
-              <h4 className="font-semibold text-[15px] mb-4 text-foreground">益语智库</h4>
-              <p className="text-[13px] text-muted-foreground/70 leading-relaxed">
-                助力企业持续增长的战略陪伴者
-              </p>
+      {/* Footer */}
+      <Footer onNavigate={handleNavigate} />
 
-              {/* Mobile Quick Links */}
-              <div className="mt-4 flex flex-wrap gap-2 md:hidden">
-                <button onClick={() => handleNavigate('insights')} className="px-3 py-1.5 rounded-full bg-white/70 border border-border/40 text-[12px] text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors">
-                  前沿洞察
-                </button>
-                <button onClick={() => handleNavigate('learning')} className="px-3 py-1.5 rounded-full bg-white/70 border border-border/40 text-[12px] text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors">
-                  学习中心
-                </button>
-                <button onClick={() => handleNavigate('strategy')} className="px-3 py-1.5 rounded-full bg-white/70 border border-border/40 text-[12px] text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors">
-                  战略陪伴
-                </button>
-                <button onClick={() => handleNavigate('about')} className="px-3 py-1.5 rounded-full bg-white/70 border border-border/40 text-[12px] text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors">
-                  关于我们
-                </button>
-              </div>
-            </div>
-            
-            {/* Insights */}
-            <div className="hidden md:block">
-              <h4 className="font-medium text-[14px] mb-4 text-foreground">洞察</h4>
-              <ul className="space-y-2.5 text-[13px] text-muted-foreground/70">
-                <li>
-                  <button type="button" onClick={() => handleNavigate('insights')} className="hover:text-primary transition-colors">
-                    行业洞察
-                  </button>
-                </li>
-                <li>
-                  <button type="button" onClick={() => handleNavigate('insights')} className="hover:text-primary transition-colors">
-                    数据洞察
-                  </button>
-                </li>
-                <li>
-                  <button type="button" onClick={() => handleNavigate('insights')} className="hover:text-primary transition-colors">
-                    深度洞察
-                  </button>
-                </li>
-              </ul>
-            </div>
-            
-            {/* Learning */}
-            <div className="hidden md:block">
-              <h4 className="font-medium text-[14px] mb-4 text-foreground">学习中心</h4>
-              <ul className="space-y-2.5 text-[13px] text-muted-foreground/70">
-                <li>
-                  <button type="button" onClick={() => handleNavigate('learning')} className="hover:text-primary transition-colors">
-                    书库
-                  </button>
-                </li>
-                <li>
-                  <button type="button" onClick={() => handleNavigate('learning')} className="hover:text-primary transition-colors">
-                    报告库
-                  </button>
-                </li>
-                <li>
-                  <button type="button" onClick={() => handleNavigate('learning')} className="hover:text-primary transition-colors">
-                    工具与模板
-                  </button>
-                </li>
-              </ul>
-            </div>
-            
-            {/* Contact */}
-            <div className="hidden md:block">
-              <h4 className="font-medium text-[14px] mb-4 text-foreground">联系我们</h4>
-              <ul className="space-y-2.5 text-[13px] text-muted-foreground/70">
-                <li>
-                  <button type="button" onClick={() => handleNavigate('about')} className="hover:text-primary transition-colors">
-                    关于我们
-                  </button>
-                </li>
-                <li>
-                  <button type="button" onClick={() => handleNavigate('strategy')} className="hover:text-primary transition-colors">
-                    战略陪伴
-                  </button>
-                </li>
-                <li>
-                  <button type="button" onClick={() => handleNavigate('consult-apply')} className="hover:text-primary transition-colors">
-                    预约对话
-                  </button>
-                </li>
-              </ul>
-            </div>
-          </div>
-          
-          {/* Bottom */}
-          <div className="pt-8 border-t border-border/40 flex flex-col md:flex-row items-center justify-between gap-4 text-[12px] text-muted-foreground/60">
-            <p>© 2026 益语智库 Yiyu Think Tank. All rights reserved.</p>
-            <p>ICP备案号：待提交</p>
-          </div>
-        </div>
-      </footer>
+
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Header } from './Header';
+import { Footer } from './Footer';
 import { CommentSection } from './CommentSection';
 import { getReports, saveReport, type Report } from '../lib/dataService';
 import {
@@ -319,7 +320,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header isLoggedIn={isLoggedIn} userType={isLoggedIn ? 'member' : 'visitor'} />
 
       {/* 报告信息头部 */}
@@ -671,6 +672,12 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
           </div>
         </div>
       </div>
+
+      {/* Reader End Bar + Unified Footer */}
+      <div className="mt-8 h-10 bg-black border-t border-white/10 flex items-center justify-center text-[12px] text-white/60">
+        — 阅读结束 —
+      </div>
+      <Footer />
 
       {/* 升级会员弹窗 */}
       {showUpgradeModal && (

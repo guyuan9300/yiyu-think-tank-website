@@ -13,6 +13,7 @@ import {
   Heart
 } from 'lucide-react';
 import { Header } from './Header';
+import { Footer } from './Footer';
 import { CommentSection } from './CommentSection';
 import { getInsights, type InsightArticle } from '../lib/dataService';
 
@@ -66,7 +67,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header
         isLoggedIn={isLoggedIn}
         userType={isLoggedIn ? 'member' : 'visitor'}
@@ -355,6 +356,8 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
           </div>
         </div>
       </section>
+
+      <Footer onNavigate={(p) => onNavigate(p)} />
     </div>
   );
 }

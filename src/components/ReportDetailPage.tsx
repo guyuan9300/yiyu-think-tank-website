@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Header } from './Header';
+import { Footer } from './Footer';
 import { AccessInfoCard } from './AccessInfoCard';
 import {
   ArrowLeft,
@@ -127,7 +128,7 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* 头部 */}
       <Header onNavigate={(p) => onNavigate(p)} />
 
@@ -329,6 +330,8 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
           </div>
         </div>
       </section>
+
+      <Footer onNavigate={(p) => onNavigate(p)} />
     </div>
   );
 }

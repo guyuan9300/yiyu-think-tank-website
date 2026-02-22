@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Header } from './Header';
+import { Footer } from './Footer';
 import { AccessInfoCard } from './AccessInfoCard';
 import {
   FileText,
@@ -257,7 +258,7 @@ export function ReportLibraryPage({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header onNavigate={onNavigate} />
 
       {/* Hero 区域 */}
@@ -404,6 +405,8 @@ export function ReportLibraryPage({
           </div>
         )}
       </div>
+
+      <Footer onNavigate={(p) => onNavigate?.(p)} />
     </div>
   );
 }
