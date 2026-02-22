@@ -250,7 +250,7 @@ export function SplitReaderPage() {
       <Header isLoggedIn={true} userType="member" />
 
       {/* 主容器：PDF占3/4(75%)，AI占1/4(25%)，左右并列 */}
-      <div className="flex flex-row h-[calc(100dvh-64px)] min-h-[520px] overflow-hidden">
+      <div className="flex flex-row h-[calc(100dvh-64px)] min-h-[1040px] overflow-hidden">
         {/* 左边3列：PDF阅读区域 - 占75% */}
         <div className="flex-[3] flex flex-col bg-slate-800 h-full overflow-hidden border-r border-slate-700">
           {/* PDF工具栏 - 在PDF区域内 */}

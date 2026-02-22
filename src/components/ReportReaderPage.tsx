@@ -57,7 +57,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
   const [contentHeightPx, setContentHeightPx] = useState<number>(() => {
     // SSR-safe init (though this app is client-side) + clamp to avoid zoom collapsing the reader.
     const h = typeof window !== 'undefined' ? window.innerHeight : 900;
-    return Math.max(520, h - 280);
+    return Math.max(1040, h - 280);
   });
   const [isMobile, setIsMobile] = useState(false);
 
@@ -264,7 +264,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
         const headerHeight = 64;
         const bookInfoHeight = bookInfoRef.current.offsetHeight;
         const desired = window.innerHeight - (headerHeight + bookInfoHeight);
-        setContentHeightPx(Math.max(520, desired));
+        setContentHeightPx(Math.max(1040, desired));
       }
     };
 
@@ -362,7 +362,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
       {/* 内容区域 */}
       <div
         className={isMobile ? "flex flex-col" : "flex"}
-        style={isMobile ? undefined : { height: `${contentHeightPx}px`, minHeight: '520px' }}
+        style={isMobile ? undefined : { height: `${contentHeightPx}px`, minHeight: '1040px' }}
       >
         {/* PDF阅读区域 */}
         <div className={isMobile ? "w-full flex flex-col bg-white" : "flex-1 flex flex-col border-r border-gray-200 bg-white min-w-0"}>
