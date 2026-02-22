@@ -14,6 +14,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { getReports as getReportsLocal, getCategories as getCategoriesLocal, type Report } from '../lib/dataService';
+import { PdfCoverImage } from './PdfCoverImage';
 import { getReports as getReportsRemote } from '../lib/dataServiceSupabase';
 
 // 报告卡片组件 - 网格视图
@@ -26,6 +27,14 @@ function ReportCardGrid({ report, onClick }: { report: Report; onClick?: () => v
       <div className="relative bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-white/80 hover:border-border/60 hover:shadow-2xl hover:shadow-black/[0.04] hover:-translate-y-1">
         {/* 封面区域 */}
         <div className="relative aspect-[16/10] bg-gradient-to-br from-success/[0.03] to-accent/[0.03] overflow-hidden">
+          {report.fileUrl ? (
+            <PdfCoverImage
+              pdfUrl={report.fileUrl}
+              alt={report.title}
+              className="absolute inset-0"
+              width={520}
+            />
+          ) : null}
           <div className="absolute inset-0 flex items-center justify-center">
             <FileText className="w-16 h-16 text-success/10" />
           </div>
@@ -90,7 +99,15 @@ function ReportListItem({ report, onClick }: { report: Report; onClick?: () => v
       onClick={onClick}
     >
       {/* 封面 */}
-      <div className="w-32 h-20 rounded-[12px] overflow-hidden flex-shrink-0 bg-gradient-to-br from-success/[0.03] to-accent/[0.03]">
+      <div className="w-32 h-20 rounded-[12px] overflow-hidden flex-shrink-0 bg-gradient-to-br from-success/[0.03] to-accent/[0.03] relative">
+        {report.fileUrl ? (
+          <PdfCoverImage
+            pdfUrl={report.fileUrl}
+            alt={report.title}
+            className="absolute inset-0"
+            width={320}
+          />
+        ) : null}
         <div className="w-full h-full flex items-center justify-center">
           <FileText className="w-8 h-8 text-success/20" />
         </div>

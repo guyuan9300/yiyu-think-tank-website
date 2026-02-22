@@ -12,6 +12,7 @@ import {
   Clock
 } from 'lucide-react';
 import { getReports, getCategories, getInsights, type Report, type InsightArticle } from '../lib/dataService';
+import { PdfCoverImage } from './PdfCoverImage';
 
 // 报告卡片组件
 function ReportCard({ report, onClick }: { report: Report; onClick?: () => void }) {
@@ -23,7 +24,17 @@ function ReportCard({ report, onClick }: { report: Report; onClick?: () => void 
       <div className="relative bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-white/80 hover:border-border/60 hover:shadow-2xl hover:shadow-black/[0.04] hover:-translate-y-1">
         {/* 封面区域 */}
         <div className="relative aspect-[16/10] bg-gradient-to-br from-success/[0.03] to-accent/[0.03] overflow-hidden">
-          {/* 封面图片占位 */}
+          {/* 自动抓取 PDF 首页作为封面（若存在 fileUrl） */}
+          {report.fileUrl ? (
+            <PdfCoverImage
+              pdfUrl={report.fileUrl}
+              alt={report.title}
+              className="absolute inset-0"
+              width={520}
+            />
+          ) : null}
+
+          {/* 无封面时占位 */}
           <div className="absolute inset-0 flex items-center justify-center">
             <TrendingUp className="w-16 h-16 text-success/10" />
           </div>
