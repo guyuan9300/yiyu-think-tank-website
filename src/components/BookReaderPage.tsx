@@ -89,7 +89,11 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const bookInfoRef = useRef<HTMLDivElement>(null);
-  const [contentHeight, setContentHeight] = useState('calc(100vh - 280px)');
+  const [contentHeightPx, setContentHeightPx] = useState<number>(() => {
+    // SSR-safe init (though this app is client-side) + clamp to avoid zoom collapsing the reader.
+    const h = typeof window !== 'undefined' ? window.innerHeight : 900;
+    return Math.max(520, h - 280);
+  });
   const [isMobile, setIsMobile] = useState(false);
 
   // 监听用户登录状态
@@ -127,7 +131,9 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
     const apply = () => {
       const mobile = window.matchMedia('(max-width: 768px)').matches;
       setIsMobile(mobile);
-      setContentHeight(mobile ? 'auto' : 'calc(100vh - 280px)');
+      // On mobile we avoid fixed-height containers (let it flow).
+      // On desktop clamp the reader area so zoom-in won't collapse it.
+      setContentHeightPx(mobile ? -1 : Math.max(520, window.innerHeight - 280));
     };
     apply();
     window.addEventListener('resize', apply);
@@ -275,9 +281,8 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
       if (bookInfoRef.current) {
         const headerHeight = 64; // Header高度
         const bookInfoHeight = bookInfoRef.current.offsetHeight;
-        const calculatedHeight = `calc(100vh - ${headerHeight + bookInfoHeight}px)`;
-        setContentHeight(calculatedHeight);
-        console.log('📐 动态计算高度:', calculatedHeight);
+        const desired = window.innerHeight - (headerHeight + bookInfoHeight);
+        setContentHeightPx(Math.max(520, desired));
       }
     };
     
@@ -358,7 +363,10 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
       </div>
 
       {/* 内容区域 */}
-      <div className={isMobile ? "flex flex-col" : "flex"} style={isMobile ? undefined : { height: contentHeight }}>
+      <div
+        className={isMobile ? "flex flex-col" : "flex"}
+        style={isMobile ? undefined : { height: `${contentHeightPx}px`, minHeight: '520px' }}
+      >
         {/* PDF阅读区域 */}
         <div className={isMobile ? "w-full flex flex-col bg-white" : "flex-1 flex flex-col border-r border-gray-200 bg-white min-w-0"}>
           {/* PDF工具条 - 精简版 */}
