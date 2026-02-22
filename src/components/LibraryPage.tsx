@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
+import { PdfCoverImage } from './PdfCoverImage';
 import { BookOpen, Star, Eye, User, ChevronRight } from 'lucide-react';
 
 interface Book {
@@ -19,6 +20,8 @@ interface Book {
   reviewCount: number;
   date: string;
   coverColor?: string;
+  /** Optional: if present, we can render a real PDF cover on the card. */
+  pdfUrl?: string;
 }
 
 interface LibraryPageProps {
@@ -77,7 +80,8 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
       views: 15680,
       reviewCount: 1234,
       date: '2026/01/29',
-      coverColor: 'from-blue-600 to-indigo-800'
+      coverColor: 'from-blue-600 to-indigo-800',
+      pdfUrl: `${import.meta.env.BASE_URL}what-is-power.pdf`
     },
     {
       id: '3',
@@ -425,7 +429,15 @@ function BookCard({ book, onClick, getCategoryColor }: { book: Book; onClick: ()
       className="relative bg-white/80 backdrop-blur-sm rounded-[20px] border border-border/40 overflow-hidden cursor-pointer group hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300"
     >
       {/* Cover */}
-      <div className={`h-36 bg-gradient-to-br ${book.coverColor || 'from-muted/50 to-muted/30'} flex items-center justify-center relative p-4`}>
+      <div className={`h-36 bg-gradient-to-br ${book.coverColor || 'from-muted/50 to-muted/30'} flex items-center justify-center relative p-4 overflow-hidden`}>
+        {book.pdfUrl ? (
+          <PdfCoverImage
+            pdfUrl={book.pdfUrl}
+            alt={book.title}
+            className="absolute inset-0"
+            width={520}
+          />
+        ) : null}
         {/* Rating */}
         <div className="absolute top-3 right-3 flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
           <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
@@ -433,7 +445,7 @@ function BookCard({ book, onClick, getCategoryColor }: { book: Book; onClick: ()
         </div>
 
         {/* Icon */}
-        <div className="w-14 h-14 rounded-[16px] bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center transform group-hover:scale-110 transition-transform duration-300">
+        <div className={`w-14 h-14 rounded-[16px] bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center transform group-hover:scale-110 transition-transform duration-300 ${book.pdfUrl ? 'opacity-0' : ''}`}>
           <BookOpen className="w-7 h-7 text-white" />
         </div>
       </div>
