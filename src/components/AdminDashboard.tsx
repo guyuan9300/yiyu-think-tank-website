@@ -2499,6 +2499,7 @@ function ReportFormModal({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               源文件 URL <span className="text-gray-400 text-xs">(建议填写可公开访问的 PDF 链接)</span>
             </label>
+
             <input
               type="url"
               name="fileUrl"
@@ -2512,8 +2513,45 @@ function ReportFormModal({
               })()}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
             />
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50"
+                onClick={() => {
+                  const input = document.querySelector('input[name="fileUrl"]') as HTMLInputElement | null;
+                  const v = (input?.value || '').trim();
+                  if (!v) return alert('请先填写源文件 URL');
+                  const full = v.startsWith('http') ? v : `${window.location.origin}${v}`;
+                  window.open(full, '_blank', 'noopener,noreferrer');
+                }}
+              >
+                打开源文件
+              </button>
+
+              <button
+                type="button"
+                className="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50"
+                onClick={async () => {
+                  const input = document.querySelector('input[name="fileUrl"]') as HTMLInputElement | null;
+                  const v = (input?.value || '').trim();
+                  if (!v) return alert('请先填写源文件 URL');
+                  const full = v.startsWith('http') ? v : `${window.location.origin}${v}`;
+                  try {
+                    await navigator.clipboard.writeText(full);
+                    alert('✅ 已复制完整链接');
+                  } catch {
+                    prompt('复制失败，请手动复制：', full);
+                  }
+                }}
+              >
+                复制完整链接
+              </button>
+            </div>
+
             <p className="text-xs text-gray-500 mt-2">
-              说明：GitHub Pages 静态站无法真正“上传并托管”PDF；你需要把 PDF 放到仓库 <code className="px-1 py-0.5 bg-gray-100 rounded">public/docs</code> 后发布，或提供飞书云空间/网盘的可访问链接。
+              说明：如果你把 URL 粘贴到飞书/其他页面里，可能会被当作“相对路径”导致打不开；用“复制完整链接”最稳。
+              GitHub Pages 静态站无法真正“上传并托管”PDF；你需要把 PDF 放到仓库 <code className="px-1 py-0.5 bg-gray-100 rounded">public/docs</code> 后发布。
             </p>
           </div>
 

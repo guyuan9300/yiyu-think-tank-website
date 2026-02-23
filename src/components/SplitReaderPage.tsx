@@ -101,7 +101,7 @@ export function SplitReaderPage() {
     pdfPages: 328,
     duration: '约6小时',
     publishDate: '2018-05',
-    pdfUrl: '/what-is-power.pdf',
+    pdfUrl: '/yiyu-think-tank-website/docs/what-is-power.pdf',
     coverColor: 'from-blue-600 to-indigo-800',
     stats: {
       completedToday: 128,

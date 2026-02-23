@@ -82,7 +82,7 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
       reviewCount: 1234,
       date: '2026/01/29',
       coverColor: 'from-blue-600 to-indigo-800',
-      pdfUrl: `${import.meta.env.BASE_URL}what-is-power.pdf`
+      pdfUrl: `${import.meta.env.BASE_URL}docs/what-is-power.pdf`
     },
     {
       id: '3',
