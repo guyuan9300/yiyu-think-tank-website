@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import { AccessInfoCard } from './AccessInfoCard';
 import { WeChatLoginModal } from './WeChatLoginModal';
 import { WeChatIcon } from './WeChatIcon';
 import { saveUser, getUserByEmail, recordUserLogin, type User } from '../lib/dataService';
@@ -168,35 +167,37 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
             <span className="text-white text-xl font-semibold">益语智库</span>
           </div>
           
-          <h1 className="text-[36px] font-bold text-white mb-6 leading-tight tracking-tight">
-            让战略落到地上<br />
-            <span className="text-white/80 font-normal">让组织持续增长</span>
-          </h1>
           
-          <p className="text-white/70 text-[15px] mb-10 max-w-sm leading-relaxed">
-            登录您的专属智库，开启战略洞察、组织效能与数字化转型之旅
-          </p>
-          
-          {/* Features */}
-          <div className="space-y-4 mb-8">
-            {[
-              '解锁专属会员内容与报告',
-              '订阅个性化洞察推送',
-              '参与战略陪伴客户专区'
-            ].map((feature, index) => (
-              <div key={index} className="flex items-center gap-3 text-white/80">
-                <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
-                  <span className="text-xs">✓</span>
+          {/* 内容访问权限说明（面向用户的版本） */}
+          <div className="w-full max-w-xl mx-auto"> 
+            <div className="rounded-3xl bg-white/10 border border-white/20 backdrop-blur-sm p-8"> 
+              <h2 className="text-white text-[18px] font-semibold">内容访问权限说明</h2>
+              <div className="mt-5 space-y-4">
+                <div>
+                  <div className="text-white/90 font-medium">访客（未注册）</div>
+                  <ul className="mt-2 space-y-2 text-white/80 text-[14px]">
+                    <li className="flex gap-2"><span className="text-white/90">✓</span><span>可浏览大部分公开内容</span></li>
+                    <li className="flex gap-2"><span className="text-white/90">✓</span><span>不含前沿洞察/战略陪伴里的报告全文</span></li>
+                  </ul>
                 </div>
-                <span className="text-[14px]">{feature}</span>
+                <div className="pt-4 border-t border-white/15">
+                  <div className="text-white/90 font-medium">注册会员（未付费）</div>
+                  <ul className="mt-2 space-y-2 text-white/80 text-[14px]">
+                    <li className="flex gap-2"><span className="text-white/90">✓</span><span>在访客基础上解锁更多内容入口</span></li>
+                    <li className="flex gap-2"><span className="text-white/90">✓</span><span>可预览各类报告前 20%</span></li>
+                  </ul>
+                </div>
+                <div className="pt-4 border-t border-white/15">
+                  <div className="text-white/90 font-medium">付费会员（298元/年）</div>
+                  <ul className="mt-2 space-y-2 text-white/80 text-[14px]">
+                    <li className="flex gap-2"><span className="text-white/90">✓</span><span>可查看所有内容</span></li>
+                    <li className="flex gap-2"><span className="text-white/90">✓</span><span>含报告全文与战略陪伴资源</span></li>
+                  </ul>
+                </div>
               </div>
-            ))}
+            </div>
           </div>
 
-          {/* Access rule card (always visible) */}
-          <div className="w-full max-w-xl mx-auto">
-            <AccessInfoCard className="bg-white/10 border-white/20 text-white shadow-none" />
-          </div>
         </div>
         
         {/* Footer */}
@@ -206,7 +207,7 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
+      <div className="flex-1 flex items-start justify-start p-6 lg:p-12">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, User, Smartphone, CheckCircle } from 'lucide-react';
 import { WeChatLoginModal } from './WeChatLoginModal';
 import { WeChatIcon } from './WeChatIcon';
-import { AccessInfoCard } from './AccessInfoCard';
 import {
   sendSMSCode,
   sendEmailCode,
@@ -221,46 +220,37 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
             <span className="text-white text-2xl font-semibold tracking-wide">益语智库</span>
           </div>
 
-          {/* Value Proposition */}
-          <div className="mb-12">
-            <h1 className="text-[44px] font-semibold text-white mb-6 leading-tight tracking-tight">
-              加入益语智库
-              <br />
-              <span className="text-white/70 font-normal">开启增长之旅</span>
-            </h1>
 
-            <p className="text-white/70 text-[17px] leading-relaxed max-w-md mb-8">
-              三种注册方式任您选择，立即成为会员解锁专属权益
-            </p>
-          </div>
-
-          {/* Benefits */}
-          <div className="space-y-5 mb-8">
-            {[
-              { icon: '✓', text: '手机号快速注册' },
-              { icon: '✓', text: '邮箱注册更安全' },
-              { icon: '✓', text: '微信一键登录' },
-              { icon: '✓', text: '成为会员享专属权益' }
-            ].map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-4 text-white/80 group cursor-default animate-fadeInUp"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/20 group-hover:bg-white/30 group-hover:scale-105 transition-all duration-300">
-                  <span className="text-sm font-medium">{item.icon}</span>
+          {/* 内容访问权限说明（面向用户的版本） */}
+          <div className="w-full max-w-xl mx-auto"> 
+            <div className="rounded-3xl bg-white/10 border border-white/20 backdrop-blur-sm p-8"> 
+              <h2 className="text-white text-[18px] font-semibold">内容访问权限说明</h2>
+              <div className="mt-5 space-y-4">
+                <div>
+                  <div className="text-white/90 font-medium">访客（未注册）</div>
+                  <ul className="mt-2 space-y-2 text-white/80 text-[14px]">
+                    <li className="flex gap-2"><span className="text-white/90">✓</span><span>可浏览大部分公开内容</span></li>
+                    <li className="flex gap-2"><span className="text-white/90">✓</span><span>不含前沿洞察/战略陪伴里的报告全文</span></li>
+                  </ul>
                 </div>
-                <span className="text-[15px] font-medium group-hover:text-white transition-colors">
-                  {item.text}
-                </span>
+                <div className="pt-4 border-t border-white/15">
+                  <div className="text-white/90 font-medium">注册会员（未付费）</div>
+                  <ul className="mt-2 space-y-2 text-white/80 text-[14px]">
+                    <li className="flex gap-2"><span className="text-white/90">✓</span><span>在访客基础上解锁更多内容入口</span></li>
+                    <li className="flex gap-2"><span className="text-white/90">✓</span><span>可预览各类报告前 20%</span></li>
+                  </ul>
+                </div>
+                <div className="pt-4 border-t border-white/15">
+                  <div className="text-white/90 font-medium">付费会员（298元/年）</div>
+                  <ul className="mt-2 space-y-2 text-white/80 text-[14px]">
+                    <li className="flex gap-2"><span className="text-white/90">✓</span><span>可查看所有内容</span></li>
+                    <li className="flex gap-2"><span className="text-white/90">✓</span><span>含报告全文与战略陪伴资源</span></li>
+                  </ul>
+                </div>
               </div>
-            ))}
+            </div>
           </div>
 
-          {/* Access rule card (always visible) */}
-          <div className="w-full max-w-xl mx-auto">
-            <AccessInfoCard className="bg-white/10 border-white/20 text-white shadow-none" />
-          </div>
         </div>
 
         {/* Footer */}
@@ -270,7 +260,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
       </div>
 
       {/* Right Side - Register Form */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-12 overflow-y-auto bg-gradient-to-b from-background to-background/50">
+      <div className="flex-1 flex items-start justify-start p-6 lg:p-12 overflow-y-auto bg-gradient-to-b from-background to-background/50">
         <div className="w-full max-w-md py-4">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
