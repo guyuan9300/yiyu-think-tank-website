@@ -183,9 +183,18 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string) =>
                 className="bg-white/80 backdrop-blur-sm rounded-[20px] border border-border/40 overflow-hidden cursor-pointer group hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300"
               >
                 <div className={`aspect-[3/4] bg-gradient-to-br ${book.coverColor || 'from-primary/20 to-accent/10'} relative overflow-hidden`}>
-                  <div className="absolute inset-0 flex items-center justify-center text-white opacity-20 text-6xl font-bold">
-                    {book.title.charAt(0)}
-                  </div>
+                  {book.coverImage ? (
+                    <img
+                      src={book.coverImage}
+                      alt={book.title}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-white opacity-20 text-6xl font-bold">
+                      {book.title.charAt(0)}
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   
                   {/* Hover Button */}
@@ -227,8 +236,17 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string) =>
                 className="bg-white/80 backdrop-blur-sm rounded-[20px] border border-border/40 p-6 flex gap-6 cursor-pointer group hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
               >
                 {/* Cover */}
-                <div className={`w-32 h-44 flex-shrink-0 rounded-[14px] bg-gradient-to-br ${book.coverColor || 'from-primary/20 to-accent/10'} flex items-center justify-center text-white text-4xl font-bold shadow-lg`}>
-                  {book.title.charAt(0)}
+                <div className={`w-32 h-44 flex-shrink-0 rounded-[14px] bg-gradient-to-br ${book.coverColor || 'from-primary/20 to-accent/10'} flex items-center justify-center text-white text-4xl font-bold shadow-lg overflow-hidden relative`}>
+                  {book.coverImage ? (
+                    <img
+                      src={book.coverImage}
+                      alt={book.title}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    book.title.charAt(0)
+                  )}
                 </div>
                 
                 {/* Content */}

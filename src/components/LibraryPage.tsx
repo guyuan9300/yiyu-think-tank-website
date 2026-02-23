@@ -20,6 +20,8 @@ interface Book {
   reviewCount: number;
   date: string;
   coverColor?: string;
+  /** Optional: manual/auto cover image (DataURL or URL). */
+  coverImage?: string;
   /** Optional: if present, we can render a real PDF cover on the card. */
   pdfUrl?: string;
 }
@@ -452,7 +454,14 @@ function BookCard({ book, onClick, getCategoryColor }: { book: Book; onClick: ()
     >
       {/* Cover */}
       <div className={`h-36 bg-gradient-to-br ${book.coverColor || 'from-muted/50 to-muted/30'} flex items-center justify-center relative p-4 overflow-hidden`}>
-        {book.pdfUrl ? (
+        {book.coverImage ? (
+          <img
+            src={book.coverImage}
+            alt={book.title}
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : book.pdfUrl ? (
           <PdfCoverImage
             pdfUrl={book.pdfUrl}
             alt={book.title}
