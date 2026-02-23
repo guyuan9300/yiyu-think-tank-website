@@ -1539,10 +1539,10 @@ const AdminStrategyCompanionPage: React.FC = () => {
         <h1 className="text-2xl font-bold text-gray-900">战略客户管理</h1>
         <p className="text-gray-600 mt-1">管理多个战略咨询项目的进度和数据</p>
       </div>
-      
-      <div className="flex gap-6">
-        {/* 左侧：客户选择器 */}
-        <div className="w-80 flex-shrink-0">
+
+      {/* 顶部一行：筛选器（客户选择） + 统计概览 */}
+      <div className="flex flex-col lg:flex-row gap-4 items-stretch mb-6">
+        <div className="flex-1 min-w-0">
           <ClientSelector
             clients={clients}
             selectedClient={selectedClient}
@@ -1550,33 +1550,33 @@ const AdminStrategyCompanionPage: React.FC = () => {
             onAddClient={handleAddClient}
             onEditClient={handleEditClient}
           />
-          
-          {/* 快速统计 */}
-          <div className="mt-4 bg-white rounded-xl border border-gray-100 p-4">
-            <h3 className="text-sm font-medium text-gray-600 mb-3">统计概览</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">客户总数</span>
-                <span className="font-medium">{clients.length}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">进行中</span>
-                <span className="font-medium text-green-600">
-                  {clients.filter(c => c.status === 'active').length}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">已完成</span>
-                <span className="font-medium text-blue-600">
-                  {clients.filter(c => c.status === 'completed').length}
-                </span>
-              </div>
+        </div>
+
+        <div className="w-full lg:w-80 flex-shrink-0 bg-white rounded-xl border border-gray-100 p-4">
+          <h3 className="text-sm font-medium text-gray-600 mb-3">统计概览</h3>
+          <div className="grid grid-cols-3 lg:grid-cols-1 gap-3">
+            <div className="flex lg:justify-between items-center text-sm">
+              <span className="text-gray-500">客户总数</span>
+              <span className="font-medium ml-auto lg:ml-0">{clients.length}</span>
+            </div>
+            <div className="flex lg:justify-between items-center text-sm">
+              <span className="text-gray-500">进行中</span>
+              <span className="font-medium text-green-600 ml-auto lg:ml-0">
+                {clients.filter(c => c.status === 'active').length}
+              </span>
+            </div>
+            <div className="flex lg:justify-between items-center text-sm">
+              <span className="text-gray-500">已完成</span>
+              <span className="font-medium text-blue-600 ml-auto lg:ml-0">
+                {clients.filter(c => c.status === 'completed').length}
+              </span>
             </div>
           </div>
         </div>
-        
-        {/* 右侧：项目详情 */}
-        <div className="flex-1">
+      </div>
+
+      {/* 项目详情 */}
+      <div className="min-w-0">
           {selectedClient ? (
             <>
               {/* 项目概览 */}
@@ -1667,7 +1667,6 @@ const AdminStrategyCompanionPage: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
       
       {/* 里程碑编辑弹窗 */}
       <Modal

@@ -718,7 +718,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         fixed lg:static inset-y-0 left-0 z-50
         bg-gradient-to-b from-gray-900 to-gray-800
         text-white transition-all duration-300 ease-in-out
-        h-full lg:h-screen
+        h-full lg:h-screen flex flex-col
         ${sidebarOpen ? 'w-64' : 'w-20'}
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
@@ -741,7 +741,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         </div>
 
         {/* 菜单列表 */}
-        <nav className="p-4 space-y-2">
+        <nav className="flex-1 min-h-0 p-4 space-y-2 overflow-y-auto">
           {menuItems.map((item) => (
             <button
               key={item.id}
@@ -775,16 +775,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
           ))}
         </nav>
 
-        {/* 底部：退出按钮 */}
-        <div className="absolute bottom-4 left-0 right-0 px-4">
-          <button
-            onClick={onLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-gray-700/50 hover:text-red-400 transition-all"
-          >
-            <LogOut className="w-5 h-5" />
-            {sidebarOpen && <span>退出登录</span>}
-          </button>
-        </div>
       </aside>
 
       {/* 主内容区 */}
@@ -810,6 +800,15 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
           </div>
           
           <div className="flex items-center gap-4">
+            <button
+              onClick={onLogout}
+              className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+              title="退出登录"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm font-medium">退出登录</span>
+            </button>
+
             <button
               onClick={onNavigateHome}
               className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white hover:bg-gray-800 transition-colors"
