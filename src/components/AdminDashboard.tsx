@@ -129,6 +129,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const [calculatedReadTime, setCalculatedReadTime] = useState<string>('');
   const [reportFile, setReportFile] = useState<File | null>(null);
   const [reportStatus, setReportStatus] = useState<'draft' | 'published'>('published');
+  // If enabled, selecting a PDF will auto-extract page 1 as cover.
+  const [useFirstPageAsCover, setUseFirstPageAsCover] = useState(true);
   const coverInputRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const reportFileInputRef = useRef<HTMLInputElement>(null);
@@ -441,14 +443,16 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
     setReportFile(file);
 
-    // 自动抓取封面与页数（失败不阻断保存流程）
+    // 自动解析页数 + 可选抓取第一页作为封面（失败不阻断保存流程）
     try {
       const { coverDataUrl, numPages } = await extractPdfCoverAndPages(file);
 
-      // 若用户未手动上传封面，则用自动抓取的
-      setCoverImage((prev) => prev || coverDataUrl);
+      if (useFirstPageAsCover) {
+        // 需求：勾选后强制用第一页作为封面（覆盖之前封面）
+        setCoverImage(coverDataUrl);
+      }
 
-      // 若页数还未填，则自动写入
+      // 页数：若页数还未填，则自动写入
       setReportPages((prev) => (prev && prev > 0 ? prev : numPages));
     } catch (err) {
       console.warn('PDF 封面/页数解析失败，将继续使用手动封面/手动页数。', err);
@@ -586,7 +590,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       status: reportStatus, // 使用状态变量而不是formData
       isHot: formData.get('isHot') === 'on',
       // 报告文件信息
-      fileUrl: reportFile ? reportFile.name : (editingItem as Report)?.fileUrl,
+      fileUrl: (formData.get('fileUrl') as string) || (reportFile ? reportFile.name : (editingItem as Report)?.fileUrl),
       fileSize: reportFile ? reportFile.size : (editingItem as Report)?.fileSize,
     };
 
@@ -1965,6 +1969,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setCalculatedReadTime('');
                 setReportFile(null);
                 setReportStatus('published');
+                setUseFirstPageAsCover(true);
               }}
               onSave={handleSaveReport}
               fileInputRef={fileInputRef}
@@ -1985,6 +1990,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               reportFileInputRef={reportFileInputRef}
               handleReportFileButtonClick={handleReportFileButtonClick}
               handleReportFileSelect={handleReportFileSelect}
+              useFirstPageAsCover={useFirstPageAsCover}
+              setUseFirstPageAsCover={setUseFirstPageAsCover}
             />
           )}
 
@@ -2218,6 +2225,8 @@ interface ReportFormModalProps {
   reportFileInputRef: React.RefObject<HTMLInputElement>;
   handleReportFileButtonClick: () => void;
   handleReportFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  useFirstPageAsCover: boolean;
+  setUseFirstPageAsCover: React.Dispatch<React.SetStateAction<boolean>>;
   strategyClients: ClientProject[];
   syncClientIds: string[];
   setSyncClientIds: React.Dispatch<React.SetStateAction<string[]>>;
@@ -2250,6 +2259,8 @@ function ReportFormModal({
   reportFileInputRef,
   handleReportFileButtonClick,
   handleReportFileSelect,
+  useFirstPageAsCover,
+  setUseFirstPageAsCover,
   strategyClients,
   syncClientIds,
   setSyncClientIds,
@@ -2259,8 +2270,8 @@ function ReportFormModal({
   const [isExtractingCover, setIsExtractingCover] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
-  // 处理报告文件拖放 - 简化版本，不自动提取
-  const handleFileDrop = (e: React.DragEvent) => {
+  // 处理报告文件拖放
+  const handleFileDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingFile(false);
@@ -2276,6 +2287,21 @@ function ReportFormModal({
       }
 
       setReportFile(file);
+
+      // 自动抓取封面/页数（可选）
+      if (useFirstPageAsCover) {
+        try {
+          setIsExtractingCover(true);
+          const { coverDataUrl, numPages } = await extractPdfCoverAndPages(file);
+          setCoverImage(coverDataUrl);
+          setReportPages((prev) => (prev && prev > 0 ? prev : numPages));
+        } catch (err) {
+          console.warn('PDF 封面/页数解析失败（拖拽上传）', err);
+        } finally {
+          setIsExtractingCover(false);
+        }
+      }
+
       setUploadSuccess(true);
       setTimeout(() => setUploadSuccess(false), 3000);
     }
@@ -2316,38 +2342,17 @@ function ReportFormModal({
               封面图 <span className="text-gray-400 text-xs">(建议尺寸 1920x1080，16:9比例)</span>
             </label>
 
-            {/* AI 生成封面（使用 Hugging Face 免费额度；token 存在浏览器本地） */}
-            <div className="flex flex-wrap items-center gap-3 mb-3">
-              <button
-                type="button"
-                className="px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors text-sm font-medium"
-                onClick={async () => {
-                  try {
-                    const formEl = document.activeElement?.closest('form') as HTMLFormElement | null;
-                    // Best-effort: read title/excerpt/tags from current form fields
-                    const titleInput = document.querySelector('input[name="title"]') as HTMLInputElement | null;
-                    const summaryInput = document.querySelector('textarea[name="summary"]') as HTMLTextAreaElement | null;
-                    const tagsInput = document.querySelector('input[name="tags"]') as HTMLInputElement | null;
-
-                    const title = titleInput?.value || editingItem?.title || '报告封面';
-                    const excerpt = summaryInput?.value || editingItem?.summary || '';
-                    const tags = (tagsInput?.value || '').split(',').map(t => t.trim()).filter(Boolean);
-
-                    const dataUrl = await generateCoverImage({ title, excerpt, tags });
-                    setCoverImage(dataUrl);
-                    alert('✅ AI 封面已生成并填充（请记得保存报告）');
-                  } catch (e: any) {
-                    alert('❌ AI 生成封面失败：' + (e?.message || String(e)) + '\n\n请先到「系统设置」填写 Hugging Face Token。');
-                  }
-                }}
-              >
-                AI 生成封面
-              </button>
-
-              <div className="text-xs text-gray-500">
-                当前模型：<code className="px-1 py-0.5 bg-gray-100 rounded">{getHfModel()}</code>
-              </div>
-            </div>
+            {/* 使用 PDF 首页作为封面（本地解析；不会上传 PDF 到服务器） */}
+            <label className="inline-flex items-center gap-2 text-sm text-gray-700 mb-3 select-none">
+              <input
+                type="checkbox"
+                checked={useFirstPageAsCover}
+                onChange={(e) => setUseFirstPageAsCover(e.target.checked)}
+                className="rounded text-purple-600 focus:ring-purple-500"
+              />
+              选择 PDF 第 1 页作为封面（推荐）
+              <span className="text-xs text-gray-500">（选择/拖拽 PDF 后自动抓取）</span>
+            </label>
 
             {coverImage ? (
               <div className="relative border-2 border-green-500 rounded-xl overflow-hidden group">
@@ -2483,10 +2488,33 @@ function ReportFormModal({
                     选择PDF文件
                   </button>
                   
-                  <p className="text-xs mt-4 text-gray-500">💡 提示：请先上传封面图，再输入页数</p>
+                  <p className="text-xs mt-4 text-gray-500">💡 提示：勾选“选择 PDF 第 1 页作为封面”后，会自动抓取封面并尝试自动填页数</p>
                 </div>
               </div>
             )}
+          </div>
+
+          {/* 源文件链接（用于前台打开/下载） */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              源文件 URL <span className="text-gray-400 text-xs">(建议填写可公开访问的 PDF 链接)</span>
+            </label>
+            <input
+              type="url"
+              name="fileUrl"
+              placeholder="例如：https://example.com/your.pdf 或 /yiyu-think-tank-website/docs/xxx.pdf"
+              defaultValue={(() => {
+                const v = (editingItem as any)?.fileUrl as string | undefined;
+                // 历史数据可能只存了文件名；这种不算可访问 URL
+                if (!v) return '';
+                if (v.startsWith('http://') || v.startsWith('https://') || v.startsWith('/')) return v;
+                return '';
+              })()}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              说明：GitHub Pages 静态站无法真正“上传并托管”PDF；你需要把 PDF 放到仓库 <code className="px-1 py-0.5 bg-gray-100 rounded">public/docs</code> 后发布，或提供飞书云空间/网盘的可访问链接。
+            </p>
           </div>
 
           <hr className="border-gray-200" />
