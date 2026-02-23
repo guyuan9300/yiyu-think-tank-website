@@ -194,7 +194,7 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
           </div>
 
           {/* Access rule card (always visible) */}
-          <div className="max-w-md">
+          <div className="w-full max-w-xl mx-auto">
             <AccessInfoCard className="bg-white/10 border-white/20 text-white shadow-none" />
           </div>
         </div>
@@ -229,10 +229,7 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
             <span>返回首页</span>
           </button>
 
-          {/* Access rule card (always visible, mobile) */}
-          <div className="mb-6">
-            <AccessInfoCard compact />
-          </div>
+          {/* Access rule card removed (避免与左侧说明重复) */}
 
           {/* Title */}
           <h2 className="text-[26px] font-semibold text-foreground mb-2">欢迎回来</h2>

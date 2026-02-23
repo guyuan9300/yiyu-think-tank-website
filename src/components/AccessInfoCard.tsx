@@ -49,7 +49,7 @@ export function AccessInfoCard({
               <div className="rounded-2xl border border-border/40 bg-gradient-to-br from-primary/10 to-accent/10 p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Crown className="w-4 h-4 text-primary/80" />
-                  <span className="text-[13px] font-medium">付费会员</span>
+                  <span className="text-[13px] font-medium">付费会员（298元/年）</span>
                 </div>
                 <ul className="text-[12px] text-muted-foreground/75 leading-relaxed list-disc pl-5 space-y-1">
                   <li>可查看所有内容</li>

@@ -258,7 +258,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
           </div>
 
           {/* Access rule card (always visible) */}
-          <div className="max-w-md">
+          <div className="w-full max-w-xl mx-auto">
             <AccessInfoCard className="bg-white/10 border-white/20 text-white shadow-none" />
           </div>
         </div>
@@ -293,10 +293,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
             <span className="text-sm font-medium">返回首页</span>
           </button>
 
-          {/* Access rule card (always visible, mobile) */}
-          <div className="mb-6">
-            <AccessInfoCard compact />
-          </div>
+          {/* Access rule card removed (避免与左侧说明重复) */}
 
           {/* Title Section */}
           <div className="mb-8">
