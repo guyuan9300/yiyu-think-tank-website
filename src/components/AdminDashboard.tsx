@@ -2015,6 +2015,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   contentText: (formData.get('contentText') as string) || undefined,
                   category: formData.get('category') as string,
                   tags: tags,
+                  coverImage: (formData.get('coverImage') as string) || (editingItem as any)?.coverImage,
                   author: formData.get('author') as string,
                   readTime: parseInt(formData.get('readTime') as string) || 10,
                   publishDate: formData.get('publishDate') as string,
@@ -2846,11 +2847,16 @@ function InsightFormModal({
   const [tags, setTags] = useState<string[]>(editingItem?.tags || []);
   const tagInputRef = useRef<HTMLInputElement>(null);
 
+  // Cover image (DataURL or URL)
+  const [coverImage, setCoverImage] = useState<string | null>((editingItem as any)?.coverImage || null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
   const [insightEditorValue, setInsightEditorValue] = useState<ArticleEditorValue | null>(null);
 
   useEffect(() => {
     // Reset editor draft when switching items
     setInsightEditorValue(null);
+    setCoverImage((editingItem as any)?.coverImage || null);
   }, [editingItem?.id]);
 
   return (
@@ -2930,6 +2936,66 @@ function InsightFormModal({
               defaultValue={editingItem?.excerpt || ''}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
             />
+          </div>
+
+          {/* 封面图片 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">文章封面</label>
+            <div className="flex items-start gap-4">
+              <div className="relative w-56 aspect-[4/3] rounded-2xl overflow-hidden border border-gray-200 bg-gradient-to-br from-purple-50 to-indigo-50">
+                {coverImage ? (
+                  <img src={coverImage} alt="文章封面" className="absolute inset-0 w-full h-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                    <Image className="w-10 h-10" />
+                    <span className="mt-2 text-xs">未上传封面</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => coverInputRef.current?.click()}
+                    className="px-4 py-2 rounded-xl bg-purple-600 text-white text-sm hover:bg-purple-700"
+                  >
+                    上传封面图片
+                  </button>
+                  {coverImage ? (
+                    <button
+                      type="button"
+                      onClick={() => setCoverImage(null)}
+                      className="px-4 py-2 rounded-xl border text-sm hover:bg-gray-50"
+                    >
+                      清除
+                    </button>
+                  ) : null}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  建议尺寸：1200×900 或 4:3；静态站 MVP 将以 base64 保存到 localStorage。
+                </p>
+              </div>
+            </div>
+
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              aria-label="上传文章封面图片文件"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (!file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                  setCoverImage(evt.target?.result as string);
+                };
+                reader.readAsDataURL(file);
+              }}
+            />
+            <input type="hidden" name="coverImage" value={coverImage || ''} />
           </div>
           
           {/* 正文内容 */}

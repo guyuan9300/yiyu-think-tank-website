@@ -87,8 +87,25 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
 
       {/* Hero Section with Left-Image-Right-Text Layout */}
       <section className="relative pt-32 pb-20 px-6 overflow-hidden">
-        {/* Background Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-success/[0.03] via-background to-accent/[0.03] pointer-events-none" />
+        {/* Background: if cover exists, use a blurred hero background for a natural frosted-glass transition */}
+        {displayArticle.coverImage ? (
+          <>
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                backgroundImage: `url(${displayArticle.coverImage})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                filter: 'blur(28px)',
+                transform: 'scale(1.08)',
+                opacity: 0.28,
+              }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-background via-background/85 to-background pointer-events-none" />
+          </>
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-success/[0.03] via-background to-accent/[0.03] pointer-events-none" />
+        )}
 
         <div className="relative max-w-7xl mx-auto">
           {/* Breadcrumb */}
@@ -109,11 +126,19 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
             {/* Left: Image */}
             <div className="order-2 lg:order-1">
               <div className="relative aspect-[4/3] rounded-3xl overflow-hidden bg-gradient-to-br from-success/[0.08] to-accent/[0.08] border border-border/40 shadow-xl">
-                {/* Placeholder for article cover image */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <BookOpen className="w-32 h-32 text-success/20" />
-                  <span className="mt-4 text-sm text-muted-foreground/40 font-light">封面图片</span>
-                </div>
+                {displayArticle.coverImage ? (
+                  <img
+                    src={displayArticle.coverImage}
+                    alt={displayArticle.title}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <BookOpen className="w-32 h-32 text-success/20" />
+                    <span className="mt-4 text-sm text-muted-foreground/40 font-light">封面图片</span>
+                  </div>
+                )}
 
                 {/* Featured Badge */}
                 {displayArticle.featured && (
@@ -125,8 +150,12 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
               </div>
             </div>
 
-            {/* Right: Content */}
+            {/* Right: Content (frosted glass card) */}
             <div className="order-1 lg:order-2">
+              <div className="relative rounded-3xl border border-border/30 bg-white/55 backdrop-blur-xl shadow-2xl shadow-black/[0.04] p-8 sm:p-10">
+                {/* subtle gradient to ensure text readability on top of cover background */}
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/65 via-white/45 to-white/30 pointer-events-none" />
+                <div className="relative">
               {/* Category & Featured */}
               <div className="flex items-center gap-3 mb-6">
                 <span className="px-4 py-1.5 rounded-full bg-success/10 text-success text-[12px] font-medium">
@@ -211,6 +240,8 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
                   <Share2 className="w-4 h-4" />
                   <span>分享到朋友圈</span>
                 </button>
+              </div>
+                </div>
               </div>
             </div>
           </div>
