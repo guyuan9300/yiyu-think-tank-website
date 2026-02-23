@@ -82,30 +82,17 @@ export default function App() {
   // Page switcher scaffolding (for building/testing). Default OFF, auto-ON for admin.
   const [showPageSwitcher, setShowPageSwitcher] = useState(false);
 
-  // Read debug/admin-only scaffolding flags from URL/localStorage
+  // Page switcher is internal scaffolding.
+  // Per product requirement: it should NOT be visible in normal usage.
+  // If we ever need it again for dev, we can re-enable via localStorage flag.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const debug = params.get('debug');
-
-    // Scaffolding controls:
-    // - ?debug=1 forces the page switcher on
-    // - Admin account sees it by default (until the site is fully built)
-    if (debug === '1') {
-      setShowPageSwitcher(true);
-      return;
-    }
-
     try {
-      const userStr = (localStorage.getItem('yiyu_current_user') ?? sessionStorage.getItem('yiyu_current_user'));
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        const adminEmails = ['guyuan9300@gmail.com'];
-        if (user?.email && adminEmails.includes(String(user.email).toLowerCase())) {
-          setShowPageSwitcher(true);
-        }
-      }
+      const params = new URLSearchParams(window.location.search);
+      const debug = params.get('debug');
+      const enabled = localStorage.getItem('yiyu_enable_page_switcher') === 'true';
+      setShowPageSwitcher(enabled && debug === '1');
     } catch {
-      // ignore
+      setShowPageSwitcher(false);
     }
   }, []);
 
