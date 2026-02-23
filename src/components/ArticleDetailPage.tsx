@@ -183,17 +183,6 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
                 {/* Actions: human-useful only */}
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => {
-                      const el = document.getElementById('article-content');
-                      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }}
-                    className="px-4 py-2 rounded-full bg-foreground text-background text-[13px] font-medium hover:opacity-90 transition"
-                    title="跳到正文"
-                  >
-                    阅读正文
-                  </button>
-
-                  <button
                     onClick={() => setIsBookmarked(!isBookmarked)}
                     className={`px-3 py-2 rounded-full text-[13px] font-medium border transition ${
                       isBookmarked
