@@ -85,31 +85,28 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
         }}
       />
 
-      {/* Hero Section with Left-Image-Right-Text Layout */}
-      <section className="relative pt-32 pb-20 px-6 overflow-hidden">
-        {/* Background: if cover exists, use a blurred hero background for a natural frosted-glass transition */}
+      {/* Hero Section (Editorial cover + calm meta; no meaningless primary CTA) */}
+      <section className="relative pt-28 pb-14 px-6 overflow-hidden">
+        {/* Ambient background */}
+        <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-primary/[0.035] via-background to-background" />
         {displayArticle.coverImage ? (
-          <>
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                backgroundImage: `url(${displayArticle.coverImage})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                filter: 'blur(28px)',
-                transform: 'scale(1.08)',
-                opacity: 0.28,
-              }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-br from-background via-background/85 to-background pointer-events-none" />
-          </>
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-success/[0.03] via-background to-accent/[0.03] pointer-events-none" />
-        )}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundImage: `url(${displayArticle.coverImage})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'blur(36px)',
+              transform: 'scale(1.12)',
+              opacity: 0.22,
+            }}
+          />
+        ) : null}
+        <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-background/55 via-background/85 to-background" />
 
-        <div className="relative max-w-7xl mx-auto">
+        <div className="relative max-w-5xl mx-auto">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 mb-8 text-[13px] text-muted-foreground/60">
+          <div className="flex items-center gap-2 mb-7 text-[13px] text-muted-foreground/60">
             <button
               onClick={() => onNavigate('article-center')}
               className="flex items-center gap-1 hover:text-foreground transition-colors duration-200"
@@ -121,135 +118,139 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
             <span className="text-foreground">{displayArticle.category}</span>
           </div>
 
-          {/* Left-Image Right-Text Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            {/* Left: Image */}
-            <div className="order-2 lg:order-1">
-              <div className="relative aspect-[4/3] rounded-3xl overflow-hidden bg-gradient-to-br from-success/[0.08] to-accent/[0.08] border border-border/40 shadow-xl">
-                {displayArticle.coverImage ? (
-                  <img
-                    src={displayArticle.coverImage}
-                    alt={displayArticle.title}
-                    className="absolute inset-0 w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <BookOpen className="w-32 h-32 text-success/20" />
-                    <span className="mt-4 text-sm text-muted-foreground/40 font-light">封面图片</span>
-                  </div>
-                )}
+          {/* Cover */}
+          <div className="relative rounded-[28px] overflow-hidden border border-border/40 bg-white/40 backdrop-blur-xl shadow-2xl shadow-black/[0.05]">
+            <div className="relative aspect-[21/9] sm:aspect-[24/9] bg-gradient-to-br from-success/[0.06] to-accent/[0.06]">
+              {displayArticle.coverImage ? (
+                <img
+                  src={displayArticle.coverImage}
+                  alt={displayArticle.title}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <BookOpen className="w-14 h-14 text-success/15" />
+                </div>
+              )}
 
-                {/* Featured Badge */}
-                {displayArticle.featured && (
-                  <div className="absolute top-6 left-6 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[12px] font-medium shadow-lg flex items-center gap-2">
+              {/* readability overlays */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/10 to-transparent" />
+              <div className="absolute inset-0 bg-[radial-gradient(1000px_circle_at_18%_12%,rgba(255,255,255,0.35),transparent_55%)]" />
+
+              {/* Badges */}
+              <div className="absolute top-5 left-5 flex items-center gap-2">
+                <span className="px-3 py-1.5 rounded-full bg-white/70 text-foreground text-[12px] font-medium border border-white/60 shadow-sm">
+                  {displayArticle.category}
+                </span>
+                {displayArticle.featured ? (
+                  <span className="px-3 py-1.5 rounded-full bg-amber-500/90 text-white text-[12px] font-medium shadow-sm inline-flex items-center gap-1.5">
                     <Heart className="w-3.5 h-3.5 fill-current" />
-                    <span>精选文章</span>
-                  </div>
-                )}
+                    精选
+                  </span>
+                ) : null}
+              </div>
+
+              {/* Title on cover (mobile-first) */}
+              <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8">
+                <h1 className="text-white text-[30px] sm:text-[40px] font-semibold leading-[1.12] tracking-[-0.02em] drop-shadow-sm">
+                  {displayArticle.title}
+                </h1>
+                <p className="mt-3 text-white/82 text-[15px] sm:text-[16px] leading-[1.65] max-w-3xl">
+                  {displayArticle.excerpt}
+                </p>
               </div>
             </div>
 
-            {/* Right: Content (frosted glass card) */}
-            <div className="order-1 lg:order-2">
-              <div className="relative rounded-3xl border border-border/30 bg-white/55 backdrop-blur-xl shadow-2xl shadow-black/[0.04] p-8 sm:p-10">
-                {/* subtle gradient to ensure text readability on top of cover background */}
-                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/65 via-white/45 to-white/30 pointer-events-none" />
-                <div className="relative">
-              {/* Category & Featured */}
-              <div className="flex items-center gap-3 mb-6">
-                <span className="px-4 py-1.5 rounded-full bg-success/10 text-success text-[12px] font-medium">
-                  {displayArticle.category}
-                </span>
-                {displayArticle.featured && (
-                  <span className="px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/10 to-orange-500/10 text-amber-600 text-[11px] font-medium">
-                    精选
-                  </span>
-                )}
-              </div>
-
-              {/* Title */}
-              <h1 className="text-[40px] sm:text-[48px] font-semibold leading-[1.1] tracking-[-0.02em] mb-6 text-foreground">
-                {displayArticle.title}
-              </h1>
-
-              {/* Excerpt */}
-              <p className="text-[18px] text-muted-foreground/70 leading-[1.6] mb-8 font-light">
-                {displayArticle.excerpt}
-              </p>
-
-              {/* Meta Info */}
-              <div className="flex flex-wrap items-center gap-6 text-[14px] text-muted-foreground/60 mb-8">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>{displayArticle.publishDate}</span>
+            {/* Meta + actions row */}
+            <div className="px-6 sm:px-8 py-5 sm:py-6 bg-white/45 backdrop-blur-xl">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-muted-foreground/70">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    <span>{displayArticle.publishDate}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    <span>{displayArticle.readTime} 分钟</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-4 h-4" />
+                    <span>{displayArticle.views.toLocaleString()}</span>
+                  </div>
                 </div>
+
+                {/* Actions: human-useful only */}
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  <span>{displayArticle.readTime}分钟阅读</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Eye className="w-4 h-4" />
-                  <span>{displayArticle.views.toLocaleString()} 次浏览</span>
+                  <button
+                    onClick={() => {
+                      const el = document.getElementById('article-content');
+                      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
+                    className="px-4 py-2 rounded-full bg-foreground text-background text-[13px] font-medium hover:opacity-90 transition"
+                    title="跳到正文"
+                  >
+                    阅读正文
+                  </button>
+
+                  <button
+                    onClick={() => setIsBookmarked(!isBookmarked)}
+                    className={`px-3 py-2 rounded-full text-[13px] font-medium border transition ${
+                      isBookmarked
+                        ? 'bg-amber-500/10 text-amber-700 border-amber-500/20'
+                        : 'bg-white/60 text-foreground/80 border-border/40 hover:bg-white/80'
+                    }`}
+                    title="收藏"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
+                      收藏
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      const slug = (displayArticle as any)?.shareSlug || displayArticle.id;
+                      const base = window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, '');
+                      const shareUrl = `${base}/share/article/${encodeURIComponent(slug)}/`;
+                      try {
+                        await navigator.clipboard.writeText(shareUrl);
+                        alert('已复制分享链接');
+                      } catch {
+                        window.prompt('复制下面链接分享：', shareUrl);
+                      }
+                    }}
+                    className="px-3 py-2 rounded-full bg-white/60 text-foreground/80 border border-border/40 hover:bg-white/80 transition text-[13px] font-medium"
+                    title="复制分享链接"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Share2 className="w-4 h-4" />
+                      分享
+                    </span>
+                  </button>
                 </div>
               </div>
 
               {/* Tags */}
-              <div className="flex flex-wrap gap-2 mb-8">
-                {displayArticle.tags.map((tag: string, index: number) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1.5 rounded-full bg-muted/40 text-muted-foreground/70 text-[12px] font-light hover:bg-muted/60 transition-colors duration-200"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-4">
-                <button className="group flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-primary text-primary-foreground text-[15px] font-medium hover:bg-primary/90 transition-all hover:scale-[1.02] shadow-lg shadow-primary/20">
-                  <BookOpen className="w-4 h-4" />
-                  <span>开始阅读</span>
-                </button>
-                <button
-                  onClick={() => setIsBookmarked(!isBookmarked)}
-                  className={`flex items-center gap-2.5 px-6 py-3 rounded-2xl text-[15px] font-medium transition-all hover:scale-[1.02] ${
-                    isBookmarked
-                      ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
-                      : 'bg-muted/40 text-muted-foreground/70 hover:bg-muted/60'
-                  }`}
-                >
-                  <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
-                  <span>{isBookmarked ? '已收藏' : '收藏'}</span>
-                </button>
-                <button
-                  onClick={async () => {
-                    const slug = (displayArticle as any)?.shareSlug || displayArticle.id;
-                    const base = window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, '');
-                    const shareUrl = `${base}/share/article/${encodeURIComponent(slug)}/`;
-                    try {
-                      await navigator.clipboard.writeText(shareUrl);
-                      alert('已复制分享链接，可直接粘贴到微信/朋友圈');
-                    } catch {
-                      window.prompt('复制下面链接分享到微信/朋友圈：', shareUrl);
-                    }
-                  }}
-                  className="flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-muted/40 text-muted-foreground/70 text-[15px] font-medium hover:bg-muted/60 transition-all hover:scale-[1.02]"
-                >
-                  <Share2 className="w-4 h-4" />
-                  <span>分享到朋友圈</span>
-                </button>
-              </div>
+              {displayArticle.tags?.length ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {displayArticle.tags.map((tag: string, index: number) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1.5 rounded-full bg-muted/40 text-muted-foreground/70 text-[12px] hover:bg-muted/60 transition-colors"
+                    >
+                      {tag}
+                    </span>
+                  ))}
                 </div>
-              </div>
+              ) : null}
             </div>
           </div>
         </div>
       </section>
 
       {/* Content Section */}
-      <section className="relative py-16 px-6">
+      <section id="article-content" className="relative py-16 px-6">
         <div className="relative max-w-3xl mx-auto">
           {/* Article Content */}
           <article className="prose prose-lg max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-muted-foreground/80 prose-p:leading-relaxed prose-a:text-primary hover:prose-a:text-primary/80">
