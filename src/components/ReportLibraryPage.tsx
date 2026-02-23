@@ -27,7 +27,14 @@ function ReportCardGrid({ report, onClick }: { report: Report; onClick?: () => v
       <div className="relative bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-white/80 hover:border-border/60 hover:shadow-2xl hover:shadow-black/[0.04] hover:-translate-y-1">
         {/* 封面区域 */}
         <div className="relative aspect-[16/10] bg-gradient-to-br from-success/[0.03] to-accent/[0.03] overflow-hidden">
-          {report.fileUrl ? (
+          {report.coverImage ? (
+            <img
+              src={report.coverImage}
+              alt={report.title}
+              className="absolute inset-0 w-full h-full object-cover"
+              loading="lazy"
+            />
+          ) : report.fileUrl ? (
             <PdfCoverImage
               pdfUrl={report.fileUrl}
               alt={report.title}
@@ -100,7 +107,14 @@ function ReportListItem({ report, onClick }: { report: Report; onClick?: () => v
     >
       {/* 封面 */}
       <div className="w-32 h-20 rounded-[12px] overflow-hidden flex-shrink-0 bg-gradient-to-br from-success/[0.03] to-accent/[0.03] relative">
-        {report.fileUrl ? (
+        {report.coverImage ? (
+          <img
+            src={report.coverImage}
+            alt={report.title}
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : report.fileUrl ? (
           <PdfCoverImage
             pdfUrl={report.fileUrl}
             alt={report.title}
@@ -184,7 +198,19 @@ export function ReportLibraryPage({
       setIsLoading(true);
       try {
         const categoriesData = getCategoriesLocal(); // categories 先沿用本地（不阻断）
-        const reportsData = useRemote ? await getReportsRemote() : getReportsLocal();
+
+        // 远端优先，但若远端为空/失败，则回退到本地（静态站 MVP 的默认行为）
+        let reportsData: Report[] = [];
+        if (useRemote) {
+          try {
+            reportsData = await getReportsRemote();
+          } catch {
+            reportsData = [];
+          }
+        }
+        if (!reportsData || reportsData.length === 0) {
+          reportsData = getReportsLocal();
+        }
 
         if (cancelled) return;
         setReports(reportsData.filter((r: any) => r.status === 'published'));
