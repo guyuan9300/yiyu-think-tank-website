@@ -301,11 +301,11 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
       <Header onNavigate={onNavigate} />
 
       {/* Hero 区域 - Apple 风格设计 */}
-      <section className="relative pt-32 pb-20 px-6 overflow-hidden">
+      <section className="relative pt-28 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* 微妙背景渐变 */}
         <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent" />
 
-        <div className="relative max-w-7xl mx-auto">
+        <div className="relative max-w-[1200px] mx-auto">
           {/* 面包屑导航 */}
           <div className="flex items-center gap-2 mb-6 text-[13px] text-muted-foreground/60">
             <button
@@ -320,7 +320,7 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
 
           {/* 主标题 - 大胆醒目 */}
           <div className="mb-4">
-            <h1 className="text-[56px] sm:text-[64px] lg:text-[72px] font-semibold leading-[1.05] tracking-[-0.025em] mb-3">
+            <h1 className="text-[48px] sm:text-[56px] lg:text-[64px] font-semibold leading-[1.05] tracking-[-0.025em] mb-3">
               前沿洞察
             </h1>
             <p className="text-[13px] text-muted-foreground/50 tracking-[0.15em] uppercase font-medium">
@@ -336,7 +336,7 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
       </section>
 
       {/* 内容区域 */}
-      <div className="max-w-7xl mx-auto px-6 pb-32">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-32">
         {/* 报告库板块 */}
         <section className="mb-32">
           {/* 板块标题 */}

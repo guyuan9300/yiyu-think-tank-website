@@ -587,11 +587,14 @@ challenge: '社区居民参与度低',
             >
               {/* Background Image */}
               {caseItem.coverImage ? (
-                <img
-                  src={caseItem.coverImage}
-                  alt={caseItem.project}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
+                <div className="w-full h-full bg-white flex items-center justify-center p-10 sm:p-12">
+                  <img
+                    src={caseItem.coverImage}
+                    alt={caseItem.project}
+                    className="max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
+                    loading="lazy"
+                  />
+                </div>
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600" />
               )}
