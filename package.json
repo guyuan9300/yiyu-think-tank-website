@@ -10,6 +10,15 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.93.3",
+    "@tiptap/core": "^3.20.0",
+    "@tiptap/extension-highlight": "^3.20.0",
+    "@tiptap/extension-image": "^3.20.0",
+    "@tiptap/extension-link": "^3.20.0",
+    "@tiptap/extension-underline": "^3.20.0",
+    "@tiptap/html": "^3.20.0",
+    "@tiptap/react": "^3.20.0",
+    "@tiptap/starter-kit": "^3.20.0",
+    "dompurify": "^3.3.1",
     "lucide-react": "^0.344.0",
     "pdfjs-dist": "^5.4.530",
     "react": "^18.2.0",
@@ -17,6 +26,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@types/dompurify": "^3.0.5",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@types/uuid": "^11.0.0",

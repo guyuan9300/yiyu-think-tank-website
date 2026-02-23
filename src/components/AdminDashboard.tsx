@@ -25,6 +25,13 @@ import {
 } from '../lib/dataService';
 import { isValidPdfFile, formatFileSize } from '../lib/pdfUtils';
 import { SettingsPage } from './SettingsPage';
+import { ArticleEditor, type ArticleEditorValue } from './ArticleEditor';
+
+// PDF 封面抓取（第一页渲染为图片）
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
+// Vite: 将 worker 作为 URL 引入
+import pdfWorkerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
 import { generateCoverImage, getHfModel, getHfToken, setHfModel, setHfToken } from '../lib/hfImageGen';
 import { UserManagementPage } from './UserManagementPage';
 import AdminStrategyCompanionPage from './AdminStrategyCompanionPage';
@@ -49,6 +56,32 @@ interface MenuItem {
   label: string;
   icon: React.ReactNode;
   badge?: number;
+}
+
+// 初始化 PDF.js worker（只需设置一次）
+GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
+
+async function extractPdfCoverAndPages(file: File): Promise<{ coverDataUrl: string; numPages: number }> {
+  const data = await file.arrayBuffer();
+  const loadingTask = getDocument({ data });
+  const pdf = await loadingTask.promise;
+
+  const page = await pdf.getPage(1);
+  // 轻量清晰：按设备像素比适配一下
+  const scale = Math.min(2, Math.max(1.25, (typeof window !== 'undefined' ? window.devicePixelRatio : 1)));
+  const viewport = page.getViewport({ scale });
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('canvas 2d context unavailable');
+
+  canvas.width = Math.floor(viewport.width);
+  canvas.height = Math.floor(viewport.height);
+
+  await page.render({ canvasContext: ctx as any, viewport, canvas: canvas as any }).promise;
+  const coverDataUrl = canvas.toDataURL('image/png');
+
+  return { coverDataUrl, numPages: pdf.numPages };
 }
 
 export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps) {
@@ -395,15 +428,29 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     reportFileInputRef.current?.click();
   };
 
-  // 处理报告文件选择
-  const handleReportFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 处理报告文件选择（PDF）：自动解析页数 + 抓取第一页作为封面（base64）
+  const handleReportFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!isValidPdfFile(file)) {
-        alert('请选择 PDF 格式的文件');
-        return;
-      }
-      setReportFile(file);
+    if (!file) return;
+
+    if (!isValidPdfFile(file)) {
+      alert('请选择 PDF 格式的文件');
+      return;
+    }
+
+    setReportFile(file);
+
+    // 自动抓取封面与页数（失败不阻断保存流程）
+    try {
+      const { coverDataUrl, numPages } = await extractPdfCoverAndPages(file);
+
+      // 若用户未手动上传封面，则用自动抓取的
+      setCoverImage((prev) => prev || coverDataUrl);
+
+      // 若页数还未填，则自动写入
+      setReportPages((prev) => (prev && prev > 0 ? prev : numPages));
+    } catch (err) {
+      console.warn('PDF 封面/页数解析失败，将继续使用手动封面/手动页数。', err);
     }
   };
 
@@ -1958,7 +2005,14 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   id: editingItem ? (editingItem as InsightArticle).id : undefined,
                   title: formData.get('title') as string,
                   excerpt: formData.get('excerpt') as string,
-                  content: formData.get('content') as string,
+                  content: (formData.get('content') as string) || '',
+                  contentJson: (() => {
+                    const raw = formData.get('contentJson') as string;
+                    if (!raw) return undefined;
+                    try { return JSON.parse(raw); } catch { return undefined; }
+                  })(),
+                  contentHtml: (formData.get('contentHtml') as string) || undefined,
+                  contentText: (formData.get('contentText') as string) || undefined,
                   category: formData.get('category') as string,
                   tags: tags,
                   author: formData.get('author') as string,
@@ -2792,6 +2846,13 @@ function InsightFormModal({
   const [tags, setTags] = useState<string[]>(editingItem?.tags || []);
   const tagInputRef = useRef<HTMLInputElement>(null);
 
+  const [insightEditorValue, setInsightEditorValue] = useState<ArticleEditorValue | null>(null);
+
+  useEffect(() => {
+    // Reset editor draft when switching items
+    setInsightEditorValue(null);
+  }, [editingItem?.id]);
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-auto">
       <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto my-8">
@@ -2876,13 +2937,23 @@ function InsightFormModal({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               文章正文
             </label>
-            <textarea
-              name="content"
-              rows={8}
-              placeholder="请输入文章正文内容..."
-              defaultValue={editingItem?.content || ''}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none font-mono text-sm"
-            />
+            {/* 公众号式正文编辑器（TipTap JSON） */}
+            <div>
+              <ArticleEditor
+                value={(editingItem as any)?.contentJson || null}
+                onChange={(v) => {
+                  setInsightEditorValue(v);
+                }}
+              />
+              {/* Hidden fields for submit (keep FormData flow) */}
+              <input type="hidden" name="content" value={insightEditorValue?.text || (editingItem?.content || '')} />
+              <input type="hidden" name="contentJson" value={insightEditorValue ? JSON.stringify(insightEditorValue.json) : ((editingItem as any)?.contentJson ? JSON.stringify((editingItem as any).contentJson) : '')} />
+              <input type="hidden" name="contentHtml" value={insightEditorValue?.html || (editingItem as any)?.contentHtml || ''} />
+              <input type="hidden" name="contentText" value={insightEditorValue?.text || (editingItem as any)?.contentText || ''} />
+              <p className="text-xs text-gray-500 mt-2">
+                支持：分段/标题/列表/引用/高亮/链接/图片插入（当前为静态站 MVP：图片以 base64 存储，后续可切 OSS）。
+              </p>
+            </div>
           </div>
           
 

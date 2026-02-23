@@ -16,6 +16,9 @@ import { Header } from './Header';
 import { Footer } from './Footer';
 import { CommentSection } from './CommentSection';
 import { getInsights, type InsightArticle } from '../lib/dataService';
+import { generateHTML } from '@tiptap/html';
+import DOMPurify from 'dompurify';
+import { getArticleTiptapExtensions } from '../lib/tiptapSchema';
 
 interface ArticleDetailPageProps {
   articleId: string;
@@ -219,12 +222,50 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
         <div className="relative max-w-3xl mx-auto">
           {/* Article Content */}
           <article className="prose prose-lg max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-muted-foreground/80 prose-p:leading-relaxed prose-a:text-primary hover:prose-a:text-primary/80">
-            {displayArticle.content?.trim() ? (
-              <div
-                className="text-[17px] leading-[1.8] font-light"
-                dangerouslySetInnerHTML={{ __html: displayArticle.content }}
-              />
-            ) : (
+            {(() => {
+              const anyArticle: any = displayArticle as any;
+              const hasJson = Boolean(anyArticle?.contentJson);
+              const htmlFromSnapshot = (anyArticle?.contentHtml as string | undefined) || '';
+
+              // Prefer saved HTML snapshot; else render from JSON; else fallback to legacy plain text.
+              if (htmlFromSnapshot.trim()) {
+                const safe = DOMPurify.sanitize(htmlFromSnapshot, { USE_PROFILES: { html: true } });
+                return (
+                  <div className="text-[17px] leading-[1.8] font-light" dangerouslySetInnerHTML={{ __html: safe }} />
+                );
+              }
+
+              if (hasJson) {
+                try {
+                  const html = generateHTML(anyArticle.contentJson, getArticleTiptapExtensions() as any);
+                  const safe = DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+                  return (
+                    <div className="text-[17px] leading-[1.8] font-light" dangerouslySetInnerHTML={{ __html: safe }} />
+                  );
+                } catch {
+                  // fall through to legacy
+                }
+              }
+
+              const legacy = (displayArticle.content || '').trim();
+              if (legacy) {
+                // Render plain text as paragraphs so newlines don't collapse.
+                const paras = legacy
+                  .split(/\n\s*\n+/)
+                  .map((p) => p.trim())
+                  .filter(Boolean);
+                return (
+                  <div className="text-[17px] leading-[1.8] font-light">
+                    {paras.map((p, idx) => (
+                      <p key={idx}>{p}</p>
+                    ))}
+                  </div>
+                );
+              }
+
+              return null;
+            })() ?? (
+
               <>
                 <h2 className="text-2xl font-semibold mb-4 text-foreground">摘要</h2>
                 <p className="mb-8 text-[17px] leading-[1.8] font-light">

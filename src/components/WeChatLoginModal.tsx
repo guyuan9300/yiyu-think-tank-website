@@ -16,6 +16,11 @@ export function WeChatLoginModal({ isOpen, onClose, onSuccess, mode = 'normal', 
   const [countdown, setCountdown] = useState(5);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
+  // P0: 按钮/链接必须有结果（已实现/未开放/权限不足）
+  const handleNotOpenYet = (label: string) => {
+    alert(`「${label}」暂未开放\n\n当前为建造期联调模式（vBuild-1.0），如需提前获取内容请联系管理员。`);
+  };
+
   // 获取真实的微信AppID
   const getAppId = (): string | null => {
     if (appId && appId !== 'your_app_id') {
@@ -183,9 +188,29 @@ export function WeChatLoginModal({ isOpen, onClose, onSuccess, mode = 'normal', 
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-400">
             登录即表示同意
-            <a href="#" className="text-[#07C160] hover:underline"> 服务条款</a>
+            <a
+              href="#"
+              data-testid="wechat-modal-terms"
+              className="text-[#07C160] hover:underline"
+              onClick={(e) => {
+                e.preventDefault();
+                handleNotOpenYet('服务条款');
+              }}
+            >
+              {' '}服务条款
+            </a>
             和
-            <a href="#" className="text-[#07C160] hover:underline"> 隐私政策</a>
+            <a
+              href="#"
+              data-testid="wechat-modal-privacy"
+              className="text-[#07C160] hover:underline"
+              onClick={(e) => {
+                e.preventDefault();
+                handleNotOpenYet('隐私政策');
+              }}
+            >
+              {' '}隐私政策
+            </a>
           </p>
         </div>
       </div>

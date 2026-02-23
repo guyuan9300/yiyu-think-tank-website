@@ -46,7 +46,22 @@ export interface InsightArticle {
   id: string;
   title: string;
   excerpt: string;
+
+  /**
+   * Legacy content field (plain text or HTML). Kept for backward compatibility.
+   * New articles should prefer contentJson/contentHtml.
+   */
   content: string;
+
+  /** TipTap/ProseMirror JSON document. */
+  contentJson?: any;
+
+  /** Optional HTML snapshot for preview/render fallback (sanitized on render). */
+  contentHtml?: string;
+
+  /** Plain text snapshot for search/index. */
+  contentText?: string;
+
   category: string;
   tags: string[];
   coverImage?: string;

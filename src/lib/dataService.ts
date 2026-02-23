@@ -33,7 +33,22 @@ export interface InsightArticle {
   id: string;
   title: string;
   excerpt: string;
+
+  /**
+   * Legacy content field (plain text or HTML). Kept for backward compatibility.
+   * New articles should prefer contentJson/contentHtml.
+   */
   content: string;
+
+  /** TipTap/ProseMirror JSON document. */
+  contentJson?: any;
+
+  /** Optional HTML snapshot for preview/render fallback (sanitized on render). */
+  contentHtml?: string;
+
+  /** Plain text snapshot for search/index. */
+  contentText?: string;
+
   category: string;
   tags: string[];
   coverImage?: string;
@@ -242,6 +257,7 @@ const initDefaultReports = (): Report[] => [
     tags: ['公益', '品牌', '组织系统', '培训'],
     version: 'v1.0',
     format: ['PDF'],
+    coverImage: '/yiyu-think-tank-website/images/placeholders/report-cover-blue.svg',
     fileUrl: '/yiyu-think-tank-website/docs/weiaiqianxing-training-20260105.pdf',
     fileSize: 31 * 1024 * 1024,
     pages: 74,
@@ -263,6 +279,7 @@ const initDefaultReports = (): Report[] => [
     tags: ['公益', '数字化', '行业洞察'],
     version: 'v2.1',
     format: ['PPT', 'PDF'],
+    coverImage: '/yiyu-think-tank-website/images/placeholders/report-cover-green.svg',
     publishDate: '2026-01-20',
     status: 'published',
     isHot: false,
@@ -581,7 +598,10 @@ export const saveInsight = (article: Partial<InsightArticle> | InsightArticle): 
     id: article.id || `insight_${Date.now()}`,
     title: article.title || '无标题文章',
     excerpt: article.excerpt || '',
-    content: article.content || '',
+    content: (article as any).content || '',
+    contentJson: (article as any).contentJson,
+    contentHtml: (article as any).contentHtml,
+    contentText: (article as any).contentText,
     category: article.category || '行业洞察',
     tags: article.tags || [],
     coverImage: article.coverImage,
