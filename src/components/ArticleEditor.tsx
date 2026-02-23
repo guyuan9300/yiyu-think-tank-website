@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { useEditor, EditorContent, type JSONContent } from '@tiptap/react';
 import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Highlighter, Link as LinkIcon, List, ListOrdered, Quote, Heading2, Heading3, Minus, Image as ImageIcon, RemoveFormatting } from 'lucide-react';
 import { getArticleTiptapExtensions } from '../lib/tiptapSchema';
+import { fileToCompressedDataUrl } from '../lib/imageCompress';
 
 export type ArticleEditorValue = {
   json: JSONContent;
@@ -52,12 +53,12 @@ export function ArticleEditor({
 
   const insertImageFromFile = async (file: File) => {
     // Static GitHub Pages MVP: store as base64 DataURL.
-    // Note: localStorage has size limits; later we should switch to OSS + URL.
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error('读取图片失败'));
-      reader.readAsDataURL(file);
+    // IMPORTANT: localStorage has strict size limits (often ~5MB). We must compress.
+    const dataUrl = await fileToCompressedDataUrl(file, {
+      maxWidth: 1600,
+      maxHeight: 1600,
+      mimeType: 'image/webp',
+      quality: 0.82,
     });
 
     editor?.chain().focus().setImage({ src: dataUrl }).run();

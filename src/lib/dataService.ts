@@ -454,8 +454,26 @@ const initDefaultBooks = (): Book[] => [
 const saveToStorage = (key: string, data: any) => {
   try {
     localStorage.setItem(key, JSON.stringify(data));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to save to localStorage:', error);
+
+    const name = error?.name || '';
+    const msg = String(error?.message || '');
+    const isQuota =
+      name === 'QuotaExceededError' ||
+      name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+      /quota/i.test(msg) ||
+      /exceed/i.test(msg);
+
+    if (isQuota) {
+      throw new Error(
+        '保存失败：浏览器存储空间不足（localStorage 配额已满）。\n\n' +
+          '原因：封面/正文内图片使用 base64 存储会迅速占满空间。\n' +
+          '建议：换更小的图片、或减少正文内插图数量；我们也可以把图片改为压缩/外链存储。'
+      );
+    }
+
+    throw new Error('保存失败：无法写入浏览器本地存储。');
   }
 };
 

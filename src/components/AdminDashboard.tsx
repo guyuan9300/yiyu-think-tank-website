@@ -33,6 +33,7 @@ import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 import pdfWorkerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 import { generateCoverImage, getHfModel, getHfToken, setHfModel, setHfToken } from '../lib/hfImageGen';
+import { fileToCompressedDataUrl } from '../lib/imageCompress';
 import { UserManagementPage } from './UserManagementPage';
 import AdminStrategyCompanionPage from './AdminStrategyCompanionPage';
 import {
@@ -1998,50 +1999,55 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               }}
               onSave={async (e: React.FormEvent<HTMLFormElement>) => {
                 e.preventDefault();
-                const formData = new FormData(e.currentTarget);
-                const tags = (formData.get('tags') as string)?.split(',').map(t => t.trim()).filter(Boolean) || [];
-                
-                const articleData: Partial<InsightArticle> = {
-                  id: editingItem ? (editingItem as InsightArticle).id : undefined,
-                  title: formData.get('title') as string,
-                  excerpt: formData.get('excerpt') as string,
-                  content: (formData.get('content') as string) || '',
-                  contentJson: (() => {
-                    const raw = formData.get('contentJson') as string;
-                    if (!raw) return undefined;
-                    try { return JSON.parse(raw); } catch { return undefined; }
-                  })(),
-                  contentHtml: (formData.get('contentHtml') as string) || undefined,
-                  contentText: (formData.get('contentText') as string) || undefined,
-                  category: formData.get('category') as string,
-                  tags: tags,
-                  coverImage: (formData.get('coverImage') as string) || (editingItem as any)?.coverImage,
-                  author: formData.get('author') as string,
-                  readTime: parseInt(formData.get('readTime') as string) || 10,
-                  publishDate: formData.get('publishDate') as string,
-                  status: formData.get('status') as 'draft' | 'published',
-                  featured: formData.get('featured') === 'on',
-                  showOnHome: formData.get('showOnHome') === 'on',
+                try {
+                  const formData = new FormData(e.currentTarget);
+                  const tags = (formData.get('tags') as string)?.split(',').map(t => t.trim()).filter(Boolean) || [];
 
-                  // Share settings (WeChat Moments etc.)
-                  shareEnabled: formData.get('shareEnabled') === 'on',
-                  shareSlug: (formData.get('shareSlug') as string) || undefined,
-                  shareTitle: (formData.get('shareTitle') as string) || undefined,
-                  shareDescription: (formData.get('shareDescription') as string) || undefined,
-                  shareImage: (formData.get('shareImage') as string) || undefined,
-                };
-                
-                const saved = saveInsight(articleData);
-                await syncInternalCourseRecommendations({
-                  internalType: 'article',
-                  internalId: saved.id,
-                  title: saved.title,
-                  selectedProjectIds: syncClientIds,
-                });
-                refreshAllData();
-                setShowInsightForm(false);
-                setEditingItem(null);
-                setMessage({ type: 'success', text: '文章已保存，前台洞察页面可见！' });
+                  const articleData: Partial<InsightArticle> = {
+                    id: editingItem ? (editingItem as InsightArticle).id : undefined,
+                    title: formData.get('title') as string,
+                    excerpt: formData.get('excerpt') as string,
+                    content: (formData.get('content') as string) || '',
+                    contentJson: (() => {
+                      const raw = formData.get('contentJson') as string;
+                      if (!raw) return undefined;
+                      try { return JSON.parse(raw); } catch { return undefined; }
+                    })(),
+                    contentHtml: (formData.get('contentHtml') as string) || undefined,
+                    contentText: (formData.get('contentText') as string) || undefined,
+                    category: formData.get('category') as string,
+                    tags: tags,
+                    coverImage: (formData.get('coverImage') as string) || (editingItem as any)?.coverImage,
+                    author: formData.get('author') as string,
+                    readTime: parseInt(formData.get('readTime') as string) || 10,
+                    publishDate: formData.get('publishDate') as string,
+                    status: formData.get('status') as 'draft' | 'published',
+                    featured: formData.get('featured') === 'on',
+                    showOnHome: formData.get('showOnHome') === 'on',
+
+                    // Share settings (WeChat Moments etc.)
+                    shareEnabled: formData.get('shareEnabled') === 'on',
+                    shareSlug: (formData.get('shareSlug') as string) || undefined,
+                    shareTitle: (formData.get('shareTitle') as string) || undefined,
+                    shareDescription: (formData.get('shareDescription') as string) || undefined,
+                    shareImage: (formData.get('shareImage') as string) || undefined,
+                  };
+
+                  const saved = saveInsight(articleData);
+                  await syncInternalCourseRecommendations({
+                    internalType: 'article',
+                    internalId: saved.id,
+                    title: saved.title,
+                    selectedProjectIds: syncClientIds,
+                  });
+                  refreshAllData();
+                  setShowInsightForm(false);
+                  setEditingItem(null);
+                  setMessage({ type: 'success', text: '文章已保存，前台洞察页面可见！' });
+                } catch (err: any) {
+                  console.error(err);
+                  setMessage({ type: 'error', text: '保存失败：' + (err?.message || String(err)) });
+                }
               }}
               handleAddTag={handleAddTag}
               handleRemoveTag={handleRemoveTag}
@@ -2984,15 +2990,25 @@ function InsightFormModal({
               accept="image/*"
               className="sr-only"
               aria-label="上传文章封面图片文件"
-              onChange={(e) => {
+              onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
                 if (!file.type.startsWith('image/')) return;
-                const reader = new FileReader();
-                reader.onload = (evt) => {
-                  setCoverImage(evt.target?.result as string);
-                };
-                reader.readAsDataURL(file);
+                try {
+                  const dataUrl = await fileToCompressedDataUrl(file, {
+                    maxWidth: 2520,
+                    maxHeight: 1440,
+                    mimeType: 'image/webp',
+                    quality: 0.86,
+                  });
+                  setCoverImage(dataUrl);
+                } catch (err) {
+                  console.error(err);
+                  // Fallback: try raw DataURL (may exceed quota later)
+                  const reader = new FileReader();
+                  reader.onload = (evt) => setCoverImage(evt.target?.result as string);
+                  reader.readAsDataURL(file);
+                }
               }}
             />
             <input type="hidden" name="coverImage" value={coverImage || ''} />
