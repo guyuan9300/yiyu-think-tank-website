@@ -24,20 +24,28 @@ function ReportCard({ report, onClick }: { report: Report; onClick?: () => void 
       <div className="relative bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-white/80 hover:border-border/60 hover:shadow-2xl hover:shadow-black/[0.04] hover:-translate-y-1">
         {/* 封面区域 */}
         <div className="relative aspect-[16/10] bg-gradient-to-br from-success/[0.03] to-accent/[0.03] overflow-hidden">
-          {/* 自动抓取 PDF 首页作为封面（若存在 fileUrl） */}
-          {report.fileUrl ? (
+          {/* 1) 优先使用已抓取/上传的封面图（更快、更稳定） */}
+          {report.coverImage ? (
+            <img
+              src={report.coverImage}
+              alt={report.title}
+              className="absolute inset-0 w-full h-full object-cover"
+              loading="lazy"
+            />
+          ) : report.fileUrl ? (
+            /* 2) 兜底：从 PDF 源文件渲染首页作为封面 */
             <PdfCoverImage
               pdfUrl={report.fileUrl}
               alt={report.title}
               className="absolute inset-0"
               width={520}
             />
-          ) : null}
-
-          {/* 无封面时占位 */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <TrendingUp className="w-16 h-16 text-success/10" />
-          </div>
+          ) : (
+            /* 3) 再兜底：占位 */
+            <div className="absolute inset-0 flex items-center justify-center">
+              <TrendingUp className="w-16 h-16 text-success/10" />
+            </div>
+          )}
 
           {/* 热门标签 */}
           {report.isHot && (
