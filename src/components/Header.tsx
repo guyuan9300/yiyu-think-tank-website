@@ -60,10 +60,10 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
   const getNavItems = () => {
     const baseItems = [
       { id: 'home', label: '首页', href: '#home' },
-      { id: 'insights', label: '前沿洞察', href: '#insights' },
-      { id: 'strategy', label: '战略陪伴', href: '#strategy' }, // 所有用户都显示战略陪伴
-      { id: 'learning', label: '学习中心', href: '#learning' },
       { id: 'about', label: '关于我们', href: '#about' },
+      { id: 'insights', label: '前沿洞察', href: '#insights' },
+      { id: 'learning', label: '学习中心', href: '#learning' },
+      { id: 'strategy', label: '战略陪伴', href: '#strategy' }, // 所有用户都显示战略陪伴
     ];
 
     return baseItems;
@@ -304,6 +304,24 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
                       <SettingsIcon className="w-4 h-4 text-gray-500" />
                       设置
                     </button>
+
+                    {(() => {
+                      const isAdmin = (localStorage.getItem('yiyu_is_admin') ?? sessionStorage.getItem('yiyu_is_admin')) === 'true';
+                      if (!isAdmin) return null;
+                      return (
+                        <button
+                          className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-muted/30 transition-all flex items-center gap-2"
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            if (onNavigate) onNavigate('admin');
+                            else window.location.assign(`${window.location.pathname}?page=admin`);
+                          }}
+                        >
+                          <Crown className="w-4 h-4 text-amber-500" />
+                          管理后台
+                        </button>
+                      );
+                    })()}
                     
                     <div className="border-t border-border/30 my-2"></div>
                     

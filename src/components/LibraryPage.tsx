@@ -39,6 +39,7 @@ interface LibraryPageProps {
       | 'admin'
       | 'user-center'
       | 'test'
+      | 'my-learning'
       | 'strategy-companion'
       | 'report-library'
       | 'article-center',
@@ -359,16 +360,37 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10">
             <div>
               <h1 className="text-[32px] font-semibold tracking-tight text-foreground mb-2">
-                书库
+                学习中心
               </h1>
               <p className="text-[15px] text-muted-foreground/70">
-                精选书籍提炼 · 知识精华萃取
+                书库 · 我的学习（持续沉淀与回顾）
               </p>
             </div>
-            <button className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white border border-border/60 hover:border-primary/40 transition-all shadow-sm text-[14px]">
-              <User className="w-4 h-4 text-muted-foreground/70" />
-              <span className="font-medium text-muted-foreground/70">我的学习</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white border border-border/60 hover:border-primary/40 transition-all shadow-sm text-[14px]"
+                onClick={() => {
+                  // 当前页就是“书库”视图：保持不跳转
+                  window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+                }}
+              >
+                <BookOpen className="w-4 h-4 text-muted-foreground/70" />
+                <span className="font-medium text-muted-foreground/70">书库</span>
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white border border-border/60 hover:border-primary/40 transition-all shadow-sm text-[14px]"
+                onClick={() => {
+                  if (onNavigate) onNavigate('my-learning');
+                  else window.location.assign(`${window.location.pathname}?page=my-learning`);
+                }}
+              >
+                <User className="w-4 h-4 text-muted-foreground/70" />
+                <span className="font-medium text-muted-foreground/70">我的学习</span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground/60" />
+              </button>
+            </div>
           </div>
 
           {/* Category Tags */}

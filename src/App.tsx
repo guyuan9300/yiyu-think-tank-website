@@ -172,7 +172,7 @@ export default function App() {
     }
   }, [currentPage, selectedDetailId, selectedCaseId, unknownPage]);
 
-  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'case' | 'admin' | 'user-center' | 'test' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply', bookId?: string, caseId?: string) => {
+  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'case' | 'admin' | 'user-center' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply', bookId?: string, caseId?: string) => {
     // Reset scroll on page-level navigation so detail pages always open from the top.
     // (Otherwise the browser may keep the previous scroll position and look like it jumped to the bottom.)
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
@@ -197,6 +197,8 @@ export default function App() {
       setCurrentPage('admin');
     } else if (page === 'user-center') {
       setCurrentPage('user-center');
+    } else if (page === 'my-learning') {
+      setCurrentPage('my-learning');
     } else if (page === 'report-library') {
       setCurrentPage('report-library');
     } else if (page === 'article-center') {
@@ -258,12 +260,20 @@ export default function App() {
           </button>
           <div className="border-t border-border/30 my-2" />
           <button
+            onClick={() => setCurrentPage('about')}
+            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+              currentPage === 'about' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
+            }`}
+          >
+            关于我们
+          </button>
+          <button
             onClick={() => setCurrentPage('insights')}
             className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
               currentPage === 'insights' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
             }`}
           >
-            洞察总页
+            前沿洞察
           </button>
           <div className="border-t border-border/30 my-2" />
           <button
@@ -272,15 +282,7 @@ export default function App() {
               currentPage === 'library' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
             }`}
           >
-            学习中心 Hub
-          </button>
-          <button
-            onClick={() => setCurrentPage('book-library')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ml-3 ${
-              currentPage === 'book-library' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
-            }`}
-          >
-            书库
+            学习中心
           </button>
           <button
             onClick={() => setCurrentPage('report-library')}
@@ -306,14 +308,6 @@ export default function App() {
           >
             智慧书房
           </button>
-          <button
-            onClick={() => setCurrentPage('my-learning')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ml-3 ${
-              currentPage === 'my-learning' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
-            }`}
-          >
-            我的学习
-          </button>
           <div className="border-t border-border/30 my-2" />
           <button
             onClick={() => setCurrentPage('strategy')}
@@ -332,22 +326,6 @@ export default function App() {
             案例详情
           </button>
           <button
-            onClick={() => setCurrentPage('about')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-              currentPage === 'about' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
-            }`}
-          >
-            关于我们
-          </button>
-          <button
-            onClick={() => setCurrentPage('admin')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-              currentPage === 'admin' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
-            }`}
-          >
-            管理后台
-          </button>
-          <button
             onClick={() => setCurrentPage('user-center')}
             className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
               currentPage === 'user-center' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
@@ -362,14 +340,6 @@ export default function App() {
             }`}
           >
             战略客户
-          </button>
-          <button
-            onClick={() => setCurrentPage('admin-strategy-companion')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-              currentPage === 'admin-strategy-companion' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
-            }`}
-          >
-            战略客户后台
           </button>
           <button
             onClick={() => setCurrentPage('test')}
