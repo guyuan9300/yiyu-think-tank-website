@@ -43,7 +43,6 @@ export default function App() {
     'home',
     'insights',
     'library',
-    'book-library',
     'report-library',
     'article-center',
     'book-reader',
@@ -67,10 +66,11 @@ export default function App() {
     '404',
   ]);
 
-  // P0-IX-10: route alias normalization. Keep backward compatibility for old links.
-  // `?page=learning` should behave as `?page=library`.
+  // Route alias normalization. Keep backward compatibility for old links.
+  // - `?page=learning` should behave as `?page=library`
+  // - `?page=book-library` is deprecated; redirect to `library`
   const initialPageRaw = initialParams.get('page') || 'home';
-  const normalized = initialPageRaw === 'learning' ? 'library' : initialPageRaw;
+  const normalized = (initialPageRaw === 'learning' || initialPageRaw === 'book-library') ? 'library' : initialPageRaw;
   const initialUnknown = ALLOWED_PAGES.has(normalized) ? null : normalized;
   const initialPage = initialUnknown ? '404' : normalized;
 
@@ -339,13 +339,7 @@ export default function App() {
     );
   }
 
-  if (currentPage === 'book-library') {
-    return (
-      <>
-        <BookLibraryPage onNavigate={(page) => handleNavigate(page as any)} />
-      </>
-    );
-  }
+  // book-library page is deprecated (redirected to library)
 
   if (currentPage === 'report-library') {
     return (
