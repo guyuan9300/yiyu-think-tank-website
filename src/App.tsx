@@ -79,22 +79,6 @@ export default function App() {
   const [selectedBookId, setSelectedBookId] = useState<string>('shimeshiquanli');
   const [selectedDetailId, setSelectedDetailId] = useState<string>(initialParams.get('id') || '');
   const [selectedCaseId, setSelectedCaseId] = useState<string>(initialParams.get('id') || 'blue-letter');
-  // Page switcher scaffolding (for building/testing). Default OFF, auto-ON for admin.
-  const [showPageSwitcher, setShowPageSwitcher] = useState(false);
-
-  // Page switcher is internal scaffolding.
-  // Per product requirement: it should NOT be visible in normal usage.
-  // If we ever need it again for dev, we can re-enable via localStorage flag.
-  useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const debug = params.get('debug');
-      const enabled = localStorage.getItem('yiyu_enable_page_switcher') === 'true';
-      setShowPageSwitcher(enabled && debug === '1');
-    } catch {
-      setShowPageSwitcher(false);
-    }
-  }, []);
 
   // 监听页面变化并更新URL（不刷新页面）
   useEffect(() => {
@@ -206,141 +190,6 @@ export default function App() {
     setCurrentPage(type);
   };
 
-  const PageSwitcher = () => {
-    if (!showPageSwitcher) return null;
-
-    return (
-      <div className="fixed bottom-8 right-8 z-50 glass rounded-2xl p-4 border border-primary/30 shadow-2xl max-h-[80vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-semibold">页面导航</h4>
-          <button
-            onClick={() => setShowPageSwitcher(false)}
-            className="text-xs text-muted-foreground hover:text-foreground"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="space-y-2">
-          <button
-            onClick={() => setCurrentPage('home')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-              currentPage === 'home' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
-            }`}
-          >
-            首页
-          </button>
-          <button
-            onClick={() => setCurrentPage('login')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-              currentPage === 'login' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
-            }`}
-          >
-            登录
-          </button>
-          <button
-            onClick={() => setCurrentPage('register')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-              currentPage === 'register' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
-            }`}
-          >
-            注册
-          </button>
-          <div className="border-t border-border/30 my-2" />
-          <button
-            onClick={() => setCurrentPage('about')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-              currentPage === 'about' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
-            }`}
-          >
-            关于我们
-          </button>
-          <button
-            onClick={() => setCurrentPage('insights')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-              currentPage === 'insights' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
-            }`}
-          >
-            前沿洞察
-          </button>
-          <div className="border-t border-border/30 my-2" />
-          <button
-            onClick={() => setCurrentPage('library')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-              currentPage === 'library' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
-            }`}
-          >
-            学习中心
-          </button>
-          <button
-            onClick={() => setCurrentPage('report-library')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ml-3 ${
-              currentPage === 'report-library' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
-            }`}
-          >
-            报告库
-          </button>
-          <button
-            onClick={() => setCurrentPage('article-center')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ml-3 ${
-              currentPage === 'article-center' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
-            }`}
-          >
-            文章中心
-          </button>
-          <button
-            onClick={() => setCurrentPage('book-reader')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ml-3 ${
-              currentPage === 'book-reader' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
-            }`}
-          >
-            智慧书房
-          </button>
-          <div className="border-t border-border/30 my-2" />
-          <button
-            onClick={() => setCurrentPage('strategy')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-              currentPage === 'strategy' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
-            }`}
-          >
-            战略陪伴
-          </button>
-          <button
-            onClick={() => setCurrentPage('case')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ml-3 ${
-              currentPage === 'case' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
-            }`}
-          >
-            案例详情
-          </button>
-          <button
-            onClick={() => setCurrentPage('user-center')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-              currentPage === 'user-center' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
-            }`}
-          >
-            会员中心
-          </button>
-          <button
-            onClick={() => setCurrentPage('strategy-companion')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-              currentPage === 'strategy-companion' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
-            }`}
-          >
-            战略客户
-          </button>
-          <button
-            onClick={() => setCurrentPage('test')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-              currentPage === 'test' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/30'
-            }`}
-          >
-            按钮测试
-          </button>
-        </div>
-      </div>
-    );
-  };
-
   // Not Found Page (unknown `?page=`)
   if (currentPage === '404') {
     return (
@@ -352,7 +201,6 @@ export default function App() {
             handleNavigate('home');
           }}
         />
-        <PageSwitcher />
       </>
     );
   }
@@ -366,7 +214,6 @@ export default function App() {
           onLoginSuccess={() => setCurrentPage('home')}
           onAdminLogin={() => setCurrentPage('admin')}
         />
-        <PageSwitcher />
       </>
     );
   }
@@ -379,7 +226,6 @@ export default function App() {
           onNavigate={(page) => handleNavigate(page === 'register' ? 'home' : page as any)}
           onRegisterSuccess={() => setCurrentPage('home')}
         />
-        <PageSwitcher />
       </>
     );
   }
@@ -389,7 +235,6 @@ export default function App() {
     return (
       <>
         <ForgotPasswordPage onNavigate={(page) => handleNavigate(page as any)} />
-        <PageSwitcher />
       </>
     );
   }
@@ -399,7 +244,6 @@ export default function App() {
     return (
       <>
         <ResetPasswordPage onNavigate={(page) => handleNavigate(page as any)} />
-        <PageSwitcher />
       </>
     );
   }
@@ -412,7 +256,6 @@ export default function App() {
           articleId={selectedDetailId}
           onNavigate={(page, id) => handleNavigateToDetail(page as any, id || '')}
         />
-        <PageSwitcher />
       </>
     );
   }
@@ -422,7 +265,6 @@ export default function App() {
     return (
       <>
         <ReportReaderPage reportId={selectedDetailId} />
-        <PageSwitcher />
       </>
     );
   }
@@ -435,7 +277,6 @@ export default function App() {
           topicId={selectedDetailId}
           onNavigate={(page, id) => handleNavigateToDetail(page as any, id || '')}
         />
-        <PageSwitcher />
       </>
     );
   }
@@ -454,7 +295,6 @@ export default function App() {
             }
           }}
         />
-        <PageSwitcher />
       </>
     );
   }
@@ -471,7 +311,6 @@ export default function App() {
             handleNavigate(page as any, id);
           }}
         />
-        <PageSwitcher />
       </>
     );
   }
@@ -480,7 +319,6 @@ export default function App() {
     return (
       <>
         <StrategyPage onNavigate={(page) => handleNavigate(page as any)} />
-        <PageSwitcher />
       </>
     );
   }
@@ -489,7 +327,6 @@ export default function App() {
     return (
       <>
         <AboutPage onNavigate={handleNavigate} />
-        <PageSwitcher />
       </>
     );
   }
@@ -498,7 +335,6 @@ export default function App() {
     return (
       <>
         <LibraryPage onNavigate={handleNavigate} />
-        <PageSwitcher />
       </>
     );
   }
@@ -507,7 +343,6 @@ export default function App() {
     return (
       <>
         <BookLibraryPage onNavigate={(page) => handleNavigate(page as any)} />
-        <PageSwitcher />
       </>
     );
   }
@@ -516,7 +351,6 @@ export default function App() {
     return (
       <>
         <ReportLibraryPage onNavigate={(page) => handleNavigate(page as any)} onNavigateToDetail={(type, id) => handleNavigateToDetail(type as any, id)} />
-        <PageSwitcher />
       </>
     );
   }
@@ -526,7 +360,6 @@ export default function App() {
     return (
       <>
         <ArticleCenterPage onNavigate={(page) => handleNavigate(page as any)} onNavigateToDetail={(id) => handleNavigateToDetail('article', id)} />
-        <PageSwitcher />
       </>
     );
   }
@@ -535,7 +368,6 @@ export default function App() {
     return (
       <>
         <BookReaderPage bookId={selectedBookId} onNavigate={(page) => handleNavigate(page as any)} />
-        <PageSwitcher />
       </>
     );
   }
@@ -544,7 +376,6 @@ export default function App() {
     return (
       <>
         <MyLearningPage onNavigate={(page) => handleNavigate(page as any)} />
-        <PageSwitcher />
       </>
     );
   }
@@ -569,7 +400,6 @@ export default function App() {
               window.location.reload();
             }}
           />
-          <PageSwitcher />
         </>
       );
     }
@@ -598,7 +428,6 @@ export default function App() {
             handleNavigate('login');
           }}
         />
-        <PageSwitcher />
       </>
     );
   }
@@ -608,7 +437,6 @@ export default function App() {
     return (
       <>
         <UserCenterPage onNavigate={(page) => handleNavigate(page as any)} />
-        <PageSwitcher />
       </>
     );
   }
@@ -618,7 +446,6 @@ export default function App() {
     return (
       <>
         <StrategyCompanionPage onNavigate={(page) => handleNavigate(page as any)} />
-        <PageSwitcher />
       </>
     );
   }
@@ -628,7 +455,6 @@ export default function App() {
     return (
       <>
         <ConsultApplyPage onBack={() => handleNavigate('home')} />
-        <PageSwitcher />
       </>
     );
   }
@@ -651,7 +477,6 @@ export default function App() {
               window.location.reload();
             }}
           />
-          <PageSwitcher />
         </>
       );
     }
@@ -659,7 +484,6 @@ export default function App() {
     return (
       <>
         <AdminStrategyCompanionPage />
-        <PageSwitcher />
       </>
     );
   }
@@ -667,7 +491,6 @@ export default function App() {
   return (
     <>
       <HomePage onNavigate={handleNavigate} onNavigateToDetail={handleNavigateToDetail} />
-      <PageSwitcher />
     </>
   );
 }
