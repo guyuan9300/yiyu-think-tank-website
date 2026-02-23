@@ -492,7 +492,27 @@ export const calculateReadTime = (pages: number): string => {
 
 // 获取所有报告
 export const getReports = (): Report[] => {
-  return loadFromStorage(STORAGE_KEYS.reports, initDefaultReports());
+  const reports = loadFromStorage(STORAGE_KEYS.reports, initDefaultReports());
+
+  // Migration: ensure every report has a coverImage so the UI never shows an empty cover.
+  // For static-site MVP, some existing reports (esp. older localStorage entries) may miss coverImage.
+  // We set a deterministic placeholder and persist back to storage.
+  let changed = false;
+  const patched = reports.map((r: Report, idx: number) => {
+    if (r.coverImage) return r;
+    changed = true;
+    const placeholder = idx % 2 === 0
+      ? '/yiyu-think-tank-website/images/placeholders/report-cover-blue.svg'
+      : '/yiyu-think-tank-website/images/placeholders/report-cover-green.svg';
+    return { ...r, coverImage: placeholder };
+  });
+
+  if (changed) {
+    saveToStorage(STORAGE_KEYS.reports, patched);
+    // no notifyDataChange here to avoid noisy loops; UI already polls.
+  }
+
+  return patched;
 };
 
 // 工具函数：触发数据变化事件
