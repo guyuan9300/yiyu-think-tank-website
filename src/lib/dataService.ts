@@ -85,6 +85,9 @@ export interface Book {
   rating: number;
   coverImage?: string;
   coverColor?: string;
+  /** Optional: publicly accessible PDF url (static-site scheme1: /yiyu-think-tank-website/docs/xxx.pdf) */
+  fileUrl?: string;
+  fileSize?: number;
   publishDate: string;
   status: 'draft' | 'published' | 'archived';
   views: number;

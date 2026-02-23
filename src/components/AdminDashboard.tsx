@@ -62,8 +62,7 @@ interface MenuItem {
 // 初始化 PDF.js worker（只需设置一次）
 GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
 
-async function extractPdfCoverAndPages(file: File): Promise<{ coverDataUrl: string; numPages: number }> {
-  const data = await file.arrayBuffer();
+async function extractPdfCoverAndPagesFromData(data: ArrayBuffer): Promise<{ coverDataUrl: string; numPages: number }> {
   const loadingTask = getDocument({ data });
   const pdf = await loadingTask.promise;
 
@@ -83,6 +82,19 @@ async function extractPdfCoverAndPages(file: File): Promise<{ coverDataUrl: stri
   const coverDataUrl = canvas.toDataURL('image/png');
 
   return { coverDataUrl, numPages: pdf.numPages };
+}
+
+async function extractPdfCoverAndPages(file: File): Promise<{ coverDataUrl: string; numPages: number }> {
+  const data = await file.arrayBuffer();
+  return await extractPdfCoverAndPagesFromData(data);
+}
+
+async function extractPdfCoverAndPagesFromUrl(url: string): Promise<{ coverDataUrl: string; numPages: number }> {
+  const full = url.startsWith('http') ? url : `${window.location.origin}${url}`;
+  const resp = await fetch(full);
+  if (!resp.ok) throw new Error(`fetch PDF failed: ${resp.status}`);
+  const data = await resp.arrayBuffer();
+  return await extractPdfCoverAndPagesFromData(data);
 }
 
 export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps) {
@@ -2094,6 +2106,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   rating: parseFloat(formData.get('rating') as string) || 4.5,
                   coverImage: bookCoverImage || (editingItem as Book)?.coverImage,
                   coverColor: formData.get('coverColor') as string,
+                  fileUrl: (formData.get('fileUrl') as string) || (editingItem as Book as any)?.fileUrl,
+                  fileSize: (editingItem as Book as any)?.fileSize,
                   publishDate: formData.get('publishDate') as string,
                   status: formData.get('status') as 'draft' | 'published',
                 };
@@ -2343,16 +2357,42 @@ function ReportFormModal({
             </label>
 
             {/* 使用 PDF 首页作为封面（本地解析；不会上传 PDF 到服务器） */}
-            <label className="inline-flex items-center gap-2 text-sm text-gray-700 mb-3 select-none">
-              <input
-                type="checkbox"
-                checked={useFirstPageAsCover}
-                onChange={(e) => setUseFirstPageAsCover(e.target.checked)}
-                className="rounded text-purple-600 focus:ring-purple-500"
-              />
-              选择 PDF 第 1 页作为封面（推荐）
-              <span className="text-xs text-gray-500">（选择/拖拽 PDF 后自动抓取）</span>
-            </label>
+            <div className="flex flex-wrap items-center gap-3 mb-3">
+              <label className="inline-flex items-center gap-2 text-sm text-gray-700 select-none">
+                <input
+                  type="checkbox"
+                  checked={useFirstPageAsCover}
+                  onChange={(e) => setUseFirstPageAsCover(e.target.checked)}
+                  className="rounded text-purple-600 focus:ring-purple-500"
+                />
+                选择 PDF 第 1 页作为封面（推荐）
+              </label>
+
+              <button
+                type="button"
+                className="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50"
+                onClick={async () => {
+                  try {
+                    const input = document.querySelector('input[name="fileUrl"]') as HTMLInputElement | null;
+                    const v = (input?.value || '').trim();
+                    if (!v) return alert('请先填写源文件 URL');
+                    setIsExtractingCover(true);
+                    const { coverDataUrl, numPages } = await extractPdfCoverAndPagesFromUrl(v);
+                    setCoverImage(coverDataUrl);
+                    setReportPages((prev) => (prev && prev > 0 ? prev : numPages));
+                    alert('✅ 已从源文件 URL 抓取第一页封面');
+                  } catch (e: any) {
+                    alert('❌ 抓取失败：' + (e?.message || String(e)));
+                  } finally {
+                    setIsExtractingCover(false);
+                  }
+                }}
+              >
+                从源文件 URL 抓取封面
+              </button>
+
+              {isExtractingCover ? <span className="text-xs text-gray-500">抓取中…</span> : null}
+            </div>
 
             {coverImage ? (
               <div className="relative border-2 border-green-500 rounded-xl overflow-hidden group">
@@ -3535,6 +3575,79 @@ function BookFormModal({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* 源文件 URL（用于前台打开/下载 PDF） */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              源文件 URL <span className="text-gray-400 text-xs">(方案1：/yiyu-think-tank-website/docs/xxx.pdf)</span>
+            </label>
+            <input
+              type="url"
+              name="fileUrl"
+              placeholder="例如：/yiyu-think-tank-website/docs/what-is-power.pdf"
+              defaultValue={(() => {
+                const v = (editingItem as any)?.fileUrl as string | undefined;
+                if (!v) return '';
+                if (v.startsWith('http://') || v.startsWith('https://') || v.startsWith('/')) return v;
+                return '';
+              })()}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50"
+                onClick={() => {
+                  const input = document.querySelector('input[name="fileUrl"]') as HTMLInputElement | null;
+                  const v = (input?.value || '').trim();
+                  if (!v) return alert('请先填写源文件 URL');
+                  const full = v.startsWith('http') ? v : `${window.location.origin}${v}`;
+                  window.open(full, '_blank', 'noopener,noreferrer');
+                }}
+              >
+                打开源文件
+              </button>
+              <button
+                type="button"
+                className="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50"
+                onClick={async () => {
+                  const input = document.querySelector('input[name="fileUrl"]') as HTMLInputElement | null;
+                  const v = (input?.value || '').trim();
+                  if (!v) return alert('请先填写源文件 URL');
+                  const full = v.startsWith('http') ? v : `${window.location.origin}${v}`;
+                  try {
+                    await navigator.clipboard.writeText(full);
+                    alert('✅ 已复制完整链接');
+                  } catch {
+                    prompt('复制失败，请手动复制：', full);
+                  }
+                }}
+              >
+                复制完整链接
+              </button>
+              <button
+                type="button"
+                className="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50"
+                onClick={async () => {
+                  try {
+                    const input = document.querySelector('input[name="fileUrl"]') as HTMLInputElement | null;
+                    const v = (input?.value || '').trim();
+                    if (!v) return alert('请先填写源文件 URL');
+                    const { coverDataUrl } = await extractPdfCoverAndPagesFromUrl(v);
+                    setBookCoverImage(coverDataUrl);
+                    alert('✅ 已从源文件 URL 抓取第一页封面');
+                  } catch (e: any) {
+                    alert('❌ 抓取失败：' + (e?.message || String(e)));
+                  }
+                }}
+              >
+                从源文件 URL 抓取封面
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-500 mt-2">说明：静态站不能真正上传并托管 PDF；必须填写一个已发布可访问的链接，前台才可下载/打开。</p>
           </div>
 
           {/* 书名 */}

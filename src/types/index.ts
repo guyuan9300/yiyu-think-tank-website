@@ -93,6 +93,8 @@ export interface Book {
   rating: number;
   coverImage?: string;
   coverColor?: string;
+  fileUrl?: string;
+  fileSize?: number;
   publishDate: string;
   status: ContentStatus;
   views: number;
