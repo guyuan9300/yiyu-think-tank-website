@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { HomePage } from './components/HomePage';
 import { InsightsPage } from './components/InsightsPage';
 import { StrategyPage } from './components/StrategyPage';
@@ -80,66 +80,78 @@ export default function App() {
   const [selectedDetailId, setSelectedDetailId] = useState<string>(initialParams.get('id') || '');
   const [selectedCaseId, setSelectedCaseId] = useState<string>(initialParams.get('id') || 'blue-letter');
 
-  // 监听页面变化并更新URL（不刷新页面）
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const currentPageParam = params.get('page');
-    const currentIdParam = params.get('id');
-    
-    if (currentPage === 'home') {
-      if (currentPageParam !== 'home') {
-        window.history.replaceState({}, '', window.location.pathname);
-      }
-    } else if (currentPage === '404') {
-      const from = unknownPage || params.get('from');
-      const next = from ? `?page=404&from=${encodeURIComponent(from)}` : `?page=404`;
-      if (currentPageParam !== '404' || (from && params.get('from') !== from)) {
-        window.history.replaceState({}, '', next);
-      }
-    } else if (currentPage === 'login' || currentPage === 'register' || currentPage === 'forgot-password' || currentPage === 'reset-password') {
-      if (currentPageParam !== currentPage) {
-        window.history.replaceState({}, '', `?page=${currentPage}`);
-      }
-    } else if (currentPage === 'article' || currentPage === 'report' || currentPage === 'topic') {
-      if (currentPageParam !== currentPage || currentIdParam !== selectedDetailId) {
-        window.history.replaceState({}, '', `?page=${currentPage}&id=${selectedDetailId}`);
-      }
-    } else if (currentPage === 'case') {
-      if (currentPageParam !== currentPage || currentIdParam !== selectedCaseId) {
-        window.history.replaceState({}, '', `?page=${currentPage}&id=${selectedCaseId}`);
-      }
-    } else if (currentPage === 'admin') {
-      if (currentPageParam !== currentPage) {
-        window.history.replaceState({}, '', `?page=${currentPage}`);
-      }
-    } else if (currentPage === 'user-center') {
-      if (currentPageParam !== currentPage) {
-        window.history.replaceState({}, '', `?page=${currentPage}`);
-      }
-    } else if (currentPage === 'strategy-companion') {
-      // Preserve clientId so direct links and switching context won't be wiped by the global URL sync.
+  const buildUrlForState = (page: string, detailId?: string, caseId?: string) => {
+    const basePath = window.location.pathname;
+
+    if (page === 'home') return basePath;
+    if (page === '404') {
+      const from = unknownPage;
+      return from ? `?page=404&from=${encodeURIComponent(from)}` : `?page=404`;
+    }
+
+    if (page === 'article' || page === 'report' || page === 'topic') {
+      return `?page=${page}&id=${encodeURIComponent(detailId || '')}`;
+    }
+
+    if (page === 'case') {
+      return `?page=case&id=${encodeURIComponent(caseId || '')}`;
+    }
+
+    if (page === 'strategy-companion') {
+      // Preserve clientId from current URL if present.
+      const params = new URLSearchParams(window.location.search);
       const clientId = params.get('clientId');
-      const next = clientId ? `?page=${currentPage}&clientId=${encodeURIComponent(clientId)}` : `?page=${currentPage}`;
-      if (currentPageParam !== currentPage || (clientId && params.get('clientId') !== clientId)) {
-        window.history.replaceState({}, '', next);
+      return clientId ? `?page=strategy-companion&clientId=${encodeURIComponent(clientId)}` : `?page=strategy-companion`;
+    }
+
+    return `?page=${page}`;
+  };
+
+  // Proper browser back/forward support (pushState + popstate).
+  // This avoids full-page navigations (which can show stale cached pages after deploy).
+  useEffect(() => {
+    const parseUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const pageRaw = params.get('page') || 'home';
+      const normalizedPage = (pageRaw === 'learning' || pageRaw === 'book-library') ? 'library' : pageRaw;
+      const unknown = ALLOWED_PAGES.has(normalizedPage) ? null : normalizedPage;
+      const page = unknown ? '404' : normalizedPage;
+      const id = params.get('id') || '';
+
+      return { page, unknown, id };
+    };
+
+    const onPopState = () => {
+      const { page, unknown, id } = parseUrl();
+      setUnknownPage(unknown);
+      setCurrentPage(page);
+      if (page === 'article' || page === 'report' || page === 'topic') {
+        setSelectedDetailId(id);
       }
-    } else if (currentPage === 'consult-apply') {
-      if (currentPageParam !== currentPage) {
-        window.history.replaceState({}, '', `?page=${currentPage}`);
+      if (page === 'case') {
+        setSelectedCaseId(id || 'blue-letter');
       }
-    } else if (currentPage === 'admin-strategy-companion') {
-      // Keep admin page stable
-      if (currentPageParam !== currentPage) {
-        window.history.replaceState({}, '', `?page=${currentPage}`);
-      }
-    } else if (currentPage === 'test') {
-      if (currentPageParam !== currentPage) {
-        window.history.replaceState({}, '', `?page=${currentPage}`);
-      }
-    } else {
-      if (currentPageParam !== currentPage) {
-        window.history.replaceState({}, '', `?page=${currentPage}`);
-      }
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  // Push a new history entry on in-app page changes.
+  const didMountRef = useRef(false);
+  useEffect(() => {
+    // Skip the very first render (URL already reflects initial state).
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+
+    const next = buildUrlForState(currentPage, selectedDetailId, selectedCaseId);
+    const current = window.location.pathname + window.location.search;
+    const target = next.startsWith('?') ? (window.location.pathname + next) : next;
+
+    if (current !== target) {
+      window.history.pushState({}, '', next);
     }
   }, [currentPage, selectedDetailId, selectedCaseId, unknownPage]);
 
