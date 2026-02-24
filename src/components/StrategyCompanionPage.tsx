@@ -823,7 +823,17 @@ function DocumentItem({
   onDownload?: (doc: Document) => void;
 }) {
   const FileIcon = getFileIcon(document.fileType);
-  
+
+  const openUrl = document.documentLink || document.fileUrl;
+
+  const handleOpen = () => {
+    if (!openUrl) {
+      alert(`暂无可打开/下载链接：${document.title}\n\n请在后台为该文档填写 fileUrl 或 documentLink。`);
+      return;
+    }
+    window.open(openUrl, '_blank');
+  };
+
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDownload?.(document);
@@ -837,7 +847,15 @@ function DocumentItem({
   };
 
   return (
-    <div className="p-4 hover:bg-slate-50 transition-colors cursor-pointer group">
+    <div
+      className="p-4 hover:bg-slate-50 transition-colors cursor-pointer group"
+      onClick={handleOpen}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') handleOpen();
+      }}
+    >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {/* thumb */}
@@ -863,11 +881,11 @@ function DocumentItem({
               <ExternalLink className="w-4 h-4 text-slate-300 group-hover:text-blue-500" />
             </button>
           )}
-          {document.fileUrl && (
+          {(document.fileUrl || document.documentLink) && (
             <button
               onClick={handleDownload}
               className="group-hover:text-blue-500 transition-colors"
-              title="下载文档"
+              title="查看/下载文档"
             >
               <Download className="w-4 h-4 text-slate-300 group-hover:text-blue-500" />
             </button>

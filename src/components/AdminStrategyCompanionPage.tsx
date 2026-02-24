@@ -2017,21 +2017,40 @@ let attachmentUrl = editingGoal?.attachmentUrl;
         title={editingDocument ? '编辑文档' : '添加文档'}
       >
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
             const formData = new FormData(e.currentTarget);
             const passwordProtected = formData.get('passwordProtected') === 'on';
             const documentFile = formData.get('documentFile') as File;
-            
-            // 处理文件上传（模拟URL，实际项目中需要上传到服务器）
+
+            // For the localStorage-MVP we store small uploads as data: URLs so they are viewable from the frontend.
+            // (Previously we used a fake storage URL which is not accessible in production.)
             let fileUrl = editingDocument?.fileUrl;
+            let fileSize: number | undefined = editingDocument?.fileSize;
+
+            const readAsDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onerror = () => reject(new Error('FileReader failed'));
+              reader.onload = () => resolve(String(reader.result || ''));
+              reader.readAsDataURL(file);
+            });
+
             if (documentFile && documentFile.size > 0) {
-              // TODO: 实际项目中应上传到服务器或云存储
-              fileUrl = `https://storage.example.com/documents/${documentFile.name}`;
-              console.log('模拟文件上传:', documentFile.name, '大小:', documentFile.size);
+              fileSize = documentFile.size;
+              const MAX_INLINE_BYTES = 3 * 1024 * 1024; // 3MB (localStorage-friendly)
+              if (documentFile.size > MAX_INLINE_BYTES) {
+                alert('该文件较大（>3MB），当前MVP版本无法稳定存到本地。\n\n请改用「外部文档链接」（如飞书文档/腾讯文档/石墨）或先上传到可公开访问的云盘后填链接。');
+              } else {
+                try {
+                  fileUrl = await readAsDataUrl(documentFile);
+                } catch (err) {
+                  console.error('读取文件失败:', err);
+                  alert('读取文件失败，请重试或改用外部文档链接。');
+                }
+              }
             }
-            
-            handleSaveDocument({
+
+            await handleSaveDocument({
               id: editingDocument?.id,
               category: formData.get('category') as 'assessment' | 'strategy' | 'tools',
               title: formData.get('title') as string,
@@ -2039,7 +2058,8 @@ let attachmentUrl = editingGoal?.attachmentUrl;
               docDate: formData.get('docDate') as string,
               fileType: formData.get('fileType') as 'pdf' | 'ppt' | 'xlsx' | 'doc' | undefined,
               fileUrl: fileUrl,
-              documentLink: formData.get('documentLink') as string || undefined,
+              fileSize,
+              documentLink: (formData.get('documentLink') as string) || undefined,
               passwordProtected: passwordProtected,
               password: passwordProtected ? (formData.get('password') as string) : undefined,
             });
