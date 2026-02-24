@@ -316,7 +316,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
             {/* CTA Button */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
-                onClick={() => handleNavigate('consult-apply')}
+                onClick={() => window.open('https://hw7oabz548h.feishu.cn/share/base/form/shrcnOlk5n3pQdidooIVje76xUc', '_blank')}
                 className="group inline-flex items-center gap-2 px-8 py-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/25"
               >
                 <span className="font-medium text-[15px]">免费预约组织诊断</span>
