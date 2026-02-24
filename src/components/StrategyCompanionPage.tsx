@@ -388,6 +388,12 @@ interface LearningResource {
   description: string;
   date: string;
   category: string;
+  /**
+   * Target URL. For internal resources we build it as `?page=...&id=...`.
+   *
+   * Note: this page is query-string routed (no React Router),
+   * so opening in a new tab is the most reliable way to enter detail pages.
+   */
   url?: string;
 }
 
@@ -717,8 +723,26 @@ function LearningResourceCard({ resource }: { resource: LearningResource }) {
     }
   };
 
+  const handleOpen = () => {
+    if (!resource.url) {
+      alert(`暂无可打开链接：${resource.title}\n\n请在后台为该资源填写 url，或确保站内资源已绑定 internalId。`);
+      return;
+    }
+
+    // Open in a new tab so query-string routing initializes correctly.
+    window.open(resource.url, '_blank');
+  };
+
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-6 hover:shadow-lg hover:shadow-slate-100/50 transition-all duration-300 cursor-pointer group">
+    <div
+      className="bg-white rounded-2xl border border-slate-100 p-6 hover:shadow-lg hover:shadow-slate-100/50 transition-all duration-300 cursor-pointer group"
+      onClick={handleOpen}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') handleOpen();
+      }}
+    >
       <div className="flex items-start gap-4 mb-4">
         <div className={`w-12 h-12 rounded-xl ${getTypeColor()} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300`}>
           {getTypeIcon()}
@@ -1099,15 +1123,35 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
         );
 
         setCourseRecommendations(
-          (data.courseRecommendations || []).map((r: any) => ({
-            id: r.id,
-            type: r.type === 'internal' ? (r.internalType === 'report' ? 'report' : r.internalType === 'book' ? 'book' : 'article') : 'article',
-            title: r.title,
-            description: r.description || '',
-            date: (r.createdAt || '').slice(0, 10),
-            category: r.sourceName || (r.type === 'internal' ? '站内' : '外部'),
-            url: r.url,
-          }))
+          (data.courseRecommendations || []).map((r: any) => {
+            const inferredType = r.type === 'internal'
+              ? (r.internalType === 'report'
+                ? 'report'
+                : r.internalType === 'book'
+                  ? 'book'
+                  : 'article')
+              : 'article';
+
+            // If it's an internal resource, build a deep link so it can be opened.
+            // (Admin sync may only store internalType/internalId, leaving `url` empty.)
+            let url: string | undefined = r.url;
+            if (!url && r.type === 'internal' && r.internalId) {
+              const base = `${window.location.origin}${window.location.pathname}`;
+              if (r.internalType === 'report') url = `${base}?page=report&id=${encodeURIComponent(r.internalId)}`;
+              else if (r.internalType === 'article') url = `${base}?page=article&id=${encodeURIComponent(r.internalId)}`;
+              // book-reader doesn't support id deep-linking today; keep undefined.
+            }
+
+            return {
+              id: r.id,
+              type: inferredType,
+              title: r.title,
+              description: r.description || '',
+              date: (r.createdAt || '').slice(0, 10),
+              category: r.sourceName || (r.type === 'internal' ? '站内' : '外部'),
+              url,
+            };
+          })
         );
 
         setIsLoadingProjectData(false);
