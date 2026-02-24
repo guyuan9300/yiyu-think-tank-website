@@ -301,35 +301,30 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
 
             {/* Main Title - Typography Hierarchy */}
             <h1 className="text-[34px] sm:text-[54px] md:text-[62px] lg:text-[70px] font-semibold leading-[1.06] tracking-tight mb-6 text-foreground">
-              用战略把增长变成可执行的路径
+              战略驱动业务增长
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary to-accent">
-                在 AI 时代持续升级认知与协作
+                科技赋能组织成长
               </span>
             </h1>
 
             {/* Subtitle - Value Proposition */}
             <p className="text-[16px] sm:text-[18px] text-muted-foreground/80 mb-8 max-w-3xl mx-auto leading-relaxed">
-              益语智库是一家战略咨询公司：服务中小企业高管与创始人、公益组织从业者，以及对 AI 与未来发展保持学习的人。
-              我们提供战略咨询、前瞻洞察与可复用的学习内容；战略陪伴客户可登录进入专属工作台，快速回看目标、会议纪要与过程文件。
+              益语智库服务于中小企业高管与创始人、公益组织从业者、终身学习者，用战略把增长变成可执行的路径，在 AI 时代持续升级认知与协作。
             </p>
 
-            {/* CTA Buttons */}
+            {/* CTA Button */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
-                onClick={() => handleNavigate('consult-apply')}
+                onClick={() => {
+                  // Temporary: keep the same deep link as shared in docs/IM.
+                  // This resolves to e.g. https://guyuan9300.github.io/yiyu-think-tank-website/?page=consult-apply on GitHub Pages.
+                  window.location.href = `${window.location.origin}${window.location.pathname}?page=consult-apply`;
+                }}
                 className="group inline-flex items-center gap-2 px-8 py-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/25"
               >
-                <span className="font-medium text-[15px]">申请战略咨询</span>
+                <span className="font-medium text-[15px]">免费预约组织诊断</span>
                 <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
-              </button>
-
-              <button
-                onClick={() => handleNavigate('insights')}
-                className="group inline-flex items-center gap-2 px-8 py-4 rounded-full border border-border/60 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 ease-out hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <span className="font-medium text-[15px]">查看最新洞察</span>
-                <Lightbulb className="w-4 h-4 transition-transform duration-300 group-hover:-rotate-12" />
               </button>
             </div>
           </div>
