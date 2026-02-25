@@ -505,7 +505,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               projectId,
               title,
               type: 'internal',
-              internalType,
+              internalType: internalType as any,
               internalId,
               description: '',
               sortOrder: 0,

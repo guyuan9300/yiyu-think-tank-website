@@ -75,6 +75,9 @@ export interface Book {
   rating: number;
   coverImage?: string;
   coverColor?: string;
+  // optional: allow books to attach a PDF/asset like reports
+  fileUrl?: string;
+  fileSize?: number;
   publishDate: string;
   status: 'draft' | 'published' | 'archived';
   showOnHome: boolean; // 是否显示在首页（手动选择）
