@@ -672,7 +672,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="h-screen bg-gray-50 flex overflow-hidden">
       {/* 移动端菜单遮罩 */}
       {isMobileMenuOpen && (
         <div 
@@ -746,7 +746,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       </aside>
 
       {/* 主内容区 */}
-      <div className="flex-1 flex flex-col min-h-screen min-h-0">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* 顶部栏 */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
           <div className="flex items-center gap-4">
