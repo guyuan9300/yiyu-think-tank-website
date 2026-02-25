@@ -688,6 +688,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         text-white transition-all duration-300 ease-in-out
         ${sidebarOpen ? 'w-64' : 'w-20'}
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        flex flex-col
       `}>
         {/* Logo区域 */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-700">
@@ -707,8 +708,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
           </button>
         </div>
 
-        {/* 菜单列表 */}
-        <nav className="p-4 space-y-2">
+        {/* 菜单列表（可滚动） */}
+        <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
           {menuItems.map((item) => (
             <button
               key={item.id}
@@ -742,20 +743,10 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
           ))}
         </nav>
 
-        {/* 底部：退出按钮 */}
-        <div className="absolute bottom-4 left-0 right-0 px-4">
-          <button
-            onClick={onLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-gray-700/50 hover:text-red-400 transition-all"
-          >
-            <LogOut className="w-5 h-5" />
-            {sidebarOpen && <span>退出登录</span>}
-          </button>
-        </div>
       </aside>
 
       {/* 主内容区 */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen min-h-0">
         {/* 顶部栏 */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
           <div className="flex items-center gap-4">
@@ -777,6 +768,15 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
           </div>
           
           <div className="flex items-center gap-4">
+            <button
+              onClick={onLogout}
+              className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-800 hover:bg-gray-50 transition-colors"
+              title="退出登录"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm font-medium">退出登录</span>
+            </button>
+
             <button
               onClick={onNavigateHome}
               className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white hover:bg-gray-800 transition-colors"
@@ -811,8 +811,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
           </div>
         </header>
 
-        {/* 页面内容 */}
-        <main className="flex-1 p-6 overflow-auto">
+        {/* 页面内容（自适应全屏 + 可滚动） */}
+        <main className="flex-1 min-h-0 p-6 overflow-auto">
           {activeMenu === 'dashboard' && (
             <div className="space-y-6">
               {/* 消息提示 */}
