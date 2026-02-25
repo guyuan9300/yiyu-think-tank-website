@@ -1,3 +1,4 @@
+// Updated: 2026-02-25 - 使命愿景价值观移到页面顶部
 import { useState, useRef, useEffect } from 'react';
 import {
   ChevronDown,
