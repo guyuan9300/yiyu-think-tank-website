@@ -121,7 +121,7 @@ export interface CourseRecommendation {
   title: string;
   description?: string;
   type: 'internal' | 'external';
-  internalType?: 'article' | 'report' | 'book';
+  internalType?: 'article' | 'report' | 'book' | 'methodology';
   internalId?: string;
   url?: string;
   sourceName?: string;
