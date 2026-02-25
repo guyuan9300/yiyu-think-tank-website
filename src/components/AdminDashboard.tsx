@@ -93,7 +93,13 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const [showBookForm, setShowBookForm] = useState(false);
   const [editingItem, setEditingItem] = useState<Report | InsightArticle | Methodology | Book | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterCategory, setFilterCategory] = useState('all');
+
+  // 内容筛选：统一标签（四类，可多选）
+  const [filterTopics, setFilterTopics] = useState<ResourceTopic[]>([]);
+  const [topicFilterOpen, setTopicFilterOpen] = useState(false);
+
+  // 评论筛选：状态
+  const [commentStatusFilter, setCommentStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   
   // 封面图状态
   const [coverImage, setCoverImage] = useState<string | null>(null);
@@ -374,14 +380,22 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     return [];
   };
 
-  // 筛选内容
+  // 筛选内容（按搜索 + topics）
   const filterContent = (items: any[]) => {
-    return items.filter(item => {
-      const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           item.excerpt?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           item.summary?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = filterCategory === 'all' || item.category === filterCategory;
-      return matchesSearch && matchesCategory;
+    const q = searchQuery.trim().toLowerCase();
+    const selected = (filterTopics || []).filter(Boolean);
+
+    return items.filter((item) => {
+      const title = (item.title || '').toString().toLowerCase();
+      const excerpt = (item.excerpt || '').toString().toLowerCase();
+      const summary = (item.summary || '').toString().toLowerCase();
+
+      const matchesSearch = !q || title.includes(q) || excerpt.includes(q) || summary.includes(q);
+
+      const itemTopics = (item.topics || []) as ResourceTopic[];
+      const matchesTopics = selected.length === 0 || selected.some((t) => itemTopics.includes(t));
+
+      return matchesSearch && matchesTopics;
     });
   };
 
@@ -910,17 +924,52 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                         className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                     </div>
-                    
-                    <select
-                      value={filterCategory}
-                      onChange={(e) => setFilterCategory(e.target.value)}
-                      className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value="all">全部分类</option>
-                      {getCurrentCategories().map(cat => (
-                        <option key={cat.id} value={cat.name}>{cat.name}</option>
-                      ))}
-                    </select>
+
+                    {/* 全部标签（四类，可多选） */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setTopicFilterOpen((v) => !v)}
+                        className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                        title="全部标签（可多选）"
+                      >
+                        {filterTopics.length === 0 ? '全部标签' : `标签：${filterTopics.join('、')}`}
+                      </button>
+
+                      {topicFilterOpen && (
+                        <div className="absolute z-20 mt-2 w-56 rounded-xl border border-gray-200 bg-white shadow-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="text-sm font-medium text-gray-800">全部标签</div>
+                            <button
+                              type="button"
+                              onClick={() => setFilterTopics([])}
+                              className="text-xs text-gray-500 hover:text-gray-800"
+                            >
+                              清空
+                            </button>
+                          </div>
+                          <div className="space-y-2">
+                            {RESOURCE_TOPICS.map((t) => {
+                              const checked = filterTopics.includes(t);
+                              return (
+                                <label key={t} className="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={(e) => {
+                                      const on = e.target.checked;
+                                      setFilterTopics((prev) => (on ? Array.from(new Set([...prev, t])) : prev.filter((x) => x !== t)));
+                                    }}
+                                    className="w-4 h-4 text-purple-600 rounded"
+                                  />
+                                  <span>{t}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   <button
@@ -1065,6 +1114,52 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                         className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                     </div>
+
+                    {/* 全部标签（四类，可多选） */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setTopicFilterOpen((v) => !v)}
+                        className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                        title="全部标签（可多选）"
+                      >
+                        {filterTopics.length === 0 ? '全部标签' : `标签：${filterTopics.join('、')}`}
+                      </button>
+
+                      {topicFilterOpen && (
+                        <div className="absolute z-20 mt-2 w-56 rounded-xl border border-gray-200 bg-white shadow-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="text-sm font-medium text-gray-800">全部标签</div>
+                            <button
+                              type="button"
+                              onClick={() => setFilterTopics([])}
+                              className="text-xs text-gray-500 hover:text-gray-800"
+                            >
+                              清空
+                            </button>
+                          </div>
+                          <div className="space-y-2">
+                            {RESOURCE_TOPICS.map((t) => {
+                              const checked = filterTopics.includes(t);
+                              return (
+                                <label key={t} className="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={(e) => {
+                                      const on = e.target.checked;
+                                      setFilterTopics((prev) => (on ? Array.from(new Set([...prev, t])) : prev.filter((x) => x !== t)));
+                                    }}
+                                    className="w-4 h-4 text-purple-600 rounded"
+                                  />
+                                  <span>{t}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <button
@@ -1179,17 +1274,52 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                         className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                     </div>
-                    
-                    <select
-                      value={filterCategory}
-                      onChange={(e) => setFilterCategory(e.target.value)}
-                      className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value="all">全部分类</option>
-                      {getCurrentCategories().map(cat => (
-                        <option key={cat.id} value={cat.name}>{cat.name}</option>
-                      ))}
-                    </select>
+
+                    {/* 全部标签（四类，可多选） */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setTopicFilterOpen((v) => !v)}
+                        className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                        title="全部标签（可多选）"
+                      >
+                        {filterTopics.length === 0 ? '全部标签' : `标签：${filterTopics.join('、')}`}
+                      </button>
+
+                      {topicFilterOpen && (
+                        <div className="absolute z-20 mt-2 w-56 rounded-xl border border-gray-200 bg-white shadow-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="text-sm font-medium text-gray-800">全部标签</div>
+                            <button
+                              type="button"
+                              onClick={() => setFilterTopics([])}
+                              className="text-xs text-gray-500 hover:text-gray-800"
+                            >
+                              清空
+                            </button>
+                          </div>
+                          <div className="space-y-2">
+                            {RESOURCE_TOPICS.map((t) => {
+                              const checked = filterTopics.includes(t);
+                              return (
+                                <label key={t} className="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={(e) => {
+                                      const on = e.target.checked;
+                                      setFilterTopics((prev) => (on ? Array.from(new Set([...prev, t])) : prev.filter((x) => x !== t)));
+                                    }}
+                                    className="w-4 h-4 text-purple-600 rounded"
+                                  />
+                                  <span>{t}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   <button
@@ -1347,17 +1477,52 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                         className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                     </div>
-                    
-                    <select
-                      value={filterCategory}
-                      onChange={(e) => setFilterCategory(e.target.value)}
-                      className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value="all">全部分类</option>
-                      {getCurrentCategories().map(cat => (
-                        <option key={cat.id} value={cat.name}>{cat.name}</option>
-                      ))}
-                    </select>
+
+                    {/* 全部标签（四类，可多选） */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setTopicFilterOpen((v) => !v)}
+                        className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                        title="全部标签（可多选）"
+                      >
+                        {filterTopics.length === 0 ? '全部标签' : `标签：${filterTopics.join('、')}`}
+                      </button>
+
+                      {topicFilterOpen && (
+                        <div className="absolute z-20 mt-2 w-56 rounded-xl border border-gray-200 bg-white shadow-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="text-sm font-medium text-gray-800">全部标签</div>
+                            <button
+                              type="button"
+                              onClick={() => setFilterTopics([])}
+                              className="text-xs text-gray-500 hover:text-gray-800"
+                            >
+                              清空
+                            </button>
+                          </div>
+                          <div className="space-y-2">
+                            {RESOURCE_TOPICS.map((t) => {
+                              const checked = filterTopics.includes(t);
+                              return (
+                                <label key={t} className="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={(e) => {
+                                      const on = e.target.checked;
+                                      setFilterTopics((prev) => (on ? Array.from(new Set([...prev, t])) : prev.filter((x) => x !== t)));
+                                    }}
+                                    className="w-4 h-4 text-purple-600 rounded"
+                                  />
+                                  <span>{t}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   <button
@@ -1825,8 +1990,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   </div>
                   
                   <select
-                    value={filterCategory}
-                    onChange={(e) => setFilterCategory(e.target.value)}
+                    value={commentStatusFilter}
+                    onChange={(e) => setCommentStatusFilter(e.target.value as any)}
                     className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
                   >
                     <option value="all">全部状态</option>
@@ -1845,7 +2010,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       comment.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
                       comment.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                       comment.contentTitle.toLowerCase().includes(searchQuery.toLowerCase());
-                    const matchesStatus = filterCategory === 'all' || comment.status === filterCategory;
+                    const matchesStatus = commentStatusFilter === 'all' || comment.status === commentStatusFilter;
                     return matchesSearch && matchesStatus;
                   })
                   .length === 0 ? (
@@ -1861,7 +2026,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                           comment.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           comment.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           comment.contentTitle.toLowerCase().includes(searchQuery.toLowerCase());
-                        const matchesStatus = filterCategory === 'all' || comment.status === filterCategory;
+                        const matchesStatus = commentStatusFilter === 'all' || comment.status === commentStatusFilter;
                         return matchesSearch && matchesStatus;
                       })
                       .map((comment) => (
