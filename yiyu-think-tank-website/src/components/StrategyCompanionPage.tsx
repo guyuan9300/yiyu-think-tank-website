@@ -1388,8 +1388,78 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
           </div>
         </div>
 
+        {/* 使命 · 愿景 · 价值观 - 时尚高级感设计 */}
+        <div className="mb-8">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8 md:p-10">
+            {/* 背景光晕 */}
+            <div className="absolute inset-0 opacity-40">
+              <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/20 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
+              <div className="absolute top-1/2 left-1/2 w-40 h-40 bg-purple-500/15 rounded-full blur-2xl transform -translate-x-1/2 -translate-y-1/2" />
+            </div>
+            
+            {/* 顶部装饰线 */}
+            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
+            <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent" />
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                  <Sparkles className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-white text-2xl font-semibold tracking-tight">使命 · 愿景 · 价值观</h2>
+                  <p className="text-slate-400 text-sm">Mission · Vision · Values</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+                {/* Mission */}
+                <div className="lg:col-span-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Target className="w-4 h-4 text-blue-400" />
+                    <span className="text-blue-400 text-xs font-semibold uppercase tracking-wider">Mission 使命</span>
+                  </div>
+                  <p className="text-white text-xl font-medium leading-relaxed">
+                    {selectedClient?.mission || '（请在后台填写使命）'}
+                  </p>
+                </div>
+                
+                {/* Vision */}
+                <div className="lg:col-span-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Rocket className="w-4 h-4 text-purple-400" />
+                    <span className="text-purple-400 text-xs font-semibold uppercase tracking-wider">Vision 愿景</span>
+                  </div>
+                  <p className="text-white text-xl font-medium leading-relaxed">
+                    {selectedClient?.vision || '（请在后台填写愿景）'}
+                  </p>
+                </div>
+                
+                {/* Values */}
+                <div className="lg:col-span-2">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Heart className="w-4 h-4 text-amber-400" />
+                    <span className="text-amber-400 text-xs font-semibold uppercase tracking-wider">Values</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {(selectedClient?.values && selectedClient.values.length > 0 ? selectedClient.values : ['深度陪伴', '系统思维', '价值共创', '长期主义']).slice(0, 4).map((value, idx) => (
+                      <div 
+                        key={idx}
+                        className="px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-white/90 text-xs font-medium backdrop-blur-sm"
+                      >
+                        {value}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* 年度终点任务 - 高级感设计 */}
-        <div className="mb-10 -mt-4">
+        <div className="mb-8">
           {/* Hero Banner */}
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8 md:p-10 mb-6">
             {/* 背景装饰 */}
@@ -1493,78 +1563,6 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
                   )}
                 </div>
               ))}
-            </div>
-          </div>
-        </div>
-
-        {/* 原有的年度终点任务区块已移除，新设计已放到上方 */}
-
-        {/* 使命愿景价值观 - 高级感设计 */}
-        <div className="mb-8">
-          {/* Hero Banner */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8 md:p-10 mb-6">
-            {/* 背景装饰 */}
-            <div className="absolute inset-0 opacity-30">
-              <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/20 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
-              <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
-            </div>
-            
-            {/* 装饰线条 */}
-            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
-            <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent" />
-            
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-                  <Star className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-white text-2xl font-semibold">使命 · 愿景 · 价值观</h2>
-                  <p className="text-slate-400 text-sm">Mission · Vision · Values</p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Mission */}
-                <div className="lg:col-span-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Target className="w-4 h-4 text-blue-400" />
-                    <span className="text-blue-400 text-xs font-semibold uppercase tracking-wider">Mission 使命</span>
-                  </div>
-                  <p className="text-white text-xl font-medium leading-relaxed">
-                    {selectedClient?.mission || '（请在后台填写使命）'}
-                  </p>
-                </div>
-                
-                {/* Vision */}
-                <div className="lg:col-span-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Rocket className="w-4 h-4 text-purple-400" />
-                    <span className="text-purple-400 text-xs font-semibold uppercase tracking-wider">Vision 愿景</span>
-                  </div>
-                  <p className="text-white text-xl font-medium leading-relaxed">
-                    {selectedClient?.vision || '（请在后台填写愿景）'}
-                  </p>
-                </div>
-                
-                {/* Values */}
-                <div className="lg:col-span-2">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Star className="w-4 h-4 text-amber-400" />
-                    <span className="text-amber-400 text-xs font-semibold uppercase tracking-wider">Values</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {(selectedClient?.values && selectedClient.values.length > 0 ? selectedClient.values : ['深度陪伴', '系统思维', '价值共创', '长期主义']).slice(0, 4).map((value, idx) => (
-                      <div 
-                        key={idx}
-                        className="px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-white/90 text-xs font-medium"
-                      >
-                        {value}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
