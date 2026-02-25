@@ -1324,67 +1324,193 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFC]">
+    <div className="min-h-screen bg-[#F5F5F7] text-slate-900">
+      {/* Apple-ish ambient background */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full bg-gradient-to-br from-blue-200/70 via-indigo-200/40 to-transparent blur-3xl" />
+        <div className="absolute -top-32 -right-48 h-[560px] w-[560px] rounded-full bg-gradient-to-bl from-emerald-200/50 via-cyan-200/30 to-transparent blur-3xl" />
+        <div className="absolute -bottom-48 left-1/3 h-[640px] w-[640px] rounded-full bg-gradient-to-tr from-purple-200/40 via-pink-200/25 to-transparent blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(1200px_600px_at_50%_-200px,rgba(255,255,255,0.85),rgba(245,245,247,0))]" />
+      </div>
+
       <Header
         isLoggedIn={true}
         userType="member"
         onNavigate={onNavigate}
       />
 
-      <main className="max-w-6xl mx-auto px-8 py-12 pt-24">
-        {/* Page Header */}
+      <main className="relative max-w-[1120px] mx-auto px-6 sm:px-8 py-10 sm:py-12 pt-24">
+        {/* Page Hero */}
         <div className="mb-10">
-          <div className="flex items-center justify-between gap-6 flex-wrap">
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                {/* client cover */}
-                <div className="w-12 h-12 rounded-2xl overflow-hidden border border-slate-100 bg-white shadow-sm shrink-0">
-                  <img
-                    src={getClientCoverImage(selectedClient)}
-                    alt=""
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
+          <div className="rounded-[28px] bg-white/70 backdrop-blur-xl border border-white/60 shadow-[0_18px_60px_rgba(15,23,42,0.08)] overflow-hidden">
+            <div className="px-6 sm:px-8 py-6 sm:py-7">
+              <div className="flex items-start justify-between gap-6 flex-wrap">
+                <div>
+                  <div className="flex items-center gap-3 mb-3">
+                    {/* client cover */}
+                    <div className="w-12 h-12 rounded-2xl overflow-hidden border border-slate-100/80 bg-white shadow-sm shrink-0">
+                      <img
+                        src={getClientCoverImage(selectedClient)}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                    <div className="w-1 h-8 bg-gradient-to-b from-blue-600 to-indigo-600 rounded-full" />
+                    <h1 className="text-[30px] sm:text-[34px] font-semibold tracking-tight">
+                      {selectedClient?.clientName || '战略客户'}
+                    </h1>
+                  </div>
+
+                  <div className="flex items-center gap-3 ml-1.5">
+                    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/[0.04] border border-slate-900/[0.06]">
+                      <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                      <span className="text-[12px] text-slate-600">战略陪伴进行中</span>
+                    </span>
+                    <span className="text-slate-300">·</span>
+                    <span className="text-[12px] text-slate-500">第 3 阶段 / 共 5 阶段</span>
+                  </div>
                 </div>
-                <div className="w-1 h-8 bg-blue-500 rounded-full" />
-                <h1 className="text-[32px] font-semibold text-slate-900 tracking-tight">
-                  {selectedClient?.clientName || '战略客户'}
-                </h1>
-              </div>
-              <div className="flex items-center gap-3 ml-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                  <span className="text-[13px] text-slate-500">战略陪伴进行中</span>
+
+                {/* Client selector */}
+                <div className="min-w-[260px]">
+                  <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-[0.18em] mb-2">
+                    当前客户
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={selectedClientId}
+                      onChange={(e) => setSelectedClientId(e.target.value)}
+                      className="w-full appearance-none px-4 py-3 pr-10 rounded-2xl bg-white/90 border border-slate-900/[0.06] text-[14px] font-medium text-slate-800 shadow-sm hover:shadow-md hover:shadow-slate-900/5 transition-all"
+                    >
+                      {clients.length === 0 ? (
+                        <option value="">暂无客户（请先在后台添加）</option>
+                      ) : (
+                        clients.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.clientName}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                  </div>
                 </div>
-                <span className="text-slate-300">·</span>
-                <span className="text-[13px] text-slate-500">第 3 阶段 / 共 5 阶段</span>
               </div>
             </div>
 
-            {/* Client selector (Apple-ish, minimal) */}
-            <div className="min-w-[260px]">
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                当前客户
-              </label>
-              <div className="relative">
-                <select
-                  value={selectedClientId}
-                  onChange={(e) => setSelectedClientId(e.target.value)}
-                  className="w-full appearance-none px-4 py-3 pr-10 rounded-2xl bg-white border border-slate-100 text-[14px] font-medium text-slate-800 hover:shadow-md hover:shadow-slate-100/50 transition-all"
-                >
-                  {clients.length === 0 ? (
-                    <option value="">暂无客户（请先在后台添加）</option>
-                  ) : (
-                    clients.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.clientName}
-                      </option>
-                    ))
-                  )}
-                </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            <div className="h-px bg-gradient-to-r from-transparent via-slate-900/[0.08] to-transparent" />
+
+            {/* Hero quick-intent row */}
+            <div className="px-6 sm:px-8 py-4 sm:py-5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="rounded-2xl bg-white/70 border border-slate-900/[0.06] px-4 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500 mb-1">今日焦点</div>
+                  <div className="text-[13px] text-slate-800 font-medium line-clamp-1">{selectedClient?.next14Days?.[0] || '（可在后台填写本周最重要的那件事）'}</div>
+                </div>
+                <div className="rounded-2xl bg-white/70 border border-slate-900/[0.06] px-4 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500 mb-1">北极星</div>
+                  <div className="text-[13px] text-slate-800 font-medium line-clamp-1">{selectedClient?.northStarMetric || '（请在后台填写年度北极星指标）'}</div>
+                </div>
+                <div className="rounded-2xl bg-white/70 border border-slate-900/[0.06] px-4 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500 mb-1">下一次关键节点</div>
+                  <div className="text-[13px] text-slate-800 font-medium line-clamp-1">{milestones?.find(m => m.status !== 'completed')?.title || '（暂无未完成里程碑）'}</div>
+                </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Mission & Vision & Values */}
+        <section className="mb-12">
+          <div className="rounded-[28px] bg-white/70 backdrop-blur-xl border border-white/60 shadow-[0_16px_50px_rgba(15,23,42,0.08)] overflow-hidden">
+            <div className="px-6 sm:px-8 py-6 sm:py-7">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.18em]">组织底座</div>
+                  <h2 className="mt-2 text-[18px] sm:text-[20px] font-semibold tracking-tight">使命 · 愿景 · 价值观</h2>
+                </div>
+                <div className="text-[12px] text-slate-500">用于对齐每一次讨论与交付的判断标准</div>
+              </div>
+            </div>
+
+            <div className="h-px bg-gradient-to-r from-transparent via-slate-900/[0.08] to-transparent" />
+
+            <div className="px-6 sm:px-8 py-6 sm:py-7">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10">
+                {/* Left: Mission & Vision */}
+                <div className="lg:col-span-8 space-y-8">
+                  {/* Mission */}
+                  <div className="rounded-2xl bg-white/70 border border-slate-900/[0.06] p-5 sm:p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-sm">
+                        <Target className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.18em]">Mission</div>
+                        <div className="text-[13px] text-slate-500">我们为什么存在</div>
+                      </div>
+                    </div>
+                    <p className="text-[18px] sm:text-[20px] font-medium text-slate-900 leading-relaxed max-w-[60ch]">
+                      {selectedClient?.mission || '（请在后台为该客户填写 Mission）'}
+                    </p>
+                  </div>
+
+                  {/* Vision */}
+                  <div className="rounded-2xl bg-white/70 border border-slate-900/[0.06] p-5 sm:p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center shadow-sm">
+                        <Rocket className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.18em]">Vision</div>
+                        <div className="text-[13px] text-slate-500">我们要到达哪里</div>
+                      </div>
+                    </div>
+                    <p className="text-[18px] sm:text-[20px] font-medium text-slate-900 leading-relaxed max-w-[60ch]">
+                      {selectedClient?.vision || '（请在后台为该客户填写 Vision）'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right: Values */}
+                <div className="lg:col-span-4">
+                  <div className="rounded-2xl bg-white/70 border border-slate-900/[0.06] p-5 sm:p-6 h-full">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-sm">
+                        <Star className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.18em]">Values</div>
+                        <div className="text-[13px] text-slate-500">当我们分歧时如何决策</div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2.5">
+                      {(selectedClient?.values && selectedClient.values.length > 0 ? selectedClient.values : ['深度陪伴', '系统思维', '价值共创', '长期主义']).map((value, idx) => (
+                        <div
+                          key={idx}
+                          className="px-4 py-2 rounded-full bg-white/90 border border-slate-900/[0.08] text-[13px] font-medium text-slate-700 shadow-sm hover:shadow-md hover:shadow-slate-900/5 transition-all duration-200 cursor-default"
+                        >
+                          {value}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Milestones Timeline */}
+        <div className="mb-12">
+          <h2 className="text-[18px] font-semibold text-slate-800 mb-6">战略里程碑</h2>
+          <div className="bg-white rounded-2xl border border-slate-100 p-6 sm:p-8 overflow-x-auto">
+            <MilestoneTimeline 
+              milestones={milestones}
+              onMilestoneClick={setSelectedMilestone}
+            />
           </div>
         </div>
 
@@ -1456,63 +1582,6 @@ export function StrategyCompanionPage({ onNavigate }: { onNavigate?: (page: stri
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-
-        {/* Mission & Vision & Values */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 mb-12">
-          {/* Left: Mission & Vision */}
-          <div className="lg:col-span-8 space-y-8">
-            {/* Mission */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-blue-500" />
-                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Mission</span>
-              </div>
-              <p className="text-[20px] font-medium text-slate-800 leading-relaxed max-w-[52ch]">
-                {selectedClient?.mission || '（请在后台为该客户填写 Mission）'}
-              </p>
-            </div>
-
-            {/* Vision */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Rocket className="w-4 h-4 text-indigo-500" />
-                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Vision</span>
-              </div>
-              <p className="text-[20px] font-medium text-slate-800 leading-relaxed max-w-[52ch]">
-                {selectedClient?.vision || '（请在后台为该客户填写 Vision）'}
-              </p>
-            </div>
-          </div>
-
-          {/* Right: Values */}
-          <div className="lg:col-span-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Star className="w-4 h-4 text-amber-500" />
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Values</span>
-            </div>
-            <div className="flex flex-wrap gap-2.5">
-              {(selectedClient?.values && selectedClient.values.length > 0 ? selectedClient.values : ['深度陪伴', '系统思维', '价值共创', '长期主义']).map((value, idx) => (
-                <div 
-                  key={idx}
-                  className="px-4 py-2 rounded-full bg-white border border-slate-100 text-[14px] font-medium text-slate-700 hover:shadow-md hover:shadow-slate-100/50 transition-all duration-200 cursor-default"
-                >
-                  {value}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Milestones Timeline */}
-        <div className="mb-12">
-          <h2 className="text-[18px] font-semibold text-slate-800 mb-6">战略里程碑</h2>
-          <div className="bg-white rounded-2xl border border-slate-100 p-6 sm:p-8 overflow-x-auto">
-            <MilestoneTimeline 
-              milestones={milestones}
-              onMilestoneClick={setSelectedMilestone}
-            />
           </div>
         </div>
 

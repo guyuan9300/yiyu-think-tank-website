@@ -18,22 +18,19 @@ import {
 import {
   getReports, saveReport, deleteReport as deleteReportFromService,
   getInsights, saveInsight, deleteInsight as deleteInsightFromService,
+  getMethodologies, saveMethodology, deleteMethodology as deleteMethodologyFromService,
   getBooks, saveBook, deleteBook as deleteBookFromService,
   getCategories, getUsedTags, addUsedTag, calculateReadTime,
   getComments, updateCommentStatus, replyComment, deleteComment,
-  type Report, type InsightArticle, type Book, type Category, type Comment
+  type Report, type InsightArticle, type Methodology, type Book, type Category, type Comment,
+  type ResourceTopic
 } from '../lib/dataService';
+
+const RESOURCE_TOPICS: ResourceTopic[] = ['战略', '业务设计', '组织', 'AI 技术'];
+
 import { isValidPdfFile, formatFileSize } from '../lib/pdfUtils';
 import { SettingsPage } from './SettingsPage';
-import { ArticleEditor, type ArticleEditorValue } from './ArticleEditor';
-
-// PDF 封面抓取（第一页渲染为图片）
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
-// Vite: 将 worker 作为 URL 引入
-import pdfWorkerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-
 import { generateCoverImage, getHfModel, getHfToken, setHfModel, setHfToken } from '../lib/hfImageGen';
-import { fileToCompressedDataUrl } from '../lib/imageCompress';
 import { UserManagementPage } from './UserManagementPage';
 import AdminStrategyCompanionPage from './AdminStrategyCompanionPage';
 import {
@@ -59,44 +56,6 @@ interface MenuItem {
   badge?: number;
 }
 
-// 初始化 PDF.js worker（只需设置一次）
-GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
-
-async function extractPdfCoverAndPagesFromData(data: ArrayBuffer): Promise<{ coverDataUrl: string; numPages: number }> {
-  const loadingTask = getDocument({ data });
-  const pdf = await loadingTask.promise;
-
-  const page = await pdf.getPage(1);
-  // 轻量清晰：按设备像素比适配一下
-  const scale = Math.min(2, Math.max(1.25, (typeof window !== 'undefined' ? window.devicePixelRatio : 1)));
-  const viewport = page.getViewport({ scale });
-
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('canvas 2d context unavailable');
-
-  canvas.width = Math.floor(viewport.width);
-  canvas.height = Math.floor(viewport.height);
-
-  await page.render({ canvasContext: ctx as any, viewport, canvas: canvas as any }).promise;
-  const coverDataUrl = canvas.toDataURL('image/png');
-
-  return { coverDataUrl, numPages: pdf.numPages };
-}
-
-async function extractPdfCoverAndPages(file: File): Promise<{ coverDataUrl: string; numPages: number }> {
-  const data = await file.arrayBuffer();
-  return await extractPdfCoverAndPagesFromData(data);
-}
-
-async function extractPdfCoverAndPagesFromUrl(url: string): Promise<{ coverDataUrl: string; numPages: number }> {
-  const full = url.startsWith('http') ? url : `${window.location.origin}${url}`;
-  const resp = await fetch(full);
-  if (!resp.ok) throw new Error(`fetch PDF failed: ${resp.status}`);
-  const data = await resp.arrayBuffer();
-  return await extractPdfCoverAndPagesFromData(data);
-}
-
 export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps) {
   const [activeMenu, setActiveMenu] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -111,6 +70,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
   // 内容管理状态 - 使用dataService的真实数据
   const [insights, setInsights] = useState<InsightArticle[]>([]);
+  const [methodologies, setMethodologies] = useState<Methodology[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -128,9 +88,10 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   
   // 表单状态
   const [showInsightForm, setShowInsightForm] = useState(false);
+  const [showMethodologyForm, setShowMethodologyForm] = useState(false);
   const [showReportForm, setShowReportForm] = useState(false);
   const [showBookForm, setShowBookForm] = useState(false);
-  const [editingItem, setEditingItem] = useState<Report | InsightArticle | Book | null>(null);
+  const [editingItem, setEditingItem] = useState<Report | InsightArticle | Methodology | Book | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   
@@ -141,8 +102,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const [calculatedReadTime, setCalculatedReadTime] = useState<string>('');
   const [reportFile, setReportFile] = useState<File | null>(null);
   const [reportStatus, setReportStatus] = useState<'draft' | 'published'>('published');
-  // If enabled, selecting a PDF will auto-extract page 1 as cover.
-  const [useFirstPageAsCover, setUseFirstPageAsCover] = useState(true);
   const coverInputRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const reportFileInputRef = useRef<HTMLInputElement>(null);
@@ -154,6 +113,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     const loadData = () => {
       setReports(getReports());
       setInsights(getInsights());
+      setMethodologies(getMethodologies());
       setBooks(getBooks());
       setCategories(getCategories());
       setUsedTags(getUsedTags());
@@ -270,6 +230,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const refreshAllData = useCallback(() => {
     setReports(getReports());
     setInsights(getInsights());
+    setMethodologies(getMethodologies());
     setBooks(getBooks());
     setCategories(getCategories());
     setUsedTags(getUsedTags());
@@ -283,7 +244,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     { id: 'insights', label: '洞察文章', icon: <FileText className="w-5 h-5" /> },
     { id: 'reports', label: '报告管理', icon: <Folder className="w-5 h-5" /> },
     { id: 'books', label: '书籍管理', icon: <BookOpen className="w-5 h-5" /> },
-    { id: 'categories', label: '分类管理', icon: <Tag className="w-5 h-5" /> },
+    { id: 'methodologies', label: '益语方法论', icon: <Tag className="w-5 h-5" /> },
     { id: 'strategy-companion', label: '战略客户', icon: <Target className="w-5 h-5" /> },
     { id: 'invite-codes', label: '邀请码管理', icon: <Gift className="w-5 h-5" /> },
     { id: 'membership', label: '会员管理', icon: <Crown className="w-5 h-5" /> },
@@ -443,31 +404,15 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     reportFileInputRef.current?.click();
   };
 
-  // 处理报告文件选择（PDF）：自动解析页数 + 抓取第一页作为封面（base64）
-  const handleReportFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 处理报告文件选择
+  const handleReportFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!isValidPdfFile(file)) {
-      alert('请选择 PDF 格式的文件');
-      return;
-    }
-
-    setReportFile(file);
-
-    // 自动解析页数 + 可选抓取第一页作为封面（失败不阻断保存流程）
-    try {
-      const { coverDataUrl, numPages } = await extractPdfCoverAndPages(file);
-
-      if (useFirstPageAsCover) {
-        // 需求：勾选后强制用第一页作为封面（覆盖之前封面）
-        setCoverImage(coverDataUrl);
+    if (file) {
+      if (!isValidPdfFile(file)) {
+        alert('请选择 PDF 格式的文件');
+        return;
       }
-
-      // 页数：若页数还未填，则自动写入
-      setReportPages((prev) => (prev && prev > 0 ? prev : numPages));
-    } catch (err) {
-      console.warn('PDF 封面/页数解析失败，将继续使用手动封面/手动页数。', err);
+      setReportFile(file);
     }
   };
 
@@ -523,7 +468,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   // 同步站内内容 → 战略陪伴客户的「课程推荐」（dataServiceLocal.course_recommendations）
   const syncInternalCourseRecommendations = useCallback(
     async (params: {
-      internalType: 'article' | 'report' | 'book';
+      internalType: 'article' | 'report' | 'book' | 'methodology';
       internalId: string;
       title: string;
       selectedProjectIds: string[];
@@ -587,23 +532,36 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
+    const selectedTopics = (formData.getAll('topics') as string[])
+      .map(s => s.trim())
+      .filter(Boolean) as any;
+
+    const current = editingItem as Report | null;
+
     const reportData: Partial<Report> = {
-      id: editingItem ? (editingItem as Report).id : undefined,
-      title: formData.get('title') as string,
-      publisher: formData.get('publisher') as string,
-      category: formData.get('category') as string,
-      summary: formData.get('summary') as string,
-      tags: (formData.get('tags') as string)?.split(',').map(t => t.trim()).filter(Boolean) || [],
-      version: formData.get('version') as string,
+      id: current ? current.id : undefined,
+      // 必填项缺失时先用“待补充”占位
+      title: (formData.get('title') as string) || current?.title || '待补充',
+      publisher: (formData.get('publisher') as string) || current?.publisher || '待补充',
+      // 旧字段：分类/旧 tags 在切换期改为只读，不再从表单写入，避免继续制造混乱
+      category: current?.category || '待补充',
+      tags: current?.tags || [],
+      // 新字段：统一四类标签
+      topics: selectedTopics,
+      summary: (formData.get('summary') as string) || current?.summary || '待补充',
+      version: (formData.get('version') as string) || current?.version || 'v1.0',
       format: ['PDF'],
-      coverImage: coverImage || (editingItem as Report)?.coverImage,
-      pages: reportPages || (editingItem as Report)?.pages,
-      publishDate: formData.get('publishDate') as string,
-      status: reportStatus, // 使用状态变量而不是formData
+      // 必填项：封面缺失时用占位
+      coverImage: coverImage || current?.coverImage || 'images/placeholders/document.svg',
+      pages: reportPages || current?.pages,
+      // 用 publishDate 作为“修改时间/展示时间”的可编辑入口
+      publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
+      status: reportStatus,
       isHot: formData.get('isHot') === 'on',
+      showOnHome: formData.get('showOnHome') === 'on',
       // 报告文件信息
-      fileUrl: (formData.get('fileUrl') as string) || (reportFile ? reportFile.name : (editingItem as Report)?.fileUrl),
-      fileSize: reportFile ? reportFile.size : (editingItem as Report)?.fileSize,
+      fileUrl: reportFile ? reportFile.name : current?.fileUrl,
+      fileSize: reportFile ? reportFile.size : current?.fileSize,
     };
 
     const saved = saveReport(reportData);
@@ -642,6 +600,16 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       await syncInternalCourseRecommendations({ internalType: 'article', internalId: id, title: '', selectedProjectIds: [] });
       refreshAllData();
       setMessage({ type: 'success', text: '文章已删除' });
+    }
+  };
+
+  // 删除方法论
+  const handleDeleteMethodology = async (id: string) => {
+    if (window.confirm('确定要删除这条方法论吗？')) {
+      deleteMethodologyFromService(id);
+      await syncInternalCourseRecommendations({ internalType: 'methodology', internalId: id, title: '', selectedProjectIds: [] });
+      refreshAllData();
+      setMessage({ type: 'success', text: '方法论已删除' });
     }
   };
 
@@ -704,7 +672,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   };
 
   return (
-    <div className="h-screen w-screen bg-gray-50 flex overflow-hidden">
+    <div className="min-h-screen bg-gray-50 flex">
       {/* 移动端菜单遮罩 */}
       {isMobileMenuOpen && (
         <div 
@@ -718,7 +686,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         fixed lg:static inset-y-0 left-0 z-50
         bg-gradient-to-b from-gray-900 to-gray-800
         text-white transition-all duration-300 ease-in-out
-        h-full lg:h-screen flex flex-col
         ${sidebarOpen ? 'w-64' : 'w-20'}
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
@@ -741,7 +708,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         </div>
 
         {/* 菜单列表 */}
-        <nav className="flex-1 min-h-0 p-4 space-y-2 overflow-y-auto">
+        <nav className="p-4 space-y-2">
           {menuItems.map((item) => (
             <button
               key={item.id}
@@ -775,10 +742,20 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
           ))}
         </nav>
 
+        {/* 底部：退出按钮 */}
+        <div className="absolute bottom-4 left-0 right-0 px-4">
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-gray-700/50 hover:text-red-400 transition-all"
+          >
+            <LogOut className="w-5 h-5" />
+            {sidebarOpen && <span>退出登录</span>}
+          </button>
+        </div>
       </aside>
 
       {/* 主内容区 */}
-      <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-screen">
         {/* 顶部栏 */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
           <div className="flex items-center gap-4">
@@ -800,15 +777,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
           </div>
           
           <div className="flex items-center gap-4">
-            <button
-              onClick={onLogout}
-              className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
-              title="退出登录"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="text-sm font-medium">退出登录</span>
-            </button>
-
             <button
               onClick={onNavigateHome}
               className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white hover:bg-gray-800 transition-colors"
@@ -844,7 +812,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         </header>
 
         {/* 页面内容 */}
-        <main className="flex-1 min-h-0 p-6 overflow-auto">
+        <main className="flex-1 p-6 overflow-auto">
           {activeMenu === 'dashboard' && (
             <div className="space-y-6">
               {/* 消息提示 */}
@@ -1075,6 +1043,112 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                     <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                     <p>暂无文章</p>
                     <p className="text-sm mt-2">点击上方按钮添加新文章</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 益语方法论管理 */}
+          {activeMenu === 'methodologies' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                <div className="flex flex-wrap gap-4 items-center justify-between">
+                  <div className="flex flex-wrap gap-4 items-center flex-1">
+                    <div className="relative flex-1 min-w-64">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="搜索方法论..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setEditingItem(null);
+                      setSyncClientIds([]);
+                      setShowMethodologyForm(true);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors"
+                  >
+                    <Plus className="w-5 h-5" />
+                    添加方法论
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标题</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">修改时间</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {filterContent(methodologies).map((item) => (
+                        <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div>
+                              <p className="font-medium text-gray-900">{item.title}</p>
+                              <p className="text-sm text-gray-500 truncate max-w-xs">{item.excerpt}</p>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.publishDate}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              item.status === 'published' ? 'bg-green-100 text-green-700' :
+                              item.status === 'draft' ? 'bg-amber-100 text-amber-700' :
+                              'bg-gray-100 text-gray-600'
+                            }`}>
+                              {item.status === 'published' ? '已发布' : item.status === 'draft' ? '草稿' : '已归档'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <button
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-blue-600"
+                                onClick={() => {
+                                  setEditingItem(item as any);
+                                  setShowMethodologyForm(true);
+                                }}
+                                title="编辑"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-red-500"
+                                onClick={() => {
+                                  if (window.confirm('确定要删除这条方法论吗？')) {
+                                    deleteMethodologyFromService(item.id);
+                                    refreshAllData();
+                                    setMessage({ type: 'success', text: '方法论已删除' });
+                                  }
+                                }}
+                                title="删除"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {filterContent(methodologies).length === 0 && (
+                  <div className="p-12 text-center text-gray-500">
+                    <Tag className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p>暂无方法论</p>
+                    <p className="text-sm mt-2">点击上方按钮添加新方法论</p>
                   </div>
                 )}
               </div>
@@ -1411,85 +1485,17 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
             </div>
           )}
 
-          {/* 分类管理 */}
+          {/* 分类管理（已停用）：统一标签体系切换中，避免继续产生旧分类 */}
           {activeMenu === 'categories' && (
             <div className="space-y-6">
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold text-gray-900">分类管理</h2>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors">
-                    <Plus className="w-5 h-5" />
-                    添加分类
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* 洞察分类 */}
-                  <div className="border border-gray-200 rounded-xl p-4">
-                    <h3 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-blue-600" />
-                      洞察文章分类
-                    </h3>
-                    <div className="space-y-2">
-                      {categories.filter(c => c.type === 'insight').map(cat => (
-                        <div key={cat.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                          <span>{cat.name}</span>
-                          <div className="flex gap-1">
-                            <button className="p-1 hover:bg-gray-200 rounded">
-                              <Edit className="w-4 h-4 text-gray-500" />
-                            </button>
-                            <button className="p-1 hover:bg-gray-200 rounded">
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* 报告分类 */}
-                  <div className="border border-gray-200 rounded-xl p-4">
-                    <h3 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
-                      <Folder className="w-5 h-5 text-green-600" />
-                      报告分类
-                    </h3>
-                    <div className="space-y-2">
-                      {categories.filter(c => c.type === 'report').map(cat => (
-                        <div key={cat.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                          <span>{cat.name}</span>
-                          <div className="flex gap-1">
-                            <button className="p-1 hover:bg-gray-200 rounded">
-                              <Edit className="w-4 h-4 text-gray-500" />
-                            </button>
-                            <button className="p-1 hover:bg-gray-200 rounded">
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* 书籍分类 */}
-                  <div className="border border-gray-200 rounded-xl p-4">
-                    <h3 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
-                      <BookOpen className="w-5 h-5 text-purple-600" />
-                      书籍分类
-                    </h3>
-                    <div className="space-y-2">
-                      {categories.filter(c => c.type === 'book').map(cat => (
-                        <div key={cat.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                          <span>{cat.name}</span>
-                          <div className="flex gap-1">
-                            <button className="p-1 hover:bg-gray-200 rounded">
-                              <Edit className="w-4 h-4 text-gray-500" />
-                            </button>
-                            <button className="p-1 hover:bg-gray-200 rounded">
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-2xl p-6">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 mt-0.5" />
+                  <div>
+                    <div className="font-semibold">分类管理已停用</div>
+                    <div className="text-sm mt-1">
+                      当前正在切换到统一的四类标签体系（战略 / 业务设计 / 组织 / AI 技术）。
+                      为避免新增旧分类导致数据混乱，分类管理暂时不开放编辑。
                     </div>
                   </div>
                 </div>
@@ -1980,7 +1986,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setCalculatedReadTime('');
                 setReportFile(null);
                 setReportStatus('published');
-                setUseFirstPageAsCover(true);
               }}
               onSave={handleSaveReport}
               fileInputRef={fileInputRef}
@@ -2001,8 +2006,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               reportFileInputRef={reportFileInputRef}
               handleReportFileButtonClick={handleReportFileButtonClick}
               handleReportFileSelect={handleReportFileSelect}
-              useFirstPageAsCover={useFirstPageAsCover}
-              setUseFirstPageAsCover={setUseFirstPageAsCover}
             />
           )}
 
@@ -2018,55 +2021,101 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               }}
               onSave={async (e: React.FormEvent<HTMLFormElement>) => {
                 e.preventDefault();
-                try {
-                  const formData = new FormData(e.currentTarget);
-                  const tags = (formData.get('tags') as string)?.split(',').map(t => t.trim()).filter(Boolean) || [];
+                const formData = new FormData(e.currentTarget);
 
-                  const articleData: Partial<InsightArticle> = {
-                    id: editingItem ? (editingItem as InsightArticle).id : undefined,
-                    title: formData.get('title') as string,
-                    excerpt: formData.get('excerpt') as string,
-                    content: (formData.get('content') as string) || '',
-                    contentJson: (() => {
-                      const raw = formData.get('contentJson') as string;
-                      if (!raw) return undefined;
-                      try { return JSON.parse(raw); } catch { return undefined; }
-                    })(),
-                    contentHtml: (formData.get('contentHtml') as string) || undefined,
-                    contentText: (formData.get('contentText') as string) || undefined,
-                    category: formData.get('category') as string,
-                    tags: tags,
-                    coverImage: (formData.get('coverImage') as string) || (editingItem as any)?.coverImage,
-                    author: formData.get('author') as string,
-                    readTime: parseInt(formData.get('readTime') as string) || 10,
-                    publishDate: formData.get('publishDate') as string,
-                    status: formData.get('status') as 'draft' | 'published',
-                    featured: formData.get('featured') === 'on',
-                    showOnHome: formData.get('showOnHome') === 'on',
+                const selectedTopics = (formData.getAll('topics') as string[]).map(s => s.trim()).filter(Boolean) as any;
+                const current = editingItem as InsightArticle | null;
 
-                    // Share settings (WeChat Moments etc.)
-                    shareEnabled: formData.get('shareEnabled') === 'on',
-                    shareSlug: (formData.get('shareSlug') as string) || undefined,
-                    shareTitle: (formData.get('shareTitle') as string) || undefined,
-                    shareDescription: (formData.get('shareDescription') as string) || undefined,
-                    shareImage: (formData.get('shareImage') as string) || undefined,
-                  };
+                const articleData: Partial<InsightArticle> = {
+                  id: current ? current.id : undefined,
+                  title: (formData.get('title') as string) || current?.title || '待补充',
+                  excerpt: (formData.get('excerpt') as string) || current?.excerpt || '待补充',
+                  content: (formData.get('content') as string) || current?.content || '',
+                  category: current?.category || '待补充',
+                  tags: current?.tags || [],
+                  topics: selectedTopics,
+                  author: (formData.get('author') as string) || current?.author || '益语智库',
+                  readTime: parseInt(formData.get('readTime') as string) || current?.readTime || 10,
+                  publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
+                  status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
+                  featured: formData.get('featured') === 'on',
+                  showOnHome: formData.get('showOnHome') === 'on',
+                  coverImage: (current as any)?.coverImage || 'images/placeholders/document.svg',
 
-                  const saved = saveInsight(articleData);
-                  await syncInternalCourseRecommendations({
-                    internalType: 'article',
-                    internalId: saved.id,
-                    title: saved.title,
-                    selectedProjectIds: syncClientIds,
-                  });
-                  refreshAllData();
-                  setShowInsightForm(false);
-                  setEditingItem(null);
-                  setMessage({ type: 'success', text: '文章已保存，前台洞察页面可见！' });
-                } catch (err: any) {
-                  console.error(err);
-                  setMessage({ type: 'error', text: '保存失败：' + (err?.message || String(err)) });
-                }
+                  // Share settings (WeChat Moments etc.)
+                  shareEnabled: formData.get('shareEnabled') === 'on',
+                  shareSlug: (formData.get('shareSlug') as string) || undefined,
+                  shareTitle: (formData.get('shareTitle') as string) || undefined,
+                  shareDescription: (formData.get('shareDescription') as string) || undefined,
+                  shareImage: (formData.get('shareImage') as string) || undefined,
+                };
+
+                const saved = saveInsight(articleData);
+                await syncInternalCourseRecommendations({
+                  internalType: 'article',
+                  internalId: saved.id,
+                  title: saved.title,
+                  selectedProjectIds: syncClientIds,
+                });
+                refreshAllData();
+                setShowInsightForm(false);
+                setEditingItem(null);
+                setMessage({ type: 'success', text: '文章已保存，前台洞察页面可见！' });
+              }}
+              handleAddTag={handleAddTag}
+              handleRemoveTag={handleRemoveTag}
+              strategyClients={strategyClients}
+              syncClientIds={syncClientIds}
+              setSyncClientIds={setSyncClientIds}
+            />
+          )}
+
+          {/* 添加/编辑方法论表单模态框 */}
+          {showMethodologyForm && (
+            <InsightFormModal
+              editingItem={editingItem as any}
+              categories={[]}
+              usedTags={usedTags}
+              onClose={() => {
+                setShowMethodologyForm(false);
+                setEditingItem(null);
+              }}
+              onSave={async (e: React.FormEvent<HTMLFormElement>) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+
+                const selectedTopics = (formData.getAll('topics') as string[]).map(s => s.trim()).filter(Boolean) as any;
+                const current = editingItem as Methodology | null;
+
+                const data: Partial<Methodology> = {
+                  id: current ? current.id : undefined,
+                  title: (formData.get('title') as string) || current?.title || '待补充',
+                  excerpt: (formData.get('excerpt') as string) || current?.excerpt || '待补充',
+                  content: (formData.get('content') as string) || current?.content || '',
+                  category: current?.category || '方法论',
+                  tags: current?.tags || [],
+                  topics: selectedTopics,
+                  author: (formData.get('author') as string) || current?.author || '益语智库',
+                  readTime: parseInt(formData.get('readTime') as string) || current?.readTime || 10,
+                  publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
+                  status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
+                  featured: formData.get('featured') === 'on',
+                  showOnHome: formData.get('showOnHome') === 'on',
+                  coverImage: (current as any)?.coverImage || 'images/placeholders/document.svg',
+                };
+
+                const saved = saveMethodology(data);
+                await syncInternalCourseRecommendations({
+                  internalType: 'methodology',
+                  internalId: saved.id,
+                  title: saved.title,
+                  selectedProjectIds: syncClientIds,
+                });
+
+                refreshAllData();
+                setShowMethodologyForm(false);
+                setEditingItem(null);
+                setMessage({ type: 'success', text: '方法论已保存！' });
               }}
               handleAddTag={handleAddTag}
               handleRemoveTag={handleRemoveTag}
@@ -2090,25 +2139,29 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               onSave={async (e: React.FormEvent<HTMLFormElement>) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
-                const tags = (formData.get('tags') as string)?.split(',').map(t => t.trim()).filter(Boolean) || [];
-                
+                const selectedTopics = (formData.getAll('topics') as string[]).map(s => s.trim()).filter(Boolean) as any;
+
+                const current = editingItem as Book | null;
+
                 const bookData: Partial<Book> = {
-                  id: editingItem ? (editingItem as Book).id : undefined,
-                  title: formData.get('title') as string,
-                  author: formData.get('author') as string,
-                  description: formData.get('description') as string,
-                  abstract: formData.get('abstract') as string,
-                  category: formData.get('category') as string,
-                  tags: tags,
-                  pages: parseInt(formData.get('pages') as string) || 100,
-                  duration: formData.get('duration') as string,
-                  rating: parseFloat(formData.get('rating') as string) || 4.5,
-                  coverImage: bookCoverImage || (editingItem as Book)?.coverImage,
-                  coverColor: formData.get('coverColor') as string,
-                  fileUrl: (formData.get('fileUrl') as string) || (editingItem as Book as any)?.fileUrl,
-                  fileSize: (editingItem as Book as any)?.fileSize,
-                  publishDate: formData.get('publishDate') as string,
-                  status: formData.get('status') as 'draft' | 'published',
+                  id: current ? current.id : undefined,
+                  title: (formData.get('title') as string) || current?.title || '待补充',
+                  author: (formData.get('author') as string) || current?.author || '待补充',
+                  description: (formData.get('description') as string) || current?.description || '待补充',
+                  abstract: (formData.get('abstract') as string) || current?.abstract || '待补充',
+                  // legacy fields: read-only during transition
+                  category: current?.category || '待补充',
+                  tags: current?.tags || [],
+                  // new unified topics
+                  topics: selectedTopics,
+                  pages: parseInt(formData.get('pages') as string) || current?.pages || 100,
+                  duration: (formData.get('duration') as string) || current?.duration || '待补充',
+                  rating: parseFloat(formData.get('rating') as string) || current?.rating || 4.5,
+                  coverImage: bookCoverImage || current?.coverImage || 'images/placeholders/document.svg',
+                  coverColor: (formData.get('coverColor') as string) || current?.coverColor,
+                  publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
+                  status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
+                  showOnHome: formData.get('showOnHome') === 'on',
                 };
                 
                 const saved = saveBook(bookData);
@@ -2238,8 +2291,6 @@ interface ReportFormModalProps {
   reportFileInputRef: React.RefObject<HTMLInputElement>;
   handleReportFileButtonClick: () => void;
   handleReportFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  useFirstPageAsCover: boolean;
-  setUseFirstPageAsCover: React.Dispatch<React.SetStateAction<boolean>>;
   strategyClients: ClientProject[];
   syncClientIds: string[];
   setSyncClientIds: React.Dispatch<React.SetStateAction<string[]>>;
@@ -2272,8 +2323,6 @@ function ReportFormModal({
   reportFileInputRef,
   handleReportFileButtonClick,
   handleReportFileSelect,
-  useFirstPageAsCover,
-  setUseFirstPageAsCover,
   strategyClients,
   syncClientIds,
   setSyncClientIds,
@@ -2283,8 +2332,8 @@ function ReportFormModal({
   const [isExtractingCover, setIsExtractingCover] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
-  // 处理报告文件拖放
-  const handleFileDrop = async (e: React.DragEvent) => {
+  // 处理报告文件拖放 - 简化版本，不自动提取
+  const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingFile(false);
@@ -2300,21 +2349,6 @@ function ReportFormModal({
       }
 
       setReportFile(file);
-
-      // 自动抓取封面/页数（可选）
-      if (useFirstPageAsCover) {
-        try {
-          setIsExtractingCover(true);
-          const { coverDataUrl, numPages } = await extractPdfCoverAndPages(file);
-          setCoverImage(coverDataUrl);
-          setReportPages((prev) => (prev && prev > 0 ? prev : numPages));
-        } catch (err) {
-          console.warn('PDF 封面/页数解析失败（拖拽上传）', err);
-        } finally {
-          setIsExtractingCover(false);
-        }
-      }
-
       setUploadSuccess(true);
       setTimeout(() => setUploadSuccess(false), 3000);
     }
@@ -2355,42 +2389,37 @@ function ReportFormModal({
               封面图 <span className="text-gray-400 text-xs">(建议尺寸 1920x1080，16:9比例)</span>
             </label>
 
-            {/* 使用 PDF 首页作为封面（本地解析；不会上传 PDF 到服务器） */}
+            {/* AI 生成封面（使用 Hugging Face 免费额度；token 存在浏览器本地） */}
             <div className="flex flex-wrap items-center gap-3 mb-3">
-              <label className="inline-flex items-center gap-2 text-sm text-gray-700 select-none">
-                <input
-                  type="checkbox"
-                  checked={useFirstPageAsCover}
-                  onChange={(e) => setUseFirstPageAsCover(e.target.checked)}
-                  className="rounded text-purple-600 focus:ring-purple-500"
-                />
-                选择 PDF 第 1 页作为封面（推荐）
-              </label>
-
               <button
                 type="button"
-                className="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50"
+                className="px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors text-sm font-medium"
                 onClick={async () => {
                   try {
-                    const input = document.querySelector('input[name="fileUrl"]') as HTMLInputElement | null;
-                    const v = (input?.value || '').trim();
-                    if (!v) return alert('请先填写源文件 URL');
-                    setIsExtractingCover(true);
-                    const { coverDataUrl, numPages } = await extractPdfCoverAndPagesFromUrl(v);
-                    setCoverImage(coverDataUrl);
-                    setReportPages((prev) => (prev && prev > 0 ? prev : numPages));
-                    alert('✅ 已从源文件 URL 抓取第一页封面');
+                    const formEl = document.activeElement?.closest('form') as HTMLFormElement | null;
+                    // Best-effort: read title/excerpt/tags from current form fields
+                    const titleInput = document.querySelector('input[name="title"]') as HTMLInputElement | null;
+                    const summaryInput = document.querySelector('textarea[name="summary"]') as HTMLTextAreaElement | null;
+                    const tagsInput = document.querySelector('input[name="tags"]') as HTMLInputElement | null;
+
+                    const title = titleInput?.value || editingItem?.title || '报告封面';
+                    const excerpt = summaryInput?.value || editingItem?.summary || '';
+                    const tags = (tagsInput?.value || '').split(',').map(t => t.trim()).filter(Boolean);
+
+                    const dataUrl = await generateCoverImage({ title, excerpt, tags });
+                    setCoverImage(dataUrl);
+                    alert('✅ AI 封面已生成并填充（请记得保存报告）');
                   } catch (e: any) {
-                    alert('❌ 抓取失败：' + (e?.message || String(e)));
-                  } finally {
-                    setIsExtractingCover(false);
+                    alert('❌ AI 生成封面失败：' + (e?.message || String(e)) + '\n\n请先到「系统设置」填写 Hugging Face Token。');
                   }
                 }}
               >
-                从源文件 URL 抓取封面
+                AI 生成封面
               </button>
 
-              {isExtractingCover ? <span className="text-xs text-gray-500">抓取中…</span> : null}
+              <div className="text-xs text-gray-500">
+                当前模型：<code className="px-1 py-0.5 bg-gray-100 rounded">{getHfModel()}</code>
+              </div>
             </div>
 
             {coverImage ? (
@@ -2527,71 +2556,10 @@ function ReportFormModal({
                     选择PDF文件
                   </button>
                   
-                  <p className="text-xs mt-4 text-gray-500">💡 提示：勾选“选择 PDF 第 1 页作为封面”后，会自动抓取封面并尝试自动填页数</p>
+                  <p className="text-xs mt-4 text-gray-500">💡 提示：请先上传封面图，再输入页数</p>
                 </div>
               </div>
             )}
-          </div>
-
-          {/* 源文件链接（用于前台打开/下载） */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              源文件 URL <span className="text-gray-400 text-xs">(建议填写可公开访问的 PDF 链接)</span>
-            </label>
-
-            <input
-              type="url"
-              name="fileUrl"
-              placeholder="例如：https://example.com/your.pdf 或 /yiyu-think-tank-website/docs/xxx.pdf"
-              defaultValue={(() => {
-                const v = (editingItem as any)?.fileUrl as string | undefined;
-                // 历史数据可能只存了文件名；这种不算可访问 URL
-                if (!v) return '';
-                if (v.startsWith('http://') || v.startsWith('https://') || v.startsWith('/')) return v;
-                return '';
-              })()}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                className="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50"
-                onClick={() => {
-                  const input = document.querySelector('input[name="fileUrl"]') as HTMLInputElement | null;
-                  const v = (input?.value || '').trim();
-                  if (!v) return alert('请先填写源文件 URL');
-                  const full = v.startsWith('http') ? v : `${window.location.origin}${v}`;
-                  window.open(full, '_blank', 'noopener,noreferrer');
-                }}
-              >
-                打开源文件
-              </button>
-
-              <button
-                type="button"
-                className="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50"
-                onClick={async () => {
-                  const input = document.querySelector('input[name="fileUrl"]') as HTMLInputElement | null;
-                  const v = (input?.value || '').trim();
-                  if (!v) return alert('请先填写源文件 URL');
-                  const full = v.startsWith('http') ? v : `${window.location.origin}${v}`;
-                  try {
-                    await navigator.clipboard.writeText(full);
-                    alert('✅ 已复制完整链接');
-                  } catch {
-                    prompt('复制失败，请手动复制：', full);
-                  }
-                }}
-              >
-                复制完整链接
-              </button>
-            </div>
-
-            <p className="text-xs text-gray-500 mt-2">
-              说明：如果你把 URL 粘贴到飞书/其他页面里，可能会被当作“相对路径”导致打不开；用“复制完整链接”最稳。
-              GitHub Pages 静态站无法真正“上传并托管”PDF；你需要把 PDF 放到仓库 <code className="px-1 py-0.5 bg-gray-100 rounded">public/docs</code> 后发布。
-            </p>
           </div>
 
           <hr className="border-gray-200" />
@@ -2627,18 +2595,16 @@ function ReportFormModal({
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                分类
+                旧分类（已停用）
               </label>
-              <select
+              <input
+                type="text"
                 name="category"
-                defaultValue={editingItem?.category || ''}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
-              >
-                <option value="">请选择分类</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.name}>{cat.name}</option>
-                ))}
-              </select>
+                disabled
+                defaultValue={editingItem?.category || '（无）'}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
+              />
+              <p className="text-xs text-gray-500 mt-2">已切换到统一四类标签体系，此字段仅保留展示，避免继续制造混乱。</p>
             </div>
           </div>
           
@@ -2658,11 +2624,12 @@ function ReportFormModal({
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                发布日期
+                修改时间 <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 name="publishDate"
+                required
                 defaultValue={editingItem?.publishDate || new Date().toISOString().split('T')[0]}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
               />
@@ -2699,7 +2666,7 @@ function ReportFormModal({
               defaultValue={editingItem?.summary || ''}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
             />
-
+          </div>
 
           {/* 同步到战略陪伴客户 */}
           <div className="bg-green-50 border border-green-200 rounded-xl p-4">
@@ -2752,77 +2719,57 @@ function ReportFormModal({
               )}
             </div>
           </div>
-          </div>
-          
-          {/* 需求2：标签自动完成和历史记录 */}
+
+          {/* 统一四类标签（多选） */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              标签 <span className="text-gray-400 text-xs">(输入后按回车添加，支持点击历史标签快速添加)</span>
+              统一标签（四类） <span className="text-red-500">*</span>
+              <span className="text-gray-400 text-xs ml-2">(可多选)</span>
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {RESOURCE_TOPICS.map((t) => (
+                <label key={t} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="topics"
+                    value={t}
+                    defaultChecked={(editingItem as any)?.topics?.includes(t)}
+                    className="w-4 h-4 text-green-600 rounded"
+                  />
+                  <span className="text-sm text-gray-800">{t}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-2">旧“标签/分类”字段正在停用切换中，后续会移除。</p>
+          </div>
+
+          {/* 旧标签（已停用）：只读展示 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              旧标签（已停用）
             </label>
             <input
-              ref={tagInputRef}
               type="text"
               name="tags"
-              placeholder="输入标签后按回车，如：旅游"
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleAddTag(e.currentTarget.value, e.currentTarget, setTags);
-                }
-              }}
+              disabled
+              defaultValue={(editingItem as any)?.tags?.join(', ') || '（无）'}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
             />
-            
-            {/* 已添加的标签 */}
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-3">
-                {tags.map(tag => (
-                  <span 
-                    key={tag}
-                    className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full"
-                  >
+          </div>
+
+          {/* 历史使用的标签（旧标签体系的遗留，只读展示） */}
+          {usedTags.length > 0 && (
+            <div className="mt-3">
+              <p className="text-xs text-gray-500 mb-2">历史标签（只读展示）：</p>
+              <div className="flex flex-wrap gap-2">
+                {usedTags.slice(0, 10).map(tag => (
+                  <span key={tag} className="px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-500">
                     {tag}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(tag, setTags)}
-                      className="hover:text-green-900"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
                   </span>
                 ))}
               </div>
-            )}
-            
-            {/* 历史使用的标签 - 需求2：点击自动填充 */}
-            {usedTags.length > 0 && (
-              <div className="mt-3">
-                <p className="text-xs text-gray-500 mb-2">历史标签（点击添加）：</p>
-                <div className="flex flex-wrap gap-2">
-                  {usedTags.slice(0, 10).map(tag => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => {
-                        if (!tags.includes(tag)) {
-                          setTags(prev => [...prev, tag]);
-                          addUsedTag(tag);
-                        }
-                      }}
-                      className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                        tags.includes(tag)
-                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-100 text-gray-600 hover:bg-green-100 hover:text-green-700'
-                      }`}
-                      disabled={tags.includes(tag)}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
           
           <div className="grid grid-cols-2 gap-6">
             <div>
@@ -2959,18 +2906,6 @@ function InsightFormModal({
   const [tags, setTags] = useState<string[]>(editingItem?.tags || []);
   const tagInputRef = useRef<HTMLInputElement>(null);
 
-  // Cover image (DataURL or URL)
-  const [coverImage, setCoverImage] = useState<string | null>((editingItem as any)?.coverImage || null);
-  const coverInputRef = useRef<HTMLInputElement>(null);
-
-  const [insightEditorValue, setInsightEditorValue] = useState<ArticleEditorValue | null>(null);
-
-  useEffect(() => {
-    // Reset editor draft when switching items
-    setInsightEditorValue(null);
-    setCoverImage((editingItem as any)?.coverImage || null);
-  }, [editingItem?.id]);
-
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-auto">
       <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto my-8">
@@ -3002,36 +2937,56 @@ function InsightFormModal({
             />
           </div>
           
-          {/* 分类和作者 */}
+          {/* 旧分类和作者 */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                分类 <span className="text-red-500">*</span>
+                旧分类（已停用）
               </label>
-              <select
+              <input
+                type="text"
                 name="category"
-                required
-                defaultValue={editingItem?.category || ''}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
-              >
-                <option value="">请选择分类</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.name}>{cat.name}</option>
-                ))}
-              </select>
+                disabled
+                defaultValue={editingItem?.category || '（无）'}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
+              />
+              <p className="text-xs text-gray-500 mt-2">切换到统一四类标签体系中，此字段仅展示。</p>
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                作者
+                作者 <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 name="author"
                 placeholder="作者名称"
+                required
                 defaultValue={editingItem?.author || '益语智库'}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
+            </div>
+          </div>
+
+          {/* 统一四类标签（多选） */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              统一标签（四类） <span className="text-red-500">*</span>
+              <span className="text-gray-400 text-xs ml-2">(可多选)</span>
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {RESOURCE_TOPICS.map((t) => (
+                <label key={t} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="topics"
+                    value={t}
+                    defaultChecked={(editingItem as any)?.topics?.includes(t)}
+                    className="w-4 h-4 text-purple-600 rounded"
+                  />
+                  <span className="text-sm text-gray-800">{t}</span>
+                </label>
+              ))}
             </div>
           </div>
           
@@ -3049,99 +3004,19 @@ function InsightFormModal({
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
             />
           </div>
-
-          {/* 封面图片 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">文章封面</label>
-            <div className="flex items-start gap-4">
-              <div className="relative w-56 aspect-[4/3] rounded-2xl overflow-hidden border border-gray-200 bg-gradient-to-br from-purple-50 to-indigo-50">
-                {coverImage ? (
-                  <img src={coverImage} alt="文章封面" className="absolute inset-0 w-full h-full object-cover" />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
-                    <Image className="w-10 h-10" />
-                    <span className="mt-2 text-xs">未上传封面</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => coverInputRef.current?.click()}
-                    className="px-4 py-2 rounded-xl bg-purple-600 text-white text-sm hover:bg-purple-700"
-                  >
-                    上传封面图片
-                  </button>
-                  {coverImage ? (
-                    <button
-                      type="button"
-                      onClick={() => setCoverImage(null)}
-                      className="px-4 py-2 rounded-xl border text-sm hover:bg-gray-50"
-                    >
-                      清除
-                    </button>
-                  ) : null}
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  建议尺寸：1200×900 或 4:3；静态站 MVP 将以 base64 保存到 localStorage。
-                </p>
-              </div>
-            </div>
-
-            <input
-              ref={coverInputRef}
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              aria-label="上传文章封面图片文件"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                if (!file.type.startsWith('image/')) return;
-                try {
-                  const dataUrl = await fileToCompressedDataUrl(file, {
-                    maxWidth: 2520,
-                    maxHeight: 1440,
-                    mimeType: 'image/webp',
-                    quality: 0.86,
-                  });
-                  setCoverImage(dataUrl);
-                } catch (err) {
-                  console.error(err);
-                  // Fallback: try raw DataURL (may exceed quota later)
-                  const reader = new FileReader();
-                  reader.onload = (evt) => setCoverImage(evt.target?.result as string);
-                  reader.readAsDataURL(file);
-                }
-              }}
-            />
-            <input type="hidden" name="coverImage" value={coverImage || ''} />
-          </div>
           
           {/* 正文内容 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               文章正文
             </label>
-            {/* 公众号式正文编辑器（TipTap JSON） */}
-            <div>
-              <ArticleEditor
-                value={(editingItem as any)?.contentJson || null}
-                onChange={(v) => {
-                  setInsightEditorValue(v);
-                }}
-              />
-              {/* Hidden fields for submit (keep FormData flow) */}
-              <input type="hidden" name="content" value={insightEditorValue?.text || (editingItem?.content || '')} />
-              <input type="hidden" name="contentJson" value={insightEditorValue ? JSON.stringify(insightEditorValue.json) : ((editingItem as any)?.contentJson ? JSON.stringify((editingItem as any).contentJson) : '')} />
-              <input type="hidden" name="contentHtml" value={insightEditorValue?.html || (editingItem as any)?.contentHtml || ''} />
-              <input type="hidden" name="contentText" value={insightEditorValue?.text || (editingItem as any)?.contentText || ''} />
-              <p className="text-xs text-gray-500 mt-2">
-                支持：分段/标题/列表/引用/高亮/链接/图片插入（当前为静态站 MVP：图片以 base64 存储，后续可切 OSS）。
-              </p>
-            </div>
+            <textarea
+              name="content"
+              rows={8}
+              placeholder="请输入文章正文内容..."
+              defaultValue={editingItem?.content || ''}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none font-mono text-sm"
+            />
           </div>
           
 
@@ -3197,7 +3072,7 @@ function InsightFormModal({
               )}
             </div>
           </div>
-          {/* 阅读时间和发布日期 */}
+          {/* 阅读时间和修改时间 */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -3215,63 +3090,31 @@ function InsightFormModal({
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                发布日期
+                修改时间 <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 name="publishDate"
+                required
                 defaultValue={editingItem?.publishDate || new Date().toISOString().split('T')[0]}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
           </div>
           
-          {/* 标签 */}
+          {/* 旧标签（已停用）：只读展示 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              标签 <span className="text-gray-400 text-xs">(输入后按回车添加)</span>
+              旧标签（已停用）
             </label>
             <input
-              ref={tagInputRef}
               type="text"
               name="tags"
-              value={tags.join(',')}
-              onChange={() => {}} // 受控组件
-              className="hidden"
+              disabled
+              defaultValue={(editingItem?.tags || []).join(', ') || '（无）'}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
             />
-            <input
-              type="text"
-              placeholder="输入标签后按回车，如：数字化"
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  const input = e.currentTarget;
-                  handleAddTag(input.value, input, setTags);
-                }
-              }}
-            />
-            
-            {/* 已添加的标签 */}
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-3">
-                {tags.map(tag => (
-                  <span 
-                    key={tag}
-                    className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(tag, setTags)}
-                      className="hover:text-purple-900"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
+          </div>
             
             {/* 历史标签 */}
             {usedTags.length > 0 && (
@@ -3301,8 +3144,7 @@ function InsightFormModal({
                 </div>
               </div>
             )}
-          </div>
-          
+
           {/* 分享设置（用于微信朋友圈卡片） */}
           <div className="bg-green-50 border border-green-200 rounded-xl p-4">
             <div className="flex items-center justify-between">
@@ -3576,79 +3418,6 @@ function BookFormModal({
             )}
           </div>
 
-          {/* 源文件 URL（用于前台打开/下载 PDF） */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              源文件 URL <span className="text-gray-400 text-xs">(方案1：/yiyu-think-tank-website/docs/xxx.pdf)</span>
-            </label>
-            <input
-              type="url"
-              name="fileUrl"
-              placeholder="例如：/yiyu-think-tank-website/docs/what-is-power.pdf"
-              defaultValue={(() => {
-                const v = (editingItem as any)?.fileUrl as string | undefined;
-                if (!v) return '';
-                if (v.startsWith('http://') || v.startsWith('https://') || v.startsWith('/')) return v;
-                return '';
-              })()}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                className="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50"
-                onClick={() => {
-                  const input = document.querySelector('input[name="fileUrl"]') as HTMLInputElement | null;
-                  const v = (input?.value || '').trim();
-                  if (!v) return alert('请先填写源文件 URL');
-                  const full = v.startsWith('http') ? v : `${window.location.origin}${v}`;
-                  window.open(full, '_blank', 'noopener,noreferrer');
-                }}
-              >
-                打开源文件
-              </button>
-              <button
-                type="button"
-                className="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50"
-                onClick={async () => {
-                  const input = document.querySelector('input[name="fileUrl"]') as HTMLInputElement | null;
-                  const v = (input?.value || '').trim();
-                  if (!v) return alert('请先填写源文件 URL');
-                  const full = v.startsWith('http') ? v : `${window.location.origin}${v}`;
-                  try {
-                    await navigator.clipboard.writeText(full);
-                    alert('✅ 已复制完整链接');
-                  } catch {
-                    prompt('复制失败，请手动复制：', full);
-                  }
-                }}
-              >
-                复制完整链接
-              </button>
-              <button
-                type="button"
-                className="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50"
-                onClick={async () => {
-                  try {
-                    const input = document.querySelector('input[name="fileUrl"]') as HTMLInputElement | null;
-                    const v = (input?.value || '').trim();
-                    if (!v) return alert('请先填写源文件 URL');
-                    const { coverDataUrl } = await extractPdfCoverAndPagesFromUrl(v);
-                    setBookCoverImage(coverDataUrl);
-                    alert('✅ 已从源文件 URL 抓取第一页封面');
-                  } catch (e: any) {
-                    alert('❌ 抓取失败：' + (e?.message || String(e)));
-                  }
-                }}
-              >
-                从源文件 URL 抓取封面
-              </button>
-            </div>
-
-            <p className="text-xs text-gray-500 mt-2">说明：静态站不能真正上传并托管 PDF；必须填写一个已发布可访问的链接，前台才可下载/打开。</p>
-          </div>
-
           {/* 书名 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -3682,19 +3451,38 @@ function BookFormModal({
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                分类 <span className="text-red-500">*</span>
+                旧分类（已停用）
               </label>
-              <select
+              <input
+                type="text"
                 name="category"
-                required
-                defaultValue={editingItem?.category || ''}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
-              >
-                <option value="">请选择分类</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.name}>{cat.name}</option>
-                ))}
-              </select>
+                disabled
+                defaultValue={editingItem?.category || '（无）'}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
+              />
+              <p className="text-xs text-gray-500 mt-2">切换到统一四类标签体系中，此字段仅展示。</p>
+            </div>
+          </div>
+
+          {/* 统一四类标签（多选） */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              统一标签（四类） <span className="text-red-500">*</span>
+              <span className="text-gray-400 text-xs ml-2">(可多选)</span>
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {RESOURCE_TOPICS.map((t) => (
+                <label key={t} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="topics"
+                    value={t}
+                    defaultChecked={(editingItem as any)?.topics?.includes(t)}
+                    className="w-4 h-4 text-purple-600 rounded"
+                  />
+                  <span className="text-sm text-gray-800">{t}</span>
+                </label>
+              ))}
             </div>
           </div>
           
@@ -3773,7 +3561,7 @@ function BookFormModal({
             </div>
           </div>
           
-          {/* 封面颜色和发布日期 */}
+          {/* 封面颜色和修改时间 */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -3792,11 +3580,12 @@ function BookFormModal({
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                发布日期
+                修改时间 <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 name="publishDate"
+                required
                 defaultValue={editingItem?.publishDate || new Date().toISOString().split('T')[0]}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
@@ -3856,82 +3645,35 @@ function BookFormModal({
               )}
             </div>
           </div>
-          {/* 标签 */}
+          {/* 旧标签（已停用）：只读展示 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              标签 <span className="text-gray-400 text-xs">(输入后按回车添加)</span>
+              旧标签（已停用）
             </label>
             <input
-              ref={tagInputRef}
               type="text"
               name="tags"
-              value={tags.join(',')}
-              onChange={() => {}} // 受控组件
-              className="hidden"
+              disabled
+              defaultValue={(editingItem?.tags || []).join(', ') || '（无）'}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
             />
-            <input
-              type="text"
-              placeholder="输入标签后按回车，如：战略管理"
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  const input = e.currentTarget;
-                  handleAddTag(input.value, input, setTags);
-                }
-              }}
-            />
-            
-            {/* 已添加的标签 */}
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-3">
-                {tags.map(tag => (
-                  <span 
-                    key={tag}
-                    className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full"
-                  >
+          </div>
+
+
+          {/* 历史标签（旧标签体系的遗留，只读展示） */}
+          {usedTags.length > 0 && (
+            <div className="mt-3">
+              <p className="text-xs text-gray-500 mb-2">历史标签（只读展示）：</p>
+              <div className="flex flex-wrap gap-2">
+                {usedTags.slice(0, 10).map(tag => (
+                  <span key={tag} className="px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-500">
                     {tag}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(tag, setTags)}
-                      className="hover:text-purple-900"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
                   </span>
                 ))}
               </div>
-            )}
-            
-            {/* 历史标签 */}
-            {usedTags.length > 0 && (
-              <div className="mt-3">
-                <p className="text-xs text-gray-500 mb-2">历史标签（点击添加）：</p>
-                <div className="flex flex-wrap gap-2">
-                  {usedTags.slice(0, 10).map(tag => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => {
-                        if (!tags.includes(tag)) {
-                          setTags(prev => [...prev, tag]);
-                          addUsedTag(tag);
-                        }
-                      }}
-                      className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                        tags.includes(tag)
-                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-100 text-gray-600 hover:bg-purple-100 hover:text-purple-700'
-                      }`}
-                      disabled={tags.includes(tag)}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
+
           
           {/* 状态 */}
           <div>

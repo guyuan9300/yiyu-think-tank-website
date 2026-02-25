@@ -6,13 +6,16 @@
 import defaultInsightsJson from '../content/defaultInsights.json';
 
 // 数据类型定义
+export type ResourceTopic = '战略' | '业务设计' | '组织' | 'AI 技术';
+
 export interface Report {
   id: string;
   title: string;
   publisher: string;
-  category: string;
+  category: string; // legacy (will be deprecated)
   summary: string;
-  tags: string[];
+  tags: string[];   // legacy (will be deprecated)
+  topics?: ResourceTopic[]; // unified topics (multi-select)
   version: string;
   format: string[];
   coverImage?: string;
@@ -33,24 +36,10 @@ export interface InsightArticle {
   id: string;
   title: string;
   excerpt: string;
-
-  /**
-   * Legacy content field (plain text or HTML). Kept for backward compatibility.
-   * New articles should prefer contentJson/contentHtml.
-   */
   content: string;
-
-  /** TipTap/ProseMirror JSON document. */
-  contentJson?: any;
-
-  /** Optional HTML snapshot for preview/render fallback (sanitized on render). */
-  contentHtml?: string;
-
-  /** Plain text snapshot for search/index. */
-  contentText?: string;
-
-  category: string;
-  tags: string[];
+  category: string; // legacy (will be deprecated)
+  tags: string[];   // legacy (will be deprecated)
+  topics?: ResourceTopic[]; // unified topics (multi-select)
   coverImage?: string;
   author: string;
   readTime: number;
@@ -78,18 +67,17 @@ export interface Book {
   author: string;
   description: string;
   abstract: string;
-  category: string;
-  tags: string[];
+  category: string; // legacy (will be deprecated)
+  tags: string[];   // legacy (will be deprecated)
+  topics?: ResourceTopic[]; // unified topics (multi-select)
   pages: number;
   duration: string;
   rating: number;
   coverImage?: string;
   coverColor?: string;
-  /** Optional: publicly accessible PDF url (static-site scheme1: /yiyu-think-tank-website/docs/xxx.pdf) */
-  fileUrl?: string;
-  fileSize?: number;
   publishDate: string;
   status: 'draft' | 'published' | 'archived';
+  showOnHome: boolean; // 是否显示在首页（手动选择）
   views: number;
   reviews: number;
   createdAt: string;
@@ -108,6 +96,28 @@ export interface Category {
   type: 'insight' | 'report' | 'book';
   parentId?: string;
   sort: number;
+}
+
+// ========== 益语方法论（正文类资源，类似洞察文章） ==========
+export interface Methodology {
+  id: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  category: string; // legacy (kept for compatibility)
+  tags: string[];   // legacy (kept for compatibility)
+  topics?: ResourceTopic[];
+  coverImage?: string;
+  author: string;
+  readTime: number;
+  publishDate: string;
+  status: 'draft' | 'published' | 'archived';
+  featured: boolean;
+  showOnHome: boolean;
+  views: number;
+  likes: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Comment {
@@ -212,6 +222,7 @@ export interface ConsultRequest {
 const STORAGE_KEYS = {
   reports: 'yiyu_reports',
   insights: 'yiyu_insights',
+  methodologies: 'yiyu_methodologies',
   books: 'yiyu_books',
   tags: 'yiyu_tags',
   categories: 'yiyu_categories',
@@ -260,7 +271,6 @@ const initDefaultReports = (): Report[] => [
     tags: ['公益', '品牌', '组织系统', '培训'],
     version: 'v1.0',
     format: ['PDF'],
-    coverImage: '/yiyu-think-tank-website/images/placeholders/report-cover-blue.svg',
     fileUrl: '/yiyu-think-tank-website/docs/weiaiqianxing-training-20260105.pdf',
     fileSize: 31 * 1024 * 1024,
     pages: 74,
@@ -282,7 +292,6 @@ const initDefaultReports = (): Report[] => [
     tags: ['公益', '数字化', '行业洞察'],
     version: 'v2.1',
     format: ['PPT', 'PDF'],
-    coverImage: '/yiyu-think-tank-website/images/placeholders/report-cover-green.svg',
     publishDate: '2026-01-20',
     status: 'published',
     isHot: false,
@@ -446,6 +455,7 @@ const initDefaultBooks = (): Book[] => [
     coverColor: 'from-blue-600 to-indigo-800',
     publishDate: '2026-01-29',
     status: 'published',
+    showOnHome: false,
     views: 15680,
     reviews: 1234,
     createdAt: new Date().toISOString(),
@@ -457,26 +467,8 @@ const initDefaultBooks = (): Book[] => [
 const saveToStorage = (key: string, data: any) => {
   try {
     localStorage.setItem(key, JSON.stringify(data));
-  } catch (error: any) {
+  } catch (error) {
     console.error('Failed to save to localStorage:', error);
-
-    const name = error?.name || '';
-    const msg = String(error?.message || '');
-    const isQuota =
-      name === 'QuotaExceededError' ||
-      name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
-      /quota/i.test(msg) ||
-      /exceed/i.test(msg);
-
-    if (isQuota) {
-      throw new Error(
-        '保存失败：浏览器存储空间不足（localStorage 配额已满）。\n\n' +
-          '原因：封面/正文内图片使用 base64 存储会迅速占满空间。\n' +
-          '建议：换更小的图片、或减少正文内插图数量；我们也可以把图片改为压缩/外链存储。'
-      );
-    }
-
-    throw new Error('保存失败：无法写入浏览器本地存储。');
   }
 };
 
@@ -513,27 +505,7 @@ export const calculateReadTime = (pages: number): string => {
 
 // 获取所有报告
 export const getReports = (): Report[] => {
-  const reports = loadFromStorage(STORAGE_KEYS.reports, initDefaultReports());
-
-  // Migration: ensure every report has a coverImage so the UI never shows an empty cover.
-  // For static-site MVP, some existing reports (esp. older localStorage entries) may miss coverImage.
-  // We set a deterministic placeholder and persist back to storage.
-  let changed = false;
-  const patched = reports.map((r: Report, idx: number) => {
-    if (r.coverImage) return r;
-    changed = true;
-    const placeholder = idx % 2 === 0
-      ? '/yiyu-think-tank-website/images/placeholders/report-cover-blue.svg'
-      : '/yiyu-think-tank-website/images/placeholders/report-cover-green.svg';
-    return { ...r, coverImage: placeholder };
-  });
-
-  if (changed) {
-    saveToStorage(STORAGE_KEYS.reports, patched);
-    // no notifyDataChange here to avoid noisy loops; UI already polls.
-  }
-
-  return patched;
+  return loadFromStorage(STORAGE_KEYS.reports, initDefaultReports());
 };
 
 // 工具函数：触发数据变化事件
@@ -617,6 +589,73 @@ export const getInsights = (): InsightArticle[] => {
   return loadFromStorage(STORAGE_KEYS.insights, initDefaultInsights());
 };
 
+// ========== 益语方法论（正文类资源） ==========
+
+const initDefaultMethodologies = (): Methodology[] => [];
+
+export const getMethodologies = (): Methodology[] => {
+  return loadFromStorage(STORAGE_KEYS.methodologies, initDefaultMethodologies());
+};
+
+export const saveMethodology = (item: Partial<Methodology> | Methodology): Methodology => {
+  const list = getMethodologies();
+  const now = new Date().toISOString();
+
+  const pickUpdatedAt = (incoming?: string) => (incoming && String(incoming).trim() ? String(incoming).trim() : now);
+
+  if ('id' in item && item.id) {
+    const index = list.findIndex(r => r.id === item.id);
+    if (index !== -1) {
+      list[index] = {
+        ...list[index],
+        ...item,
+        updatedAt: pickUpdatedAt((item as any).updatedAt),
+      } as Methodology;
+      saveToStorage(STORAGE_KEYS.methodologies, list);
+      notifyDataChange();
+      return list[index];
+    }
+  }
+
+  const newItem: Methodology = {
+    id: (item as any).id || `methodology_${Date.now()}`,
+    title: (item as any).title || '待补充',
+    excerpt: (item as any).excerpt || '待补充',
+    content: (item as any).content || '',
+    category: (item as any).category || '待补充',
+    tags: (item as any).tags || [],
+    topics: (item as any).topics || [],
+    coverImage: (item as any).coverImage,
+    author: (item as any).author || '益语智库',
+    readTime: (item as any).readTime || 8,
+    publishDate: (item as any).publishDate || new Date().toISOString().split('T')[0],
+    status: (item as any).status || 'draft',
+    featured: (item as any).featured || false,
+    showOnHome: (item as any).showOnHome || false,
+    views: (item as any).views || 0,
+    likes: (item as any).likes || 0,
+    createdAt: (item as any).createdAt || now,
+    updatedAt: pickUpdatedAt((item as any).updatedAt),
+  };
+
+  list.unshift(newItem);
+  saveToStorage(STORAGE_KEYS.methodologies, list);
+  notifyDataChange();
+  updateUsedTags(newItem.tags);
+  return newItem;
+};
+
+export const deleteMethodology = (id: string): boolean => {
+  const list = getMethodologies();
+  const filtered = list.filter(r => r.id !== id);
+  if (filtered.length !== list.length) {
+    saveToStorage(STORAGE_KEYS.methodologies, filtered);
+    notifyDataChange();
+    return true;
+  }
+  return false;
+};
+
 export const saveInsight = (article: Partial<InsightArticle> | InsightArticle): InsightArticle => {
   const articles = getInsights();
   const now = new Date().toISOString();
@@ -639,10 +678,7 @@ export const saveInsight = (article: Partial<InsightArticle> | InsightArticle): 
     id: article.id || `insight_${Date.now()}`,
     title: article.title || '无标题文章',
     excerpt: article.excerpt || '',
-    content: (article as any).content || '',
-    contentJson: (article as any).contentJson,
-    contentHtml: (article as any).contentHtml,
-    contentText: (article as any).contentText,
+    content: article.content || '',
     category: article.category || '行业洞察',
     tags: article.tags || [],
     coverImage: article.coverImage,
@@ -717,6 +753,7 @@ export const saveBook = (book: Partial<Book> | Book): Book => {
     coverColor: book.coverColor || 'from-blue-600 to-indigo-800',
     publishDate: book.publishDate || new Date().toISOString().split('T')[0],
     status: book.status || 'published',
+    showOnHome: (book as any).showOnHome || false,
     views: book.views || 0,
     reviews: book.reviews || 0,
     createdAt: book.createdAt || now,
@@ -1049,6 +1086,7 @@ export const exportAllData = (): string => {
   const data = {
     reports: getReports(),
     insights: getInsights(),
+    methodologies: getMethodologies(),
     books: getBooks(),
     categories: getCategories(),
     tags: getTags(),
@@ -1073,6 +1111,7 @@ export const importAllData = (jsonData: string): boolean => {
     // 导入各类数据
     if (data.reports) saveToStorage(STORAGE_KEYS.reports, data.reports);
     if (data.insights) saveToStorage(STORAGE_KEYS.insights, data.insights);
+    if (data.methodologies) saveToStorage(STORAGE_KEYS.methodologies, data.methodologies);
     if (data.books) saveToStorage(STORAGE_KEYS.books, data.books);
     if (data.categories) saveToStorage(STORAGE_KEYS.categories, data.categories);
     if (data.tags) saveToStorage(STORAGE_KEYS.tags, data.tags);
