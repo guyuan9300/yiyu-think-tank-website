@@ -193,6 +193,7 @@ export default function App() {
     } else if (page === 'book-library') {
       setCurrentPage('book-library');
     } else if (page === 'methodology-library') {
+      setSelectedDetailId(bookId || '');
       setCurrentPage('methodology-library');
     } else if (page === 'strategy-companion') {
       setCurrentPage('strategy-companion');
