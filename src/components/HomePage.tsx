@@ -242,11 +242,12 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
     desc: string;
     icon: React.ComponentType<{ className?: string }>;
     gradient: string;
+    accent: string;
   }> = [
-    { id: '战略', title: '战略', desc: '把方向讲清楚，把取舍做出来', icon: Target, gradient: 'from-primary/18 to-primary/6' },
-    { id: '业务设计', title: '业务设计', desc: '把想法变成可交付、可复用的方案', icon: Lightbulb, gradient: 'from-accent/18 to-accent/6' },
-    { id: '组织', title: '组织', desc: '让人和事跑起来：责任清楚、节奏稳定', icon: Users, gradient: 'from-success/18 to-success/6' },
-    { id: 'AI 技术', title: 'AI 技术', desc: '把 AI 变成省力的小工具和稳定的工作流', icon: Zap, gradient: 'from-secondary/18 to-secondary/6' },
+    { id: '战略', title: '战略', desc: '把方向讲清楚，把取舍做出来', icon: Target, gradient: 'from-primary/18 to-primary/6', accent: 'rgba(37, 99, 235, 0.95)' },
+    { id: '业务设计', title: '业务设计', desc: '把想法变成可交付、可复用的方案', icon: Lightbulb, gradient: 'from-fuchsia-500/18 to-fuchsia-500/6', accent: 'rgba(192, 38, 211, 0.95)' },
+    { id: '组织', title: '组织', desc: '让人和事跑起来：责任清楚、节奏稳定', icon: Users, gradient: 'from-emerald-500/18 to-emerald-500/6', accent: 'rgba(16, 185, 129, 0.95)' },
+    { id: 'AI 技术', title: 'AI 技术', desc: '把 AI 变成省力的小工具和稳定的工作流', icon: Zap, gradient: 'from-orange-500/18 to-orange-500/6', accent: 'rgba(249, 115, 22, 0.95)' },
   ];
 
   type LatestResource = {
@@ -316,6 +317,23 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
       .sort((a, b) => asDate(b.date) - asDate(a.date))
       .slice(0, 6);
   }, [latestTopic]);
+
+  const latestCounts = useMemo(() => {
+    const by: Record<string, number> = { '战略': 0, '业务设计': 0, '组织': 0, 'AI 技术': 0 };
+
+    const bump = (topics: any) => {
+      (topics || []).forEach((t: string) => {
+        if (t in by) by[t] += 1;
+      });
+    };
+
+    getInsights().filter((a) => a.status === 'published').forEach((a) => bump((a as any).topics));
+    getReports().filter((r) => r.status === 'published').forEach((r) => bump((r as any).topics));
+    getBooks().filter((b) => b.status === 'published').forEach((b) => bump((b as any).topics));
+    getMethodologies().filter((m) => m.status === 'published').forEach((m) => bump((m as any).topics));
+
+    return by;
+  }, []);
 
   const insights = homeInsights.map(i => ({
     id: i.id,
@@ -439,26 +457,40 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
                         key={c.id}
                         type="button"
                         onClick={() => setLatestTopic(c.id)}
-                        className={`relative text-left rounded-[18px] px-4 py-3.5 transition-all duration-300 outline-none focus:ring-2 focus:ring-primary/20 ${
+                        className={`relative text-left rounded-[18px] px-4 py-3.5 transition-all duration-300 outline-none focus:ring-2 focus:ring-primary/20 will-change-transform ${
                           active
-                            ? 'bg-white shadow-md border border-border/60'
-                            : 'bg-white/0 hover:bg-white/55 border border-transparent'
+                            ? 'bg-white shadow-md border border-border/60 scale-[1.01]'
+                            : 'bg-white/0 hover:bg-white/55 border border-transparent hover:-translate-y-0.5 hover:shadow-sm'
                         }`}
                       >
+                        {/* left accent bar */}
+                        <div
+                          className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full transition-all duration-300 ${
+                            active ? 'opacity-100' : 'opacity-0'
+                          }`}
+                          style={{ background: c.accent }}
+                        />
+
+                        {/* badge */}
+                        <div className="absolute right-3 top-3">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all duration-300 ${
+                              active
+                                ? 'bg-white text-foreground border-border/60'
+                                : 'bg-white/60 text-muted-foreground/70 border-border/40'
+                            }`}
+                            style={active ? { boxShadow: `0 6px 22px -14px ${c.accent}` } : undefined}
+                          >
+                            {latestCounts[c.id] ?? 0}
+                          </span>
+                        </div>
                         {/* active underline accent */}
                         <div
                           className={`absolute left-3 right-3 bottom-2 h-[2px] rounded-full transition-all duration-300 ${
                             active ? 'opacity-100' : 'opacity-0'
                           }`}
                           style={{
-                            background:
-                              c.id === '战略'
-                                ? 'linear-gradient(90deg, rgba(99,102,241,0.0), rgba(99,102,241,0.95), rgba(99,102,241,0.0))'
-                                : c.id === '业务设计'
-                                ? 'linear-gradient(90deg, rgba(236,72,153,0.0), rgba(236,72,153,0.9), rgba(236,72,153,0.0))'
-                                : c.id === '组织'
-                                ? 'linear-gradient(90deg, rgba(34,197,94,0.0), rgba(34,197,94,0.9), rgba(34,197,94,0.0))'
-                                : 'linear-gradient(90deg, rgba(14,165,233,0.0), rgba(14,165,233,0.9), rgba(14,165,233,0.0))',
+                            background: `linear-gradient(90deg, rgba(0,0,0,0), ${c.accent}, rgba(0,0,0,0))`,
                           }}
                         />
 
@@ -469,6 +501,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
                                 ? 'bg-white border-border/60'
                                 : 'bg-white/70 border-border/30'
                             }`}
+                            style={active ? { boxShadow: `0 18px 40px -28px ${c.accent}` } : undefined}
                           >
                             <div className={`w-9 h-9 rounded-[13px] bg-gradient-to-br ${c.gradient} flex items-center justify-center`}>
                               <Icon className={`w-5 h-5 transition-all duration-300 ${active ? 'text-foreground' : 'text-foreground/75'}`} />
@@ -531,7 +564,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
                     if (onNavigate) onNavigate('methodology-library' as any, r.id);
                     else window.location.assign(`${window.location.pathname}?page=methodology-library&id=${encodeURIComponent(r.id)}`);
                   }}
-                  className="w-full text-left bg-white/70 hover:bg-white/85 border border-border/40 hover:border-border/60 rounded-[22px] p-4 sm:p-5 transition-all duration-300"
+                  className="w-full text-left bg-white/70 hover:bg-white/90 border border-border/40 hover:border-border/60 rounded-[22px] p-4 sm:p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_60px_-45px_rgba(0,0,0,0.35)]"
                 >
                   <div className="flex gap-4">
                     <div className="w-28 h-20 rounded-[14px] overflow-hidden flex-shrink-0 bg-gradient-to-br from-primary/10 to-accent/10 relative">
