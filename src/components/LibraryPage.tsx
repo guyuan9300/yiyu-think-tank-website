@@ -44,7 +44,9 @@ interface LibraryPageProps {
       | 'my-learning'
       | 'strategy-companion'
       | 'report-library'
-      | 'article-center',
+      | 'article-center'
+      | 'book-library'
+      | 'methodology-library',
     bookId?: string,
     caseId?: string
   ) => void;
@@ -198,10 +200,10 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
 
             <button
               type="button"
-              onClick={() => setShowAllBooks((v) => !v)}
+              onClick={() => onNavigate?.('book-library')}
               className="inline-flex items-center gap-2 text-[14px] text-muted-foreground/70 hover:text-foreground transition-colors"
             >
-              <span>{showAllBooks ? '收起' : '查看更多'}</span>
+              <span>查看更多</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -237,10 +239,10 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
 
             <button
               type="button"
-              onClick={() => setShowAllMethodologies((v) => !v)}
+              onClick={() => onNavigate?.('methodology-library')}
               className="inline-flex items-center gap-2 text-[14px] text-muted-foreground/70 hover:text-foreground transition-colors"
             >
-              <span>{showAllMethodologies ? '收起' : '查看更多'}</span>
+              <span>查看更多</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

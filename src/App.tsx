@@ -5,6 +5,7 @@ import { StrategyPage } from './components/StrategyPage';
 import { AboutPage } from './components/AboutPage';
 import { LibraryPage } from './components/LibraryPage';
 import { BookLibraryPage } from './components/BookLibraryPage';
+import { MethodologyLibraryPage } from './components/MethodologyLibraryPage';
 import { ReportLibraryPage } from './components/ReportLibraryPage';
 import { ArticleCenterPage } from './components/ArticleCenterPage';
 import { BookReaderPage } from './components/BookReaderPage';
@@ -155,7 +156,7 @@ export default function App() {
     }
   }, [currentPage, selectedDetailId, selectedCaseId, unknownPage]);
 
-  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'case' | 'admin' | 'user-center' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply', bookId?: string, caseId?: string) => {
+  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'case' | 'admin' | 'user-center' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply' | 'book-library' | 'methodology-library', bookId?: string, caseId?: string) => {
     // Reset scroll on page-level navigation so detail pages always open from the top.
     // (Otherwise the browser may keep the previous scroll position and look like it jumped to the bottom.)
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
@@ -186,6 +187,10 @@ export default function App() {
       setCurrentPage('report-library');
     } else if (page === 'article-center') {
       setCurrentPage('article-center');
+    } else if (page === 'book-library') {
+      setCurrentPage('book-library');
+    } else if (page === 'methodology-library') {
+      setCurrentPage('methodology-library');
     } else if (page === 'strategy-companion') {
       setCurrentPage('strategy-companion');
     } else if (page === 'consult-apply') {
@@ -347,6 +352,22 @@ export default function App() {
     return (
       <>
         <LibraryPage onNavigate={handleNavigate} />
+      </>
+    );
+  }
+
+  if (currentPage === 'book-library') {
+    return (
+      <>
+        <BookLibraryPage onNavigate={(p) => handleNavigate(p as any)} />
+      </>
+    );
+  }
+
+  if (currentPage === 'methodology-library') {
+    return (
+      <>
+        <MethodologyLibraryPage onNavigate={(p) => handleNavigate(p as any)} />
       </>
     );
   }
