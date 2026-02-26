@@ -6,7 +6,7 @@ import {
 import { getBooks, type Book } from '../lib/dataService';
 import { useState, useEffect, useMemo } from 'react';
 
-export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string) => void }) {
+export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id?: string) => void }) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState<'all' | '战略' | '业务设计' | '组织' | 'AI 技术'>('all');
@@ -189,11 +189,15 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string) =>
           </div>
         ) : viewMode === 'grid' ? (
           /* Grid View */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredBooks.map((book) => (
               <article 
                 key={book.id} 
                 className="bg-white/80 backdrop-blur-sm rounded-[20px] border border-border/40 overflow-hidden cursor-pointer group hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300"
+                onClick={() => {
+                  if (onNavigate) onNavigate('book-reader', book.id);
+                  else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(book.id)}`);
+                }}
               >
                 <div className={`aspect-[3/4] bg-gradient-to-br ${book.coverColor || 'from-primary/20 to-accent/10'} relative overflow-hidden`}>
                   {book.coverImage ? (
@@ -212,7 +216,15 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string) =>
                   
                   {/* Hover Button */}
                   <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                    <button className="w-full py-2.5 bg-white/90 backdrop-blur-sm rounded-[12px] text-[13px] font-medium text-foreground hover:bg-white transition-colors flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onNavigate) onNavigate('book-reader', book.id);
+                        else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(book.id)}`);
+                      }}
+                      className="w-full py-2.5 bg-white/90 backdrop-blur-sm rounded-[12px] text-[13px] font-medium text-foreground hover:bg-white transition-colors flex items-center justify-center gap-2"
+                    >
                       <Eye className="w-4 h-4" />
                       <span>详情</span>
                     </button>
@@ -247,6 +259,10 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string) =>
               <article 
                 key={book.id} 
                 className="bg-white/80 backdrop-blur-sm rounded-[20px] border border-border/40 p-6 flex gap-6 cursor-pointer group hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
+                onClick={() => {
+                  if (onNavigate) onNavigate('book-reader', book.id);
+                  else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(book.id)}`);
+                }}
               >
                 {/* Cover */}
                 <div className={`w-32 h-44 flex-shrink-0 rounded-[14px] bg-gradient-to-br ${book.coverColor || 'from-primary/20 to-accent/10'} flex items-center justify-center text-white text-4xl font-bold shadow-lg overflow-hidden relative`}>
@@ -291,7 +307,15 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string) =>
                 
                 {/* Action */}
                 <div className="flex-shrink-0 flex flex-col justify-center gap-3">
-                  <button className="px-5 py-2.5 rounded-full bg-primary/10 text-primary text-[14px] font-medium hover:bg-primary/20 transition-colors flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onNavigate) onNavigate('book-reader', book.id);
+                      else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(book.id)}`);
+                    }}
+                    className="px-5 py-2.5 rounded-full bg-primary/10 text-primary text-[14px] font-medium hover:bg-primary/20 transition-colors flex items-center gap-2"
+                  >
                     <Eye className="w-4 h-4" />
                     <span>查看详情</span>
                   </button>

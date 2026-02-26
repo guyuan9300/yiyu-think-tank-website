@@ -359,7 +359,7 @@ export default function App() {
   if (currentPage === 'book-library') {
     return (
       <>
-        <BookLibraryPage onNavigate={(p) => handleNavigate(p as any)} />
+        <BookLibraryPage onNavigate={(p, id) => handleNavigate(p as any, id)} />
       </>
     );
   }

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
-import { Search, Filter, Wrench, ChevronRight } from 'lucide-react';
+import { Search, Filter, FileText, ChevronRight } from 'lucide-react';
 import { getMethodologies, type Methodology } from '../lib/dataService';
+import DOMPurify from 'dompurify';
 
 type Topic = '战略' | '业务设计' | '组织' | 'AI 技术';
 
@@ -55,44 +56,90 @@ export function MethodologyLibraryPage({
     });
   }, [items, searchQuery, selectedTopic]);
 
-  // Methodology reader view (article-like)
+  // Methodology reader view (match ArticleDetailPage grain)
   if (selected) {
+    const html = DOMPurify.sanitize(String(selected.content || selected.excerpt || ''));
+
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background flex flex-col">
         <Header onNavigate={onNavigate} />
 
-        <section className="relative pt-28 sm:pt-32 pb-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent" />
-          <div className="relative max-w-4xl mx-auto">
-            <button
-              onClick={() => setSelected(null)}
-              className="text-[13px] text-muted-foreground/70 hover:text-foreground transition-colors"
-            >
-              ← 返回工具/方法论
-            </button>
+        <section className="relative pt-28 pb-14 px-6 overflow-hidden">
+          <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-primary/[0.035] via-background to-background" />
+          <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-background/55 via-background/85 to-background" />
 
-            <h1 className="mt-6 text-[34px] sm:text-[44px] font-semibold leading-[1.15] tracking-tight">
-              {selected.title}
-            </h1>
-
-            <div className="mt-5 flex items-center gap-2 flex-wrap">
-              {(selected.topics || []).map((t, idx) => (
-                <span
-                  key={idx}
-                  className="px-3 py-1 rounded-full bg-primary/8 text-primary text-[12px] font-medium border border-primary/15"
-                >
-                  {t}
-                </span>
-              ))}
-              <span className="text-[12px] text-muted-foreground/50">· {selected.publishDate}</span>
+          <div className="relative max-w-5xl mx-auto">
+            {/* Breadcrumb */}
+            <div className="flex items-center gap-2 mb-7 text-[13px] text-muted-foreground/60">
+              <button
+                onClick={() => setSelected(null)}
+                className="flex items-center gap-1 hover:text-foreground transition-colors duration-200"
+              >
+                <span>工具/方法论</span>
+              </button>
+              <ChevronRight className="w-3.5 h-3.5" />
+              <span className="text-foreground">{selected.topics?.[0] || '方法论'}</span>
             </div>
 
-            <div className="mt-10 bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl p-6 sm:p-10">
-              <div className="prose prose-neutral max-w-none">
+            {/* Cover */}
+            <div className="relative rounded-[28px] overflow-hidden border border-border/40 bg-white/40 backdrop-blur-xl shadow-2xl shadow-black/[0.05]">
+              <div className="relative aspect-[21/9] sm:aspect-[24/9] bg-gradient-to-br from-primary/[0.06] to-accent/[0.06]">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <FileText className="w-16 h-16 text-primary/15" />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
+
+                <div className="absolute inset-x-0 bottom-0 p-6 sm:p-10">
+                  <div className="flex items-center gap-2 mb-4 flex-wrap">
+                    {(selected.topics || []).slice(0, 3).map((t, idx) => (
+                      <span
+                        key={idx}
+                        className="px-3 py-1 rounded-full bg-white/75 text-foreground text-[12px] font-medium border border-white/50"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+
+                  <h1 className="text-white text-[28px] sm:text-[38px] font-semibold leading-[1.2] tracking-tight">
+                    {selected.title}
+                  </h1>
+
+                  <p className="mt-3 text-white/85 text-[14px] max-w-3xl line-clamp-2">
+                    {selected.excerpt}
+                  </p>
+
+                  <div className="mt-5 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 text-[12px] text-white/75">
+                      <span>{selected.publishDate}</span>
+                    </div>
+                    <button
+                      onClick={() => setSelected(null)}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 text-white border border-white/30 hover:bg-white/20 transition-colors text-[13px]"
+                    >
+                      ← 返回列表
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Body */}
+        <section className="px-6 pb-20">
+          <div className="max-w-5xl mx-auto">
+            <div className="bg-white/70 backdrop-blur-sm border border-border/40 rounded-[24px] p-6 sm:p-10">
+              {html.includes('<') ? (
+                <div
+                  className="prose prose-neutral max-w-none"
+                  dangerouslySetInnerHTML={{ __html: html }}
+                />
+              ) : (
                 <div className="text-[15px] sm:text-[16px] leading-[1.9] text-foreground/90 whitespace-pre-wrap">
                   {selected.content || selected.excerpt}
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </section>
@@ -178,30 +225,57 @@ export function MethodologyLibraryPage({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((m) => (
-              <button
+              <article
                 key={m.id}
                 onClick={() => setSelected(m)}
-                className="text-left bg-white/80 backdrop-blur-sm rounded-[20px] border border-border/40 p-6 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300"
+                className="group cursor-pointer"
               >
-                <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center">
-                    <Wrench className="w-4 h-4 text-primary" />
+                <div className="relative bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-white/80 hover:border-border/60 hover:shadow-2xl hover:shadow-black/[0.04] hover:-translate-y-1">
+                  {/* 封面区域 */}
+                  <div className="relative aspect-[16/10] bg-gradient-to-br from-primary/[0.03] to-accent/[0.03] overflow-hidden">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <FileText className="w-16 h-16 text-primary/10" />
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                      <span className="text-white text-[14px] font-medium">查看详情</span>
+                    </div>
                   </div>
-                  {(m.topics || []).slice(0, 2).map((t, idx) => (
-                    <span
-                      key={idx}
-                      className="px-2.5 py-1 rounded-full bg-primary/8 text-primary text-[11px] font-medium border border-primary/15"
-                    >
-                      {t}
-                    </span>
-                  ))}
+
+                  {/* 内容区域 */}
+                  <div className="p-6">
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      {(m.topics || []).slice(0, 2).map((t, idx) => (
+                        <span
+                          key={idx}
+                          className="px-3 py-1 rounded-full bg-primary/8 text-primary text-[11px] font-medium"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                      <span className="text-[12px] text-muted-foreground/50">{m.publishDate}</span>
+                    </div>
+
+                    <h3 className="text-[18px] font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors leading-[1.4]">
+                      {m.title}
+                    </h3>
+
+                    <p className="text-[14px] text-muted-foreground/70 line-clamp-2 leading-[1.6] mb-4">
+                      {m.excerpt}
+                    </p>
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {(m.topics || []).slice(0, 3).map((tag: string, index: number) => (
+                        <span
+                          key={index}
+                          className="px-2.5 py-1 rounded-full bg-muted/40 text-muted-foreground/60 text-[11px]"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <h3 className="text-[16px] font-semibold mb-2 line-clamp-2">{m.title}</h3>
-                <p className="text-[13px] text-muted-foreground/70 line-clamp-3 leading-relaxed">{m.excerpt}</p>
-                <div className="mt-4 pt-4 border-t border-border/40 text-[12px] text-muted-foreground/50">
-                  {m.publishDate}
-                </div>
-              </button>
+              </article>
             ))}
           </div>
         )}
