@@ -13,9 +13,8 @@ import {
   RefreshCw,
   ArrowRight
 } from 'lucide-react';
-import { getReports as getReportsLocal, getCategories as getCategoriesLocal, type Report } from '../lib/dataService';
+import { getReports as getReportsLocal, type Report } from '../lib/dataService';
 import { PdfCoverImage } from './PdfCoverImage';
-import { getReports as getReportsRemote } from '../lib/dataServiceSupabase';
 
 // 报告卡片组件 - 网格视图
 function ReportCardGrid({ report, onClick }: { report: Report; onClick?: () => void }) {
@@ -45,11 +44,7 @@ function ReportCardGrid({ report, onClick }: { report: Report; onClick?: () => v
           <div className="absolute inset-0 flex items-center justify-center">
             <FileText className="w-16 h-16 text-success/10" />
           </div>
-          {report.isHot && (
-            <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-gradient-to-r from-red-500 to-pink-500 text-white text-[11px] font-medium shadow-lg">
-              热门
-            </div>
-          )}
+          {/* 热门标签已废弃 */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
             <span className="text-white text-[14px] font-medium">查看详情</span>
           </div>
@@ -57,10 +52,15 @@ function ReportCardGrid({ report, onClick }: { report: Report; onClick?: () => v
 
         {/* 内容区域 */}
         <div className="p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="px-3 py-1 rounded-full bg-success/8 text-success text-[11px] font-medium">
-              {report.category}
-            </span>
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            {(report.topics || []).slice(0, 2).map((t, idx) => (
+              <span
+                key={idx}
+                className="px-3 py-1 rounded-full bg-success/8 text-success text-[11px] font-medium"
+              >
+                {t}
+              </span>
+            ))}
             <span className="text-[12px] text-muted-foreground/40">
               v{report.version}
             </span>
@@ -75,7 +75,7 @@ function ReportCardGrid({ report, onClick }: { report: Report; onClick?: () => v
           </p>
 
           <div className="flex flex-wrap gap-1.5 mb-4">
-            {report.tags.slice(0, 3).map((tag: string, index: number) => (
+            {(report.topics || []).slice(0, 3).map((tag: string, index: number) => (
               <span
                 key={index}
                 className="px-2.5 py-1 rounded-full bg-muted/40 text-muted-foreground/60 text-[11px]"
@@ -130,14 +130,14 @@ function ReportListItem({ report, onClick }: { report: Report; onClick?: () => v
       {/* 内容 */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-2">
-          {report.isHot && (
-            <span className="px-2.5 py-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-[11px] font-medium rounded-full">
-              热门
+          {(report.topics || []).slice(0, 2).map((t, idx) => (
+            <span
+              key={idx}
+              className="px-2.5 py-1 bg-success/8 text-success text-[11px] font-medium rounded-full"
+            >
+              {t}
             </span>
-          )}
-          <span className="px-2.5 py-1 bg-success/8 text-success text-[11px] font-medium rounded-full">
-            {report.category}
-          </span>
+          ))}
         </div>
         <h3 className="font-medium text-[15px] text-foreground mb-1 truncate group-hover:text-primary transition-colors">
           {report.title}
@@ -147,9 +147,9 @@ function ReportListItem({ report, onClick }: { report: Report; onClick?: () => v
         </p>
       </div>
 
-      {/* 标签 */}
+      {/* topics */}
       <div className="flex flex-wrap gap-1.5 w-40">
-        {report.tags.slice(0, 2).map((tag: string, index: number) => (
+        {(report.topics || []).slice(0, 2).map((tag: string, index: number) => (
           <span
             key={index}
             className="px-2 py-0.5 bg-muted/40 text-muted-foreground/60 text-[11px] rounded-full truncate"
@@ -183,68 +183,39 @@ export function ReportLibraryPage({
 }) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedTopic, setSelectedTopic] = useState<'all' | '战略' | '业务设计' | '组织' | 'AI 技术'>('all');
   const [selectedYear, setSelectedYear] = useState('all');
   const [reports, setReports] = useState<Report[]>([]);
-  const [categories, setCategories] = useState<{id: string, name: string, type: string}[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 加载数据
+  const topicOptions: Array<{ id: 'all' | '战略' | '业务设计' | '组织' | 'AI 技术'; label: string }> = [
+    { id: 'all', label: '全部' },
+    { id: '战略', label: '战略' },
+    { id: '业务设计', label: '业务设计' },
+    { id: '组织', label: '组织' },
+    { id: 'AI 技术', label: 'AI 技术' },
+  ];
+
+  // 加载数据（建造期：以本地数据为准；旧字段迁移也在 dataService 内部完成）
   useEffect(() => {
-    let cancelled = false;
-    const useRemote = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
-
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        const categoriesData = getCategoriesLocal(); // categories 先沿用本地（不阻断）
-
-        // 远端优先，但若远端为空/失败，则回退到本地（静态站 MVP 的默认行为）
-        let reportsData: Report[] = [];
-        if (useRemote) {
-          try {
-            reportsData = await getReportsRemote();
-          } catch {
-            reportsData = [];
-          }
-        }
-        if (!reportsData || reportsData.length === 0) {
-          reportsData = getReportsLocal();
-        }
-
-        if (cancelled) return;
-        setReports(reportsData.filter((r: any) => r.status === 'published'));
-        setCategories(categoriesData.filter(c => c.type === 'report'));
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
+    const loadData = () => {
+      const reportsData = getReportsLocal();
+      setReports(reportsData.filter((r: any) => r.status === 'published'));
+      setIsLoading(false);
     };
 
     loadData();
 
-    if (!useRemote) {
-      const handleStorageChange = () => {
-        loadData();
-      };
+    const handleStorageChange = () => loadData();
+    const pollInterval = setInterval(() => loadData(), 1000);
 
-      const pollInterval = setInterval(() => {
-        loadData();
-      }, 1000);
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('yiyu_data_change', handleStorageChange);
 
-      window.addEventListener('storage', handleStorageChange);
-      window.addEventListener('yiyu_data_change', handleStorageChange);
-
-      return () => {
-        cancelled = true;
-        clearInterval(pollInterval);
-        window.removeEventListener('storage', handleStorageChange);
-        window.removeEventListener('yiyu_data_change', handleStorageChange);
-      };
-    }
-
-    // Remote mode: rely on manual refresh for now
     return () => {
-      cancelled = true;
+      clearInterval(pollInterval);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('yiyu_data_change', handleStorageChange);
     };
   }, []);
 
@@ -264,21 +235,20 @@ export function ReportLibraryPage({
       const matchesSearch = !searchQuery ||
         report.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         report.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        report.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+        (report.topics || []).some((t: string) => t.toLowerCase().includes(searchQuery.toLowerCase()));
 
-      const matchesCategory = selectedCategory === 'all' || report.category === selectedCategory;
+      const matchesTopic = selectedTopic === 'all' || (report.topics || []).includes(selectedTopic);
       const matchesYear = selectedYear === 'all' || report.publishDate.startsWith(selectedYear);
 
-      return matchesSearch && matchesCategory && matchesYear;
+      return matchesSearch && matchesTopic && matchesYear;
     });
-  }, [reports, searchQuery, selectedCategory, selectedYear]);
+  }, [reports, searchQuery, selectedTopic, selectedYear]);
 
   // 刷新数据
   const handleRefresh = async () => {
-    const useRemote = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
     setIsLoading(true);
     try {
-      const reportsData = useRemote ? await getReportsRemote() : getReportsLocal();
+      const reportsData = getReportsLocal();
       setReports(reportsData.filter((r: any) => r.status === 'published'));
     } finally {
       setIsLoading(false);
@@ -358,13 +328,14 @@ export function ReportLibraryPage({
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-muted-foreground/50" />
               <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                value={selectedTopic}
+                onChange={(e) => setSelectedTopic(e.target.value as any)}
                 className="px-4 py-2.5 bg-muted/30 border border-border/40 rounded-full text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all cursor-pointer"
               >
-                <option value="all">全部分类</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.name}>{cat.name}</option>
+                {topicOptions.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.id === 'all' ? '全部标签' : opt.label}
+                  </option>
                 ))}
               </select>
 

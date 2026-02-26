@@ -47,21 +47,21 @@ function ReportCard({ report, onClick }: { report: Report; onClick?: () => void 
             </div>
           )}
 
-          {/* 热门标签 */}
-          {report.isHot && (
-            <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-gradient-to-r from-red-500 to-pink-500 text-white text-[11px] font-medium shadow-lg">
-              热门
-            </div>
-          )}
+          {/* 热门标签已废弃 */}
         </div>
 
         {/* 内容区域 */}
         <div className="p-6">
-          {/* 分类与版本 */}
-          <div className="flex items-center gap-2 mb-3">
-            <span className="px-3 py-1 rounded-full bg-success/8 text-success text-[11px] font-medium">
-              {report.category}
-            </span>
+          {/* topics 与版本 */}
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            {(report.topics || []).slice(0, 2).map((t, idx) => (
+              <span
+                key={idx}
+                className="px-3 py-1 rounded-full bg-success/8 text-success text-[11px] font-medium"
+              >
+                {t}
+              </span>
+            ))}
             <span className="text-[12px] text-muted-foreground/40">
               v{report.version}
             </span>
@@ -77,9 +77,9 @@ function ReportCard({ report, onClick }: { report: Report; onClick?: () => void 
             {report.summary}
           </p>
 
-          {/* 标签 */}
+          {/* topics（标签） */}
           <div className="flex flex-wrap gap-1.5 mb-4">
-            {report.tags.slice(0, 3).map((tag: string, index: number) => (
+            {(report.topics || []).slice(0, 3).map((tag: string, index: number) => (
               <span
                 key={index}
                 className="px-2.5 py-1 rounded-full bg-muted/40 text-muted-foreground/60 text-[11px]"
@@ -119,17 +119,20 @@ function ArticleCard({ article, onClick }: { article: InsightArticle; onClick?: 
               <FileText className="w-6 h-6 text-primary/40" />
             </div>
             <div>
-              <p className="text-white/90 text-[11px] font-medium bg-black/35 inline-block px-2 py-1 rounded-full mb-2">
-                {article.category}
-              </p>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {(article.topics || []).slice(0, 2).map((t, idx) => (
+                  <span
+                    key={idx}
+                    className="text-white/90 text-[11px] font-medium bg-black/35 inline-block px-2 py-1 rounded-full"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
               <h4 className="text-[16px] font-semibold leading-snug text-foreground line-clamp-3">
                 {article.title}
               </h4>
-              {article.author && (
-                <p className="text-[12px] text-muted-foreground/70 mt-2 line-clamp-1">
-                  {article.author}
-                </p>
-              )}
+              {/* 作者已废弃 */}
             </div>
           </div>
 
@@ -145,22 +148,21 @@ function ArticleCard({ article, onClick }: { article: InsightArticle; onClick?: 
             />
           )}
 
-          {/* 推荐标签 */}
-          {article.featured && (
-            <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-medium shadow-lg flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3" />
-              <span>推荐</span>
-            </div>
-          )}
+          {/* 推荐标签已废弃 */}
         </div>
 
         {/* 内容区域 */}
         <div className="p-6">
-          {/* 分类 */}
-          <div className="flex items-center gap-2 mb-3">
-            <span className="px-3 py-1 rounded-full bg-primary/8 text-primary text-[11px] font-medium">
-              {article.category}
-            </span>
+          {/* topics */}
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            {(article.topics || []).slice(0, 2).map((t, idx) => (
+              <span
+                key={idx}
+                className="px-3 py-1 rounded-full bg-primary/8 text-primary text-[11px] font-medium"
+              >
+                {t}
+              </span>
+            ))}
           </div>
 
           {/* 标题 */}
@@ -173,9 +175,9 @@ function ArticleCard({ article, onClick }: { article: InsightArticle; onClick?: 
             {article.excerpt}
           </p>
 
-          {/* 标签 */}
+          {/* topics（标签） */}
           <div className="flex flex-wrap gap-1.5 mb-4">
-            {article.tags.slice(0, 3).map((tag: string, index: number) => (
+            {(article.topics || []).slice(0, 3).map((tag: string, index: number) => (
               <span
                 key={index}
                 className="px-2.5 py-1 rounded-full bg-muted/40 text-muted-foreground/60 text-[11px]"
@@ -187,17 +189,11 @@ function ArticleCard({ article, onClick }: { article: InsightArticle; onClick?: 
 
           {/* 底部元数据 */}
           <div className="flex items-center justify-between pt-4 border-t border-border/30 text-[12px] text-muted-foreground/50">
-            <span>{article.author}</span>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                <Eye className="w-3.5 h-3.5" />
-                <span>{article.views}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                <span>{article.readTime}分钟</span>
-              </div>
+            <div className="flex items-center gap-1">
+              <Eye className="w-3.5 h-3.5" />
+              <span>{article.views}</span>
             </div>
+            <span>{article.publishDate}</span>
           </div>
         </div>
       </div>

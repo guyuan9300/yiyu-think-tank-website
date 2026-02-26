@@ -4,7 +4,6 @@ import { Footer } from './Footer';
 import { AccessInfoCard } from './AccessInfoCard';
 import {
   ArrowLeft,
-  Clock,
   Eye,
   ChevronRight,
   Download,
@@ -13,7 +12,8 @@ import {
   TrendingUp,
   FileText,
   Calendar,
-  Tag
+  Tag,
+  Clock
 } from 'lucide-react';
 import { getReports, saveReport, type Report } from '../lib/dataService';
 
@@ -148,7 +148,7 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
               <span>报告库</span>
             </button>
             <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-foreground">{report.category}</span>
+            <span className="text-foreground">{(report.topics || []).join(' / ')}</span>
           </div>
 
           {/* 左图右文布局 */}
@@ -161,22 +161,22 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
                   <TrendingUp className="w-32 h-32 text-success/10" />
                 </div>
 
-                {/* 热门标签 */}
-                {report.isHot && (
-                  <div className="absolute top-6 left-6 px-4 py-2 rounded-full bg-gradient-to-r from-red-500 to-pink-500 text-white text-[12px] font-medium shadow-lg">
-                    热门报告
-                  </div>
-                )}
+                {/* 热门标签已废弃 */}
               </div>
             </div>
 
             {/* 右侧内容区域 */}
             <div className="order-1 lg:order-2">
-              {/* 分类标签 */}
-              <div className="flex items-center gap-3 mb-6">
-                <span className="px-4 py-1.5 rounded-full bg-success/10 text-success text-[12px] font-medium">
-                  {report.category}
-                </span>
+              {/* topics */}
+              <div className="flex items-center gap-3 mb-6 flex-wrap">
+                {(report.topics || []).slice(0, 2).map((t, idx) => (
+                  <span
+                    key={idx}
+                    className="px-4 py-1.5 rounded-full bg-success/10 text-success text-[12px] font-medium"
+                  >
+                    {t}
+                  </span>
+                ))}
                 <span className="text-[12px] text-muted-foreground/50">
                   v{report.version}
                 </span>
@@ -212,9 +212,9 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
                 </div>
               </div>
 
-              {/* 标签 */}
+              {/* topics（标签） */}
               <div className="flex flex-wrap gap-2 mb-8">
-                {report.tags.map((tag: string, index: number) => (
+                {(report.topics || []).map((tag: string, index: number) => (
                   <span
                     key={index}
                     className="px-3 py-1.5 rounded-full bg-muted/40 text-muted-foreground/70 text-[12px]"

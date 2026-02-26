@@ -11,8 +11,7 @@ interface Book {
   author: string;
   description: string;
   abstract: string;
-  category: string;
-  tags: string[];
+  topics: string[];
   valuePoints?: string[];
   pages: number;
   duration: string;
@@ -56,12 +55,10 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
 
   const categories = [
     { id: 'all', label: '全部' },
-    { id: 'ai', label: '人工智能' },
-    { id: 'business', label: '商业思维' },
-    { id: 'management', label: '管理实战' },
-    { id: 'strategy', label: '战略' },
-    { id: 'data', label: '数据分析' },
-    { id: 'organization', label: '组织发展' },
+    { id: '战略', label: '战略' },
+    { id: '业务设计', label: '业务设计' },
+    { id: '组织', label: '组织' },
+    { id: 'AI 技术', label: 'AI 技术' },
   ];
   const [books, setBooks] = useState<Book[]>([]);
 
@@ -75,8 +72,7 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
         author: b.author,
         description: b.description,
         abstract: b.abstract,
-        category: b.category,
-        tags: b.tags || [],
+        topics: (b.topics || []) as any,
         pages: b.pages,
         duration: b.duration,
         rating: b.rating,
@@ -103,27 +99,17 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
 
   const filteredBooks = books.filter(book => {
     if (activeCategory === 'all') return true;
-    const categoryMap: Record<string, string[]> = {
-      'ai': ['人工智能'],
-      'business': ['商业思维'],
-      'management': ['管理实战'],
-      'strategy': ['战略'],
-      'data': ['数据分析'],
-      'organization': ['组织发展']
-    };
-    return categoryMap[activeCategory]?.includes(book.category);
+    return (book.topics || []).includes(activeCategory);
   });
 
-  const getCategoryColor = (category: string) => {
+  const getCategoryColor = (topic: string) => {
     const colors: Record<string, string> = {
       '战略': 'bg-blue-100 text-blue-700',
-      '人工智能': 'bg-purple-100 text-purple-700',
-      '商业思维': 'bg-orange-100 text-orange-700',
-      '管理实战': 'bg-green-100 text-green-700',
-      '数据分析': 'bg-cyan-100 text-cyan-700',
-      '组织发展': 'bg-pink-100 text-pink-700',
+      '业务设计': 'bg-orange-100 text-orange-700',
+      '组织': 'bg-green-100 text-green-700',
+      'AI 技术': 'bg-purple-100 text-purple-700',
     };
-    return colors[category] || 'bg-gray-100 text-gray-700';
+    return colors[topic] || 'bg-gray-100 text-gray-700';
   };
 
   const handleBookClick = (bookId: string) => {
@@ -267,8 +253,8 @@ function BookCard({ book, onClick, getCategoryColor }: { book: Book; onClick: ()
       <div className="p-5">
         {/* Category */}
         <div className="flex items-center gap-2 mb-3">
-          <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium border ${getCategoryColor(book.category)}`}>
-            {book.category}
+          <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium border ${getCategoryColor((book.topics || [])[0] || '')}`}>
+            {(book.topics || [])[0] || '—'}
           </span>
         </div>
 
@@ -284,7 +270,7 @@ function BookCard({ book, onClick, getCategoryColor }: { book: Book; onClick: ()
 
         {/* Value Points Preview */}
         <div className="flex items-center gap-1.5 mb-4 flex-wrap">
-          {(book.valuePoints && book.valuePoints.length > 0 ? book.valuePoints : book.tags)
+          {(book.valuePoints && book.valuePoints.length > 0 ? book.valuePoints : (book.topics || []))
             .slice(0, 2)
             .map((point, index) => (
               <span key={index} className="px-2 py-0.5 rounded bg-success/10 text-success/80 text-[11px]">

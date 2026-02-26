@@ -2,23 +2,28 @@ import { Header } from './Header';
 import {
   BookOpen, Search, Filter, Grid3X3, List, Eye, Star, Clock, ChevronRight, RefreshCw
 } from 'lucide-react';
-import { getBooks, getCategories, type Book } from '../lib/dataService';
+import { getBooks, type Book } from '../lib/dataService';
 import { useState, useEffect, useMemo } from 'react';
 
 export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string) => void }) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedTopic, setSelectedTopic] = useState<'all' | '战略' | '业务设计' | '组织' | 'AI 技术'>('all');
   const [books, setBooks] = useState<Book[]>([]);
-  const [categories, setCategories] = useState<{id: string, name: string, type: string}[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const topicOptions: Array<{ id: 'all' | '战略' | '业务设计' | '组织' | 'AI 技术'; label: string }> = [
+    { id: 'all', label: '全部' },
+    { id: '战略', label: '战略' },
+    { id: '业务设计', label: '业务设计' },
+    { id: '组织', label: '组织' },
+    { id: 'AI 技术', label: 'AI 技术' },
+  ];
 
   useEffect(() => {
     const loadData = () => {
       const booksData = getBooks();
-      const categoriesData = getCategories();
       setBooks(booksData.filter(b => b.status === 'published'));
-      setCategories(categoriesData.filter(c => c.type === 'book'));
       setIsLoading(false);
     };
     
@@ -55,11 +60,11 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string) =>
         book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         book.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         book.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        book.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-      const matchesCategory = selectedCategory === 'all' || book.category === selectedCategory;
-      return matchesSearch && matchesCategory;
+        (book.topics || []).some((t: string) => t.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesTopic = selectedTopic === 'all' || (book.topics || []).includes(selectedTopic);
+      return matchesSearch && matchesTopic;
     });
-  }, [books, searchQuery, selectedCategory]);
+  }, [books, searchQuery, selectedTopic]);
 
   const handleRefresh = () => {
     setIsLoading(true);
@@ -119,17 +124,18 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string) =>
               />
             </div>
             
-            {/* Category Filter */}
+            {/* topics Filter */}
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-muted-foreground/50" />
               <select 
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                value={selectedTopic}
+                onChange={(e) => setSelectedTopic(e.target.value as any)}
                 className="px-4 py-2.5 bg-muted/50 border border-border/60 rounded-full text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all cursor-pointer"
               >
-                <option value="all">全部分类</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.name}>{cat.name}</option>
+                {topicOptions.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.id === 'all' ? '全部话题' : opt.label}
+                  </option>
                 ))}
               </select>
             </div>

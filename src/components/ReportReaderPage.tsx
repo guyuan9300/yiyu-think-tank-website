@@ -333,7 +333,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
           <div className="flex flex-wrap items-center gap-6 mb-6">
             <span className="text-gray-600">机构：{report.publisher || '益语智库'}</span>
             <span className="text-gray-400">|</span>
-            <span className="text-gray-600">分类：{report.category}</span>
+            <span className="text-gray-600">主题：{(report.topics || []).join(' / ') || '—'}</span>
             <span className="text-gray-400">|</span>
             <span className="text-gray-600">页数：{report.pages || totalPages}页</span>
             <span className="text-gray-400">|</span>
@@ -347,12 +347,12 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
               "{report.summary}"
             </p>
             <div className="flex flex-wrap gap-2">
-              {report.tags.map((tag, index) => (
+              {(report.topics || []).map((topic: string, index: number) => (
                 <span
                   key={index}
                   className="px-3 py-1 bg-white rounded-full text-sm text-gray-600 shadow-sm"
                 >
-                  #{tag}
+                  #{topic}
                 </span>
               ))}
             </div>

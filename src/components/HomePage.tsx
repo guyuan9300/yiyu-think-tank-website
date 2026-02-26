@@ -76,43 +76,40 @@ function TopicCard({ id, name, description, icon: Icon, color, updates, onClick 
 }
 
 // Insight Card - Editorial Style
-function InsightCard({ id, title, excerpt, tags, readTime, publishDate, featured, onClick }: {
+function InsightCard({ id, title, excerpt, topics, publishDate, onClick }: {
   id: string;
   title: string;
   excerpt: string;
-  tags: string[];
-  readTime: number;
+  topics: string[];
   publishDate: string;
-  featured?: boolean;
   onClick?: () => void;
 }) {
   return (
     <article
       onClick={onClick}
-      className={`group p-6 rounded-[20px] bg-white/80 backdrop-blur-sm border border-border/40 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 cursor-pointer ${featured ? 'md:col-span-2' : ''}`}
+      className="group p-6 rounded-[20px] bg-white/80 backdrop-blur-sm border border-border/40 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 cursor-pointer"
     >
       <div className="flex items-center gap-2 mb-4 flex-wrap">
-        {tags.slice(0, 2).map((tag) => (
+        {(topics || []).slice(0, 2).map((topic) => (
           <span
-            key={tag}
+            key={topic}
             className="px-2.5 py-1 rounded-full bg-primary/8 text-primary text-[11px] font-medium border border-primary/15"
           >
-            {tag}
+            {topic}
           </span>
         ))}
       </div>
 
-      <h3 className={`font-medium mb-3 text-foreground group-hover:text-primary transition-colors ${featured ? 'text-[18px]' : 'text-[15px]'}`}>
+      <h3 className="font-medium mb-3 text-foreground group-hover:text-primary transition-colors text-[16px]">
         {title}
       </h3>
 
-      <p className={`text-muted-foreground/70 mb-4 line-clamp-2 leading-relaxed ${featured ? 'text-[14px]' : 'text-[13px]'}`}>
+      <p className="text-muted-foreground/70 mb-4 line-clamp-2 leading-relaxed text-[13px]">
         {excerpt}
       </p>
 
       <div className="flex items-center justify-between pt-4 border-t border-border/40">
         <div className="flex items-center gap-4 text-[12px] text-muted-foreground/50">
-          <span>{readTime}分钟</span>
           <span>{publishDate}</span>
         </div>
         <div className="flex items-center gap-1">
@@ -183,7 +180,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
     const load = () => {
       const insights = getInsights()
         .filter(i => i.status === 'published' && i.showOnHome)
-        .sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0))
+        // topics-only schema: no featured sorting
         .slice(0, 4);
       const reports = getReports()
         .filter(r => r.status === 'published' && r.showOnHome)
@@ -241,16 +238,14 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
     id: i.id,
     title: i.title,
     excerpt: i.excerpt,
-    tags: i.tags,
-    readTime: i.readTime,
+    topics: i.topics,
     publishDate: i.publishDate.split('-').join('/'),
-    featured: i.featured,
   }));
 
   const reports = homeReports.map(r => ({
     id: r.id,
     title: r.title,
-    tags: r.tags,
+    topics: r.topics,
     updateDate: r.publishDate.split('-').join('/'),
     version: r.version,
     isPublic: true,

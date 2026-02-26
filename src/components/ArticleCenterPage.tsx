@@ -11,10 +11,9 @@ import {
   Heart,
   Clock,
   ChevronRight,
-  RefreshCw,
-  Sparkles
+  RefreshCw
 } from 'lucide-react';
-import { getInsights, getCategories, type InsightArticle } from '../lib/dataService';
+import { getInsights, type InsightArticle } from '../lib/dataService';
 
 // 文章卡片组件 - 网格视图
 function ArticleCardGrid({ article, onClick }: { article: InsightArticle; onClick?: () => void }) {
@@ -35,23 +34,23 @@ function ArticleCardGrid({ article, onClick }: { article: InsightArticle; onClic
               <FileText className="w-16 h-16 text-primary/10" />
             </div>
           )}
-          {article.featured && (
-            <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-medium shadow-lg flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3" />
-              <span>推荐</span>
-            </div>
-          )}
+          {/* 推荐标签已废弃 */}
         </div>
 
         {/* 内容区域 */}
         <div className="p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="px-3 py-1 rounded-full bg-primary/8 text-primary text-[11px] font-medium">
-              {article.category}
-            </span>
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            {(article.topics || []).slice(0, 2).map((t, idx) => (
+              <span
+                key={idx}
+                className="px-3 py-1 rounded-full bg-primary/8 text-primary text-[11px] font-medium"
+              >
+                {t}
+              </span>
+            ))}
             <span className="flex items-center gap-1 text-[12px] text-muted-foreground/50">
               <Clock className="w-3 h-3" />
-              {article.readTime}分钟
+              {article.publishDate}
             </span>
           </div>
 
@@ -64,7 +63,7 @@ function ArticleCardGrid({ article, onClick }: { article: InsightArticle; onClic
           </p>
 
           <div className="flex flex-wrap gap-1.5 mb-4">
-            {article.tags.slice(0, 3).map((tag: string, index: number) => (
+            {(article.topics || []).slice(0, 3).map((tag: string, index: number) => (
               <span
                 key={index}
                 className="px-2.5 py-1 rounded-full bg-muted/40 text-muted-foreground/60 text-[11px]"
@@ -75,7 +74,7 @@ function ArticleCardGrid({ article, onClick }: { article: InsightArticle; onClic
           </div>
 
           <div className="flex items-center justify-between pt-4 border-t border-border/30 text-[12px] text-muted-foreground/50">
-            <span>{article.author}</span>
+            <span>{article.publishDate}</span>
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1">
                 <Eye className="w-3.5 h-3.5" />
@@ -115,16 +114,15 @@ function ArticleListItem({ article, onClick }: { article: InsightArticle; onClic
 
       {/* 内容 */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-2">
-          {article.featured && (
-            <span className="px-2.5 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-medium rounded-full flex items-center gap-1">
-              <Sparkles className="w-3 h-3" />
-              推荐
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
+          {(article.topics || []).slice(0, 2).map((t, idx) => (
+            <span
+              key={idx}
+              className="px-2.5 py-1 bg-primary/8 text-primary text-[11px] font-medium rounded-full"
+            >
+              {t}
             </span>
-          )}
-          <span className="px-2.5 py-1 bg-primary/8 text-primary text-[11px] font-medium rounded-full">
-            {article.category}
-          </span>
+          ))}
         </div>
         <h3 className="font-medium text-[15px] text-foreground mb-1 truncate group-hover:text-primary transition-colors">
           {article.title}
@@ -138,9 +136,8 @@ function ArticleListItem({ article, onClick }: { article: InsightArticle; onClic
       <div className="flex flex-col items-end gap-1.5 text-[12px] text-muted-foreground/50 w-32">
         <span className="flex items-center gap-1">
           <Clock className="w-3 h-3" />
-          {article.readTime}分钟
+          {article.publishDate}
         </span>
-        <span>{article.author}</span>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
             <Eye className="w-3 h-3" />
@@ -165,19 +162,24 @@ export function ArticleCenterPage({
 }) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedTopic, setSelectedTopic] = useState<'all' | '战略' | '业务设计' | '组织' | 'AI 技术'>('all');
   const [articles, setArticles] = useState<InsightArticle[]>([]);
-  const [categories, setCategories] = useState<{id: string, name: string, type: string}[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const topicOptions: Array<{ id: 'all' | '战略' | '业务设计' | '组织' | 'AI 技术'; label: string }> = [
+    { id: 'all', label: '全部' },
+    { id: '战略', label: '战略' },
+    { id: '业务设计', label: '业务设计' },
+    { id: '组织', label: '组织' },
+    { id: 'AI 技术', label: 'AI 技术' },
+  ];
 
   // 加载数据
   useEffect(() => {
     const loadData = () => {
       const articlesData = getInsights();
-      const categoriesData = getCategories();
 
       setArticles(articlesData.filter((a: InsightArticle) => a.status === 'published'));
-      setCategories(categoriesData.filter((c: {type: string}) => c.type === 'insight'));
       setIsLoading(false);
     };
 
@@ -213,13 +215,13 @@ export function ArticleCenterPage({
       const matchesSearch = !searchQuery ||
         article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         article.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        article.tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+        (article.topics || []).some((t: string) => t.toLowerCase().includes(searchQuery.toLowerCase()));
 
-      const matchesCategory = selectedCategory === 'all' || article.category === selectedCategory;
+      const matchesTopic = selectedTopic === 'all' || (article.topics || []).includes(selectedTopic);
 
-      return matchesSearch && matchesCategory;
+      return matchesSearch && matchesTopic;
     });
-  }, [articles, searchQuery, selectedCategory]);
+  }, [articles, searchQuery, selectedTopic]);
 
   // 刷新数据
   const handleRefresh = () => {
@@ -293,17 +295,18 @@ export function ArticleCenterPage({
               />
             </div>
 
-            {/* 分类筛选 */}
+            {/* topics 筛选 */}
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-muted-foreground/50" />
               <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                value={selectedTopic}
+                onChange={(e) => setSelectedTopic(e.target.value as any)}
                 className="px-4 py-2.5 bg-muted/30 border border-border/40 rounded-full text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all cursor-pointer"
               >
-                <option value="all">全部分类</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.name}>{cat.name}</option>
+                {topicOptions.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.id === 'all' ? '全部标签' : opt.label}
+                  </option>
                 ))}
               </select>
             </div>

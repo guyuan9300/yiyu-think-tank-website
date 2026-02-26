@@ -45,13 +45,9 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
     title: '2026年公益行业数字化转型白皮书',
     excerpt: '基于200+公益组织调研，深度解析数字化转型的挑战与机遇',
     content: '',
-    category: '行业洞察',
-    tags: ['公益', '数字化'],
-    author: '益语智库',
-    readTime: 25,
+    topics: ['战略'],
     publishDate: '2026-01-25',
     status: 'published',
-    featured: true,
     showOnHome: true,
     views: 1234,
     likes: 89,
@@ -115,7 +111,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
               <span>文章中心</span>
             </button>
             <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-foreground">{displayArticle.category}</span>
+            <span className="text-foreground">{displayArticle.topics?.[0] || '洞察'}</span>
           </div>
 
           {/* Cover */}
@@ -141,14 +137,9 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
               {/* Badges */}
               <div className="absolute top-5 left-5 flex items-center gap-2">
                 <span className="px-3 py-1.5 rounded-full bg-white/70 text-foreground text-[12px] font-medium border border-white/60 shadow-sm">
-                  {displayArticle.category}
+                  {displayArticle.topics?.[0] || '洞察'}
                 </span>
-                {displayArticle.featured ? (
-                  <span className="px-3 py-1.5 rounded-full bg-amber-500/90 text-white text-[12px] font-medium shadow-sm inline-flex items-center gap-1.5">
-                    <Heart className="w-3.5 h-3.5 fill-current" />
-                    精选
-                  </span>
-                ) : null}
+                {/* featured removed (topics-only schema) */}
               </div>
 
               {/* Title on cover (mobile-first) */}
@@ -170,10 +161,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
                     <Calendar className="w-4 h-4" />
                     <span>{displayArticle.publishDate}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    <span>{displayArticle.readTime} 分钟</span>
-                  </div>
+                  {/* readTime removed (topics-only schema) */}
                   <div className="flex items-center gap-2">
                     <Eye className="w-4 h-4" />
                     <span>{displayArticle.views.toLocaleString()}</span>
@@ -220,15 +208,15 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
                 </div>
               </div>
 
-              {/* Tags */}
-              {displayArticle.tags?.length ? (
+              {/* Topics */}
+              {displayArticle.topics?.length ? (
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {displayArticle.tags.map((tag: string, index: number) => (
+                  {displayArticle.topics.map((topic: string, index: number) => (
                     <span
                       key={index}
                       className="px-3 py-1.5 rounded-full bg-muted/40 text-muted-foreground/70 text-[12px] hover:bg-muted/60 transition-colors"
                     >
-                      {tag}
+                      {topic}
                     </span>
                   ))}
                 </div>
