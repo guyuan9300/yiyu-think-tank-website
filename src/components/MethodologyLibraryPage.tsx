@@ -43,7 +43,17 @@ export function MethodologyLibraryPage({
   useEffect(() => {
     const load = () => {
       const data = getMethodologies();
-      setItems(data.filter((m) => m.status === 'published'));
+      const published = data.filter((m) => m.status === 'published');
+      setItems(published);
+
+      // Deep-link: ?page=methodology-library&id=<methodologyId>
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      if (id) {
+        const found = published.find((m) => m.id === id) || data.find((m) => m.id === id);
+        if (found) setSelected(found);
+      }
+
       setIsLoading(false);
     };
 
@@ -195,7 +205,7 @@ export function MethodologyLibraryPage({
 
         {/* Body */}
         <section className="px-6 pb-8">
-          <div className="max-w-5xl mx-auto">
+          <div className="max-w-3xl mx-auto">
             <div className="bg-white/70 backdrop-blur-sm border border-border/40 rounded-[24px] p-6 sm:p-10">
               {html.includes('<') ? (
                 <div

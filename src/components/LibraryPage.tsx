@@ -250,9 +250,16 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
           {visibleMethodologies.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {visibleMethodologies.map((m) => (
-                <div
+                <button
                   key={m.id}
-                  className="relative bg-white/80 backdrop-blur-sm rounded-[20px] border border-border/40 overflow-hidden"
+                  type="button"
+                  onClick={() => {
+                    // open reader view
+                    window.location.assign(
+                      `${window.location.pathname}?page=methodology-library&id=${encodeURIComponent(m.id)}`
+                    );
+                  }}
+                  className="relative bg-white/80 backdrop-blur-sm rounded-[20px] border border-border/40 overflow-hidden text-left cursor-pointer group hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300"
                 >
                   <div className="relative aspect-[16/10] bg-gradient-to-br from-primary/[0.03] to-accent/[0.03] overflow-hidden">
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -276,7 +283,7 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
                     <h3 className="text-[16px] font-semibold mb-2 line-clamp-2">{m.title}</h3>
                     <p className="text-[13px] text-muted-foreground/70 line-clamp-3 leading-relaxed">{m.excerpt}</p>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           ) : (
