@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
-import { Search, Filter, Wrench, ChevronRight, X } from 'lucide-react';
+import { Search, Filter, Wrench, ChevronRight } from 'lucide-react';
 import { getMethodologies, type Methodology } from '../lib/dataService';
 
 type Topic = '战略' | '业务设计' | '组织' | 'AI 技术';
@@ -54,6 +54,53 @@ export function MethodologyLibraryPage({
       return matchesSearch && matchesTopic;
     });
   }, [items, searchQuery, selectedTopic]);
+
+  // Methodology reader view (article-like)
+  if (selected) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header onNavigate={onNavigate} />
+
+        <section className="relative pt-28 sm:pt-32 pb-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent" />
+          <div className="relative max-w-4xl mx-auto">
+            <button
+              onClick={() => setSelected(null)}
+              className="text-[13px] text-muted-foreground/70 hover:text-foreground transition-colors"
+            >
+              ← 返回工具/方法论
+            </button>
+
+            <h1 className="mt-6 text-[34px] sm:text-[44px] font-semibold leading-[1.15] tracking-tight">
+              {selected.title}
+            </h1>
+
+            <div className="mt-5 flex items-center gap-2 flex-wrap">
+              {(selected.topics || []).map((t, idx) => (
+                <span
+                  key={idx}
+                  className="px-3 py-1 rounded-full bg-primary/8 text-primary text-[12px] font-medium border border-primary/15"
+                >
+                  {t}
+                </span>
+              ))}
+              <span className="text-[12px] text-muted-foreground/50">· {selected.publishDate}</span>
+            </div>
+
+            <div className="mt-10 bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl p-6 sm:p-10">
+              <div className="prose prose-neutral max-w-none">
+                <div className="text-[15px] sm:text-[16px] leading-[1.9] text-foreground/90 whitespace-pre-wrap">
+                  {selected.content || selected.excerpt}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <Footer onNavigate={(p) => onNavigate?.(p)} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -159,40 +206,6 @@ export function MethodologyLibraryPage({
           </div>
         )}
       </div>
-
-      {/* Detail modal (simple) */}
-      {selected && (
-        <div className="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-border/40 flex items-center justify-between sticky top-0 bg-white z-10">
-              <div>
-                <div className="text-[12px] text-muted-foreground/60">工具/方法论</div>
-                <h3 className="text-[18px] font-semibold">{selected.title}</h3>
-              </div>
-              <button
-                onClick={() => setSelected(null)}
-                className="p-2 rounded-xl hover:bg-muted/30 transition-colors"
-                aria-label="关闭"
-              >
-                <X className="w-5 h-5 text-muted-foreground" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="flex items-center gap-2 flex-wrap">
-                {(selected.topics || []).map((t, idx) => (
-                  <span
-                    key={idx}
-                    className="px-2.5 py-1 rounded-full bg-primary/8 text-primary text-[11px] font-medium border border-primary/15"
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
-              <p className="text-[14px] text-muted-foreground/80 leading-relaxed whitespace-pre-wrap">{selected.content || selected.excerpt}</p>
-            </div>
-          </div>
-        </div>
-      )}
 
       <Footer onNavigate={(p) => onNavigate?.(p)} />
     </div>

@@ -1,4 +1,5 @@
 import { Header } from './Header';
+import { Footer } from './Footer';
 import {
   BookOpen, Search, Filter, Grid3X3, List, Eye, Star, Clock, ChevronRight, RefreshCw
 } from 'lucide-react';
@@ -88,19 +89,25 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string) =>
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header onNavigate={onNavigate} />
       
       {/* Page Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-border/40">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="flex items-center gap-2 text-[13px] text-muted-foreground/60 mb-4">
-            <span className="hover:text-foreground cursor-pointer transition-colors">首页</span>
+            <button
+              type="button"
+              onClick={() => onNavigate?.('learning')}
+              className="hover:text-foreground transition-colors"
+            >
+              学习中心
+            </button>
             <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-foreground">书库</span>
+            <span className="text-foreground">图书馆</span>
           </div>
           <h1 className="text-[32px] font-semibold tracking-tight text-foreground mb-2">
-            精选书库
+            图书馆
           </h1>
           <p className="text-[15px] text-muted-foreground/70">
             汇聚商业、管理、战略等领域经典著作与前沿著作
@@ -160,7 +167,7 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string) =>
       </div>
 
       {/* Content */}
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
         {/* Results Info */}
         <div className="flex items-center justify-between mb-8">
           <p className="text-[14px] text-muted-foreground/70">
@@ -294,6 +301,8 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string) =>
           </div>
         )}
       </div>
+
+      <Footer onNavigate={(p) => onNavigate?.(p)} />
     </div>
   );
 }

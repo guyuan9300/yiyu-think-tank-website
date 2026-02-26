@@ -257,7 +257,12 @@ export function ArticleCenterPage({
         <div className="relative max-w-7xl mx-auto">
           {/* 面包屑导航 */}
           <div className="flex items-center gap-2 mb-6 text-[13px] text-muted-foreground/60">
-            <button className="hover:text-foreground transition-colors">首页</button>
+            <button
+              onClick={() => onNavigate?.('insights')}
+              className="hover:text-foreground transition-colors"
+            >
+              前沿洞察
+            </button>
             <ChevronRight className="w-3.5 h-3.5" />
             <span className="text-foreground">文章中心</span>
           </div>
