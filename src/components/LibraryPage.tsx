@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { PdfCoverImage } from './PdfCoverImage';
-import { BookOpen, Star, Eye, User, ChevronRight } from 'lucide-react';
-import { getBooks, type Book as StoredBook } from '../lib/dataService';
+import { BookOpen, Star, Eye, User, ChevronRight, Wrench, ArrowRight } from 'lucide-react';
+import { getBooks, getMethodologies, type Book as StoredBook, type Methodology as StoredMethodology } from '../lib/dataService';
 
 interface Book {
   id: string;
@@ -50,20 +50,24 @@ interface LibraryPageProps {
   ) => void;
 }
 
-export function LibraryPage({ onNavigate }: LibraryPageProps) {
-  const [activeCategory, setActiveCategory] = useState('all');
+interface MethodologyCardData {
+  id: string;
+  title: string;
+  excerpt: string;
+  topics: string[];
+  publishDate: string;
+}
 
-  const categories = [
-    { id: 'all', label: '全部' },
-    { id: '战略', label: '战略' },
-    { id: '业务设计', label: '业务设计' },
-    { id: '组织', label: '组织' },
-    { id: 'AI 技术', label: 'AI 技术' },
-  ];
+export function LibraryPage({ onNavigate }: LibraryPageProps) {
+  // 图书馆：按需求隐藏标签筛选（topics 筛选后续如果需要再加回来）
   const [books, setBooks] = useState<Book[]>([]);
+  const [methodologies, setMethodologies] = useState<MethodologyCardData[]>([]);
+  const [showAllBooks, setShowAllBooks] = useState(false);
+  const [showAllMethodologies, setShowAllMethodologies] = useState(false);
 
   useEffect(() => {
     const load = () => {
+      // books
       const raw = getBooks();
       const published = raw.filter((b) => b.status === 'published');
       const mapped: Book[] = published.map((b: StoredBook) => ({
@@ -85,6 +89,18 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
         pdfUrl: b.fileUrl ? (b.fileUrl.startsWith('http') ? b.fileUrl : `${window.location.origin}${b.fileUrl}`) : undefined,
       }));
       setBooks(mapped);
+
+      // methodologies
+      const rawMethods = getMethodologies();
+      const publishedMethods = rawMethods.filter((m: StoredMethodology) => m.status === 'published');
+      const methodCards: MethodologyCardData[] = publishedMethods.map((m: StoredMethodology) => ({
+        id: m.id,
+        title: m.title,
+        excerpt: m.excerpt,
+        topics: (m.topics || []) as any,
+        publishDate: m.publishDate,
+      }));
+      setMethodologies(methodCards);
     };
 
     load();
@@ -97,11 +113,6 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
     };
   }, []);
 
-  const filteredBooks = books.filter(book => {
-    if (activeCategory === 'all') return true;
-    return (book.topics || []).includes(activeCategory);
-  });
-
   const getCategoryColor = (topic: string) => {
     const colors: Record<string, string> = {
       '战略': 'bg-blue-100 text-blue-700',
@@ -111,6 +122,16 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
     };
     return colors[topic] || 'bg-gray-100 text-gray-700';
   };
+
+  const visibleBooks = useMemo(() => {
+    const list = books;
+    return showAllBooks ? list : list.slice(0, 6);
+  }, [books, showAllBooks]);
+
+  const visibleMethodologies = useMemo(() => {
+    const list = methodologies;
+    return showAllMethodologies ? list : list.slice(0, 6);
+  }, [methodologies, showAllMethodologies]);
 
   const handleBookClick = (bookId: string) => {
     if (onNavigate) {
@@ -124,30 +145,25 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
     <div className="min-h-screen bg-background">
       <Header isLoggedIn={false} userType="visitor" onNavigate={(p) => onNavigate?.(p as any)} />
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-12 px-4 sm:px-6 lg:px-8 border-b border-border/40">
-        <div className="max-w-[1200px] mx-auto">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10">
+      {/* Hero 区域：对齐「前沿洞察」样式 */}
+      <section className="relative pt-28 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent" />
+        <div className="relative max-w-[1200px] mx-auto">
+          <div className="flex items-end justify-between gap-6">
             <div>
-              <h1 className="text-[32px] font-semibold tracking-tight text-foreground mb-2">
+              <h1 className="text-[48px] sm:text-[56px] lg:text-[64px] font-semibold leading-[1.05] tracking-[-0.025em] mb-3">
                 学习中心
               </h1>
-              <p className="text-[15px] text-muted-foreground/70">
-                书库 · 我的学习（持续沉淀与回顾）
+              <p className="text-[13px] text-muted-foreground/50 tracking-[0.15em] uppercase font-medium">
+                Learning Center
+              </p>
+              <p className="mt-4 text-[21px] text-muted-foreground/70 leading-[1.5] max-w-3xl font-light">
+                书库 · 工具与方法论（持续沉淀与回顾）
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white border border-border/60 hover:border-primary/40 transition-all shadow-sm text-[14px]"
-                onClick={() => {
-                  // 当前页就是“书库”视图：保持不跳转
-                  window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-                }}
-              >
-                <BookOpen className="w-4 h-4 text-muted-foreground/70" />
-                <span className="font-medium text-muted-foreground/70">书库</span>
-              </button>
+
+            {/* 右上角：保留“我的学习”，移除“书库”图标按钮 */}
+            <div className="hidden sm:flex items-center">
               <button
                 type="button"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white border border-border/60 hover:border-primary/40 transition-all shadow-sm text-[14px]"
@@ -162,48 +178,102 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
               </button>
             </div>
           </div>
-
-          {/* Category Tags */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => setActiveCategory(category.id)}
-                className={`px-5 py-2.5 rounded-full text-[14px] font-medium transition-all duration-300 ${
-                  activeCategory === category.id
-                    ? 'bg-foreground text-white shadow-lg'
-                    : 'bg-white border border-border/60 hover:border-primary/40 text-muted-foreground/70 hover:text-foreground'
-                }`}
-              >
-                {category.label}
-              </button>
-            ))}
-          </div>
         </div>
       </section>
 
-      {/* Content */}
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {filteredBooks.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredBooks.map((book) => (
-              <BookCard
-                key={book.id}
-                book={book}
-                onClick={() => handleBookClick(book.id)}
-                getCategoryColor={getCategoryColor}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-24">
-            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-6">
-              <BookOpen className="w-8 h-8 text-muted-foreground/50" />
+      {/* 内容区域 */}
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-32">
+        {/* 图书馆 */}
+        <section className="mb-20">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-success/10 to-accent/10 flex items-center justify-center">
+                <BookOpen className="w-6 h-6 text-success" />
+              </div>
+              <div>
+                <h2 className="text-[32px] font-semibold tracking-[-0.02em] mb-1">图书馆</h2>
+                <p className="text-[15px] text-muted-foreground/60">精选书单与学习资料</p>
+              </div>
             </div>
-            <h3 className="text-[18px] font-medium mb-2">未找到相关书籍</h3>
-            <p className="text-muted-foreground/70 text-[14px]">尝试其他分类</p>
+
+            <button
+              type="button"
+              onClick={() => setShowAllBooks((v) => !v)}
+              className="inline-flex items-center gap-2 text-[14px] text-muted-foreground/70 hover:text-foreground transition-colors"
+            >
+              <span>{showAllBooks ? '收起' : '查看更多'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
-        )}
+
+          {visibleBooks.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {visibleBooks.map((book) => (
+                <BookCard
+                  key={book.id}
+                  book={book}
+                  onClick={() => handleBookClick(book.id)}
+                  getCategoryColor={getCategoryColor}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-20 text-muted-foreground/70">暂无书籍</div>
+          )}
+        </section>
+
+        {/* 工具/方法论 */}
+        <section>
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center">
+                <Wrench className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-[32px] font-semibold tracking-[-0.02em] mb-1">工具/方法论</h2>
+                <p className="text-[15px] text-muted-foreground/60">益语方法论与可复用工具</p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowAllMethodologies((v) => !v)}
+              className="inline-flex items-center gap-2 text-[14px] text-muted-foreground/70 hover:text-foreground transition-colors"
+            >
+              <span>{showAllMethodologies ? '收起' : '查看更多'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {visibleMethodologies.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {visibleMethodologies.map((m) => (
+                <div
+                  key={m.id}
+                  className="bg-white/80 backdrop-blur-sm rounded-[20px] border border-border/40 p-6"
+                >
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    {(m.topics || []).slice(0, 2).map((t) => (
+                      <span
+                        key={t}
+                        className="px-2.5 py-1 rounded-full bg-primary/8 text-primary text-[11px] font-medium border border-primary/15"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                  <h3 className="text-[16px] font-semibold mb-2 line-clamp-2">{m.title}</h3>
+                  <p className="text-[13px] text-muted-foreground/70 line-clamp-3 leading-relaxed">{m.excerpt}</p>
+                  <div className="mt-4 pt-4 border-t border-border/40 text-[12px] text-muted-foreground/50">
+                    {m.publishDate}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-20 text-muted-foreground/70">暂无方法论</div>
+          )}
+        </section>
       </div>
 
       {/* Footer */}
