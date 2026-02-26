@@ -2264,11 +2264,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   description: (formData.get('description') as string) || current?.description || '待补充',
                   abstract: (formData.get('abstract') as string) || current?.abstract || '待补充',
                   topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
-                  pages: parseInt(formData.get('pages') as string) || current?.pages || 100,
-                  duration: (formData.get('duration') as string) || current?.duration || '待补充',
                   rating: parseFloat(formData.get('rating') as string) || current?.rating || 4.5,
                   coverImage: bookCoverImage || current?.coverImage || 'images/placeholders/document.svg',
-                  coverColor: (formData.get('coverColor') as string) || current?.coverColor,
                   publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
                   status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
                   showOnHome: formData.get('showOnHome') === 'on',
@@ -2692,19 +2689,7 @@ function ReportFormModal({
               />
             </div>
             
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                旧分类（已停用）
-              </label>
-              <input
-                type="text"
-                name="category"
-                disabled
-                defaultValue={'（已迁移到 topics）'}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
-              />
-              <p className="text-xs text-gray-500 mt-2">已切换到统一四类标签体系，此字段仅保留展示，避免继续制造混乱。</p>
-            </div>
+            {/* 旧分类字段已废弃（已迁移到 topics），按需求从表单移除 */}
           </div>
           
           <div className="grid grid-cols-3 gap-4">
@@ -2991,35 +2976,7 @@ function InsightFormModal({
             />
           </div>
           
-          {/* 旧分类和作者 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                旧分类（已停用）
-              </label>
-              <input
-                type="text"
-                name="category"
-                disabled
-                defaultValue={'（已迁移到 topics）'}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
-              />
-              <p className="text-xs text-gray-500 mt-2">切换到统一四类标签体系中，此字段仅展示。</p>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                作者（已停用）
-              </label>
-              <input
-                type="text"
-                name="legacyAuthor"
-                disabled
-                defaultValue={'（已迁移到 topics）'}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
-              />
-            </div>
-          </div>
+          {/* 旧分类/作者字段已废弃（已迁移到 topics），按需求从表单移除 */}
 
           {/* 统一四类标签（多选） */}
           <div>
@@ -3157,18 +3114,7 @@ function InsightFormModal({
           </div>
           
           {/* 旧标签（已停用）：只读展示 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              旧标签（已停用）
-            </label>
-            <input
-              type="text"
-              name="legacyTags"
-              disabled
-              defaultValue={'（已迁移到 topics）'}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
-            />
-          </div>
+          {/* 旧标签字段已废弃（已迁移到 topics），按需求从表单移除 */}
 
           {/* legacy tags/usedTags removed (topics-only schema) */}
 
@@ -3441,35 +3387,19 @@ function BookFormModal({
             />
           </div>
           
-          {/* 作者和分类 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                作者 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="author"
-                placeholder="作者名称"
-                required
-                defaultValue={editingItem?.author || ''}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                旧分类（已停用）
-              </label>
-              <input
-                type="text"
-                name="category"
-                disabled
-                defaultValue={'（已迁移到 topics）'}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
-              />
-              <p className="text-xs text-gray-500 mt-2">切换到统一四类标签体系中，此字段仅展示。</p>
-            </div>
+          {/* 作者（书籍保留） */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              作者 <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="author"
+              placeholder="作者名称"
+              required
+              defaultValue={editingItem?.author || ''}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
           </div>
 
           {/* 统一四类标签（多选） */}
@@ -3523,35 +3453,8 @@ function BookFormModal({
             />
           </div>
           
-          {/* 页数、时长、评分 */}
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                页数
-              </label>
-              <input
-                type="number"
-                name="pages"
-                placeholder="如: 328"
-                min={1}
-                defaultValue={editingItem?.pages || 100}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                阅读时长
-              </label>
-              <input
-                type="text"
-                name="duration"
-                placeholder="如: 约6小时"
-                defaultValue={editingItem?.duration || '约5小时'}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
-            
+          {/* 页数/阅读时长已按需求移除；保留评分 */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 评分（1-5）
@@ -3569,23 +3472,8 @@ function BookFormModal({
             </div>
           </div>
           
-          {/* 封面颜色和修改时间 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                封面颜色
-              </label>
-              <select
-                name="coverColor"
-                defaultValue={editingItem?.coverColor || 'from-blue-600 to-indigo-800'}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
-              >
-                {colorOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-            
+          {/* 封面颜色已按需求移除；保留修改时间 */}
+          <div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 修改时间 <span className="text-red-500">*</span>
