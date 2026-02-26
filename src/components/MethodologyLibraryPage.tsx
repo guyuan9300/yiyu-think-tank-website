@@ -104,7 +104,7 @@ export function MethodologyLibraryPage({
                 <span>工具/方法论</span>
               </button>
               <ChevronRight className="w-3.5 h-3.5" />
-              <span className="text-foreground">{selected.topics?.[0] || '方法论'}</span>
+              <span className="text-foreground">详情</span>
             </div>
 
             {/* Cover */}

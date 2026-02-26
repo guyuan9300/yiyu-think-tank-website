@@ -148,7 +148,7 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
               <span>报告库</span>
             </button>
             <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-foreground">{(report.topics || []).join(' / ')}</span>
+            <span className="text-foreground">详情</span>
           </div>
 
           {/* 左图右文布局 */}

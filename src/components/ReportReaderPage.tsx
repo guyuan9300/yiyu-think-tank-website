@@ -326,6 +326,23 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
       {/* 报告信息头部 */}
       <div ref={bookInfoRef} className="bg-white border-b border-gray-200 pt-16">
         <div className="max-w-[1600px] mx-auto px-6 py-8">
+          {/* 面包屑 */}
+          <div className="flex items-center gap-2 mb-4 text-[13px] text-gray-500">
+            <button
+              type="button"
+              onClick={() => {
+                const params = new URLSearchParams(window.location.search);
+                params.set('page', 'report-library');
+                params.delete('id');
+                window.location.href = `${window.location.pathname}?${params.toString()}`;
+              }}
+              className="hover:text-gray-900 transition-colors"
+            >
+              报告库
+            </button>
+            <ChevronRight className="w-3.5 h-3.5" />
+            <span className="text-gray-900">详情</span>
+          </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             {report.title}
           </h1>

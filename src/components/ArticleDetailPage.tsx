@@ -111,7 +111,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
               <span>文章中心</span>
             </button>
             <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-foreground">{displayArticle.topics?.[0] || '洞察'}</span>
+            <span className="text-foreground">详情</span>
           </div>
 
           {/* Cover */}

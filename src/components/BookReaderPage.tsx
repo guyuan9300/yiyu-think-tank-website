@@ -316,6 +316,18 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
       {/* 书籍信息头部 - 优化为紧凑布局 */}
       <div ref={bookInfoRef} className="bg-white border-b border-gray-200 pt-16">
         <div className="max-w-[1600px] mx-auto px-6 py-4">
+          {/* 面包屑 */}
+          <div className="flex items-center gap-2 mb-3 text-[13px] text-gray-500">
+            <button
+              type="button"
+              onClick={() => onNavigate?.('book-library' as any)}
+              className="hover:text-gray-900 transition-colors"
+            >
+              图书馆
+            </button>
+            <ChevronRight className="w-3.5 h-3.5" />
+            <span className="text-gray-900">详情</span>
+          </div>
           {/* 第1行：书名、作者信息、下载按钮 */}
           <div className="flex items-center justify-between gap-6 mb-3">
             <div className="flex items-center gap-6 flex-1">
