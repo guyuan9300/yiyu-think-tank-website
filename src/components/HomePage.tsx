@@ -460,7 +460,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
                         className={`relative text-left rounded-[18px] px-4 py-3.5 transition-all duration-300 outline-none focus:ring-2 focus:ring-primary/20 will-change-transform ${
                           active
                             ? 'bg-white shadow-lg border border-border/70 scale-[1.04]'
-                            : 'bg-muted/60 hover:bg-muted/45 border border-border/40 hover:border-border/60 hover:-translate-y-0.5 hover:shadow-sm'
+                            : 'bg-[#E6E6E6] hover:bg-[#DCDCDC] border border-border/40 hover:border-border/60 hover:-translate-y-0.5 hover:shadow-sm'
                         }`}
                         style={
                           active
@@ -512,7 +512,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
                               className={`tracking-tight transition-all duration-300 ${
                                 active
                                   ? 'text-[18px] font-semibold text-foreground'
-                                  : 'text-[16px] font-medium text-foreground/70'
+                                  : 'text-[16px] font-medium text-foreground/75'
                               }`}
                             >
                               {c.title}
