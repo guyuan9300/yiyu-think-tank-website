@@ -20,7 +20,7 @@ import {
   getInsights, saveInsight, deleteInsight as deleteInsightFromService,
   getMethodologies, saveMethodology, deleteMethodology as deleteMethodologyFromService,
   getBooks, saveBook, deleteBook as deleteBookFromService,
-  getCategories, getUsedTags, addUsedTag, calculateReadTime,
+  getCategories, calculateReadTime,
   getComments, updateCommentStatus, replyComment, deleteComment,
   type Report, type InsightArticle, type Methodology, type Book, type Category, type Comment,
   type ResourceTopic
@@ -74,7 +74,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const [reports, setReports] = useState<Report[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [usedTags, setUsedTags] = useState<string[]>([]);
+  // usedTags removed: switched to topics-only schema
   
   // 战略陪伴客户同步（写入 dataServiceLocal.course_recommendations）
   const [strategyClients, setStrategyClients] = useState<ClientProject[]>([]);
@@ -112,7 +112,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const fileInputRef = useRef<HTMLInputElement>(null);
   const reportFileInputRef = useRef<HTMLInputElement>(null);
   const bookCoverFileInputRef = useRef<HTMLInputElement>(null);
-  const tagInputRef = useRef<HTMLInputElement>(null);
+  // tagInputRef removed (topics-only schema)
 
   // 初始化数据
   useEffect(() => {
@@ -122,7 +122,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       setMethodologies(getMethodologies());
       setBooks(getBooks());
       setCategories(getCategories());
-      setUsedTags(getUsedTags());
+      // usedTags removed (topics-only schema)
       setComments(getComments());
       loadInviteCodes();
     };
@@ -239,7 +239,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     setMethodologies(getMethodologies());
     setBooks(getBooks());
     setCategories(getCategories());
-    setUsedTags(getUsedTags());
+    // usedTags removed (topics-only schema)
     setComments(getComments());
   }, []);
 
@@ -459,25 +459,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     bookCoverFileInputRef.current?.click();
   };
 
-  // 添加标签
-  const handleAddTag = (tag: string, tagInput: HTMLInputElement, setTags: React.Dispatch<React.SetStateAction<string[]>>) => {
-    const newTag = tag.trim();
-    if (newTag) {
-      setTags(prev => {
-        if (!prev.includes(newTag)) {
-          return [...prev, newTag];
-        }
-        return prev;
-      });
-      tagInput.value = '';
-      addUsedTag(newTag); // 保存到历史记录
-    }
-  };
-
-  // 移除标签
-  const handleRemoveTag = (tag: string, setTags: React.Dispatch<React.SetStateAction<string[]>>) => {
-    setTags(prev => prev.filter(t => t !== tag));
-  };
+  // tags/usedTags removed (topics-only schema)
 
   // 同步站内内容 → 战略陪伴客户的「课程推荐」（dataServiceLocal.course_recommendations）
   const syncInternalCourseRecommendations = useCallback(
@@ -557,11 +539,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       // 必填项缺失时先用“待补充”占位
       title: (formData.get('title') as string) || current?.title || '待补充',
       publisher: (formData.get('publisher') as string) || current?.publisher || '待补充',
-      // 旧字段：分类/旧 tags 在切换期改为只读，不再从表单写入，避免继续制造混乱
-      category: current?.category || '待补充',
-      tags: current?.tags || [],
-      // 新字段：统一四类标签
-      topics: selectedTopics,
+      // 统一四类标签（必填）
+      topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
       summary: (formData.get('summary') as string) || current?.summary || '待补充',
       version: (formData.get('version') as string) || current?.version || 'v1.0',
       format: ['PDF'],
@@ -571,7 +550,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       // 用 publishDate 作为“修改时间/展示时间”的可编辑入口
       publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
       status: reportStatus,
-      isHot: formData.get('isHot') === 'on',
       showOnHome: formData.get('showOnHome') === 'on',
       // 报告文件信息
       fileUrl: reportFile ? reportFile.name : current?.fileUrl,
@@ -1005,9 +983,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                         <tr key={article.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              {article.featured && (
-                                <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">荐</span>
-                              )}
+                              {/* featured removed (topics-only schema) */}
                               <div>
                                 <p className="font-medium text-gray-900">{article.title}</p>
                                 <p className="text-sm text-gray-500 truncate max-w-xs">{article.excerpt}</p>
@@ -1016,11 +992,11 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                              {article.category}
+                              {(article.topics || []).join(' / ')}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                            {article.author}
+                            —
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                             {article.publishDate}
@@ -1360,9 +1336,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                         <tr key={report.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              {report.isHot && (
-<span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">热</span>
-                              )}
+                              {/* isHot removed (topics-only schema) */}
                               <div>
                                 <p className="font-medium text-gray-900">{report.title}</p>
                                 <p className="text-sm text-gray-500 truncate max-w-xs">{report.summary}</p>
@@ -1374,7 +1348,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full">
-                              {report.category}
+                              {(report.topics || []).join(' / ')}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
@@ -1573,7 +1547,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
-                              {book.category}
+                              {(book.topics || []).join(' / ')}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
@@ -2141,8 +2115,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               reportPages={reportPages}
               setReportPages={setReportPages}
               calculatedReadTime={calculatedReadTime}
-              categories={categories.filter(c => c.type === 'report')}
-              usedTags={usedTags}
               onClose={() => {
                 setShowReportForm(false);
                 setEditingItem(null);
@@ -2155,11 +2127,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               onSave={handleSaveReport}
               fileInputRef={fileInputRef}
               coverInputRef={coverInputRef}
-              tagInputRef={tagInputRef}
               handleCoverButtonClick={handleCoverButtonClick}
               handleCoverImageSelect={handleCoverImageSelect}
-              handleAddTag={handleAddTag}
-              handleRemoveTag={handleRemoveTag}
               strategyClients={strategyClients}
               syncClientIds={syncClientIds}
               setSyncClientIds={setSyncClientIds}
@@ -2178,8 +2147,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
           {showInsightForm && (
             <InsightFormModal
               editingItem={editingItem as InsightArticle | null}
-              categories={categories.filter(c => c.type === 'insight')}
-              usedTags={usedTags}
               onClose={() => {
                 setShowInsightForm(false);
                 setEditingItem(null);
@@ -2196,14 +2163,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   title: (formData.get('title') as string) || current?.title || '待补充',
                   excerpt: (formData.get('excerpt') as string) || current?.excerpt || '待补充',
                   content: (formData.get('content') as string) || current?.content || '',
-                  category: current?.category || '待补充',
-                  tags: current?.tags || [],
-                  topics: selectedTopics,
-                  author: (formData.get('author') as string) || current?.author || '益语智库',
-                  readTime: parseInt(formData.get('readTime') as string) || current?.readTime || 10,
+                  topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
                   publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
                   status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
-                  featured: formData.get('featured') === 'on',
                   showOnHome: formData.get('showOnHome') === 'on',
                   coverImage: (current as any)?.coverImage || 'images/placeholders/document.svg',
 
@@ -2227,8 +2189,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setEditingItem(null);
                 setMessage({ type: 'success', text: '文章已保存，前台洞察页面可见！' });
               }}
-              handleAddTag={handleAddTag}
-              handleRemoveTag={handleRemoveTag}
               strategyClients={strategyClients}
               syncClientIds={syncClientIds}
               setSyncClientIds={setSyncClientIds}
@@ -2239,8 +2199,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
           {showMethodologyForm && (
             <InsightFormModal
               editingItem={editingItem as any}
-              categories={[]}
-              usedTags={usedTags}
               onClose={() => {
                 setShowMethodologyForm(false);
                 setEditingItem(null);
@@ -2257,14 +2215,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   title: (formData.get('title') as string) || current?.title || '待补充',
                   excerpt: (formData.get('excerpt') as string) || current?.excerpt || '待补充',
                   content: (formData.get('content') as string) || current?.content || '',
-                  category: current?.category || '方法论',
-                  tags: current?.tags || [],
-                  topics: selectedTopics,
-                  author: (formData.get('author') as string) || current?.author || '益语智库',
-                  readTime: parseInt(formData.get('readTime') as string) || current?.readTime || 10,
+                  topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
                   publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
                   status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
-                  featured: formData.get('featured') === 'on',
                   showOnHome: formData.get('showOnHome') === 'on',
                   coverImage: (current as any)?.coverImage || 'images/placeholders/document.svg',
                 };
@@ -2282,8 +2235,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setEditingItem(null);
                 setMessage({ type: 'success', text: '方法论已保存！' });
               }}
-              handleAddTag={handleAddTag}
-              handleRemoveTag={handleRemoveTag}
               strategyClients={strategyClients}
               syncClientIds={syncClientIds}
               setSyncClientIds={setSyncClientIds}
@@ -2294,8 +2245,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
           {showBookForm && (
             <BookFormModal
               editingItem={editingItem as Book | null}
-              categories={categories.filter(c => c.type === 'book')}
-              usedTags={usedTags}
               onClose={() => {
                 setShowBookForm(false);
                 setEditingItem(null);
@@ -2314,11 +2263,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   author: (formData.get('author') as string) || current?.author || '待补充',
                   description: (formData.get('description') as string) || current?.description || '待补充',
                   abstract: (formData.get('abstract') as string) || current?.abstract || '待补充',
-                  // legacy fields: read-only during transition
-                  category: current?.category || '待补充',
-                  tags: current?.tags || [],
-                  // new unified topics
-                  topics: selectedTopics,
+                  topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
                   pages: parseInt(formData.get('pages') as string) || current?.pages || 100,
                   duration: (formData.get('duration') as string) || current?.duration || '待补充',
                   rating: parseFloat(formData.get('rating') as string) || current?.rating || 4.5,
@@ -2342,8 +2287,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setBookCoverImage(null);
                 setMessage({ type: 'success', text: '书籍已保存，前台书库可见！' });
               }}
-              handleAddTag={handleAddTag}
-              handleRemoveTag={handleRemoveTag}
               strategyClients={strategyClients}
               syncClientIds={syncClientIds}
               setSyncClientIds={setSyncClientIds}
@@ -2438,17 +2381,12 @@ interface ReportFormModalProps {
   setReportPages: React.Dispatch<React.SetStateAction<number>>;
   calculatedReadTime: string;
   setCalculatedReadTime: React.Dispatch<React.SetStateAction<string>>;
-  categories: Category[];
-  usedTags: string[];
   onClose: () => void;
   onSave: (e: React.FormEvent<HTMLFormElement>) => void;
   fileInputRef: React.RefObject<HTMLInputElement>;
   coverInputRef: React.RefObject<HTMLDivElement>;
-  tagInputRef: React.RefObject<HTMLInputElement>;
   handleCoverButtonClick: () => void;
   handleCoverImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleAddTag: (tag: string, input: HTMLInputElement, setTags: React.Dispatch<React.SetStateAction<string[]>>) => void;
-  handleRemoveTag: (tag: string, setTags: React.Dispatch<React.SetStateAction<string[]>>) => void;
   reportFile: File | null;
   setReportFile: React.Dispatch<React.SetStateAction<File | null>>;
   reportStatus: 'draft' | 'published';
@@ -2470,17 +2408,12 @@ function ReportFormModal({
   setReportPages,
   calculatedReadTime,
   setCalculatedReadTime,
-  categories,
-  usedTags,
   onClose,
   onSave,
   fileInputRef,
   coverInputRef,
-  tagInputRef,
   handleCoverButtonClick,
   handleCoverImageSelect,
-  handleAddTag,
-  handleRemoveTag,
   reportFile,
   setReportFile,
   reportStatus,
@@ -2492,7 +2425,7 @@ function ReportFormModal({
   syncClientIds,
   setSyncClientIds,
 }: ReportFormModalProps) {
-  const [tags, setTags] = useState<string[]>(editingItem?.tags || []);
+  // tags/usedTags 已废弃（统一改为 topics）。
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [isExtractingCover, setIsExtractingCover] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -2565,11 +2498,12 @@ function ReportFormModal({
                     // Best-effort: read title/excerpt/tags from current form fields
                     const titleInput = document.querySelector('input[name="title"]') as HTMLInputElement | null;
                     const summaryInput = document.querySelector('textarea[name="summary"]') as HTMLTextAreaElement | null;
-                    const tagsInput = document.querySelector('input[name="tags"]') as HTMLInputElement | null;
+                    // 旧 tags 字段已废弃：用 topics 作为 prompt 关键词
+                    const topicChecks = Array.from(document.querySelectorAll('input[name="topics"]')) as HTMLInputElement[];
 
                     const title = titleInput?.value || editingItem?.title || '报告封面';
                     const excerpt = summaryInput?.value || editingItem?.summary || '';
-                    const tags = (tagsInput?.value || '').split(',').map(t => t.trim()).filter(Boolean);
+                    const tags = topicChecks.filter(c => c.checked).map(c => c.value).filter(Boolean);
 
                     const dataUrl = await generateCoverImage({ title, excerpt, tags });
                     setCoverImage(dataUrl);
@@ -2766,7 +2700,7 @@ function ReportFormModal({
                 type="text"
                 name="category"
                 disabled
-                defaultValue={editingItem?.category || '（无）'}
+                defaultValue={'（已迁移到 topics）'}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
               />
               <p className="text-xs text-gray-500 mt-2">已切换到统一四类标签体系，此字段仅保留展示，避免继续制造混乱。</p>
@@ -2908,33 +2842,7 @@ function ReportFormModal({
             <p className="text-xs text-gray-500 mt-2">旧“标签/分类”字段正在停用切换中，后续会移除。</p>
           </div>
 
-          {/* 旧标签（已停用）：只读展示 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              旧标签（已停用）
-            </label>
-            <input
-              type="text"
-              name="tags"
-              disabled
-              defaultValue={(editingItem as any)?.tags?.join(', ') || '（无）'}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
-            />
-          </div>
-
-          {/* 历史使用的标签（旧标签体系的遗留，只读展示） */}
-          {usedTags.length > 0 && (
-            <div className="mt-3">
-              <p className="text-xs text-gray-500 mb-2">历史标签（只读展示）：</p>
-              <div className="flex flex-wrap gap-2">
-                {usedTags.slice(0, 10).map(tag => (
-                  <span key={tag} className="px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-500">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* legacy tags/usedTags removed (topics-only schema) */}
           
           <div className="grid grid-cols-2 gap-6">
             <div>
@@ -2967,16 +2875,7 @@ function ReportFormModal({
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                name="isHot"
-                id="isHot"
-                defaultChecked={editingItem ? editingItem.isHot : false}
-                className="rounded text-green-600 focus:ring-green-500"
-              />
-              <label htmlFor="isHot" className="text-sm text-gray-700 cursor-pointer">设为热门报告</label>
-            </div>
+            {/* isHot removed (topics-only schema) */}
 
             <div className="flex items-center gap-2">
               <input
@@ -3044,12 +2943,8 @@ function ReportFormModal({
 // 洞察文章表单模态框组件
 interface InsightFormModalProps {
   editingItem: InsightArticle | null;
-  categories: Category[];
-  usedTags: string[];
   onClose: () => void;
   onSave: (e: React.FormEvent<HTMLFormElement>) => void;
-  handleAddTag: (tag: string, input: HTMLInputElement, setTags: React.Dispatch<React.SetStateAction<string[]>>) => void;
-  handleRemoveTag: (tag: string, setTags: React.Dispatch<React.SetStateAction<string[]>>) => void;
   strategyClients: ClientProject[];
   syncClientIds: string[];
   setSyncClientIds: React.Dispatch<React.SetStateAction<string[]>>;
@@ -3058,18 +2953,12 @@ interface InsightFormModalProps {
 
 function InsightFormModal({
   editingItem,
-  categories,
-  usedTags,
   onClose,
   onSave,
-  handleAddTag,
-  handleRemoveTag,
   strategyClients,
   syncClientIds,
   setSyncClientIds,
 }: InsightFormModalProps) {
-  const [tags, setTags] = useState<string[]>(editingItem?.tags || []);
-  const tagInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-auto">
@@ -3112,7 +3001,7 @@ function InsightFormModal({
                 type="text"
                 name="category"
                 disabled
-                defaultValue={editingItem?.category || '（无）'}
+                defaultValue={'（已迁移到 topics）'}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
               />
               <p className="text-xs text-gray-500 mt-2">切换到统一四类标签体系中，此字段仅展示。</p>
@@ -3120,15 +3009,14 @@ function InsightFormModal({
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                作者 <span className="text-red-500">*</span>
+                作者（已停用）
               </label>
               <input
                 type="text"
-                name="author"
-                placeholder="作者名称"
-                required
-                defaultValue={editingItem?.author || '益语智库'}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                name="legacyAuthor"
+                disabled
+                defaultValue={'（已迁移到 topics）'}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
               />
             </div>
           </div>
@@ -3248,8 +3136,9 @@ function InsightFormModal({
                 name="readTime"
                 placeholder="如: 15"
                 min={1}
-                defaultValue={editingItem?.readTime || 10}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled
+                defaultValue={0}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
               />
             </div>
             
@@ -3274,41 +3163,14 @@ function InsightFormModal({
             </label>
             <input
               type="text"
-              name="tags"
+              name="legacyTags"
               disabled
-              defaultValue={(editingItem?.tags || []).join(', ') || '（无）'}
+              defaultValue={'（已迁移到 topics）'}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
             />
           </div>
-            
-            {/* 历史标签 */}
-            {usedTags.length > 0 && (
-              <div className="mt-3">
-                <p className="text-xs text-gray-500 mb-2">历史标签（点击添加）：</p>
-                <div className="flex flex-wrap gap-2">
-                  {usedTags.slice(0, 10).map(tag => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => {
-                        if (!tags.includes(tag)) {
-                          setTags(prev => [...prev, tag]);
-                          addUsedTag(tag);
-                        }
-                      }}
-                      className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                        tags.includes(tag)
-                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-100 text-gray-600 hover:bg-purple-100 hover:text-purple-700'
-                      }`}
-                      disabled={tags.includes(tag)}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+
+          {/* legacy tags/usedTags removed (topics-only schema) */}
 
           {/* 分享设置（用于微信朋友圈卡片） */}
           <div className="bg-green-50 border border-green-200 rounded-xl p-4">
@@ -3403,16 +3265,7 @@ function InsightFormModal({
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                name="featured"
-                id="featured"
-                defaultChecked={editingItem?.featured || false}
-                className="rounded text-purple-600 focus:ring-purple-500"
-              />
-              <label htmlFor="featured" className="text-sm text-gray-700 cursor-pointer">设为推荐文章</label>
-            </div>
+            {/* featured removed (topics-only schema) */}
 
             <div className="flex items-center gap-2">
               <input
@@ -3455,12 +3308,8 @@ function InsightFormModal({
 // 书籍表单模态框组件
 interface BookFormModalProps {
   editingItem: Book | null;
-  categories: Category[];
-  usedTags: string[];
   onClose: () => void;
   onSave: (e: React.FormEvent<HTMLFormElement>) => void;
-  handleAddTag: (tag: string, input: HTMLInputElement, setTags: React.Dispatch<React.SetStateAction<string[]>>) => void;
-  handleRemoveTag: (tag: string, setTags: React.Dispatch<React.SetStateAction<string[]>>) => void;
   bookCoverImage: string | null;
   setBookCoverImage: React.Dispatch<React.SetStateAction<string | null>>;
   bookCoverFileInputRef: React.RefObject<HTMLInputElement>;
@@ -3474,12 +3323,8 @@ interface BookFormModalProps {
 
 function BookFormModal({
   editingItem,
-  categories,
-  usedTags,
   onClose,
   onSave,
-  handleAddTag,
-  handleRemoveTag,
   bookCoverImage,
   setBookCoverImage,
   bookCoverFileInputRef,
@@ -3489,8 +3334,6 @@ function BookFormModal({
   syncClientIds,
   setSyncClientIds,
 }: BookFormModalProps) {
-  const [tags, setTags] = useState<string[]>(editingItem?.tags || []);
-  const tagInputRef = useRef<HTMLInputElement>(null);
 
   const colorOptions = [
     { value: 'from-blue-600 to-indigo-800', label: '蓝色' },
@@ -3622,7 +3465,7 @@ function BookFormModal({
                 type="text"
                 name="category"
                 disabled
-                defaultValue={editingItem?.category || '（无）'}
+                defaultValue={'（已迁移到 topics）'}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
               />
               <p className="text-xs text-gray-500 mt-2">切换到统一四类标签体系中，此字段仅展示。</p>
@@ -3810,34 +3653,7 @@ function BookFormModal({
               )}
             </div>
           </div>
-          {/* 旧标签（已停用）：只读展示 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              旧标签（已停用）
-            </label>
-            <input
-              type="text"
-              name="tags"
-              disabled
-              defaultValue={(editingItem?.tags || []).join(', ') || '（无）'}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
-            />
-          </div>
-
-
-          {/* 历史标签（旧标签体系的遗留，只读展示） */}
-          {usedTags.length > 0 && (
-            <div className="mt-3">
-              <p className="text-xs text-gray-500 mb-2">历史标签（只读展示）：</p>
-              <div className="flex flex-wrap gap-2">
-                {usedTags.slice(0, 10).map(tag => (
-                  <span key={tag} className="px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-500">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* legacy tags/usedTags removed (topics-only schema) */}
 
           
           {/* 状态 */}
