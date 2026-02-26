@@ -327,98 +327,17 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
         </div>
       </section>
 
-      {/* Quick Entry Cards - Refined Grid */}
-      <section className="py-12 px-4 sm:px-6 lg:px-8">
+      {/* 首页：按需求隐藏「免费预约组织诊断」后到「战略陪伴」前的内容（3张跳转卡片 / 热门内容 / 战略前沿报告） */}
+
+      {/* 最新内容（占位：后续按你指示补具体呈现） */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1200px] mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <QuickEntryCard
-              icon={<TrendingUp className="w-6 h-6" />}
-              title="我想看洞察与观点"
-              subtitle="Industry Insights"
-              onClick={() => handleNavigate('insights')}
-              gradient="from-primary/15 to-primary/5"
-              borderColor="hover:border-primary/30"
-            />
-            <QuickEntryCard
-              icon={<BookOpen className="w-6 h-6" />}
-              title="我来学习与下载资料"
-              subtitle="Learning Center"
-              onClick={() => handleNavigate('learning')}
-              gradient="from-secondary/15 to-secondary/5"
-              borderColor="hover:border-secondary/30"
-            />
-            <QuickEntryCard
-              icon={<Users className="w-6 h-6" />}
-              title="我是战略陪伴客户"
-              subtitle="Client Workspace"
-              onClick={() => handleNavigate('strategy-companion')}
-              gradient="from-accent/15 to-accent/5"
-              borderColor="hover:border-accent/30"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Hot Content Section - Refined Layout */}
-      <section className="py-14 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-[1200px] mx-auto">
-          {/* Section Header */}
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
-            <div className="space-y-2">
-              <h2 className="text-[28px] font-semibold tracking-tight text-foreground">
-                热门内容
-              </h2>
-              <p className="text-[14px] text-muted-foreground/60">
-                Featured Content · 精选报告 + 书籍 + 洞察
-              </p>
-            </div>
-            <button
-              onClick={() => handleNavigate('insights')}
-              className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-border/50 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 text-[14px]"
-            >
-              <span>查看全部</span>
-              <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5" />
-            </button>
-          </div>
-
-          {/* Topic Cards - Horizontal Scroll */}
-          <div className="flex gap-5 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4">
-            {hotTopics.map((topic, index) => (
-              <TopicCard
-                key={index}
-                {...topic}
-                onClick={() => handleNavigateToDetail('topic', topic.id)}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Strategy Frontier Reports - Editorial Design */}
-      <section className="py-14 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-transparent to-muted/8">
-        <div className="max-w-[1200px] mx-auto">
-          {/* Section Header */}
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
-            <div className="space-y-2">
-              <h2 className="text-[28px] font-semibold tracking-tight text-foreground">
-                战略前沿报告
-              </h2>
-              <p className="text-[14px] text-muted-foreground/60">
-                Frontier Reports · 前沿洞察 / 行业研究 / 深度分析
-              </p>
-            </div>
-            {/* 订阅前沿按钮已迁移到「前沿洞察」页面右上角 */}
-          </div>
-
-          {/* Editorial Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-            {insights.map((insight, index) => (
-              <InsightCard
-                key={index}
-                {...insight}
-                onClick={() => handleNavigateToDetail('article', insight.id)}
-              />
-            ))}
+          <div className="text-center max-w-3xl mx-auto">
+            <h2 className="text-[32px] font-semibold tracking-tight mb-3 text-foreground">最新内容</h2>
+            <p className="text-[15px] text-muted-foreground/60 mb-6">Latest Content</p>
+            <div className="h-px w-20 bg-border/50 mx-auto mb-6" />
+            <p className="text-[20px] text-foreground/90 font-medium leading-relaxed mb-2">我们不堆概念，只给你下一步</p>
+            <p className="text-[20px] text-foreground/90 font-medium leading-relaxed">从战略到 AI，把复杂问题拆成可执行方案</p>
           </div>
         </div>
       </section>
