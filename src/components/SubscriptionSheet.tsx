@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Mail, CheckCircle2 } from 'lucide-react';
+import { X, CheckCircle2 } from 'lucide-react';
 import { isPremiumMember, getCurrentUser } from '../lib/auth';
 
 export type SubscriptionFrequency = 'weekly';
@@ -13,7 +13,14 @@ export interface SubscriptionPrefs {
     insights: boolean;
     reports: boolean;
     tools: boolean;
-    strategyUpdates: boolean;
+  };
+
+  // 用户关注的标签（多选）
+  labels: {
+    strategy: boolean;
+    businessDesign: boolean;
+    organization: boolean;
+    aiTech: boolean;
   };
   // style
   formats: {
@@ -50,7 +57,12 @@ function defaultPrefs(): SubscriptionPrefs {
       insights: true,
       reports: true,
       tools: false,
-      strategyUpdates: true,
+    },
+    labels: {
+      strategy: true,
+      businessDesign: false,
+      organization: false,
+      aiTech: false,
     },
     formats: {
       digest: true,
@@ -103,6 +115,13 @@ export function SubscriptionSheet({
     });
   };
 
+  const handleStop = () => {
+    const next = { ...prefs, enabled: false, updatedAt: new Date().toISOString() };
+    saveSubscriptionPrefs(next);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  };
+
   const handleSave = () => {
     if (!eligible) return;
     const next = { ...prefs, updatedAt: new Date().toISOString() };
@@ -116,18 +135,14 @@ export function SubscriptionSheet({
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
       <div
-        className="absolute left-1/2 top-[10vh] w-[92vw] max-w-[680px] -translate-x-1/2 rounded-[28px] bg-white/90 backdrop-blur-xl border border-border/40 shadow-2xl shadow-black/10 overflow-hidden"
+        className="absolute left-1/2 top-[10vh] w-[92vw] max-w-[680px] -translate-x-1/2 rounded-[28px] bg-white/90 backdrop-blur-xl border border-border/40 shadow-2xl shadow-black/10 overflow-hidden max-h-[80vh] overflow-y-auto"
         role="dialog"
         aria-label="订阅前沿更新"
         aria-modal="true"
       >
-        <div className="p-6 sm:p-8 border-b border-border/40 flex items-start justify-between gap-6">
+        <div className="p-6 sm:p-8 border-b border-border/40 flex items-start justify-between gap-6 sticky top-0 bg-white/90 backdrop-blur-xl z-10">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-[12px] font-medium border border-primary/20">
-              <Mail className="w-4 h-4" />
-              <span>每周订阅</span>
-            </div>
-            <h3 className="mt-3 text-[24px] font-semibold tracking-tight">订阅前沿更新</h3>
+            <h3 className="text-[24px] font-semibold tracking-tight">订阅前沿更新</h3>
             <p className="mt-1 text-[14px] text-muted-foreground/70">
               每周把最新洞察与报告发送到你的邮箱。你可以选择关注的类型与呈现形式。
             </p>
@@ -165,7 +180,6 @@ export function SubscriptionSheet({
                     { k: 'topics.insights', label: '洞察文章' },
                     { k: 'topics.reports', label: '前沿报告' },
                     { k: 'topics.tools', label: '工具/模板' },
-                    { k: 'topics.strategyUpdates', label: '战略陪伴更新' },
                   ] as const
                 ).map((it) => (
                   <label key={it.k} className="flex items-center justify-between p-3 rounded-2xl bg-muted/20 hover:bg-muted/30 transition-colors">
@@ -183,20 +197,21 @@ export function SubscriptionSheet({
             </div>
 
             <div className="space-y-3">
-              <p className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">订阅形式（多选）</p>
+              <p className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">订阅标签（多选）</p>
               <div className="space-y-2">
                 {(
                   [
-                    { k: 'formats.digest', label: '本周摘要（默认）' },
-                    { k: 'formats.keyTakeaways', label: '重点解读（更短）' },
-                    { k: 'formats.actionChecklist', label: '行动清单（可执行）' },
+                    { k: 'labels.strategy', label: '战略' },
+                    { k: 'labels.businessDesign', label: '业务设计' },
+                    { k: 'labels.organization', label: '组织' },
+                    { k: 'labels.aiTech', label: 'AI 技术' },
                   ] as const
                 ).map((it) => (
                   <label key={it.k} className="flex items-center justify-between p-3 rounded-2xl bg-muted/20 hover:bg-muted/30 transition-colors">
                     <span className="text-[14px] font-medium">{it.label}</span>
                     <input
                       type="checkbox"
-                      checked={it.k.startsWith('formats.') ? (prefs.formats as any)[it.k.split('.')[1]] : false}
+                      checked={(prefs as any).labels?.[it.k.split('.')[1]] ?? false}
                       onChange={() => toggle(it.k)}
                       disabled={!eligible}
                       className="w-5 h-5"
@@ -220,20 +235,29 @@ export function SubscriptionSheet({
 
           <div className="flex items-center justify-between gap-4 pt-2">
             <p className="text-[12px] text-muted-foreground/60">频率：每周一次（后续可选周一上午/周五下午）</p>
-            <button
-              onClick={handleSave}
-              disabled={!eligible || !prefs.email.trim()}
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-primary text-primary-foreground text-[14px] font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {saved ? (
-                <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  已保存
-                </>
-              ) : (
-                '保存订阅'
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleStop}
+                disabled={!eligible}
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-foreground border border-border/60 text-[14px] font-medium hover:bg-muted/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                停止订阅
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={!eligible || !prefs.email.trim()}
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-primary text-primary-foreground text-[14px] font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saved ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    已保存
+                  </>
+                ) : (
+                  '保存订阅'
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
