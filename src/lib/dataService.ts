@@ -129,7 +129,7 @@ export interface Methodology {
 export interface Comment {
   id: string;
   contentId: string;      // 关联内容ID
-  contentType: 'insight' | 'report' | 'book';  // 内容类型
+  contentType: 'insight' | 'report' | 'book' | 'methodology';  // 内容类型
   contentTitle: string;   // 内容标题（冗余存储便于显示）
   userId: string;         // 评论用户ID
   userName: string;       // 评论用户名称
@@ -924,7 +924,7 @@ export const getComments = (): Comment[] => {
 };
 
 // 根据内容ID和类型获取评论
-export const getCommentsByContent = (contentId: string, contentType: 'insight' | 'report' | 'book'): Comment[] => {
+export const getCommentsByContent = (contentId: string, contentType: 'insight' | 'report' | 'book' | 'methodology'): Comment[] => {
   const comments = getComments();
   return comments
     .filter(c => c.contentId === contentId && c.contentType === contentType)

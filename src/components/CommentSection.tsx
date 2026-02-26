@@ -12,7 +12,7 @@ import {
 
 interface CommentSectionProps {
   contentId: string;
-  contentType: 'insight' | 'report' | 'book';
+  contentType: 'insight' | 'report' | 'book' | 'methodology';
   contentTitle: string;
   isLoggedIn?: boolean;
   userName?: string;

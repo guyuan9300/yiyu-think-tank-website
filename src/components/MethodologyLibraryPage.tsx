@@ -1,7 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
+import {
+  Calendar,
+  Eye,
+  ThumbsUp,
+  Share2,
+  Bookmark,
+  ChevronRight,
+  Search,
+  Filter,
+  FileText,
+} from 'lucide-react';
 import { Header } from './Header';
 import { Footer } from './Footer';
-import { Search, Filter, FileText, ChevronRight } from 'lucide-react';
+import { CommentSection } from './CommentSection';
 import { getMethodologies, type Methodology } from '../lib/dataService';
 import DOMPurify from 'dompurify';
 
@@ -18,6 +29,8 @@ export function MethodologyLibraryPage({
   const [isLoading, setIsLoading] = useState(true);
 
   const [selected, setSelected] = useState<Methodology | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
 
   const topicOptions: Array<{ id: 'all' | Topic; label: string }> = [
     { id: 'all', label: '全部' },
@@ -84,9 +97,18 @@ export function MethodologyLibraryPage({
             {/* Cover */}
             <div className="relative rounded-[28px] overflow-hidden border border-border/40 bg-white/40 backdrop-blur-xl shadow-2xl shadow-black/[0.05]">
               <div className="relative aspect-[21/9] sm:aspect-[24/9] bg-gradient-to-br from-primary/[0.06] to-accent/[0.06]">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <FileText className="w-16 h-16 text-primary/15" />
-                </div>
+                {selected.coverImage ? (
+                  <img
+                    src={selected.coverImage}
+                    alt={selected.title}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <FileText className="w-16 h-16 text-primary/15" />
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
 
                 <div className="absolute inset-x-0 bottom-0 p-6 sm:p-10">
@@ -109,16 +131,61 @@ export function MethodologyLibraryPage({
                     {selected.excerpt}
                   </p>
 
-                  <div className="mt-5 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 text-[12px] text-white/75">
-                      <span>{selected.publishDate}</span>
+                  <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[12px] text-white/75">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        <span>{selected.publishDate}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Eye className="w-4 h-4" />
+                        <span>{selected.views.toLocaleString?.() ? selected.views.toLocaleString() : selected.views}</span>
+                      </div>
                     </div>
-                    <button
-                      onClick={() => setSelected(null)}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 text-white border border-white/30 hover:bg-white/20 transition-colors text-[13px]"
-                    >
-                      ← 返回列表
-                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setIsBookmarked(!isBookmarked)}
+                        className={`px-3 py-2 rounded-full text-[13px] font-medium border transition ${
+                          isBookmarked
+                            ? 'bg-amber-500/10 text-amber-100 border-amber-200/40'
+                            : 'bg-white/15 text-white border-white/30 hover:bg-white/20'
+                        }`}
+                        title="收藏"
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
+                          收藏
+                        </span>
+                      </button>
+
+                      <button
+                        onClick={async () => {
+                          const base = window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, '');
+                          const shareUrl = `${base}/?page=methodology-library`;
+                          try {
+                            await navigator.clipboard.writeText(shareUrl);
+                            alert('已复制分享链接');
+                          } catch {
+                            window.prompt('复制下面链接分享到微信/朋友圈：', shareUrl);
+                          }
+                        }}
+                        className="px-3 py-2 rounded-full bg-white/15 text-white border border-white/30 hover:bg-white/20 transition text-[13px] font-medium"
+                        title="分享到朋友圈"
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          <Share2 className="w-4 h-4" />
+                          分享
+                        </span>
+                      </button>
+
+                      <button
+                        onClick={() => setSelected(null)}
+                        className="px-3 py-2 rounded-full bg-white/15 text-white border border-white/30 hover:bg-white/20 transition text-[13px] font-medium"
+                      >
+                        ← 返回列表
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -127,7 +194,7 @@ export function MethodologyLibraryPage({
         </section>
 
         {/* Body */}
-        <section className="px-6 pb-20">
+        <section className="px-6 pb-8">
           <div className="max-w-5xl mx-auto">
             <div className="bg-white/70 backdrop-blur-sm border border-border/40 rounded-[24px] p-6 sm:p-10">
               {html.includes('<') ? (
@@ -140,6 +207,62 @@ export function MethodologyLibraryPage({
                   {selected.content || selected.excerpt}
                 </div>
               )}
+
+              {/* Action Bar (match article) */}
+              <div className="mt-12 pt-8 border-t border-border/40">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => {
+                        // demo: purely UI (likes stored in item for now)
+                        alert('已点赞');
+                      }}
+                      className="flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-all duration-300 hover:scale-[1.02] group"
+                    >
+                      <ThumbsUp className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
+                      <span className="font-medium">{selected.likes}</span>
+                    </button>
+                    <button
+                      onClick={() => setIsBookmarked(!isBookmarked)}
+                      className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl transition-all duration-300 hover:scale-[1.02] ${
+                        isBookmarked
+                          ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                          : 'bg-muted/30 hover:bg-muted/50'
+                      }`}
+                    >
+                      <Bookmark className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`} />
+                      <span className="font-medium">{isBookmarked ? '已收藏' : '收藏'}</span>
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const base = window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, '');
+                        const shareUrl = `${base}/?page=methodology-library`;
+                        try {
+                          await navigator.clipboard.writeText(shareUrl);
+                          alert('已复制分享链接，可直接粘贴到微信/朋友圈');
+                        } catch {
+                          window.prompt('复制下面链接分享到微信/朋友圈：', shareUrl);
+                        }
+                      }}
+                      className="flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-all duration-300 hover:scale-[1.02]"
+                    >
+                      <Share2 className="w-5 h-5" />
+                      <span className="font-medium">分享到朋友圈</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Comment Section */}
+              <div className="mt-12">
+                <CommentSection
+                  contentId={selected.id}
+                  contentType="methodology"
+                  contentTitle={selected.title}
+                  isLoggedIn={isLoggedIn}
+                  userName={isLoggedIn ? '张三' : '访客'}
+                />
+              </div>
             </div>
           </div>
         </section>
@@ -233,9 +356,18 @@ export function MethodologyLibraryPage({
                 <div className="relative bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-white/80 hover:border-border/60 hover:shadow-2xl hover:shadow-black/[0.04] hover:-translate-y-1">
                   {/* 封面区域 */}
                   <div className="relative aspect-[16/10] bg-gradient-to-br from-primary/[0.03] to-accent/[0.03] overflow-hidden">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <FileText className="w-16 h-16 text-primary/10" />
-                    </div>
+                    {m.coverImage ? (
+                      <img
+                        src={m.coverImage}
+                        alt={m.title}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <FileText className="w-16 h-16 text-primary/10" />
+                      </div>
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
                       <span className="text-white text-[14px] font-medium">查看详情</span>
                     </div>

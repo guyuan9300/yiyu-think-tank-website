@@ -252,22 +252,29 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
               {visibleMethodologies.map((m) => (
                 <div
                   key={m.id}
-                  className="bg-white/80 backdrop-blur-sm rounded-[20px] border border-border/40 p-6"
+                  className="relative bg-white/80 backdrop-blur-sm rounded-[20px] border border-border/40 overflow-hidden"
                 >
-                  <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    {(m.topics || []).slice(0, 2).map((t) => (
-                      <span
-                        key={t}
-                        className="px-2.5 py-1 rounded-full bg-primary/8 text-primary text-[11px] font-medium border border-primary/15"
-                      >
-                        {t}
-                      </span>
-                    ))}
+                  <div className="relative aspect-[16/10] bg-gradient-to-br from-primary/[0.03] to-accent/[0.03] overflow-hidden">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Wrench className="w-12 h-12 text-primary/10" />
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                  <h3 className="text-[16px] font-semibold mb-2 line-clamp-2">{m.title}</h3>
-                  <p className="text-[13px] text-muted-foreground/70 line-clamp-3 leading-relaxed">{m.excerpt}</p>
-                  <div className="mt-4 pt-4 border-t border-border/40 text-[12px] text-muted-foreground/50">
-                    {m.publishDate}
+
+                  <div className="p-6">
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      {(m.topics || []).slice(0, 2).map((t) => (
+                        <span
+                          key={t}
+                          className="px-2.5 py-1 rounded-full bg-primary/8 text-primary text-[11px] font-medium border border-primary/15"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                      <span className="text-[12px] text-muted-foreground/50">{m.publishDate}</span>
+                    </div>
+                    <h3 className="text-[16px] font-semibold mb-2 line-clamp-2">{m.title}</h3>
+                    <p className="text-[13px] text-muted-foreground/70 line-clamp-3 leading-relaxed">{m.excerpt}</p>
                   </div>
                 </div>
               ))}
