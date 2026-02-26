@@ -460,7 +460,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
                         className={`relative text-left rounded-[18px] px-4 py-3.5 transition-all duration-300 outline-none focus:ring-2 focus:ring-primary/20 will-change-transform ${
                           active
                             ? 'bg-white shadow-lg border border-border/70 scale-[1.04]'
-                            : 'bg-white/0 hover:bg-white/55 border border-transparent hover:-translate-y-0.5 hover:shadow-sm'
+                            : 'bg-muted/35 hover:bg-muted/20 border border-border/40 hover:border-border/60 hover:-translate-y-0.5 hover:shadow-sm'
                         }`}
                         style={
                           active
