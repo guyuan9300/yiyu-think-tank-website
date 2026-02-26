@@ -60,10 +60,10 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
   const getNavItems = () => {
     const baseItems = [
       { id: 'home', label: '首页', href: '#home' },
-      { id: 'about', label: '关于我们', href: '#about' },
       { id: 'insights', label: '前沿洞察', href: '#insights' },
       { id: 'learning', label: '学习中心', href: '#learning' },
       { id: 'strategy', label: '战略陪伴', href: '#strategy' }, // 所有用户都显示战略陪伴
+      { id: 'about', label: '关于我们', href: '#about' },
     ];
 
     return baseItems;

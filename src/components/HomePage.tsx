@@ -407,13 +407,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
                 Frontier Reports · 前沿洞察 / 行业研究 / 深度分析
               </p>
             </div>
-            <button
-              onClick={() => setSubscriptionOpen(true)}
-              className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-all duration-300 text-[14px]"
-            >
-              <span>订阅前沿</span>
-              <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5" />
-            </button>
+            {/* 订阅前沿按钮已迁移到「前沿洞察」页面右上角 */}
           </div>
 
           {/* Editorial Grid */}
