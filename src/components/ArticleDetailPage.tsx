@@ -100,7 +100,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
         ) : null}
         <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-background/55 via-background/85 to-background" />
 
-        <div className="relative max-w-5xl mx-auto">
+        <div className="relative max-w-4xl mx-auto">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 mb-7 text-[13px] text-muted-foreground/60">
             <button
@@ -228,7 +228,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
 
       {/* Content Section */}
       <section id="article-content" className="relative py-16 px-6">
-        <div className="relative max-w-5xl mx-auto">
+        <div className="relative max-w-4xl mx-auto">
           {/* Article Content */}
           <article className="prose prose-lg max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-muted-foreground/80 prose-p:leading-relaxed prose-a:text-primary hover:prose-a:text-primary/80">
             {(() => {

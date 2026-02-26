@@ -370,7 +370,10 @@ export default function App() {
   if (currentPage === 'methodology-library') {
     return (
       <>
-        <MethodologyLibraryPage onNavigate={(p, id) => handleNavigate(p as any, id)} />
+        <MethodologyLibraryPage
+          onNavigate={(p, id) => handleNavigate(p as any, id)}
+          methodologyId={selectedDetailId}
+        />
       </>
     );
   }

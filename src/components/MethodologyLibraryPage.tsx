@@ -20,8 +20,10 @@ type Topic = '战略' | '业务设计' | '组织' | 'AI 技术';
 
 export function MethodologyLibraryPage({
   onNavigate,
+  methodologyId,
 }: {
   onNavigate?: (page: string, id?: string) => void;
+  methodologyId?: string;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState<'all' | Topic>('all');
@@ -46,9 +48,10 @@ export function MethodologyLibraryPage({
       const published = data.filter((m) => m.status === 'published');
       setItems(published);
 
-      // Deep-link: ?page=methodology-library&id=<methodologyId>
+      // Deep-link: prefer App state (SPA), then fallback to URL param.
       const params = new URLSearchParams(window.location.search);
-      const id = params.get('id');
+      const idFromUrl = params.get('id') || '';
+      const id = (methodologyId || idFromUrl).trim();
       if (id) {
         const found = published.find((m) => m.id === id) || data.find((m) => m.id === id);
         if (found) setSelected(found);
@@ -65,7 +68,7 @@ export function MethodologyLibraryPage({
       window.removeEventListener('yiyu_data_change', onChange);
       window.removeEventListener('storage', onChange);
     };
-  }, []);
+  }, [methodologyId]);
 
   const filtered = useMemo(() => {
     return items.filter((m) => {
@@ -91,7 +94,7 @@ export function MethodologyLibraryPage({
           <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-primary/[0.035] via-background to-background" />
           <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-background/55 via-background/85 to-background" />
 
-          <div className="relative max-w-5xl mx-auto">
+          <div className="relative max-w-4xl mx-auto">
             {/* Breadcrumb */}
             <div className="flex items-center gap-2 mb-7 text-[13px] text-muted-foreground/60">
               <button
@@ -205,7 +208,7 @@ export function MethodologyLibraryPage({
 
         {/* Body */}
         <section className="px-6 pb-8">
-          <div className="max-w-5xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             <article className="prose prose-lg max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-muted-foreground/80 prose-p:leading-relaxed prose-a:text-primary hover:prose-a:text-primary/80">
               {html.includes('<') ? (
                 <div dangerouslySetInnerHTML={{ __html: html }} />
