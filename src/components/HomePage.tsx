@@ -423,34 +423,87 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
             <p className="text-[14px] text-muted-foreground/70">从战略到 AI，把复杂问题拆成可执行方案</p>
           </div>
 
-          {/* 四张标签卡片 */}
-          <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {latestTopicCards.map((c) => {
-              const Icon = c.icon;
-              const active = latestTopic === c.id;
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setLatestTopic(c.id)}
-                  className={`group text-left p-6 rounded-[22px] border transition-all duration-300 ${
-                    active
-                      ? 'bg-white shadow-lg shadow-primary/5 border-border/60'
-                      : 'bg-white/70 hover:bg-white/85 border-border/40 hover:border-border/60'
-                  }`}
-                >
-                  <div className={`w-11 h-11 rounded-[14px] bg-gradient-to-br ${c.gradient} flex items-center justify-center mb-4 shadow-sm`}>
-                    <Icon className="w-5 h-5 text-foreground/80" />
-                  </div>
-                  <div className="text-[18px] font-semibold tracking-tight text-foreground mb-1">{c.title}</div>
-                  <div className="text-[13px] text-muted-foreground/70 leading-relaxed">{c.desc}</div>
-                </button>
-              );
-            })}
+          {/* 标签卡片（像浏览器标签页）：强交互提示 */}
+          <div className="mt-14">
+            <div className="relative rounded-[26px] bg-white/55 backdrop-blur-xl border border-border/40 shadow-[0_30px_80px_-55px_rgba(0,0,0,0.35)] overflow-hidden">
+              {/* subtle mesh */}
+              <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-primary/[0.06] via-transparent to-accent/[0.05]" />
+              <div className="relative p-2">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                  {latestTopicCards.map((c) => {
+                    const Icon = c.icon;
+                    const active = latestTopic === c.id;
+
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setLatestTopic(c.id)}
+                        className={`relative text-left rounded-[18px] px-4 py-3.5 transition-all duration-300 outline-none focus:ring-2 focus:ring-primary/20 ${
+                          active
+                            ? 'bg-white shadow-md border border-border/60'
+                            : 'bg-white/0 hover:bg-white/55 border border-transparent'
+                        }`}
+                      >
+                        {/* active underline accent */}
+                        <div
+                          className={`absolute left-3 right-3 bottom-2 h-[2px] rounded-full transition-all duration-300 ${
+                            active ? 'opacity-100' : 'opacity-0'
+                          }`}
+                          style={{
+                            background:
+                              c.id === '战略'
+                                ? 'linear-gradient(90deg, rgba(99,102,241,0.0), rgba(99,102,241,0.95), rgba(99,102,241,0.0))'
+                                : c.id === '业务设计'
+                                ? 'linear-gradient(90deg, rgba(236,72,153,0.0), rgba(236,72,153,0.9), rgba(236,72,153,0.0))'
+                                : c.id === '组织'
+                                ? 'linear-gradient(90deg, rgba(34,197,94,0.0), rgba(34,197,94,0.9), rgba(34,197,94,0.0))'
+                                : 'linear-gradient(90deg, rgba(14,165,233,0.0), rgba(14,165,233,0.9), rgba(14,165,233,0.0))',
+                          }}
+                        />
+
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`mt-0.5 w-10 h-10 rounded-[14px] flex items-center justify-center shadow-sm border transition-all duration-300 ${
+                              active
+                                ? 'bg-white border-border/60'
+                                : 'bg-white/70 border-border/30'
+                            }`}
+                          >
+                            <div className={`w-9 h-9 rounded-[13px] bg-gradient-to-br ${c.gradient} flex items-center justify-center`}>
+                              <Icon className={`w-5 h-5 transition-all duration-300 ${active ? 'text-foreground' : 'text-foreground/75'}`} />
+                            </div>
+                          </div>
+
+                          <div className="min-w-0">
+                            <div
+                              className={`tracking-tight transition-all duration-300 ${
+                                active
+                                  ? 'text-[18px] font-semibold text-foreground'
+                                  : 'text-[16px] font-medium text-foreground/85'
+                              }`}
+                            >
+                              {c.title}
+                            </div>
+                            <div
+                              className={`mt-0.5 text-[12px] leading-relaxed transition-all duration-300 ${
+                                active ? 'text-muted-foreground/75' : 'text-muted-foreground/60'
+                              }`}
+                            >
+                              {c.desc}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* 资源长条卡片（最多 6 条） */}
-          <div className="mt-10 space-y-3">
+          <div key={latestTopic} className="mt-10 space-y-3 animate-fade-in-up">
             {latestResources.length === 0 ? (
               <div className="text-center text-[14px] text-muted-foreground/70 py-10">
                 暂无内容
