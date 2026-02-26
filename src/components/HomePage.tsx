@@ -459,9 +459,16 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
                         onClick={() => setLatestTopic(c.id)}
                         className={`relative text-left rounded-[18px] px-4 py-3.5 transition-all duration-300 outline-none focus:ring-2 focus:ring-primary/20 will-change-transform ${
                           active
-                            ? 'bg-white shadow-md border border-border/60 scale-[1.01]'
+                            ? 'bg-white shadow-lg border border-border/70 scale-[1.04]'
                             : 'bg-white/0 hover:bg-white/55 border border-transparent hover:-translate-y-0.5 hover:shadow-sm'
                         }`}
+                        style={
+                          active
+                            ? {
+                                backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.00))`,
+                              }
+                            : undefined
+                        }
                       >
                         {/* left accent bar */}
                         <div
@@ -484,15 +491,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
                             {latestCounts[c.id] ?? 0}
                           </span>
                         </div>
-                        {/* active underline accent */}
-                        <div
-                          className={`absolute left-3 right-3 bottom-2 h-[2px] rounded-full transition-all duration-300 ${
-                            active ? 'opacity-100' : 'opacity-0'
-                          }`}
-                          style={{
-                            background: `linear-gradient(90deg, rgba(0,0,0,0), ${c.accent}, rgba(0,0,0,0))`,
-                          }}
-                        />
+                        {/* underline removed (keep clean) */}
 
                         <div className="flex items-start gap-3">
                           <div
