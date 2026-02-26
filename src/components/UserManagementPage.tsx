@@ -593,8 +593,8 @@ export function UserManagementPage() {
       {/* 编辑用户弹窗 */}
       {showEditModal && editingUser && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
               <h3 className="text-lg font-semibold text-gray-900">编辑用户</h3>
               <button
                 onClick={() => setShowEditModal(false)}

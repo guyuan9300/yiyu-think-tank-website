@@ -63,6 +63,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   
   // 邀请码管理状态
   const [inviteCodes, setInviteCodes] = useState<InviteCode[]>([]);
+  const [selectedInviteIds, setSelectedInviteIds] = useState<string[]>([]);
   const [selectedType, setSelectedType] = useState<InviteCodeType>('30days');
   const [maxUses, setMaxUses] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -230,6 +231,35 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const loadInviteCodes = async () => {
     const codes = await getAllInviteCodes();
     setInviteCodes(codes);
+    setSelectedInviteIds([]);
+  };
+
+  const exportInviteCodesCsv = (rows: InviteCode[]) => {
+    const header = ['邀请码', '类型', '最大使用次数', '已使用次数', '奖励时长(天)', '状态', '创建时间'];
+    const lines = rows.map((c) => {
+      const typeInfo = getTypeInfo(c.type as InviteCodeType);
+      return [
+        c.code,
+        typeInfo.label,
+        String(c.maxUses ?? ''),
+        String(c.usedCount ?? ''),
+        String(typeInfo.days ?? ''),
+        c.status,
+        new Date(c.createdAt).toLocaleString('zh-CN'),
+      ]
+        .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+        .join(',');
+    });
+    const csv = [header.join(','), ...lines].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `invite-codes-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   };
 
   // 刷新所有数据
@@ -253,7 +283,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     { id: 'methodologies', label: '益语方法论', icon: <Tag className="w-5 h-5" /> },
     { id: 'strategy-companion', label: '战略客户', icon: <Target className="w-5 h-5" /> },
     { id: 'invite-codes', label: '邀请码管理', icon: <Gift className="w-5 h-5" /> },
-    { id: 'membership', label: '会员管理', icon: <Crown className="w-5 h-5" /> },
+    // 会员管理与用户管理为同一页，按需求隐藏入口
+    // { id: 'membership', label: '会员管理', icon: <Crown className="w-5 h-5" /> }, 
     { id: 'comments', label: '评论管理', icon: <MessageSquare className="w-5 h-5" />, badge: 24 },
     { id: 'settings', label: '系统设置', icon: <Settings className="w-5 h-5" /> },
   ];
@@ -1707,15 +1738,40 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               </div>
 
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                <div className="p-6 border-b border-gray-100 flex items-center justify-between gap-3">
                   <h3 className="text-lg font-semibold text-gray-900">邀请码列表</h3>
-                  <button 
-                    onClick={loadInviteCodes}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600"
-                  >
-                    <RefreshCw className="w-5 h-5" />
-                    刷新
-                  </button>
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    <button
+                      onClick={() => {
+                        const selected = inviteCodes.filter((c) => selectedInviteIds.includes(c.id));
+                        const rows = selected.length > 0 ? selected : inviteCodes;
+                        exportInviteCodesCsv(rows);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600"
+                      title="导出为 CSV（Excel 可直接打开）"
+                    >
+                      导出 Excel
+                    </button>
+                    <button
+                      onClick={() => setSelectedInviteIds(inviteCodes.map((c) => c.id))}
+                      className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600"
+                    >
+                      全选
+                    </button>
+                    <button
+                      onClick={() => setSelectedInviteIds([])}
+                      className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600"
+                    >
+                      清空
+                    </button>
+                    <button 
+                      onClick={loadInviteCodes}
+                      className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600"
+                    >
+                      <RefreshCw className="w-5 h-5" />
+                      刷新
+                    </button>
+                  </div>
                 </div>
                 
                 {inviteCodes.length === 0 ? (
@@ -1729,6 +1785,15 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                     <table className="w-full">
                       <thead className="bg-gray-50">
                         <tr>
+                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <input
+                              type="checkbox"
+                              checked={selectedInviteIds.length > 0 && selectedInviteIds.length === inviteCodes.length}
+                              onChange={(e) => {
+                                setSelectedInviteIds(e.target.checked ? inviteCodes.map((c) => c.id) : []);
+                              }}
+                            />
+                          </th>
                           <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">邀请码</th>
                           <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
                           <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">使用情况</th>
@@ -1745,6 +1810,18 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                           
                           return (
                             <tr key={code.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedInviteIds.includes(code.id)}
+                                  onChange={(e) => {
+                                    const on = e.target.checked;
+                                    setSelectedInviteIds((prev) =>
+                                      on ? Array.from(new Set([...prev, code.id])) : prev.filter((x) => x !== code.id)
+                                    );
+                                  }}
+                                />
+                              </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="flex items-center gap-2">
                                   <code className="font-mono font-medium text-gray-900">{code.code}</code>
@@ -1904,7 +1981,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
             </div>
           )}
 
-          {/* 其他菜单项显示占位符 */}
+          {/* 会员管理与用户管理同页：保留兼容但隐藏菜单入口 */}
           {['membership'].includes(activeMenu) && (
             <div className="h-full">
               <UserManagementPage />
