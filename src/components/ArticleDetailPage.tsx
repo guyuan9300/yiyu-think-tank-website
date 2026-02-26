@@ -228,7 +228,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
 
       {/* Content Section */}
       <section id="article-content" className="relative py-16 px-6">
-        <div className="relative max-w-3xl mx-auto">
+        <div className="relative max-w-5xl mx-auto">
           {/* Article Content */}
           <article className="prose prose-lg max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-muted-foreground/80 prose-p:leading-relaxed prose-a:text-primary hover:prose-a:text-primary/80">
             {(() => {

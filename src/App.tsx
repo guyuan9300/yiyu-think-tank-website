@@ -64,6 +64,8 @@ export default function App() {
     'consult-apply',
     'admin-strategy-companion',
     'test',
+    'methodology-library',
+    'book-library',
     '404',
   ]);
 
@@ -71,7 +73,8 @@ export default function App() {
   // - `?page=learning` should behave as `?page=library`
   // - `?page=book-library` is deprecated; redirect to `library`
   const initialPageRaw = initialParams.get('page') || 'home';
-  const normalized = (initialPageRaw === 'learning' || initialPageRaw === 'book-library') ? 'library' : initialPageRaw;
+  // `learning` is an alias for `library`.
+  const normalized = initialPageRaw === 'learning' ? 'library' : initialPageRaw;
   const initialUnknown = ALLOWED_PAGES.has(normalized) ? null : normalized;
   const initialPage = initialUnknown ? '404' : normalized;
 
@@ -90,7 +93,7 @@ export default function App() {
       return from ? `?page=404&from=${encodeURIComponent(from)}` : `?page=404`;
     }
 
-    if (page === 'article' || page === 'report' || page === 'topic') {
+    if (page === 'article' || page === 'report' || page === 'topic' || page === 'methodology-library') {
       return `?page=${page}&id=${encodeURIComponent(detailId || '')}`;
     }
 
@@ -126,7 +129,7 @@ export default function App() {
       const { page, unknown, id } = parseUrl();
       setUnknownPage(unknown);
       setCurrentPage(page);
-      if (page === 'article' || page === 'report' || page === 'topic') {
+      if (page === 'article' || page === 'report' || page === 'topic' || page === 'methodology-library') {
         setSelectedDetailId(id);
       }
       if (page === 'case') {
@@ -367,7 +370,7 @@ export default function App() {
   if (currentPage === 'methodology-library') {
     return (
       <>
-        <MethodologyLibraryPage onNavigate={(p) => handleNavigate(p as any)} />
+        <MethodologyLibraryPage onNavigate={(p, id) => handleNavigate(p as any, id)} />
       </>
     );
   }

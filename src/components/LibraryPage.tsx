@@ -255,9 +255,11 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
                   type="button"
                   onClick={() => {
                     // open reader view
-                    window.location.assign(
-                      `${window.location.pathname}?page=methodology-library&id=${encodeURIComponent(m.id)}`
-                    );
+                    if (onNavigate) onNavigate('methodology-library', m.id);
+                    else
+                      window.location.assign(
+                        `${window.location.pathname}?page=methodology-library&id=${encodeURIComponent(m.id)}`
+                      );
                   }}
                   className="relative bg-white/80 backdrop-blur-sm rounded-[20px] border border-border/40 overflow-hidden text-left cursor-pointer group hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300"
                 >

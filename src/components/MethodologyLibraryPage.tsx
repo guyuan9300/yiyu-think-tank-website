@@ -21,7 +21,7 @@ type Topic = '战略' | '业务设计' | '组织' | 'AI 技术';
 export function MethodologyLibraryPage({
   onNavigate,
 }: {
-  onNavigate?: (page: string) => void;
+  onNavigate?: (page: string, id?: string) => void;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState<'all' | Topic>('all');
@@ -205,20 +205,18 @@ export function MethodologyLibraryPage({
 
         {/* Body */}
         <section className="px-6 pb-8">
-          <div className="max-w-3xl mx-auto">
-            <div className="bg-white/70 backdrop-blur-sm border border-border/40 rounded-[24px] p-6 sm:p-10">
+          <div className="max-w-5xl mx-auto">
+            <article className="prose prose-lg max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-muted-foreground/80 prose-p:leading-relaxed prose-a:text-primary hover:prose-a:text-primary/80">
               {html.includes('<') ? (
-                <div
-                  className="prose prose-neutral max-w-none"
-                  dangerouslySetInnerHTML={{ __html: html }}
-                />
+                <div dangerouslySetInnerHTML={{ __html: html }} />
               ) : (
-                <div className="text-[15px] sm:text-[16px] leading-[1.9] text-foreground/90 whitespace-pre-wrap">
+                <div className="text-[17px] leading-[1.8] font-light">
                   {selected.content || selected.excerpt}
                 </div>
               )}
+            </article>
 
-              {/* Action Bar (match article) */}
+            {/* Action Bar (match article) */}
               <div className="mt-12 pt-8 border-t border-border/40">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
@@ -263,16 +261,15 @@ export function MethodologyLibraryPage({
                 </div>
               </div>
 
-              {/* Comment Section */}
-              <div className="mt-12">
-                <CommentSection
-                  contentId={selected.id}
-                  contentType="methodology"
-                  contentTitle={selected.title}
-                  isLoggedIn={isLoggedIn}
-                  userName={isLoggedIn ? '张三' : '访客'}
-                />
-              </div>
+            {/* Comment Section */}
+            <div className="mt-12">
+              <CommentSection
+                contentId={selected.id}
+                contentType="methodology"
+                contentTitle={selected.title}
+                isLoggedIn={isLoggedIn}
+                userName={isLoggedIn ? '张三' : '访客'}
+              />
             </div>
           </div>
         </section>
