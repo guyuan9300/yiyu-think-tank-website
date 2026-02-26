@@ -12,10 +12,11 @@ export interface Report {
   id: string;
   title: string;
   publisher: string;
-  category: string; // legacy (will be deprecated)
   summary: string;
-  tags: string[];   // legacy (will be deprecated)
-  topics?: ResourceTopic[]; // unified topics (multi-select)
+
+  /** 统一标签（四类，多选）。旧 category/tags 已彻底废弃。 */
+  topics: ResourceTopic[];
+
   version: string;
   format: string[];
   coverImage?: string;
@@ -24,8 +25,10 @@ export interface Report {
   pages?: number;
   publishDate: string;
   status: 'draft' | 'published' | 'archived';
-  isHot: boolean;           // 是否热门（自动根据浏览量计算，也可手动设置）
-  showOnHome: boolean;      // 是否显示在首页（手动选择）
+
+  /** 是否显示在首页（手动选择） */
+  showOnHome: boolean;
+
   views: number;
   downloads: number;
   createdAt: string;
@@ -37,16 +40,17 @@ export interface InsightArticle {
   title: string;
   excerpt: string;
   content: string;
-  category: string; // legacy (will be deprecated)
-  tags: string[];   // legacy (will be deprecated)
-  topics?: ResourceTopic[]; // unified topics (multi-select)
+
+  /** 统一标签（四类，多选）。旧 category/tags/readTime/featured/author 已彻底废弃。 */
+  topics: ResourceTopic[];
+
   coverImage?: string;
-  author: string;
-  readTime: number;
   publishDate: string;
   status: 'draft' | 'published' | 'archived';
-  featured: boolean;        // 是否精选（自动根据点赞量计算，也可手动设置）
-  showOnHome: boolean;      // 是否显示在首页（手动选择）
+
+  /** 是否显示在首页（手动选择） */
+  showOnHome: boolean;
+
   views: number;
   likes: number;
 
@@ -67,9 +71,10 @@ export interface Book {
   author: string;
   description: string;
   abstract: string;
-  category: string; // legacy (will be deprecated)
-  tags: string[];   // legacy (will be deprecated)
-  topics?: ResourceTopic[]; // unified topics (multi-select)
+
+  /** 统一标签（四类，多选）。旧 category/tags 已彻底废弃。 */
+  topics: ResourceTopic[];
+
   pages: number;
   duration: string;
   rating: number;
@@ -107,15 +112,13 @@ export interface Methodology {
   title: string;
   excerpt: string;
   content: string;
-  category: string; // legacy (kept for compatibility)
-  tags: string[];   // legacy (kept for compatibility)
-  topics?: ResourceTopic[];
+
+  /** 统一标签（四类，多选）。旧 category/tags/readTime/featured/author 已彻底废弃。 */
+  topics: ResourceTopic[];
+
   coverImage?: string;
-  author: string;
-  readTime: number;
   publishDate: string;
   status: 'draft' | 'published' | 'archived';
-  featured: boolean;
   showOnHome: boolean;
   views: number;
   likes: number;
@@ -269,9 +272,8 @@ const initDefaultReports = (): Report[] => [
     id: 'r_weiaiqianxing_training_20260105',
     title: '为爱黔行｜第一次培训：做好公益的系统思考（课件）',
     publisher: '益语智库（内部示例）',
-    category: '行业报告',
     summary: '以“增长式咨询/学习型战略陪伴”为框架，讨论公益组织如何通过系统性认知与行动校准，提升组织战斗力与品牌影响力。',
-    tags: ['公益', '品牌', '组织系统', '培训'],
+    topics: ['战略', '组织'],
     version: 'v1.0',
     format: ['PDF'],
     fileUrl: '/yiyu-think-tank-website/docs/weiaiqianxing-training-20260105.pdf',
@@ -279,7 +281,6 @@ const initDefaultReports = (): Report[] => [
     pages: 74,
     publishDate: '2026-01-05',
     status: 'published',
-    isHot: true,
     showOnHome: true,
     views: 2680,
     downloads: 420,
@@ -290,14 +291,12 @@ const initDefaultReports = (): Report[] => [
     id: '1',
     title: '2026公益行业数字化现状报告（示例）',
     publisher: '益语智库研究中心',
-    category: '行业报告',
     summary: '用于演示报告库的内容结构与交互；后续可替换为真实研究报告。',
-    tags: ['公益', '数字化', '行业洞察'],
+    topics: ['业务设计', 'AI 技术'],
     version: 'v2.1',
     format: ['PPT', 'PDF'],
     publishDate: '2026-01-20',
     status: 'published',
-    isHot: false,
     showOnHome: false,
     views: 12340,
     downloads: 3456,
@@ -450,8 +449,7 @@ const initDefaultBooks = (): Book[] => [
     author: '弗朗西斯·福山',
     description: '深入探讨权力的本质、来源与运作机制',
     abstract: '本书系统性地探讨了权力的本质与来源',
-    category: '战略',
-    tags: ['政治哲学', '权力理论'],
+    topics: ['战略'],
     pages: 328,
     duration: '约6小时',
     rating: 4.8,
@@ -486,6 +484,108 @@ const loadFromStorage = (key: string, defaultData: any) => {
   }
 };
 
+// ================================================
+// Legacy 字段迁移（彻底废弃 category/tags/readTime/featured/isHot/author 等）
+// ================================================
+
+const ALL_RESOURCE_TOPICS: ResourceTopic[] = ['战略', '业务设计', '组织', 'AI 技术'];
+
+const normalizeTopics = (topics: any): ResourceTopic[] => {
+  if (!Array.isArray(topics)) return [];
+  const out: ResourceTopic[] = [];
+  for (const t of topics) {
+    if (ALL_RESOURCE_TOPICS.includes(t)) out.push(t);
+  }
+  // 去重
+  return Array.from(new Set(out));
+};
+
+const inferTopicsFromLegacy = (input: {
+  category?: any;
+  tags?: any;
+  title?: any;
+  summary?: any;
+  excerpt?: any;
+  content?: any;
+}): ResourceTopic[] => {
+  const text = [input.category, ...(Array.isArray(input.tags) ? input.tags : []), input.title, input.summary, input.excerpt]
+    .filter(Boolean)
+    .join(' ');
+
+  const hits: ResourceTopic[] = [];
+  for (const t of ALL_RESOURCE_TOPICS) {
+    if (text.includes(t)) hits.push(t);
+  }
+
+  // 一些常见关键词兜底
+  const lowered = text.toLowerCase();
+  if (lowered.includes('ai') || text.includes('人工智能') || text.includes('大模型')) hits.push('AI 技术');
+  if (text.includes('组织') || text.includes('人力') || text.includes('文化')) hits.push('组织');
+  if (text.includes('业务') || text.includes('产品') || text.includes('增长')) hits.push('业务设计');
+  if (text.includes('战略') || text.includes('okr') || text.includes('kpi')) hits.push('战略');
+
+  const uniq = Array.from(new Set(hits));
+  return uniq.length > 0 ? uniq : ['战略'];
+};
+
+const migrateList = <T extends Record<string, any>>(key: string, list: T[], kind: 'report' | 'insight' | 'book' | 'methodology'): any[] => {
+  let changed = false;
+
+  const migrated = (list || []).map((item) => {
+    if (!item || typeof item !== 'object') return item;
+
+    const existingTopics = normalizeTopics(item.topics);
+    const topics = existingTopics.length > 0 ? existingTopics : inferTopicsFromLegacy(item);
+
+    // 删除彻底废弃字段
+    const { category, tags, isHot, featured, readTime, author, ...rest } = item;
+
+    // 书籍保留 author（但上面 destructure 掉了，这里加回来）
+    const finalAuthor = kind === 'book' ? String(item.author || '') : undefined;
+
+    const next: any = {
+      ...rest,
+      topics,
+    };
+
+    if (kind === 'book') next.author = finalAuthor;
+
+    // 保障 showOnHome 等开关为 boolean
+    if (typeof next.showOnHome !== 'boolean') next.showOnHome = false;
+
+    // 保障 publishDate/status
+    if (!next.publishDate) next.publishDate = new Date().toISOString().slice(0, 10);
+    if (!next.status) next.status = 'draft';
+
+    // 粗略检测是否变化
+    if (
+      category !== undefined ||
+      tags !== undefined ||
+      isHot !== undefined ||
+      featured !== undefined ||
+      readTime !== undefined ||
+      author !== undefined ||
+      existingTopics.length === 0
+    ) {
+      changed = true;
+    }
+
+    return next;
+  });
+
+  if (changed) {
+    saveToStorage(key, migrated);
+    // 直接触发数据变化事件（避免依赖后续声明的 notifyDataChange）
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new Event('yiyu_data_change'));
+      } catch {}
+    }
+  }
+
+  return migrated;
+};
+
 // 工具函数：计算预计阅读时间（根据总页数）
 export const calculateReadTime = (pages: number): string => {
   // 假设一页平均阅读时间约30秒，加上前后的准备时间
@@ -508,7 +608,8 @@ export const calculateReadTime = (pages: number): string => {
 
 // 获取所有报告
 export const getReports = (): Report[] => {
-  return loadFromStorage(STORAGE_KEYS.reports, initDefaultReports());
+  const list = loadFromStorage(STORAGE_KEYS.reports, initDefaultReports());
+  return migrateList(STORAGE_KEYS.reports, list, 'report') as Report[];
 };
 
 // 工具函数：触发数据变化事件
@@ -545,9 +646,8 @@ export const saveReport = (report: Partial<Report> | Report): Report => {
     id: report.id || `report_${Date.now()}`,
     title: report.title || '无标题报告',
     publisher: report.publisher || '',
-    category: report.category || '行业报告',
     summary: report.summary || '',
-    tags: report.tags || [],
+    topics: (report as any).topics || [],
     version: report.version || 'v1.0',
     format: report.format || ['PDF'],
     coverImage: report.coverImage,
@@ -556,7 +656,6 @@ export const saveReport = (report: Partial<Report> | Report): Report => {
     pages: report.pages,
     publishDate: report.publishDate || new Date().toISOString().split('T')[0],
     status: report.status || 'draft',
-    isHot: report.isHot || false,
     showOnHome: report.showOnHome || false,
     views: report.views || 0,
     downloads: report.downloads || 0,
@@ -569,8 +668,6 @@ export const saveReport = (report: Partial<Report> | Report): Report => {
   notifyDataChange();
   
   // 更新使用的标签
-  updateUsedTags(newReport.tags);
-  
   return newReport;
 };
 
@@ -589,7 +686,8 @@ export const deleteReport = (id: string): boolean => {
 // ========== 洞察文章管理 ==========
 
 export const getInsights = (): InsightArticle[] => {
-  return loadFromStorage(STORAGE_KEYS.insights, initDefaultInsights());
+  const list = loadFromStorage(STORAGE_KEYS.insights, initDefaultInsights());
+  return migrateList(STORAGE_KEYS.insights, list, 'insight') as InsightArticle[];
 };
 
 // ========== 益语方法论（正文类资源） ==========
@@ -597,7 +695,8 @@ export const getInsights = (): InsightArticle[] => {
 const initDefaultMethodologies = (): Methodology[] => [];
 
 export const getMethodologies = (): Methodology[] => {
-  return loadFromStorage(STORAGE_KEYS.methodologies, initDefaultMethodologies());
+  const list = loadFromStorage(STORAGE_KEYS.methodologies, initDefaultMethodologies());
+  return migrateList(STORAGE_KEYS.methodologies, list, 'methodology') as Methodology[];
 };
 
 export const saveMethodology = (item: Partial<Methodology> | Methodology): Methodology => {
@@ -625,15 +724,10 @@ export const saveMethodology = (item: Partial<Methodology> | Methodology): Metho
     title: (item as any).title || '待补充',
     excerpt: (item as any).excerpt || '待补充',
     content: (item as any).content || '',
-    category: (item as any).category || '待补充',
-    tags: (item as any).tags || [],
-    topics: (item as any).topics || [],
+    topics: normalizeTopics((item as any).topics).length > 0 ? normalizeTopics((item as any).topics) : ['战略'],
     coverImage: (item as any).coverImage,
-    author: (item as any).author || '益语智库',
-    readTime: (item as any).readTime || 8,
     publishDate: (item as any).publishDate || new Date().toISOString().split('T')[0],
     status: (item as any).status || 'draft',
-    featured: (item as any).featured || false,
     showOnHome: (item as any).showOnHome || false,
     views: (item as any).views || 0,
     likes: (item as any).likes || 0,
@@ -644,7 +738,6 @@ export const saveMethodology = (item: Partial<Methodology> | Methodology): Metho
   list.unshift(newItem);
   saveToStorage(STORAGE_KEYS.methodologies, list);
   notifyDataChange();
-  updateUsedTags(newItem.tags);
   return newItem;
 };
 
@@ -682,26 +775,20 @@ export const saveInsight = (article: Partial<InsightArticle> | InsightArticle): 
     title: article.title || '无标题文章',
     excerpt: article.excerpt || '',
     content: article.content || '',
-    category: article.category || '行业洞察',
-    tags: article.tags || [],
+    topics: normalizeTopics((article as any).topics).length > 0 ? normalizeTopics((article as any).topics) : ['战略'],
     coverImage: article.coverImage,
-    author: article.author || '益语智库',
-    readTime: article.readTime || 10,
     publishDate: article.publishDate || new Date().toISOString().split('T')[0],
     status: article.status || 'draft',
-    featured: article.featured || false,
     showOnHome: article.showOnHome || false,
-    views: article.views || 0,
-    likes: article.likes || 0,
-    createdAt: article.createdAt || now,
+    views: (article as any).views || 0,
+    likes: (article as any).likes || 0,
+    createdAt: (article as any).createdAt || now,
     updatedAt: now,
   };
   
   articles.unshift(newArticle);
   saveToStorage(STORAGE_KEYS.insights, articles);
   notifyDataChange();
-  
-  updateUsedTags(newArticle.tags);
   
   return newArticle;
 };
@@ -720,7 +807,8 @@ export const deleteInsight = (id: string): boolean => {
 // ========== 书籍管理 ==========
 
 export const getBooks = (): Book[] => {
-  return loadFromStorage(STORAGE_KEYS.books, initDefaultBooks());
+  const list = loadFromStorage(STORAGE_KEYS.books, initDefaultBooks());
+  return migrateList(STORAGE_KEYS.books, list, 'book') as Book[];
 };
 
 export const saveBook = (book: Partial<Book> | Book): Book => {
@@ -747,14 +835,13 @@ export const saveBook = (book: Partial<Book> | Book): Book => {
     author: book.author || '',
     description: book.description || '',
     abstract: book.abstract || '',
-    category: book.category || '人工智能',
-    tags: book.tags || [],
-    pages: book.pages || 100,
-    duration: book.duration || calculateReadTime(book.pages || 100),
-    rating: book.rating || 4.5,
-    coverImage: book.coverImage,
-    coverColor: book.coverColor || 'from-blue-600 to-indigo-800',
-    publishDate: book.publishDate || new Date().toISOString().split('T')[0],
+    topics: normalizeTopics((book as any).topics).length > 0 ? normalizeTopics((book as any).topics) : ['战略'],
+    pages: (book as any).pages || 100,
+    duration: (book as any).duration || calculateReadTime((book as any).pages || 100),
+    rating: (book as any).rating || 4.5,
+    coverImage: (book as any).coverImage,
+    coverColor: (book as any).coverColor || 'from-blue-600 to-indigo-800',
+    publishDate: (book as any).publishDate || new Date().toISOString().split('T')[0],
     status: book.status || 'published',
     showOnHome: (book as any).showOnHome || false,
     views: book.views || 0,
@@ -766,8 +853,6 @@ export const saveBook = (book: Partial<Book> | Book): Book => {
   books.unshift(newBook);
   saveToStorage(STORAGE_KEYS.books, books);
   notifyDataChange();
-  
-  updateUsedTags(newBook.tags);
   
   return newBook;
 };
@@ -923,36 +1008,36 @@ export const deleteComment = (commentId: string): boolean => {
 
 // ========== 搜索和筛选 ==========
 
-export const searchReports = (query: string, category?: string): Report[] => {
+export const searchReports = (query: string, topic?: ResourceTopic | 'all'): Report[] => {
   const reports = getReports();
   return reports.filter(report => {
-    const matchesSearch = !query || 
+    const matchesSearch = !query ||
       report.title.toLowerCase().includes(query.toLowerCase()) ||
       report.summary.toLowerCase().includes(query.toLowerCase());
-    const matchesCategory = !category || category === 'all' || report.category === category;
-    return matchesSearch && matchesCategory && report.status === 'published';
+    const matchesTopic = !topic || topic === 'all' || (report.topics || []).includes(topic as ResourceTopic);
+    return matchesSearch && matchesTopic && report.status === 'published';
   });
 };
 
-export const searchInsights = (query: string, category?: string): InsightArticle[] => {
+export const searchInsights = (query: string, topic?: ResourceTopic | 'all'): InsightArticle[] => {
   const articles = getInsights();
   return articles.filter(article => {
-    const matchesSearch = !query || 
+    const matchesSearch = !query ||
       article.title.toLowerCase().includes(query.toLowerCase()) ||
       article.excerpt.toLowerCase().includes(query.toLowerCase());
-    const matchesCategory = !category || category === 'all' || article.category === category;
-    return matchesSearch && matchesCategory && article.status === 'published';
+    const matchesTopic = !topic || topic === 'all' || (article.topics || []).includes(topic as ResourceTopic);
+    return matchesSearch && matchesTopic && article.status === 'published';
   });
 };
 
-export const searchBooks = (query: string, category?: string): Book[] => {
+export const searchBooks = (query: string, topic?: ResourceTopic | 'all'): Book[] => {
   const books = getBooks();
   return books.filter(book => {
-    const matchesSearch = !query || 
+    const matchesSearch = !query ||
       book.title.toLowerCase().includes(query.toLowerCase()) ||
       book.description.toLowerCase().includes(query.toLowerCase());
-    const matchesCategory = !category || category === 'all' || book.category === category;
-    return matchesSearch && matchesCategory && book.status === 'published';
+    const matchesTopic = !topic || topic === 'all' || (book.topics || []).includes(topic as ResourceTopic);
+    return matchesSearch && matchesTopic && book.status === 'published';
   });
 };
 
@@ -970,7 +1055,7 @@ export const getStats = () => {
     totalViews: reports.reduce((sum, r) => sum + r.views, 0) + 
                 insights.reduce((sum, i) => sum + i.views, 0) +
                 books.reduce((sum, b) => sum + b.views, 0),
-    hotReports: reports.filter(r => r.isHot).length,
+    hotReports: 0,
   };
 };
 

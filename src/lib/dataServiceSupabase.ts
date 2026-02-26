@@ -15,9 +15,8 @@ export interface Report {
   id: string;
   title: string;
   publisher: string;
-  category: string;
   summary: string;
-  tags: string[];
+  topics: string[];
   version: string;
   format: string[];
   coverImage?: string;
@@ -26,7 +25,6 @@ export interface Report {
   pages?: number;
   publishDate: string;
   status: 'draft' | 'published' | 'archived';
-  isHot: boolean;
   showOnHome: boolean;
   views: number;
   downloads: number;
@@ -39,14 +37,10 @@ export interface InsightArticle {
   title: string;
   excerpt: string;
   content: string;
-  category: string;
-  tags: string[];
+  topics: string[];
   coverImage?: string;
-  author: string;
-  readTime: number;
   publishDate: string;
   status: 'draft' | 'published' | 'archived';
-  featured: boolean;
   showOnHome: boolean;
   views: number;
   likes: number;
@@ -60,8 +54,7 @@ export interface Book {
   author: string;
   description: string;
   abstract: string;
-  category: string;
-  tags: string[];
+  topics: string[];
   pages: number;
   duration: string;
   rating: number;
@@ -69,6 +62,7 @@ export interface Book {
   coverColor?: string;
   publishDate: string;
   status: 'draft' | 'published' | 'archived';
+  showOnHome?: boolean;
   views: number;
   reviews: number;
   createdAt: string;
@@ -163,37 +157,43 @@ export const getReports = async (): Promise<Report[]> => {
     return [];
   }
 
-  return (data || []).map((item: Record<string, unknown>) => ({
-    id: String(item.id || ''),
-    title: String(item.title || ''),
-    publisher: String(item.publisher || ''),
-    category: String(item.category || ''),
-    summary: String(item.summary || ''),
-    tags: Array.isArray(item.tags) ? item.tags as string[] : [],
-    version: String(item.version || 'v1.0'),
-    format: Array.isArray(item.format) ? item.format as string[] : [],
-    coverImage: item.cover_image as string | undefined,
-    fileUrl: item.file_url as string | undefined,
-    fileSize: item.file_size as number | undefined,
-    pages: item.pages as number | undefined,
-    publishDate: formatDate(item.publish_date as string | null),
-    status: toReportStatus(item.status),
-    isHot: Boolean(item.is_hot),
-    showOnHome: Boolean(item.show_on_home),
-    views: Number(item.views) || 0,
-    downloads: Number(item.downloads) || 0,
-    createdAt: String(item.created_at || ''),
-    updatedAt: String(item.updated_at || ''),
-  }));
+  return (data || []).map((item: Record<string, unknown>) => {
+    const topicsFromDb = Array.isArray(item.topics) ? (item.topics as unknown[]).map(String) : [];
+    const legacyTopics = [
+      ...(item.category ? [String(item.category)] : []),
+      ...(Array.isArray(item.tags) ? (item.tags as unknown[]).map(String) : []),
+    ];
+    const topics = Array.from(new Set((topicsFromDb.length ? topicsFromDb : legacyTopics).filter(Boolean)));
+
+    return {
+      id: String(item.id || ''),
+      title: String(item.title || ''),
+      publisher: String(item.publisher || ''),
+      summary: String(item.summary || ''),
+      topics,
+      version: String(item.version || 'v1.0'),
+      format: Array.isArray(item.format) ? (item.format as string[]) : [],
+      coverImage: item.cover_image as string | undefined,
+      fileUrl: item.file_url as string | undefined,
+      fileSize: item.file_size as number | undefined,
+      pages: item.pages as number | undefined,
+      publishDate: formatDate(item.publish_date as string | null),
+      status: toReportStatus(item.status),
+      showOnHome: Boolean(item.show_on_home),
+      views: Number(item.views) || 0,
+      downloads: Number(item.downloads) || 0,
+      createdAt: String(item.created_at || ''),
+      updatedAt: String(item.updated_at || ''),
+    };
+  });
 };
 
 export const saveReport = async (report: Partial<Report>): Promise<Report | null> => {
   const reportData: Record<string, unknown> = {
     title: report.title,
     publisher: report.publisher,
-    category: report.category,
     summary: report.summary,
-    tags: report.tags,
+    topics: report.topics,
     version: report.version,
     format: report.format,
     cover_image: report.coverImage,
@@ -202,7 +202,6 @@ export const saveReport = async (report: Partial<Report>): Promise<Report | null
     pages: report.pages,
     publish_date: report.publishDate,
     status: report.status,
-    is_hot: report.isHot,
     show_on_home: report.showOnHome,
     views: report.views,
     downloads: report.downloads,
@@ -235,27 +234,33 @@ export const saveReport = async (report: Partial<Report>): Promise<Report | null
   if (!result.data) return null;
 
   const item = result.data;
+
+  const topicsFromDb = Array.isArray((item as any).topics) ? ((item as any).topics as unknown[]).map(String) : [];
+  const legacyTopics = [
+    ...((item as any).category ? [String((item as any).category)] : []),
+    ...(Array.isArray((item as any).tags) ? (((item as any).tags as unknown[]).map(String)) : []),
+  ];
+  const topics = Array.from(new Set((topicsFromDb.length ? topicsFromDb : legacyTopics).filter(Boolean)));
+
   return {
     id: String(item.id || ''),
     title: String(item.title || ''),
     publisher: String(item.publisher || ''),
-    category: String(item.category || ''),
     summary: String(item.summary || ''),
-    tags: Array.isArray(item.tags) ? item.tags as string[] : [],
-    version: String(item.version || 'v1.0'),
-    format: Array.isArray(item.format) ? item.format as string[] : [],
-    coverImage: item.cover_image as string | undefined,
-    fileUrl: item.file_url as string | undefined,
-    fileSize: item.file_size as number | undefined,
-    pages: item.pages as number | undefined,
-    publishDate: formatDate(item.publish_date as string | null),
-    status: toReportStatus(item.status),
-    isHot: Boolean(item.is_hot),
-    showOnHome: Boolean(item.show_on_home),
-    views: Number(item.views) || 0,
-    downloads: Number(item.downloads) || 0,
-    createdAt: String(item.created_at || ''),
-    updatedAt: String(item.updated_at || ''),
+    topics,
+    version: String((item as any).version || 'v1.0'),
+    format: Array.isArray((item as any).format) ? ((item as any).format as string[]) : [],
+    coverImage: (item as any).cover_image as string | undefined,
+    fileUrl: (item as any).file_url as string | undefined,
+    fileSize: (item as any).file_size as number | undefined,
+    pages: (item as any).pages as number | undefined,
+    publishDate: formatDate((item as any).publish_date as string | null),
+    status: toReportStatus((item as any).status),
+    showOnHome: Boolean((item as any).show_on_home),
+    views: Number((item as any).views) || 0,
+    downloads: Number((item as any).downloads) || 0,
+    createdAt: String((item as any).created_at || ''),
+    updatedAt: String((item as any).updated_at || ''),
   };
 };
 
@@ -291,25 +296,30 @@ export const getInsights = async (): Promise<InsightArticle[]> => {
     return [];
   }
 
-  return (data || []).map((item: Record<string, unknown>) => ({
-    id: String(item.id || ''),
-    title: String(item.title || ''),
-    excerpt: String(item.excerpt || ''),
-    content: String(item.content || ''),
-    category: String(item.category || ''),
-    tags: Array.isArray(item.tags) ? item.tags as string[] : [],
-    coverImage: item.cover_image as string | undefined,
-    author: String(item.author || ''),
-    readTime: Number(item.read_time) || 10,
-    publishDate: formatDate(item.publish_date as string | null),
-    status: toReportStatus(item.status),
-    featured: Boolean(item.featured),
-    showOnHome: Boolean(item.show_on_home),
-    views: Number(item.views) || 0,
-    likes: Number(item.likes) || 0,
-    createdAt: String(item.created_at || ''),
-    updatedAt: String(item.updated_at || ''),
-  }));
+  return (data || []).map((item: Record<string, unknown>) => {
+    const topicsFromDb = Array.isArray(item.topics) ? (item.topics as unknown[]).map(String) : [];
+    const legacyTopics = [
+      ...(item.category ? [String(item.category)] : []),
+      ...(Array.isArray(item.tags) ? (item.tags as unknown[]).map(String) : []),
+    ];
+    const topics = Array.from(new Set((topicsFromDb.length ? topicsFromDb : legacyTopics).filter(Boolean)));
+
+    return {
+      id: String(item.id || ''),
+      title: String(item.title || ''),
+      excerpt: String(item.excerpt || ''),
+      content: String(item.content || ''),
+      topics,
+      coverImage: item.cover_image as string | undefined,
+      publishDate: formatDate(item.publish_date as string | null),
+      status: toReportStatus(item.status),
+      showOnHome: Boolean(item.show_on_home),
+      views: Number(item.views) || 0,
+      likes: Number(item.likes) || 0,
+      createdAt: String(item.created_at || ''),
+      updatedAt: String(item.updated_at || ''),
+    };
+  });
 };
 
 export const saveInsight = async (article: Partial<InsightArticle>): Promise<InsightArticle | null> => {
@@ -317,14 +327,10 @@ export const saveInsight = async (article: Partial<InsightArticle>): Promise<Ins
     title: article.title,
     excerpt: article.excerpt,
     content: article.content,
-    category: article.category,
-    tags: article.tags,
+    topics: article.topics,
     cover_image: article.coverImage,
-    author: article.author,
-    read_time: article.readTime,
     publish_date: article.publishDate,
     status: article.status,
-    featured: article.featured,
     show_on_home: article.showOnHome,
     views: article.views,
     likes: article.likes,
@@ -355,24 +361,28 @@ export const saveInsight = async (article: Partial<InsightArticle>): Promise<Ins
   }
 
   const item = result.data;
+
+  const topicsFromDb = Array.isArray((item as any).topics) ? ((item as any).topics as unknown[]).map(String) : [];
+  const legacyTopics = [
+    ...((item as any).category ? [String((item as any).category)] : []),
+    ...(Array.isArray((item as any).tags) ? (((item as any).tags as unknown[]).map(String)) : []),
+  ];
+  const topics = Array.from(new Set((topicsFromDb.length ? topicsFromDb : legacyTopics).filter(Boolean)));
+
   return {
-    id: String(item.id || ''),
-    title: String(item.title || ''),
-    excerpt: String(item.excerpt || ''),
-    content: String(item.content || ''),
-    category: String(item.category || ''),
-    tags: Array.isArray(item.tags) ? item.tags as string[] : [],
-    coverImage: item.cover_image as string | undefined,
-    author: String(item.author || ''),
-    readTime: Number(item.read_time) || 10,
-    publishDate: formatDate(item.publish_date as string | null),
-    status: toReportStatus(item.status),
-    featured: Boolean(item.featured),
-    showOnHome: Boolean(item.show_on_home),
-    views: Number(item.views) || 0,
-    likes: Number(item.likes) || 0,
-    createdAt: String(item.created_at || ''),
-    updatedAt: String(item.updated_at || ''),
+    id: String((item as any).id || ''),
+    title: String((item as any).title || ''),
+    excerpt: String((item as any).excerpt || ''),
+    content: String((item as any).content || ''),
+    topics,
+    coverImage: (item as any).cover_image as string | undefined,
+    publishDate: formatDate((item as any).publish_date as string | null),
+    status: toReportStatus((item as any).status),
+    showOnHome: Boolean((item as any).show_on_home),
+    views: Number((item as any).views) || 0,
+    likes: Number((item as any).likes) || 0,
+    createdAt: String((item as any).created_at || ''),
+    updatedAt: String((item as any).updated_at || ''),
   };
 };
 
@@ -408,26 +418,34 @@ export const getBooks = async (): Promise<Book[]> => {
     return [];
   }
 
-  return (data || []).map((item: Record<string, unknown>) => ({
-    id: String(item.id || ''),
-    title: String(item.title || ''),
-    author: String(item.author || ''),
-    description: String(item.description || ''),
-    abstract: String(item.abstract || ''),
-    category: String(item.category || ''),
-    tags: Array.isArray(item.tags) ? item.tags as string[] : [],
-    pages: Number(item.pages) || 100,
-    duration: String(item.duration || ''),
-    rating: Number(item.rating) || 4.5,
-    coverImage: item.cover_image as string | undefined,
-    coverColor: item.cover_color as string | undefined,
-    publishDate: formatDate(item.publish_date as string | null),
-    status: toReportStatus(item.status),
-    views: Number(item.views) || 0,
-    reviews: Number(item.reviews) || 0,
-    createdAt: String(item.created_at || ''),
-    updatedAt: String(item.updated_at || ''),
-  }));
+  return (data || []).map((item: Record<string, unknown>) => {
+    const topicsFromDb = Array.isArray(item.topics) ? (item.topics as unknown[]).map(String) : [];
+    const legacyTopics = [
+      ...(item.category ? [String(item.category)] : []),
+      ...(Array.isArray(item.tags) ? (item.tags as unknown[]).map(String) : []),
+    ];
+    const topics = Array.from(new Set((topicsFromDb.length ? topicsFromDb : legacyTopics).filter(Boolean)));
+
+    return {
+      id: String(item.id || ''),
+      title: String(item.title || ''),
+      author: String(item.author || ''),
+      description: String(item.description || ''),
+      abstract: String(item.abstract || ''),
+      topics,
+      pages: Number(item.pages) || 100,
+      duration: String(item.duration || ''),
+      rating: Number(item.rating) || 4.5,
+      coverImage: item.cover_image as string | undefined,
+      coverColor: item.cover_color as string | undefined,
+      publishDate: formatDate(item.publish_date as string | null),
+      status: toReportStatus(item.status),
+      views: Number(item.views) || 0,
+      reviews: Number(item.reviews) || 0,
+      createdAt: String(item.created_at || ''),
+      updatedAt: String(item.updated_at || ''),
+    };
+  });
 };
 
 export const saveBook = async (book: Partial<Book>): Promise<Book | null> => {
@@ -436,8 +454,7 @@ export const saveBook = async (book: Partial<Book>): Promise<Book | null> => {
     author: book.author,
     description: book.description,
     abstract: book.abstract,
-    category: book.category,
-    tags: book.tags,
+    topics: book.topics,
     pages: book.pages,
     duration: book.duration,
     rating: book.rating,
@@ -474,25 +491,32 @@ export const saveBook = async (book: Partial<Book>): Promise<Book | null> => {
   }
 
   const item = result.data;
+
+  const topicsFromDb = Array.isArray((item as any).topics) ? ((item as any).topics as unknown[]).map(String) : [];
+  const legacyTopics = [
+    ...((item as any).category ? [String((item as any).category)] : []),
+    ...(Array.isArray((item as any).tags) ? (((item as any).tags as unknown[]).map(String)) : []),
+  ];
+  const topics = Array.from(new Set((topicsFromDb.length ? topicsFromDb : legacyTopics).filter(Boolean)));
+
   return {
-    id: String(item.id || ''),
-    title: String(item.title || ''),
-    author: String(item.author || ''),
-    description: String(item.description || ''),
-    abstract: String(item.abstract || ''),
-    category: String(item.category || ''),
-    tags: Array.isArray(item.tags) ? item.tags as string[] : [],
-    pages: Number(item.pages) || 100,
-    duration: String(item.duration || ''),
-    rating: Number(item.rating) || 4.5,
-    coverImage: item.cover_image as string | undefined,
-    coverColor: item.cover_color as string | undefined,
-    publishDate: formatDate(item.publish_date as string | null),
-    status: toReportStatus(item.status),
-    views: Number(item.views) || 0,
-    reviews: Number(item.reviews) || 0,
-    createdAt: String(item.created_at || ''),
-    updatedAt: String(item.updated_at || ''),
+    id: String((item as any).id || ''),
+    title: String((item as any).title || ''),
+    author: String((item as any).author || ''),
+    description: String((item as any).description || ''),
+    abstract: String((item as any).abstract || ''),
+    topics,
+    pages: Number((item as any).pages) || 100,
+    duration: String((item as any).duration || ''),
+    rating: Number((item as any).rating) || 4.5,
+    coverImage: (item as any).cover_image as string | undefined,
+    coverColor: (item as any).cover_color as string | undefined,
+    publishDate: formatDate((item as any).publish_date as string | null),
+    status: toReportStatus((item as any).status),
+    views: Number((item as any).views) || 0,
+    reviews: Number((item as any).reviews) || 0,
+    createdAt: String((item as any).created_at || ''),
+    updatedAt: String((item as any).updated_at || ''),
   };
 };
 
@@ -849,7 +873,7 @@ export const saveSystemSettings = async (
 
 export const searchReports = async (
   query: string,
-  category?: string
+  topic?: string
 ): Promise<Report[]> => {
   let supabaseQuery = supabase
     .from('reports')
@@ -860,8 +884,9 @@ export const searchReports = async (
     supabaseQuery = supabaseQuery.or(`title.ilike.%${query}%,summary.ilike.%${query}%`);
   }
 
-  if (category && category !== 'all') {
-    supabaseQuery = supabaseQuery.eq('category', category);
+  if (topic && topic !== 'all') {
+    // topics is a Postgres text[]
+    supabaseQuery = supabaseQuery.contains('topics', [topic]);
   }
 
   const { data, error } = await supabaseQuery.order('created_at', { ascending: false });
@@ -871,33 +896,40 @@ export const searchReports = async (
     return [];
   }
 
-  return (data || []).map((item: Record<string, unknown>) => ({
-    id: String(item.id || ''),
-    title: String(item.title || ''),
-    publisher: String(item.publisher || ''),
-    category: String(item.category || ''),
-    summary: String(item.summary || ''),
-    tags: Array.isArray(item.tags) ? item.tags as string[] : [],
-    version: String(item.version || 'v1.0'),
-    format: Array.isArray(item.format) ? item.format as string[] : [],
-    coverImage: item.cover_image as string | undefined,
-    fileUrl: item.file_url as string | undefined,
-    fileSize: item.file_size as number | undefined,
-    pages: item.pages as number | undefined,
-    publishDate: formatDate(item.publish_date as string | null),
-    status: toReportStatus(item.status),
-    isHot: Boolean(item.is_hot),
-    showOnHome: Boolean(item.show_on_home),
-    views: Number(item.views) || 0,
-    downloads: Number(item.downloads) || 0,
-    createdAt: String(item.created_at || ''),
-    updatedAt: String(item.updated_at || ''),
-  }));
+  return (data || []).map((item: Record<string, unknown>) => {
+    const topicsFromDb = Array.isArray(item.topics) ? (item.topics as unknown[]).map(String) : [];
+    const legacyTopics = [
+      ...(item.category ? [String(item.category)] : []),
+      ...(Array.isArray(item.tags) ? (item.tags as unknown[]).map(String) : []),
+    ];
+    const topics = Array.from(new Set((topicsFromDb.length ? topicsFromDb : legacyTopics).filter(Boolean)));
+
+    return {
+      id: String(item.id || ''),
+      title: String(item.title || ''),
+      publisher: String(item.publisher || ''),
+      summary: String(item.summary || ''),
+      topics,
+      version: String(item.version || 'v1.0'),
+      format: Array.isArray(item.format) ? (item.format as string[]) : [],
+      coverImage: item.cover_image as string | undefined,
+      fileUrl: item.file_url as string | undefined,
+      fileSize: item.file_size as number | undefined,
+      pages: item.pages as number | undefined,
+      publishDate: formatDate(item.publish_date as string | null),
+      status: toReportStatus(item.status),
+      showOnHome: Boolean(item.show_on_home),
+      views: Number(item.views) || 0,
+      downloads: Number(item.downloads) || 0,
+      createdAt: String(item.created_at || ''),
+      updatedAt: String(item.updated_at || ''),
+    };
+  });
 };
 
 export const searchInsights = async (
   query: string,
-  category?: string
+  topic?: string
 ): Promise<InsightArticle[]> => {
   let supabaseQuery = supabase
     .from('insights')
@@ -908,8 +940,8 @@ export const searchInsights = async (
     supabaseQuery = supabaseQuery.or(`title.ilike.%${query}%,excerpt.ilike.%${query}%`);
   }
 
-  if (category && category !== 'all') {
-    supabaseQuery = supabaseQuery.eq('category', category);
+  if (topic && topic !== 'all') {
+    supabaseQuery = supabaseQuery.contains('topics', [topic]);
   }
 
   const { data, error } = await supabaseQuery.order('created_at', { ascending: false });
@@ -919,30 +951,35 @@ export const searchInsights = async (
     return [];
   }
 
-  return (data || []).map((item: Record<string, unknown>) => ({
-    id: String(item.id || ''),
-    title: String(item.title || ''),
-    excerpt: String(item.excerpt || ''),
-    content: String(item.content || ''),
-    category: String(item.category || ''),
-    tags: Array.isArray(item.tags) ? item.tags as string[] : [],
-    coverImage: item.cover_image as string | undefined,
-    author: String(item.author || ''),
-    readTime: Number(item.read_time) || 10,
-    publishDate: formatDate(item.publish_date as string | null),
-    status: toReportStatus(item.status),
-    featured: Boolean(item.featured),
-    showOnHome: Boolean(item.show_on_home),
-    views: Number(item.views) || 0,
-    likes: Number(item.likes) || 0,
-    createdAt: String(item.created_at || ''),
-    updatedAt: String(item.updated_at || ''),
-  }));
+  return (data || []).map((item: Record<string, unknown>) => {
+    const topicsFromDb = Array.isArray(item.topics) ? (item.topics as unknown[]).map(String) : [];
+    const legacyTopics = [
+      ...(item.category ? [String(item.category)] : []),
+      ...(Array.isArray(item.tags) ? (item.tags as unknown[]).map(String) : []),
+    ];
+    const topics = Array.from(new Set((topicsFromDb.length ? topicsFromDb : legacyTopics).filter(Boolean)));
+
+    return {
+      id: String(item.id || ''),
+      title: String(item.title || ''),
+      excerpt: String(item.excerpt || ''),
+      content: String(item.content || ''),
+      topics,
+      coverImage: item.cover_image as string | undefined,
+      publishDate: formatDate(item.publish_date as string | null),
+      status: toReportStatus(item.status),
+      showOnHome: Boolean(item.show_on_home),
+      views: Number(item.views) || 0,
+      likes: Number(item.likes) || 0,
+      createdAt: String(item.created_at || ''),
+      updatedAt: String(item.updated_at || ''),
+    };
+  });
 };
 
 export const searchBooks = async (
   query: string,
-  category?: string
+  topic?: string
 ): Promise<Book[]> => {
   let supabaseQuery = supabase
     .from('books')
@@ -953,8 +990,8 @@ export const searchBooks = async (
     supabaseQuery = supabaseQuery.or(`title.ilike.%${query}%,description.ilike.%${query}%`);
   }
 
-  if (category && category !== 'all') {
-    supabaseQuery = supabaseQuery.eq('category', category);
+  if (topic && topic !== 'all') {
+    supabaseQuery = supabaseQuery.contains('topics', [topic]);
   }
 
   const { data, error } = await supabaseQuery.order('created_at', { ascending: false });
@@ -964,26 +1001,34 @@ export const searchBooks = async (
     return [];
   }
 
-  return (data || []).map((item: Record<string, unknown>) => ({
-    id: String(item.id || ''),
-    title: String(item.title || ''),
-    author: String(item.author || ''),
-    description: String(item.description || ''),
-    abstract: String(item.abstract || ''),
-    category: String(item.category || ''),
-    tags: Array.isArray(item.tags) ? item.tags as string[] : [],
-    pages: Number(item.pages) || 100,
-    duration: String(item.duration || ''),
-    rating: Number(item.rating) || 4.5,
-    coverImage: item.cover_image as string | undefined,
-    coverColor: item.cover_color as string | undefined,
-    publishDate: formatDate(item.publish_date as string | null),
-    status: toReportStatus(item.status),
-    views: Number(item.views) || 0,
-    reviews: Number(item.reviews) || 0,
-    createdAt: String(item.created_at || ''),
-    updatedAt: String(item.updated_at || ''),
-  }));
+  return (data || []).map((item: Record<string, unknown>) => {
+    const topicsFromDb = Array.isArray(item.topics) ? (item.topics as unknown[]).map(String) : [];
+    const legacyTopics = [
+      ...(item.category ? [String(item.category)] : []),
+      ...(Array.isArray(item.tags) ? (item.tags as unknown[]).map(String) : []),
+    ];
+    const topics = Array.from(new Set((topicsFromDb.length ? topicsFromDb : legacyTopics).filter(Boolean)));
+
+    return {
+      id: String(item.id || ''),
+      title: String(item.title || ''),
+      author: String(item.author || ''),
+      description: String(item.description || ''),
+      abstract: String(item.abstract || ''),
+      topics,
+      pages: Number(item.pages) || 100,
+      duration: String(item.duration || ''),
+      rating: Number(item.rating) || 4.5,
+      coverImage: item.cover_image as string | undefined,
+      coverColor: item.cover_color as string | undefined,
+      publishDate: formatDate(item.publish_date as string | null),
+      status: toReportStatus(item.status),
+      views: Number(item.views) || 0,
+      reviews: Number(item.reviews) || 0,
+      createdAt: String(item.created_at || ''),
+      updatedAt: String(item.updated_at || ''),
+    };
+  });
 };
 
 // ================================================
@@ -1005,7 +1050,7 @@ export const getStats = async () => {
       reports.reduce((sum, r) => sum + (r.views || 0), 0) +
       insights.reduce((sum, i) => sum + (i.views || 0), 0) +
       books.reduce((sum, b) => sum + (b.views || 0), 0),
-    hotReports: reports.filter(r => r.isHot).length,
+    hotReports: 0,
   };
 };
 
