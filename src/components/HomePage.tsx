@@ -337,7 +337,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
             <p className="text-[15px] text-muted-foreground/60 mb-6">Latest Content</p>
             <div className="h-px w-20 bg-border/50 mx-auto mb-6" />
             <p className="text-[20px] text-foreground/90 font-medium leading-relaxed mb-2">我们不堆概念，只给你下一步</p>
-            <p className="text-[20px] text-foreground/90 font-medium leading-relaxed">从战略到 AI，把复杂问题拆成可执行方案</p>
+            <p className="text-[14px] text-muted-foreground/70">从战略到 AI，把复杂问题拆成可执行方案</p>
           </div>
         </div>
       </section>
