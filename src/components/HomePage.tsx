@@ -460,7 +460,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
                         className={`relative text-left rounded-[18px] px-4 py-3.5 transition-all duration-300 outline-none focus:ring-2 focus:ring-primary/20 will-change-transform ${
                           active
                             ? 'bg-white shadow-lg border border-border/70 scale-[1.04]'
-                            : 'bg-muted/35 hover:bg-muted/20 border border-border/40 hover:border-border/60 hover:-translate-y-0.5 hover:shadow-sm'
+                            : 'bg-muted/60 hover:bg-muted/45 border border-border/40 hover:border-border/60 hover:-translate-y-0.5 hover:shadow-sm'
                         }`}
                         style={
                           active
@@ -498,7 +498,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
                             className={`mt-0.5 w-10 h-10 rounded-[14px] flex items-center justify-center shadow-sm border transition-all duration-300 ${
                               active
                                 ? 'bg-white border-border/60'
-                                : 'bg-white/70 border-border/30'
+                                : 'bg-white/45 border-border/30'
                             }`}
                             style={active ? { boxShadow: `0 18px 40px -28px ${c.accent}` } : undefined}
                           >
@@ -512,7 +512,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
                               className={`tracking-tight transition-all duration-300 ${
                                 active
                                   ? 'text-[18px] font-semibold text-foreground'
-                                  : 'text-[16px] font-medium text-foreground/85'
+                                  : 'text-[16px] font-medium text-foreground/70'
                               }`}
                             >
                               {c.title}
