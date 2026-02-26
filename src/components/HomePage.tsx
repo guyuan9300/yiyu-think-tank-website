@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
-import { ArrowRight, Brain, Target, Users, TrendingUp, BookOpen, FileText, Lightbulb, ChevronRight, Star, Zap, ChevronDown } from 'lucide-react';
-import { getInsights, getReports, type InsightArticle, type Report } from '../lib/dataService';
+import { ArrowRight, Brain, Target, Users, TrendingUp, BookOpen, FileText, Lightbulb, ChevronRight, Star, Zap, ChevronDown, Wrench } from 'lucide-react';
+import { getInsights, getReports, getBooks, getMethodologies, type InsightArticle, type Report, type Book, type Methodology } from '../lib/dataService';
 import { SubscriptionSheet } from './SubscriptionSheet';
 
 // Quick Entry Card - Apple Style
@@ -153,7 +153,7 @@ function ModuleCard({ icon, title, subtitle, description, gradient, onMouseEnter
 }
 
 interface HomePageProps {
-  onNavigate?: (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'login' | 'register') => void;
+  onNavigate?: (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'login' | 'register' | 'book-reader' | 'methodology-library', id?: string) => void;
   onNavigateToDetail?: (type: 'article' | 'report' | 'topic', id: string) => void;
 }
 
@@ -165,6 +165,8 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
   const [homeInsights, setHomeInsights] = useState<InsightArticle[]>([]);
   const [homeReports, setHomeReports] = useState<Report[]>([]);
   const [subscriptionOpen, setSubscriptionOpen] = useState(false);
+
+  const [latestTopic, setLatestTopic] = useState<'战略' | '业务设计' | '组织' | 'AI 技术'>('战略');
 
   // Track scroll for parallax and header effects
   useEffect(() => {
@@ -233,6 +235,87 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
       updates: 10
     },
   ];
+
+  const latestTopicCards: Array<{
+    id: '战略' | '业务设计' | '组织' | 'AI 技术';
+    title: string;
+    desc: string;
+    icon: React.ComponentType<{ className?: string }>;
+    gradient: string;
+  }> = [
+    { id: '战略', title: '战略', desc: '把方向讲清楚，把取舍做出来', icon: Target, gradient: 'from-primary/18 to-primary/6' },
+    { id: '业务设计', title: '业务设计', desc: '把想法变成可交付、可复用的方案', icon: Lightbulb, gradient: 'from-accent/18 to-accent/6' },
+    { id: '组织', title: '组织', desc: '让人和事跑起来：责任清楚、节奏稳定', icon: Users, gradient: 'from-success/18 to-success/6' },
+    { id: 'AI 技术', title: 'AI 技术', desc: '把 AI 变成省力的小工具和稳定的工作流', icon: Zap, gradient: 'from-secondary/18 to-secondary/6' },
+  ];
+
+  type LatestResource = {
+    kind: 'article' | 'report' | 'book' | 'methodology';
+    id: string;
+    title: string;
+    excerpt: string;
+    date: string;
+    coverImage?: string;
+    coverColor?: string;
+  };
+
+  const latestResources = useMemo(() => {
+    const topic = latestTopic;
+
+    const asDate = (s?: string) => {
+      const t = s ? new Date(s).getTime() : 0;
+      return Number.isFinite(t) ? t : 0;
+    };
+
+    const articles = getInsights()
+      .filter((a) => a.status === 'published' && (a.topics || []).includes(topic))
+      .map((a: InsightArticle): LatestResource => ({
+        kind: 'article',
+        id: a.id,
+        title: a.title,
+        excerpt: a.excerpt,
+        date: a.publishDate,
+        coverImage: a.coverImage,
+      }));
+
+    const reports = getReports()
+      .filter((r) => r.status === 'published' && (r.topics || []).includes(topic))
+      .map((r: Report): LatestResource => ({
+        kind: 'report',
+        id: r.id,
+        title: r.title,
+        excerpt: r.summary,
+        date: r.publishDate,
+        coverImage: r.coverImage,
+      }));
+
+    const books = getBooks()
+      .filter((b) => b.status === 'published' && (b.topics || []).includes(topic))
+      .map((b: Book): LatestResource => ({
+        kind: 'book',
+        id: b.id,
+        title: b.title,
+        excerpt: b.description,
+        date: b.publishDate,
+        coverImage: b.coverImage,
+        coverColor: (b as any).coverColor,
+      }));
+
+    const methods = getMethodologies()
+      .filter((m) => m.status === 'published' && (m.topics || []).includes(topic))
+      .map((m: Methodology): LatestResource => ({
+        kind: 'methodology',
+        id: m.id,
+        title: m.title,
+        excerpt: m.excerpt,
+        date: m.publishDate,
+        coverImage: (m as any).coverImage,
+      }));
+
+    return [...articles, ...reports, ...books, ...methods]
+      .sort((a, b) => asDate(b.date) - asDate(a.date))
+      .slice(0, 6);
+  }, [latestTopic]);
 
   const insights = homeInsights.map(i => ({
     id: i.id,
@@ -329,7 +412,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
 
       {/* 首页：按需求隐藏「免费预约组织诊断」后到「战略陪伴」前的内容（3张跳转卡片 / 热门内容 / 战略前沿报告） */}
 
-      {/* 最新内容（占位：后续按你指示补具体呈现） */}
+      {/* 最新内容 */}
       <section className="py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center max-w-3xl mx-auto">
@@ -338,6 +421,99 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
             <div className="h-px w-20 bg-border/50 mx-auto mb-6" />
             <p className="text-[20px] text-foreground/90 font-medium leading-relaxed mb-2">我们不堆概念，只给你下一步</p>
             <p className="text-[14px] text-muted-foreground/70">从战略到 AI，把复杂问题拆成可执行方案</p>
+          </div>
+
+          {/* 四张标签卡片 */}
+          <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {latestTopicCards.map((c) => {
+              const Icon = c.icon;
+              const active = latestTopic === c.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setLatestTopic(c.id)}
+                  className={`group text-left p-6 rounded-[22px] border transition-all duration-300 ${
+                    active
+                      ? 'bg-white shadow-lg shadow-primary/5 border-border/60'
+                      : 'bg-white/70 hover:bg-white/85 border-border/40 hover:border-border/60'
+                  }`}
+                >
+                  <div className={`w-11 h-11 rounded-[14px] bg-gradient-to-br ${c.gradient} flex items-center justify-center mb-4 shadow-sm`}>
+                    <Icon className="w-5 h-5 text-foreground/80" />
+                  </div>
+                  <div className="text-[18px] font-semibold tracking-tight text-foreground mb-1">{c.title}</div>
+                  <div className="text-[13px] text-muted-foreground/70 leading-relaxed">{c.desc}</div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 资源长条卡片（最多 6 条） */}
+          <div className="mt-10 space-y-3">
+            {latestResources.length === 0 ? (
+              <div className="text-center text-[14px] text-muted-foreground/70 py-10">
+                暂无内容
+              </div>
+            ) : (
+              latestResources.map((r: any) => (
+                <button
+                  key={`${r.kind}-${r.id}`}
+                  type="button"
+                  onClick={() => {
+                    if (r.kind === 'article') {
+                      onNavigateToDetail?.('article', r.id);
+                      return;
+                    }
+                    if (r.kind === 'report') {
+                      onNavigateToDetail?.('report', r.id);
+                      return;
+                    }
+                    if (r.kind === 'book') {
+                      if (onNavigate) onNavigate('book-reader' as any, r.id);
+                      else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(r.id)}`);
+                      return;
+                    }
+                    // methodology
+                    if (onNavigate) onNavigate('methodology-library' as any, r.id);
+                    else window.location.assign(`${window.location.pathname}?page=methodology-library&id=${encodeURIComponent(r.id)}`);
+                  }}
+                  className="w-full text-left bg-white/70 hover:bg-white/85 border border-border/40 hover:border-border/60 rounded-[22px] p-4 sm:p-5 transition-all duration-300"
+                >
+                  <div className="flex gap-4">
+                    <div className="w-28 h-20 rounded-[14px] overflow-hidden flex-shrink-0 bg-gradient-to-br from-primary/10 to-accent/10 relative">
+                      {r.coverImage ? (
+                        <img src={r.coverImage} alt={r.title} className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          {r.kind === 'book' ? (
+                            <BookOpen className="w-6 h-6 text-primary/25" />
+                          ) : r.kind === 'report' ? (
+                            <TrendingUp className="w-6 h-6 text-success/25" />
+                          ) : r.kind === 'methodology' ? (
+                            <Wrench className="w-6 h-6 text-primary/25" />
+                          ) : (
+                            <FileText className="w-6 h-6 text-primary/25" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="font-semibold text-[15px] text-foreground line-clamp-1">
+                          {r.title}
+                        </div>
+                        <div className="text-[12px] text-muted-foreground/60 flex-shrink-0">{r.date}</div>
+                      </div>
+                      <div className="mt-1 text-[13px] text-muted-foreground/70 line-clamp-2 leading-relaxed">
+                        {r.excerpt}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))
+            )}
           </div>
         </div>
       </section>
