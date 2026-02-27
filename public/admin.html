@@ -2297,9 +2297,72 @@
     // =========================
     // Jump / Nav (mock)
     // =========================
+    const pageTitleEl = document.querySelector('h1');
+    const allSections = $$('.section');
+
+    const moduleView = document.createElement('section');
+    moduleView.className = 'section';
+    moduleView.style.display = 'none';
+    moduleView.innerHTML = `
+      <div class="section-card" data-state="ready">
+        <div class="section-head">
+          <div class="section-title">
+            <h2 id="moduleTitle">模块</h2>
+            <p id="moduleSubtitle">新后台模块视图（替代旧后台页面跳转）</p>
+          </div>
+          <div class="section-actions">
+            <button class="btn btn--sm btn--outline" id="moduleBackBtn">返回数据概览</button>
+            <button class="btn btn--sm btn--primary">+ 新建</button>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="state-box">
+            <b id="moduleHintTitle">正在查看模块</b>
+            <p id="moduleHintDesc">这里是新后台内部承接区域，后续会把旧后台功能逐步迁移到这里。</p>
+          </div>
+        </div>
+      </div>
+    `;
+    document.querySelector('.container')?.appendChild(moduleView);
+
+    function setAdminView(view) {
+      const map = {
+        dashboard: { title: '数据概览', sub: '运营中枢 · 今天是安静、高级、可运营的后台首页' },
+        'content/articles': { title: '洞察文章', sub: '新后台模块：洞察文章管理（承接旧后台）' },
+        'content/reports': { title: '报告管理', sub: '新后台模块：报告管理（承接旧后台）' },
+        'content/books': { title: '书籍管理', sub: '新后台模块：书籍管理（承接旧后台）' },
+        'content/methods': { title: '益语方法论', sub: '新后台模块：益语方法论管理（承接旧后台）' },
+      };
+      const meta = map[view] || { title: '数据概览', sub: '运营中枢' };
+      if (pageTitleEl) pageTitleEl.textContent = meta.title;
+
+      if (view === 'dashboard') {
+        allSections.forEach((s) => (s.style.display = 'block'));
+        moduleView.style.display = 'none';
+      } else {
+        allSections.forEach((s) => (s.style.display = 'none'));
+        moduleView.style.display = 'block';
+        const t = document.getElementById('moduleTitle');
+        const st = document.getElementById('moduleSubtitle');
+        const ht = document.getElementById('moduleHintTitle');
+        const hd = document.getElementById('moduleHintDesc');
+        if (t) t.textContent = meta.title;
+        if (st) st.textContent = meta.sub;
+        if (ht) ht.textContent = `${meta.title} · 新后台页面`;
+        if (hd) hd.textContent = `你当前留在新后台内（未跳转旧页面）。下一步会在这里继续完善 ${meta.title} 的真实管理功能。`;
+      }
+    }
+
+    moduleView.addEventListener('click', (e) => {
+      const btn = e.target.closest('#moduleBackBtn');
+      if (!btn) return;
+      setAdminView('dashboard');
+      $$('.nav__item').forEach(i => i.classList.remove('is-active'));
+      const dashboardNav = document.querySelector('.nav__item[data-jump="dashboard"]');
+      if (dashboardNav) dashboardNav.classList.add('is-active');
+    });
+
     function handleJump(target) {
-      // In a real app, this would route to the target
-      // For now, we just show a toast
       if (target === 'logout') {
         showToast('退出登录功能待实现');
         return;
@@ -2315,25 +2378,13 @@
         return;
       }
 
-      // 连接到旧后台对应模块（洞察文章/报告管理/书籍管理/益语方法论）
-      const oldAdminMap = {
-        'content/articles': 'insights',
-        'content/reports': 'reports',
-        'content/books': 'books',
-        'content/methods': 'methodologies',
-      };
-      if (oldAdminMap[target]) {
-        const menu = oldAdminMap[target];
-        const basePath = window.location.pathname.replace(/admin\.html$/, '');
-        try {
-          sessionStorage.setItem('yiyu_admin_target_menu', menu);
-        } catch {}
-        const targetUrl = `${window.location.origin}${basePath}?page=admin-legacy#${menu}`;
-        if (window.top && window.top !== window) {
-          window.top.location.href = targetUrl;
-        } else {
-          window.location.href = targetUrl;
-        }
+      if (target === 'content/articles' || target === 'content/reports' || target === 'content/books' || target === 'content/methods') {
+        setAdminView(target);
+        return;
+      }
+
+      if (target === 'dashboard') {
+        setAdminView('dashboard');
         return;
       }
 
@@ -2341,8 +2392,7 @@
         showToast(`跳转到: ${target}`);
         return;
       }
-      
-      // Show toast for demo
+
       const labels = {
         'dashboard': '数据概览',
         'content/articles': '洞察文章',
@@ -2361,7 +2411,7 @@
         'settings': '系统设置',
         'audit': '权限&审计'
       };
-      
+
       const label = labels[target] || target;
       showToast(`跳转到: ${label}`);
     }
