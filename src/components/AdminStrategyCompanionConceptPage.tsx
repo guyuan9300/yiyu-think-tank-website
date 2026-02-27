@@ -915,23 +915,14 @@ export default function AdminStrategyCompanionConceptPage({ onNavigate, showHead
       {showHeader ? <Header isLoggedIn userType="client" onNavigate={onNavigate} /> : null}
 
       <main className={`max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 ${showHeader ? 'pt-24' : 'pt-6'} pb-20 ${spacing}`}>
-        <section className={`${card} p-7 sm:p-8`}>
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400 mb-2">Founder Focus Dashboard</p>
-              <h1 className="text-[26px] sm:text-[30px] tracking-[-0.02em] font-semibold text-slate-900">战略陪伴后台管理</h1>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[12px]">方向画布</span>
-                <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[12px]">北极星承诺</span>
-                <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[12px]">里程碑</span>
-                <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[12px]">目标与进展</span>
-              </div>
+        <section className={`${card} p-8 sm:p-10`}>
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between mb-7">
+            <div className="flex items-center gap-3">
+              {currentLogo ? <img src={currentLogo} alt={currentDisplayName} className="w-10 h-10 rounded-xl object-cover border border-slate-100" /> : <div className="w-10 h-10 rounded-xl bg-slate-100" />}
+              <h2 className="text-[42px] leading-none font-semibold tracking-[-0.02em] text-slate-900">{currentDisplayName}</h2>
             </div>
+
             <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5">
-                {currentLogo ? <img src={currentLogo} alt={currentDisplayName} className="w-8 h-8 rounded-lg object-cover border border-slate-100" /> : <div className="w-8 h-8 rounded-lg bg-slate-100" />}
-                <span className="text-[13px] font-medium text-slate-700">{currentDisplayName}</span>
-              </div>
               {!isFrontend && (
                 <select className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-[14px]" value={client} onChange={(e) => setClient(e.target.value as any)}>
                   <option>蓝信封</option>
@@ -973,10 +964,11 @@ export default function AdminStrategyCompanionConceptPage({ onNavigate, showHead
               )}
             </div>
           </div>
-          {!isFrontend && saveHint ? <p className="mt-3 text-[12px] text-emerald-600">{saveHint}</p> : null}
-        </section>
 
-        <section className={`${card} p-8 sm:p-10`}>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-3">Strategic Companion</p>
+          <p className="text-[34px] leading-[1.25] text-slate-500 italic mb-3">「当你静下来，才能看见更远的路」</p>
+          <p className="text-[18px] text-slate-500 mb-8">每当迷茫时，回到这里，思考你的使命、愿景、价值观</p>
+
           <SectionHeader title="方向画布（使命/愿景/价值观）" subtitle="方向优先，静心中心（可沉浸阅读）" icon={<Sparkles className="w-4 h-4" />} />
 
             <div className="max-w-5xl">
