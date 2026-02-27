@@ -59,6 +59,31 @@ interface MenuItem {
 
 export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps) {
   const [activeMenu, setActiveMenu] = useState('dashboard');
+
+  // 支持从 URL hash 或临时会话参数直达指定后台模块（用于新 dashboard 跳转旧后台页面）
+  useEffect(() => {
+    const allowedMenus = new Set([
+      'dashboard', 'insights', 'reports', 'books', 'methodologies',
+      'categories', 'strategy-companion', 'invite-codes', 'comments',
+      'settings', 'user-management', 'membership'
+    ]);
+
+    const applyTargetMenu = () => {
+      const fromHash = (window.location.hash || '').replace('#', '').trim();
+      const fromSession = (sessionStorage.getItem('yiyu_admin_target_menu') || '').trim();
+      const target = fromSession || fromHash;
+      if (allowedMenus.has(target)) {
+        setActiveMenu(target);
+      }
+      if (fromSession) {
+        sessionStorage.removeItem('yiyu_admin_target_menu');
+      }
+    };
+
+    applyTargetMenu();
+    window.addEventListener('hashchange', applyTargetMenu);
+    return () => window.removeEventListener('hashchange', applyTargetMenu);
+  }, []);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   

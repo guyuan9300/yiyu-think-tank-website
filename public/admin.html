@@ -2314,6 +2314,29 @@
         }
         return;
       }
+
+      // 连接到旧后台对应模块（洞察文章/报告管理/书籍管理/益语方法论）
+      const oldAdminMap = {
+        'content/articles': 'insights',
+        'content/reports': 'reports',
+        'content/books': 'books',
+        'content/methods': 'methodologies',
+      };
+      if (oldAdminMap[target]) {
+        const menu = oldAdminMap[target];
+        const basePath = window.location.pathname.replace(/admin\.html$/, '');
+        try {
+          sessionStorage.setItem('yiyu_admin_target_menu', menu);
+        } catch {}
+        const targetUrl = `${window.location.origin}${basePath}?page=admin#${menu}`;
+        if (window.top && window.top !== window) {
+          window.top.location.href = targetUrl;
+        } else {
+          window.location.href = targetUrl;
+        }
+        return;
+      }
+
       if (target === 'profile' || target === 'settings' || target === 'settings/data') {
         showToast(`跳转到: ${target}`);
         return;
