@@ -9,7 +9,7 @@ import {
   Search, Filter, MoreVertical, Edit, Trash2, Copy, CheckCircle, 
   XCircle, Plus, Download, RefreshCw, AlertTriangle, Eye, EyeOff,
   BookOpen, Tag, Folder, Upload, Image, File, Send, Check, Calendar,
-  User, Globe, TrendingUp, MoreHorizontal, Clock, FileText, Target
+  User, Globe, TrendingUp, MoreHorizontal, Clock, FileText, Target, RotateCcw
 } from 'lucide-react';
 import {
   generateInvitationCode, getAllInviteCodes, disableInviteCode,
@@ -21,7 +21,7 @@ import {
   getMethodologies, saveMethodology, deleteMethodology as deleteMethodologyFromService,
   getBooks, saveBook, deleteBook as deleteBookFromService,
   getCategories, calculateReadTime,
-  getComments, updateCommentStatus, replyComment, deleteComment,
+  getComments, updateCommentStatus, replyComment,
   type Report, type InsightArticle, type Methodology, type Book, type Category, type Comment,
   type ResourceTopic
 } from '../lib/dataService';
@@ -100,7 +100,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const [topicFilterOpen, setTopicFilterOpen] = useState(false);
 
   // 评论筛选：状态
-  const [commentStatusFilter, setCommentStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [commentStatusFilter, setCommentStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'has_reply'>('all');
   
   // 封面图状态
   const [coverImage, setCoverImage] = useState<string | null>(null);
@@ -646,31 +646,27 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     }
   };
 
-  // 评论审核（通过）
-  const handleApproveComment = (commentId: string) => {
+  // 评论可见性：显示
+  const handleShowComment = (commentId: string) => {
     if (updateCommentStatus(commentId, 'approved')) {
       refreshAllData();
-      setMessage({ type: 'success', text: '评论已审核通过' });
+      setMessage({ type: 'success', text: '已设置为：显示' });
     }
   };
 
-  // 评论审核（拒绝）
-  const handleRejectComment = (commentId: string) => {
-    if (window.confirm('确定要拒绝这条评论吗？')) {
-      if (updateCommentStatus(commentId, 'rejected')) {
-        refreshAllData();
-        setMessage({ type: 'success', text: '评论已拒绝' });
-      }
+  // 评论可见性：不显示
+  const handleHideComment = (commentId: string) => {
+    if (updateCommentStatus(commentId, 'rejected')) {
+      refreshAllData();
+      setMessage({ type: 'success', text: '已设置为：不显示' });
     }
   };
 
-  // 删除评论
-  const handleDeleteComment = (commentId: string) => {
-    if (window.confirm('确定要删除这条评论吗？此操作不可恢复。')) {
-      if (deleteComment(commentId)) {
-        refreshAllData();
-        setMessage({ type: 'success', text: '评论已删除' });
-      }
+  // 撤回管理员回复（清空 reply）
+  const handleWithdrawReply = (commentId: string) => {
+    if (replyComment(commentId, '')) {
+      refreshAllData();
+      setMessage({ type: 'success', text: '管理员回复已撤回' });
     }
   };
 
@@ -2007,21 +2003,21 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   <p className="text-2xl font-bold text-gray-900">{comments.length}</p>
                 </div>
                 <div className="bg-white rounded-xl p-4 border border-gray-100">
-                  <p className="text-sm text-gray-500 mb-1">待审核</p>
-                  <p className="text-2xl font-bold text-amber-600">
-                    {comments.filter(c => c.status === 'pending').length}
-                  </p>
-                </div>
-                <div className="bg-white rounded-xl p-4 border border-gray-100">
-                  <p className="text-sm text-gray-500 mb-1">已通过</p>
+                  <p className="text-sm text-gray-500 mb-1">总显示数</p>
                   <p className="text-2xl font-bold text-green-600">
                     {comments.filter(c => c.status === 'approved').length}
                   </p>
                 </div>
                 <div className="bg-white rounded-xl p-4 border border-gray-100">
-                  <p className="text-sm text-gray-500 mb-1">已拒绝</p>
-                  <p className="text-2xl font-bold text-red-600">
-                    {comments.filter(c => c.status === 'rejected').length}
+                  <p className="text-sm text-gray-500 mb-1">总回复数</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {comments.filter(c => Boolean(c.reply && c.reply.trim())).length}
+                  </p>
+                </div>
+                <div className="bg-white rounded-xl p-4 border border-gray-100">
+                  <p className="text-sm text-gray-500 mb-1">未审核数</p>
+                  <p className="text-2xl font-bold text-amber-600">
+                    {comments.filter(c => c.status === 'pending').length}
                   </p>
                 </div>
               </div>
@@ -2046,9 +2042,10 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                     className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
                   >
                     <option value="all">全部状态</option>
-                    <option value="pending">待审核</option>
-                    <option value="approved">已通过</option>
-                    <option value="rejected">已拒绝</option>
+                    <option value="pending">未审核</option>
+                    <option value="approved">显示</option>
+                    <option value="rejected">不显示</option>
+                    <option value="has_reply">有回复</option>
                   </select>
                 </div>
               </div>
@@ -2061,7 +2058,13 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       comment.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
                       comment.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                       comment.contentTitle.toLowerCase().includes(searchQuery.toLowerCase());
-                    const matchesStatus = commentStatusFilter === 'all' || comment.status === commentStatusFilter;
+                    const matchesStatus = (
+                      commentStatusFilter === 'all'
+                        ? true
+                        : commentStatusFilter === 'has_reply'
+                          ? Boolean(comment.reply && comment.reply.trim())
+                          : comment.status === commentStatusFilter
+                    );
                     return matchesSearch && matchesStatus;
                   })
                   .length === 0 ? (
@@ -2077,7 +2080,13 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                           comment.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           comment.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           comment.contentTitle.toLowerCase().includes(searchQuery.toLowerCase());
-                        const matchesStatus = commentStatusFilter === 'all' || comment.status === commentStatusFilter;
+                        const matchesStatus = (
+                          commentStatusFilter === 'all'
+                            ? true
+                            : commentStatusFilter === 'has_reply'
+                              ? Boolean(comment.reply && comment.reply.trim())
+                              : comment.status === commentStatusFilter
+                        );
                         return matchesSearch && matchesStatus;
                       })
                       .map((comment) => (
@@ -2131,49 +2140,53 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                               comment.status === 'approved' ? 'bg-green-100 text-green-700' :
                               'bg-red-100 text-red-700'
                             }`}>
-                              {comment.status === 'pending' ? '待审核' :
-                               comment.status === 'approved' ? '已通过' : '已拒绝'}
+                              {comment.status === 'pending' ? '未审核' :
+                               comment.status === 'approved' ? '显示' : '不显示'}
                             </span>
                           </div>
                           
                           {/* 操作按钮 */}
                           <div className="flex items-center gap-2 mt-3">
-                            {comment.status === 'pending' && (
-                              <>
-                                <button
-                                  onClick={() => handleApproveComment(comment.id)}
-                                  className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-                                >
-                                  <CheckCircle className="w-4 h-4" />
-                                  通过
-                                </button>
-                                <button
-                                  onClick={() => handleRejectComment(comment.id)}
-                                  className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-                                >
-                                  <XCircle className="w-4 h-4" />
-                                  拒绝
-                                </button>
-                              </>
-                            )}
-                            
-                            {comment.status === 'approved' && (
+                            <button
+                              onClick={() => handleShowComment(comment.id)}
+                              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors text-sm ${
+                                comment.status === 'approved'
+                                  ? 'bg-green-600 text-white hover:bg-green-700'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              }`}
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              显示
+                            </button>
+                            <button
+                              onClick={() => handleHideComment(comment.id)}
+                              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors text-sm ${
+                                comment.status === 'rejected'
+                                  ? 'bg-red-600 text-white hover:bg-red-700'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              }`}
+                            >
+                              <XCircle className="w-4 h-4" />
+                              不显示
+                            </button>
+
+                            <button
+                              onClick={() => handleOpenReplyModal(comment)}
+                              className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                              {comment.reply ? '修改回复' : '回复'}
+                            </button>
+
+                            {comment.reply && (
                               <button
-                                onClick={() => handleOpenReplyModal(comment)}
-                                className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                                onClick={() => handleWithdrawReply(comment.id)}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
                               >
-                                <MessageSquare className="w-4 h-4" />
-                                {comment.reply ? '修改回复' : '回复'}
+                                <RotateCcw className="w-4 h-4" />
+                                撤回
                               </button>
                             )}
-                            
-                            <button
-                              onClick={() => handleDeleteComment(comment.id)}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm ml-auto"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              删除
-                            </button>
                           </div>
                         </div>
                       ))}
