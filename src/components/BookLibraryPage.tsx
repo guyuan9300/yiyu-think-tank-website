@@ -94,7 +94,7 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id
 
       {/* Page Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-border/40">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="flex items-center gap-2 text-[13px] text-muted-foreground/60 mb-4">
             <button
               type="button"
@@ -117,7 +117,7 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id
 
       {/* Filter Bar */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-border/40 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-wrap items-center gap-4">
             {/* Search */}
             <div className="flex-1 min-w-64 relative">
@@ -167,7 +167,7 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
         {/* Results Info */}
         <div className="flex items-center justify-between mb-8">
           <p className="text-[14px] text-muted-foreground/70">
