@@ -66,22 +66,9 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(328);
   const [zoomLevel, setZoomLevel] = useState(100);
+  // NOTE: "智能助手"功能已移除（详情页仅保留阅读区）。
   const [activeTab, setActiveTab] = useState<'chat' | 'favorites' | 'feedback' | 'comments'>('chat');
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: `您好！我是您的智能阅读助手。关于《什么是权力》，我可以帮您：
-
-• 提炼核心观点与洞见
-• 解答政治权力相关问题
-• 梳理章节脉络与逻辑
-
-请问有什么想了解的？`,
-      timestamp: '10:30',
-      isBookmarked: false
-    }
-  ]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [feedback, setFeedback] = useState('');
@@ -377,11 +364,11 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
 
       {/* 内容区域 */}
       <div
-        className={isMobile ? "flex flex-col" : "flex"}
+        className="w-full"
         style={isMobile ? undefined : { height: `${contentHeightPx}px`, minHeight: '1040px' }}
       >
         {/* PDF阅读区域 */}
-        <div className={isMobile ? "w-full flex flex-col bg-white" : "flex-1 flex flex-col border-r border-gray-200 bg-white min-w-0"}>
+        <div className={isMobile ? "w-full flex flex-col bg-white" : "max-w-4xl mx-auto w-full flex flex-col bg-white min-w-0"}>
           {/* PDF工具条 - 精简版 */}
           <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
             <div className="flex items-center gap-4">
@@ -459,232 +446,6 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
               <div className="text-center py-12">
                 <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500">PDF文件暂未上传</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* AI助手区域 */}
-        <div className={isMobile ? "w-full flex flex-col bg-white" : "w-[400px] flex flex-col bg-white flex-shrink-0"}>
-          {/* AI顶部导航 */}
-          <div className="flex border-b border-gray-200">
-            <button
-              onClick={() => setActiveTab('chat')}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
-                activeTab === 'chat'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <MessageSquare className="w-4 h-4" />
-              对话
-            </button>
-            <button
-              onClick={() => setActiveTab('favorites')}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
-                activeTab === 'favorites'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Bookmark className="w-4 h-4" />
-              收藏
-            </button>
-            <button
-              onClick={() => setActiveTab('feedback')}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
-                activeTab === 'feedback'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <MessageCircle className="w-4 h-4" />
-              留言
-            </button>
-            <button
-              onClick={() => setActiveTab('comments')}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
-                activeTab === 'comments'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <MessageSquare className="w-4 h-4" />
-              评论
-            </button>
-          </div>
-
-          {/* AI内容区域 */}
-          <div className="flex-1 overflow-hidden">
-            {/* 对话面板 */}
-            {activeTab === 'chat' && (
-              <div className="h-full flex flex-col">
-                {/* AI简介 */}
-                <div className="px-4 py-3 bg-blue-50 border-b border-blue-100 flex-shrink-0">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                      <Sparkles className="w-4 h-4 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-blue-900">智能阅读助手</p>
-                      <p className="text-xs text-blue-700">基于《{book.title}》内容训练</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 消息列表 */}
-                <div
-                  ref={chatContainerRef}
-                  className="flex-1 overflow-auto p-4 space-y-4"
-                >
-                  {chatMessages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
-                    >
-                      {message.role === 'assistant' && (
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-                          <Sparkles className="w-4 h-4 text-white" />
-                        </div>
-                      )}
-                      {message.role === 'user' && (
-                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-medium text-gray-600">我</span>
-                        </div>
-                      )}
-
-                      <div className={`max-w-[75%] ${message.role === 'user' ? 'text-right' : ''}`}>
-                        <div
-                          className={`inline-block px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-                            message.role === 'user'
-                              ? 'bg-blue-600 text-white rounded-tr-md'
-                              : 'bg-gray-100 text-gray-800 rounded-tl-md'
-                          }`}
-                        >
-                          {message.content}
-                        </div>
-
-                        {/* 操作按钮 */}
-                        {message.role === 'assistant' && (
-                          <div className="flex items-center gap-2 mt-1.5 justify-start">
-                            <span className="text-xs text-gray-400">{message.timestamp}</span>
-                            <button
-                              onClick={() => handleBookmark(message.id)}
-                              className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                                message.isBookmarked ? 'text-blue-600' : 'text-gray-400'
-                              }`}
-                              title={message.isBookmarked ? '已收藏' : '收藏'}
->
-                              <Bookmark
-                                className="w-3.5 h-3.5"
-                                fill={message.isBookmarked ? 'currentColor' : 'none'}
-                              />
-                            </button>
-                            <button
-                              onClick={() => handleCopy(message.content)}
-                              className="p-1 rounded hover:bg-gray-200 transition-colors text-gray-400"
-                              title="复制"
-                            >
-                              <Copy className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* 输入框 */}
-                <div className="p-4 border-t border-gray-200 flex-shrink-0">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                      placeholder="输入您的问题..."
-                      className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                    />
-                    <button
-                      onClick={handleSendMessage}
-                      disabled={!newMessage.trim()}
-                      className="px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Send className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-2 text-center">
-                    基于飞书扣子智能体 · AI对话内容可一键收藏
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* 收藏面板 */}
-            {activeTab === 'favorites' && (
-              <div className="h-full overflow-auto p-4">
-                {favorites.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Bookmark className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">暂无收藏内容</p>
-                    <p className="text-sm text-gray-400 mt-1">
-                      对话中的重要信息可以收藏保存
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {favorites.map((item) => (
-                      <div key={item.id} className="p-3 bg-gray-50 rounded-xl">
-                        <p className="text-sm text-gray-700 mb-2">{item.content}</p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-400">{item.timestamp}</span>
-                          <button
-                            onClick={() => handleCopy(item.content)}
-                            className="p-1 rounded hover:bg-gray-200 transition-colors text-gray-400"
-                          >
-                            <Copy className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 留言面板 */}
-            {activeTab === 'feedback' && (
-              <div className="h-full flex flex-col p-4">
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    您的反馈
-                  </label>
-                  <textarea
-                    value={feedback}
-                    onChange={(e) => setFeedback(e.target.value)}
-                    placeholder="请告诉我们您的建议或问题..."
-                    className="w-full h-40 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-none"
-                  />
-                </div>
-                <button
-                  onClick={handleSubmitFeedback}
-                  disabled={!feedback.trim()}
-                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  提交反馈
-                </button>
-              </div>
-            )}
-            {/* 评论面板 */}
-            {activeTab === 'comments' && (
-              <div className="h-full overflow-auto">
-                <CommentSection
-                  contentId={bookId}
-                  contentType="book"
-                  contentTitle={book.title}
-                  isLoggedIn={true}
-                  userName="张三"
-                />
               </div>
             )}
           </div>
