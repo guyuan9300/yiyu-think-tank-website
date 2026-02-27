@@ -969,27 +969,25 @@ export default function AdminStrategyCompanionConceptPage({ onNavigate, showHead
           <p className="text-[34px] leading-[1.25] text-slate-500 italic mb-3">「当你静下来，才能看见更远的路」</p>
           <p className="text-[18px] text-slate-500 mb-8">每当迷茫时，回到这里，思考你的使命、愿景、价值观</p>
 
-          <SectionHeader title="方向画布（使命/愿景/价值观）" subtitle="方向优先，静心中心（可沉浸阅读）" icon={<Sparkles className="w-4 h-4" />} />
-
-            <div className="max-w-5xl">
+          <div className="max-w-5xl">
               {mode === 'work' ? (
                 <textarea
                   value={heroData.mission}
                   onChange={(e) => setOverrideHero((prev) => ({ ...prev, [client]: { mission: e.target.value, vision: heroData.vision, values: heroData.values } }))}
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-[34px] leading-[1.25] tracking-[-0.02em] font-semibold text-slate-900 mb-6"
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-[54px] leading-[1.15] tracking-[-0.03em] font-semibold text-slate-900 mb-8"
                 />
               ) : (
-                <h2 className="text-[34px] leading-[1.25] tracking-[-0.02em] font-semibold text-slate-900 mb-6">{heroData.mission}</h2>
+                <h2 className="text-[54px] leading-[1.15] tracking-[-0.03em] font-semibold text-slate-900 mb-8">{heroData.mission}</h2>
               )}
 
               {mode === 'work' ? (
                 <textarea
                   value={heroData.vision}
                   onChange={(e) => setOverrideHero((prev) => ({ ...prev, [client]: { mission: heroData.mission, vision: e.target.value, values: heroData.values } }))}
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-[27px] leading-[1.35] tracking-[-0.015em] font-medium text-slate-700 mb-6"
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-[44px] leading-[1.2] tracking-[-0.02em] font-medium text-slate-700 mb-8"
                 />
               ) : (
-                <p className="text-[27px] leading-[1.35] tracking-[-0.015em] font-medium text-slate-700 mb-6">{heroData.vision}</p>
+                <p className="text-[44px] leading-[1.2] tracking-[-0.02em] font-medium text-slate-700 mb-8">{heroData.vision}</p>
               )}
 
               {mode === 'work' ? (
@@ -1000,9 +998,9 @@ export default function AdminStrategyCompanionConceptPage({ onNavigate, showHead
                   placeholder="每行一个价值观，回车分隔"
                 />
               ) : (
-                <div className="flex flex-wrap gap-2.5 mb-5">
+                <div className="flex flex-wrap gap-3 mb-2">
                   {heroData.values.map((v) => (
-                    <span key={v} className="px-4 py-2 rounded-full border border-slate-200 bg-slate-50 text-[14px] text-slate-700">{v}</span>
+                    <span key={v} className="px-5 py-2.5 rounded-full border border-slate-200 bg-slate-50 text-[16px] text-slate-700">{v}</span>
                   ))}
                 </div>
               )}
