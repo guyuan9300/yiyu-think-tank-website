@@ -2304,7 +2304,17 @@
         showToast('退出登录功能待实现');
         return;
       }
-      if (target === 'homeBtn' || target === 'profile' || target === 'settings' || target === 'settings/data') {
+      if (target === 'homeBtn') {
+        const basePath = window.location.pathname.replace(/admin\.html$/, '');
+        const targetUrl = `${window.location.origin}${basePath}?page=home`;
+        if (window.top && window.top !== window) {
+          window.top.location.href = targetUrl;
+        } else {
+          window.location.href = targetUrl;
+        }
+        return;
+      }
+      if (target === 'profile' || target === 'settings' || target === 'settings/data') {
         showToast(`跳转到: ${target}`);
         return;
       }
