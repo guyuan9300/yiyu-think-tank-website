@@ -151,9 +151,8 @@ function ModuleCard({ icon, title, subtitle, description, gradient, onMouseEnter
       <h3 className="font-medium text-[18px] text-foreground mb-1 transition-all duration-300 group-hover:text-white group-hover:text-[22px]">
         {title}
       </h3>
-      {/* Hover on Home should become "blue-only" (no original copy) */}
-      <p className="text-[13px] text-muted-foreground/60 mb-3 transition-all duration-300 group-hover:opacity-0 group-hover:translate-y-1">{subtitle}</p>
-      <p className="text-[14px] text-muted-foreground/70 leading-relaxed transition-all duration-300 group-hover:opacity-0 group-hover:translate-y-1">{description}</p>
+      <p className="text-[13px] text-muted-foreground/60 mb-3 transition-colors duration-300 group-hover:text-white/80">{subtitle}</p>
+      <p className="text-[14px] text-muted-foreground/70 leading-relaxed transition-colors duration-300 group-hover:text-white/85">{description}</p>
     </div>
   );
 }

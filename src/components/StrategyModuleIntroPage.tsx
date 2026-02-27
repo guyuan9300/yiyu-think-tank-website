@@ -136,20 +136,6 @@ export function StrategyModuleIntroPage({ module, onNavigate }: StrategyModuleIn
                 ))}
               </div>
 
-              <div className="mt-10 flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={() => onNavigate?.('strategy')}
-                  className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-foreground text-background hover:bg-foreground/90 transition-all"
-                >
-                  查看成功案例
-                </button>
-                <button
-                  onClick={() => onNavigate?.('strategy-companion')}
-                  className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white/75 hover:bg-white transition-all border border-border/40"
-                >
-                  去「战略陪伴」
-                </button>
-              </div>
             </div>
           </div>
         </div>
