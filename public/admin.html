@@ -2328,7 +2328,7 @@
         try {
           sessionStorage.setItem('yiyu_admin_target_menu', menu);
         } catch {}
-        const targetUrl = `${window.location.origin}${basePath}?page=admin#${menu}`;
+        const targetUrl = `${window.location.origin}${basePath}?page=admin-legacy#${menu}`;
         if (window.top && window.top !== window) {
           window.top.location.href = targetUrl;
         } else {
