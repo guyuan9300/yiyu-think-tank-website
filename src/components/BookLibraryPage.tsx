@@ -184,67 +184,122 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id
         ) : viewMode === 'grid' ? (
           /* Grid View */
           <div className={filteredBooks.length === 1 ? "grid grid-cols-1 gap-7" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-7"}>
-            {filteredBooks.map((book) => (
-              <article
-                key={book.id}
-                className="bg-white/80 backdrop-blur-sm rounded-[20px] border border-border/40 overflow-hidden cursor-pointer group hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300"
-                onClick={() => {
-                  if (onNavigate) onNavigate('book-reader', book.id);
-                  else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(book.id)}`);
-                }}
-              >
-                <div className={`aspect-[16/10] bg-gradient-to-br ${book.coverColor || 'from-primary/20 to-accent/10'} relative overflow-hidden`}>
-                  {book.coverImage ? (
-                    <img
-                      src={book.coverImage}
-                      alt={book.title}
-                      className="absolute inset-0 w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-white opacity-20 text-6xl font-bold">
-                      {book.title.charAt(0)}
+            {filteredBooks.map((book) => {
+              const isSingle = filteredBooks.length === 1;
+              const go = () => {
+                if (onNavigate) onNavigate('book-reader', book.id);
+                else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(book.id)}`);
+              };
+
+              // Single item: render a wide, report-card-like layout (cover left, content right)
+              if (isSingle) {
+                return (
+                  <article
+                    key={book.id}
+                    className="bg-white/80 backdrop-blur-sm rounded-[24px] border border-border/40 overflow-hidden cursor-pointer group hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300"
+                    onClick={go}
+                  >
+                    <div className="flex flex-col md:flex-row">
+                      <div className={`md:w-[360px] w-full aspect-[3/4] md:aspect-auto bg-gradient-to-br ${book.coverColor || 'from-primary/20 to-accent/10'} relative overflow-hidden`}>
+                        {book.coverImage ? (
+                          <img
+                            src={book.coverImage}
+                            alt={book.title}
+                            className="absolute inset-0 w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center text-white opacity-20 text-6xl font-bold">
+                            {book.title.charAt(0)}
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+                      </div>
+
+                      <div className="flex-1 p-8">
+                        <h3 className="font-semibold text-[22px] text-foreground mb-2 group-hover:text-primary transition-colors">
+                          {book.title}
+                        </h3>
+                        <p className="text-[14px] text-muted-foreground/70 mb-6">{book.author}</p>
+
+                        <p className="text-[14px] text-muted-foreground/75 leading-relaxed line-clamp-3 mb-6">
+                          {book.description}
+                        </p>
+
+                        <div className="flex flex-wrap items-center gap-4 text-[13px] text-muted-foreground/60">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            {book.duration}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                            {book.rating}
+                          </span>
+                        </div>
+
+                        <div className="mt-7">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              go();
+                            }}
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                          >
+                            <Eye className="w-4 h-4" />
+                            查看详情
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </article>
+                );
+              }
 
-                  {/* Hover Button */}
-                  <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (onNavigate) onNavigate('book-reader', book.id);
-                        else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(book.id)}`);
-                      }}
-                      className="w-full py-2.5 bg-white/90 backdrop-blur-sm rounded-[12px] text-[13px] font-medium text-foreground hover:bg-white transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span>详情</span>
-                    </button>
+              // Multi items: keep compact cards
+              return (
+                <article
+                  key={book.id}
+                  className="bg-white/80 backdrop-blur-sm rounded-[20px] border border-border/40 overflow-hidden cursor-pointer group hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300"
+                  onClick={go}
+                >
+                  <div className={`aspect-[3/4] bg-gradient-to-br ${book.coverColor || 'from-primary/20 to-accent/10'} relative overflow-hidden`}>
+                    {book.coverImage ? (
+                      <img
+                        src={book.coverImage}
+                        alt={book.title}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-white opacity-20 text-6xl font-bold">
+                        {book.title.charAt(0)}
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                </div>
 
-                <div className="p-5">
-                  <h3 className="font-medium text-[15px] text-foreground mb-1.5 line-clamp-1 group-hover:text-primary transition-colors">
-                    {book.title}
-                  </h3>
-                  <p className="text-[13px] text-muted-foreground/70 mb-3">{book.author}</p>
+                  <div className="p-5">
+                    <h3 className="font-medium text-[15px] text-foreground mb-1.5 line-clamp-1 group-hover:text-primary transition-colors">
+                      {book.title}
+                    </h3>
+                    <p className="text-[13px] text-muted-foreground/70 mb-3">{book.author}</p>
 
-                  {/* Meta */}
-                  <div className="flex items-center gap-4 text-[12px] text-muted-foreground/50">
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" />
-                      {book.duration}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                      {book.rating}
-                    </span>
+                    {/* Meta */}
+                    <div className="flex items-center gap-4 text-[12px] text-muted-foreground/50">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5" />
+                        {book.duration}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                        {book.rating}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         ) : (
           /* List View */
