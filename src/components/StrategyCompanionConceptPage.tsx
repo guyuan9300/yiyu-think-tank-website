@@ -108,9 +108,17 @@ export function StrategyCompanionConceptPage({ onNavigate }: { onNavigate?: (pag
       }
     };
 
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key || e.key === ADMIN_OVERRIDE_STORAGE_KEY) loadOverrides();
+    };
+
     loadOverrides();
     window.addEventListener('yiyu_data_change', loadOverrides);
-    return () => window.removeEventListener('yiyu_data_change', loadOverrides);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('yiyu_data_change', loadOverrides);
+      window.removeEventListener('storage', onStorage);
+    };
   }, []);
 
   const selectedClient = useMemo(

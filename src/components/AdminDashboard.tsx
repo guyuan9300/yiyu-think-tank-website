@@ -1899,7 +1899,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
           {/* 战略客户管理（已替换为新设计后台页） */}
           {activeMenu === 'strategy-companion' && (
-            <AdminStrategyCompanionConceptPage />
+            <AdminStrategyCompanionConceptPage showHeader={false} />
           )}
 
           {/* 系统设置 */}

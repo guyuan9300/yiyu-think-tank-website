@@ -324,7 +324,7 @@ type AdminOverridePayload = {
   extraLearning?: Record<string, ClientPreset['learning']>;
 };
 
-export default function AdminStrategyCompanionConceptPage({ onNavigate }: { onNavigate?: (page: string) => void }) {
+export default function AdminStrategyCompanionConceptPage({ onNavigate, showHeader = true }: { onNavigate?: (page: string) => void; showHeader?: boolean }) {
   const [mode, setMode] = useState<Mode>('immersive');
   const [client, setClient] = useState<'蓝信封' | '日慈基金会'>('蓝信封');
   const data = clientData[client];
@@ -753,9 +753,9 @@ export default function AdminStrategyCompanionConceptPage({ onNavigate }: { onNa
 
   return (
     <div className="min-h-screen bg-[#F7F7F5]">
-      <Header isLoggedIn userType="client" onNavigate={onNavigate} />
+      {showHeader ? <Header isLoggedIn userType="client" onNavigate={onNavigate} /> : null}
 
-      <main className={`max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 pt-24 pb-20 ${spacing}`}>
+      <main className={`max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 ${showHeader ? 'pt-24' : 'pt-6'} pb-20 ${spacing}`}>
         <section className={`${card} p-7 sm:p-8`}>
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
