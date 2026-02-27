@@ -142,8 +142,15 @@ export function StrategyCompanionConceptPage({ onNavigate }: { onNavigate?: (pag
         date: x.date,
         done: x.status === 'done',
         current: x.status === 'current',
+        detail: x.detail || '',
       }))
-    : (strategyData?.milestones || fallbackTimeline)
+    : (strategyData?.milestones || fallbackTimeline).map((x: any) => ({
+        title: x.title,
+        date: x.date || x.milestoneDate || '',
+        done: x.done ?? x.status === 'completed',
+        current: x.current ?? x.status === 'in-progress',
+        detail: x.detail || x.description || '',
+      }))
   ).slice(0, 5);
   const quarterly = strategyData?.quarterlyPlan || { q1: [], q2: [], q3: [], q4: [] };
   const goals = ((goalsOverride || strategyData?.goals || []) as any[])
@@ -242,6 +249,7 @@ export function StrategyCompanionConceptPage({ onNavigate }: { onNavigate?: (pag
                     <div className={`relative z-10 w-4 h-4 rounded-full border-2 ${current ? 'border-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,.15)]' : done ? 'border-blue-500 bg-blue-500' : 'border-slate-300 bg-white'}`} />
                     <p className="mt-3 text-[14px] font-medium text-slate-800">{t.title}</p>
                     <p className="text-[12px] text-slate-500">{t.date}</p>
+                    {t.detail ? <p className="text-[12px] text-slate-500 mt-1">{t.detail}</p> : null}
                   </div>
                 );
               })}
@@ -330,12 +338,19 @@ export function StrategyCompanionConceptPage({ onNavigate }: { onNavigate?: (pag
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               <div className="space-y-3">
                 {(documents.length ? documents : [{ title: '暂无文档资源' }]).slice(0, 3).map((f: any, idx: number) => (
-                  <div key={f.id || idx} className="rounded-2xl border border-slate-200/70 bg-white p-4 text-[14px] text-slate-700">{f.title}</div>
+                  <div key={f.id || idx} className="rounded-2xl border border-slate-200/70 bg-white p-4">
+                    <p className="text-[14px] text-slate-800 font-medium">{f.title}</p>
+                    {f.desc || f.description ? <p className="text-[12px] text-slate-500 mt-1">{f.desc || f.description}</p> : null}
+                    {f.date || f.docDate ? <p className="text-[12px] text-slate-400 mt-1">{f.date || f.docDate}</p> : null}
+                    {(f.link || f.documentLink) ? <a href={f.link || f.documentLink} target="_blank" rel="noreferrer" className="text-[12px] text-indigo-600 mt-1 inline-block">打开文档</a> : null}
+                  </div>
                 ))}
               </div>
               <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-5">
                 <p className="text-[14px] font-medium text-slate-800 mb-2">会议记录</p>
-                <p className="text-[13px] text-slate-600">{meetings[0] ? `${meetings[0].date} · ${meetings[0].duration} · ${meetings[0].participants}人参与 · ${meetings[0].title}` : '暂无会议记录'}</p>
+                <p className="text-[13px] text-slate-600">{meetings[0] ? `${meetings[0].date || meetings[0].meetingDate || '-'} · ${meetings[0].duration || '-'} · ${meetings[0].participants || meetings[0].participantsCount || '-'}人参与 · ${meetings[0].title}` : '暂无会议记录'}</p>
+                {meetings[0]?.topic || meetings[0]?.keyPoints?.[0] ? <p className="text-[12px] text-slate-500 mt-1">核心议题：{meetings[0].topic || meetings[0].keyPoints?.[0]}</p> : null}
+                {(meetings[0]?.link || meetings[0]?.meetingLink) ? <a href={meetings[0].link || meetings[0].meetingLink} target="_blank" rel="noreferrer" className="text-[12px] text-indigo-600 mt-1 inline-block">打开会议记录</a> : null}
               </div>
             </div>
           )}
@@ -348,8 +363,9 @@ export function StrategyCompanionConceptPage({ onNavigate }: { onNavigate?: (pag
               {(courses.length ? courses : [{ title: '组织系统设计' }, { title: 'AI 时代管理者学习路径' }, { title: '战略复盘方法论' }]).slice(0, 3).map((a: any, idx: number) => (
                 <article key={a.id || idx} className="rounded-2xl border border-indigo-100/80 bg-indigo-50/40 p-5">
                   <p className="text-[15px] font-semibold text-slate-800 mb-2">{a.title}</p>
-                  <p className="text-[13px] text-slate-600 mb-4">{a.description || '面向当前阶段的精选内容，帮助从思考走向行动。'}</p>
-                  <button className="text-[13px] text-indigo-600 font-medium">Read More</button>
+                  <p className="text-[13px] text-slate-600 mb-1">{a.description || a.summary || '面向当前阶段的精选内容，帮助从思考走向行动。'}</p>
+                  {a.relation ? <p className="text-[12px] text-slate-500 mb-3">{a.relation}</p> : <div className="mb-3" />}
+                  {(a.link || a.url) ? <a href={a.link || a.url} target="_blank" rel="noreferrer" className="text-[13px] text-indigo-600 font-medium">Read More</a> : <button className="text-[13px] text-indigo-600 font-medium">Read More</button>}
                 </article>
               ))}
             </div>
