@@ -3,7 +3,7 @@ import { Mail, Phone } from 'lucide-react';
 import { getSystemSettings, type SystemSettings } from '../lib/dataService';
 
 interface FooterProps {
-  onNavigate?: (page: 'about' | 'home' | 'insights' | 'learning' | 'strategy') => void;
+  onNavigate?: (page: 'about' | 'home' | 'insights' | 'learning' | 'strategy' | 'report-library' | 'article-center' | 'book-library' | 'methodology-library') => void;
 }
 
 /**
@@ -23,7 +23,7 @@ export function Footer({ onNavigate }: FooterProps) {
 
   const currentYear = new Date().getFullYear();
 
-  const nav = (page: 'about' | 'home' | 'insights' | 'learning' | 'strategy') => {
+  const nav = (page: 'about' | 'home' | 'insights' | 'learning' | 'strategy' | 'report-library' | 'article-center' | 'book-library' | 'methodology-library') => {
     onNavigate?.(page);
   };
 
@@ -73,23 +73,18 @@ export function Footer({ onNavigate }: FooterProps) {
             </div>
           </div>
 
-          {/* Insights (second largest heading) */}
+          {/* Insights */}
           <div className="hidden md:block">
-            <h4 className="font-medium text-[15px] mb-4 text-white">洞察</h4>
+            <h4 className="font-medium text-[15px] mb-4 text-white">前沿洞察</h4>
             <ul className="space-y-2.5 text-[13px] text-white/70">
               <li>
-                <button type="button" onClick={() => nav('insights')} className="hover:text-white transition-colors">
-                  行业洞察
+                <button type="button" onClick={() => nav('report-library')} className="hover:text-white transition-colors">
+                  报告库
                 </button>
               </li>
               <li>
-                <button type="button" onClick={() => nav('insights')} className="hover:text-white transition-colors">
-                  数据洞察
-                </button>
-              </li>
-              <li>
-                <button type="button" onClick={() => nav('insights')} className="hover:text-white transition-colors">
-                  深度洞察
+                <button type="button" onClick={() => nav('article-center')} className="hover:text-white transition-colors">
+                  文章中心
                 </button>
               </li>
             </ul>
@@ -100,18 +95,13 @@ export function Footer({ onNavigate }: FooterProps) {
             <h4 className="font-medium text-[15px] mb-4 text-white">学习中心</h4>
             <ul className="space-y-2.5 text-[13px] text-white/70">
               <li>
-                <button type="button" onClick={() => nav('learning')} className="hover:text-white transition-colors">
-                  书库
+                <button type="button" onClick={() => nav('book-library')} className="hover:text-white transition-colors">
+                  图书馆
                 </button>
               </li>
               <li>
-                <button type="button" onClick={() => nav('learning')} className="hover:text-white transition-colors">
-                  我的学习
-                </button>
-              </li>
-              <li>
-                <button type="button" onClick={() => nav('learning')} className="hover:text-white transition-colors">
-                  学习路径（建设中）
+                <button type="button" onClick={() => nav('methodology-library')} className="hover:text-white transition-colors">
+                  工具/方法论
                 </button>
               </li>
             </ul>

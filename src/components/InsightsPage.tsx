@@ -252,11 +252,11 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
 
   // 获取最新的报告和文章
   const latestReports = useMemo(() => {
-    return reports.slice(0, 6);
+    return reports.slice(0, 3);
   }, [reports]);
 
   const latestArticles = useMemo(() => {
-    return articles.slice(0, 6);
+    return articles.slice(0, 3);
   }, [articles]);
 
   // 跳转到报告库

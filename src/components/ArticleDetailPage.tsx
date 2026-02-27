@@ -398,29 +398,8 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
             />
           </div>
 
-          {/* Related Articles */}
-          <div className="mt-16 pt-8 border-t border-border/40">
-            <h3 className="text-xl font-semibold mb-8 text-foreground">相关文章推荐</h3>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {[
-                { id: 'related-1', title: '企业社会责任数字化实践报告', date: '2026-01-20', readTime: '12分钟' },
-                { id: 'related-2', title: '非营利组织数据驱动决策指南', date: '2026-01-18', readTime: '18分钟' },
-              ].map((item, index) => (
-                <button
-                  key={item.id}
-                  onClick={() => onNavigate('article', item.id)}
-                  className="p-6 rounded-2xl bg-muted/20 border border-border/40 hover:border-primary/50 hover:bg-muted/30 transition-all duration-300 cursor-pointer group text-left hover:scale-[1.02]"
-                >
-                  <h4 className="font-medium mb-2 group-hover:text-primary transition-colors duration-200 text-foreground">
-                    {item.title}
-                  </h4>
-                  <p className="text-sm text-muted-foreground/60">
-                    {item.date} • {item.readTime}阅读
-                  </p>
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* Related Articles removed */}
+          {/* 相关文章推荐：按需求移除 */}
         </div>
       </section>
 

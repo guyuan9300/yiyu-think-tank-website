@@ -127,12 +127,12 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
 
   const visibleBooks = useMemo(() => {
     const list = books;
-    return showAllBooks ? list : list.slice(0, 6);
+    return showAllBooks ? list : list.slice(0, 3);
   }, [books, showAllBooks]);
 
   const visibleMethodologies = useMemo(() => {
     const list = methodologies;
-    return showAllMethodologies ? list : list.slice(0, 6);
+    return showAllMethodologies ? list : list.slice(0, 3);
   }, [methodologies, showAllMethodologies]);
 
   const handleBookClick = (bookId: string) => {

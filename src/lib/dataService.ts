@@ -1066,8 +1066,8 @@ const defaultSystemSettings: SystemSettings = {
   // 基本信息
   siteName: '益语智库 Yiyu Think Tank',
   siteDescription: '致力于为公益组织、社会企业提供专业的战略咨询和能力建设服务',
-  contactEmail: 'contact@yiyu-thinktank.org',
-  contactPhone: '+86 400-123-4567',
+  contactEmail: 'guyuan@klngo.org',
+  contactPhone: '18027370767',
   
   // SEO
   seoTitle: '益语智库 - 公益行业战略咨询与能力建设平台',
