@@ -46,7 +46,7 @@ function getClientCoverImage(client: { clientName?: string; logoUrl?: string } |
   return withBase(map[name] || 'images/placeholders/client-default.svg');
 }
 
-export function StrategyCompanionConceptPage({ onNavigate }: { onNavigate?: (page: string) => void }) {
+export function StrategyCompanionConceptPage({ onNavigate, showClientSwitcher = false }: { onNavigate?: (page: string) => void; showClientSwitcher?: boolean }) {
   const [open, setOpen] = useState<Record<SectionKey, boolean>>({
     timeline: true,
     northstar: true,
@@ -127,6 +127,7 @@ export function StrategyCompanionConceptPage({ onNavigate }: { onNavigate?: (pag
   );
 
   const clientName = (selectedClient?.clientName || '').trim();
+  const clientMetaOverride = adminOverrides?.overrideClientMeta?.[clientName];
   const heroOverride = adminOverrides?.overrideHero?.[clientName];
   const northOverride = adminOverrides?.overrideNorth?.[clientName];
   const timelineOverride = adminOverrides?.overrideTimeline?.[clientName];
@@ -200,26 +201,30 @@ export function StrategyCompanionConceptPage({ onNavigate }: { onNavigate?: (pag
           <div className="flex flex-wrap items-center justify-between gap-4 mb-7">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl overflow-hidden border border-slate-200 bg-white">
-                <img src={getClientCoverImage(selectedClient)} alt="" className="w-full h-full object-cover" />
+                <img src={clientMetaOverride?.logoUrl || getClientCoverImage(selectedClient)} alt="" className="w-full h-full object-cover" />
               </div>
               <div className="w-1 h-8 bg-blue-500 rounded-full" />
               <h1 className="text-[28px] sm:text-[34px] tracking-[-0.02em] font-semibold text-slate-900">
-                {selectedClient?.clientName || '战略客户'}
+                {clientMetaOverride?.displayName || selectedClient?.clientName || '战略客户'}
               </h1>
             </div>
 
-            <div className="min-w-[220px]">
-              <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400 mb-2">当前客户</p>
-              <select
-                value={selectedClientId}
-                onChange={(e) => setSelectedClientId(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-[14px] text-slate-700"
-              >
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>{c.clientName}</option>
-                ))}
-              </select>
-            </div>
+            {showClientSwitcher ? (
+              <div className="min-w-[220px]">
+                <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400 mb-2">当前客户</p>
+                <select
+                  value={selectedClientId}
+                  onChange={(e) => setSelectedClientId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-[14px] text-slate-700"
+                >
+                  {clients.map((c) => {
+                    const name = (c.clientName || '').trim();
+                    const displayName = adminOverrides?.overrideClientMeta?.[name]?.displayName || c.clientName;
+                    return <option key={c.id} value={c.id}>{displayName}</option>;
+                  })}
+                </select>
+              </div>
+            ) : null}
           </div>
 
           <div className="max-w-4xl">
