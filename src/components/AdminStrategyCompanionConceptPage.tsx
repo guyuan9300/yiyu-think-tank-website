@@ -939,19 +939,27 @@ export default function AdminStrategyCompanionConceptPage({ onNavigate, showHead
                 </select>
               )}
               {!isFrontend && mode === 'work' && (
-                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5">
-                  <input
-                    value={currentDisplayName}
-                    onChange={(e) => setOverrideClientMeta((prev) => ({ ...prev, [client]: { displayName: e.target.value, logoUrl: currentLogo } }))}
-                    className="w-28 px-2 py-1 rounded-lg border border-slate-200 text-[12px]"
-                    placeholder="客户名称"
-                  />
-                  <input
-                    value={currentLogo}
-                    onChange={(e) => setOverrideClientMeta((prev) => ({ ...prev, [client]: { displayName: currentDisplayName, logoUrl: e.target.value } }))}
-                    className="w-52 px-2 py-1 rounded-lg border border-slate-200 text-[12px]"
-                    placeholder="Logo URL"
-                  />
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const nextName = window.prompt('请输入客户名称', currentDisplayName);
+                      if (nextName === null) return;
+                      setOverrideClientMeta((prev) => ({ ...prev, [client]: { displayName: nextName.trim() || currentDisplayName, logoUrl: currentLogo } }));
+                    }}
+                    className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[12px] text-slate-700 hover:bg-slate-50"
+                  >
+                    编辑客户名称
+                  </button>
+                  <button
+                    onClick={() => {
+                      const nextLogo = window.prompt('请输入客户 Logo URL', currentLogo);
+                      if (nextLogo === null) return;
+                      setOverrideClientMeta((prev) => ({ ...prev, [client]: { displayName: currentDisplayName, logoUrl: nextLogo.trim() || currentLogo } }));
+                    }}
+                    className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[12px] text-slate-700 hover:bg-slate-50"
+                  >
+                    编辑客户 Logo
+                  </button>
                 </div>
               )}
               {!isFrontend && (
