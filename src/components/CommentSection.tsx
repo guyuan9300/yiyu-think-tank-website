@@ -224,7 +224,7 @@ export function CommentSection({
           </div>
         ) : (
           comments.map((comment) => (
-            <div key={comment.id} className="bg-white rounded-xl p-6 border border-gray-100 hover:border-purple-200 transition-colors">
+            <div key={comment.id} className="ml-12 bg-white rounded-xl p-6 border border-gray-100 hover:border-purple-200 transition-colors">
               {/* 评论头部 */}
               <div className="flex items-start gap-3 mb-3">
                 {/* 用户头像 */}
@@ -242,14 +242,14 @@ export function CommentSection({
                     </span>
                   </div>
                   
-                  {/* 评论内容（社媒风格：首行缩进，区分输入框与展示态） */}
-                  <p className="text-gray-700 leading-relaxed indent-6">{comment.text}</p>
+                  {/* 评论内容 */}
+                  <p className="text-gray-700 leading-relaxed">{comment.text}</p>
                 </div>
               </div>
               
               {/* 管理员回复 */}
               {comment.reply && (
-                <div className="ml-13 mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border-l-4 border-purple-500">
+                <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border-l-4 border-purple-500">
                   <div className="flex items-start gap-3">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">
                       <img
@@ -260,7 +260,7 @@ export function CommentSection({
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-purple-900 mb-1">管理员回复：</p>
-                      <p className="text-sm text-gray-800 leading-relaxed indent-6">{comment.reply}</p>
+                      <p className="text-sm text-gray-800 leading-relaxed">{comment.reply}</p>
                     </div>
                   </div>
                 </div>
