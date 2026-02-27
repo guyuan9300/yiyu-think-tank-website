@@ -1008,6 +1008,46 @@ export default function AdminStrategyCompanionConceptPage({ onNavigate, showHead
         </section>
 
         <section className={`${card} p-7 sm:p-8`}>
+          <SectionHeader title="战略里程碑时间线（Strategic Timeline）" subtitle="" icon={<CalendarClock className="w-4 h-4" />} action={mode === 'work' ? <button onClick={addTimelineCard} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-[12px]"><Plus className="w-3 h-3" />新增阶段</button> : undefined} />
+
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              {timelineData.map((t, index) => (
+                <div key={`${t.stage}-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 relative">
+                  {mode === 'work' && (
+                    <button onClick={() => removeTimelineCard(index)} className="absolute top-2 right-2 w-6 h-6 rounded-md border border-slate-200 text-slate-500 hover:bg-slate-100">−</button>
+                  )}
+
+                  {mode === 'work' ? (
+                    <div className="space-y-2">
+                      <input value={t.stage} onChange={(e) => updateTimelineField(index, 'stage', e.target.value)} className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-[13px] font-semibold" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input value={t.date} onChange={(e) => updateTimelineField(index, 'date', e.target.value)} className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px]" />
+                        <select value={t.status} onChange={(e) => updateTimelineField(index, 'status', e.target.value)} className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px] bg-white">
+                          <option value="done">done</option>
+                          <option value="current">current</option>
+                          <option value="pending">pending</option>
+                        </select>
+                      </div>
+                      <textarea value={t.detail} onChange={(e) => updateTimelineField(index, 'detail', e.target.value)} className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-[13px] min-h-[90px]" />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2 mb-2">
+                        {t.status === 'done' && <CheckCircle className="w-4 h-4 text-blue-600" />}
+                        {t.status === 'current' && <Clock3 className="w-4 h-4 text-amber-600" />}
+                        {t.status === 'pending' && <AlertCircle className="w-4 h-4 text-slate-400" />}
+                        <p className="text-[13px] font-semibold text-slate-800">{t.stage}</p>
+                      </div>
+                      <p className="text-[12px] text-slate-500 mb-2">{t.date}</p>
+                      <p className="text-[13px] text-slate-700 leading-6">{t.detail}</p>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+        </section>
+
+        <section className={`${card} p-7 sm:p-8`}>
           <SectionHeader title="年度北极星与承诺（North Star & Commitments）" subtitle="年度北极星 + 年度交付 + 14天动作" icon={<LayoutGrid className="w-4 h-4" />} />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -1049,46 +1089,6 @@ export default function AdminStrategyCompanionConceptPage({ onNavigate, showHead
                   </ul>
                 )}
               </div>
-            </div>
-        </section>
-
-        <section className={`${card} p-7 sm:p-8`}>
-          <SectionHeader title="战略里程碑时间线（Strategic Timeline）" subtitle="" icon={<CalendarClock className="w-4 h-4" />} action={mode === 'work' ? <button onClick={addTimelineCard} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-[12px]"><Plus className="w-3 h-3" />新增阶段</button> : undefined} />
-
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              {timelineData.map((t, index) => (
-                <div key={`${t.stage}-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 relative">
-                  {mode === 'work' && (
-                    <button onClick={() => removeTimelineCard(index)} className="absolute top-2 right-2 w-6 h-6 rounded-md border border-slate-200 text-slate-500 hover:bg-slate-100">−</button>
-                  )}
-
-                  {mode === 'work' ? (
-                    <div className="space-y-2">
-                      <input value={t.stage} onChange={(e) => updateTimelineField(index, 'stage', e.target.value)} className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-[13px] font-semibold" />
-                      <div className="grid grid-cols-2 gap-2">
-                        <input value={t.date} onChange={(e) => updateTimelineField(index, 'date', e.target.value)} className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px]" />
-                        <select value={t.status} onChange={(e) => updateTimelineField(index, 'status', e.target.value)} className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px] bg-white">
-                          <option value="done">done</option>
-                          <option value="current">current</option>
-                          <option value="pending">pending</option>
-                        </select>
-                      </div>
-                      <textarea value={t.detail} onChange={(e) => updateTimelineField(index, 'detail', e.target.value)} className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-[13px] min-h-[90px]" />
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-2 mb-2">
-                        {t.status === 'done' && <CheckCircle className="w-4 h-4 text-blue-600" />}
-                        {t.status === 'current' && <Clock3 className="w-4 h-4 text-amber-600" />}
-                        {t.status === 'pending' && <AlertCircle className="w-4 h-4 text-slate-400" />}
-                        <p className="text-[13px] font-semibold text-slate-800">{t.stage}</p>
-                      </div>
-                      <p className="text-[12px] text-slate-500 mb-2">{t.date}</p>
-                      <p className="text-[13px] text-slate-700 leading-6">{t.detail}</p>
-                    </>
-                  )}
-                </div>
-              ))}
             </div>
         </section>
 
