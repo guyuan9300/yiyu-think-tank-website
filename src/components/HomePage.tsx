@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
-import { ArrowRight, Brain, Target, Users, TrendingUp, BookOpen, FileText, Lightbulb, ChevronRight, Star, Zap, ChevronDown, Wrench } from 'lucide-react';
+import { ArrowRight, Brain, Target, Users, TrendingUp, BookOpen, FileText, Lightbulb, ChevronRight, Star, Zap, ChevronDown, Wrench, Layers } from 'lucide-react';
 import { getInsights, getReports, getBooks, getMethodologies, type InsightArticle, type Report, type Book, type Methodology } from '../lib/dataService';
 import { SubscriptionSheet } from './SubscriptionSheet';
 
@@ -140,25 +140,31 @@ function ModuleCard({ icon, title, subtitle, description, gradient, onMouseEnter
     <div
       onMouseEnter={onMouseEnter}
       onClick={onClick}
-      className={`group p-8 rounded-[24px] bg-white/80 backdrop-blur-sm border border-border/40 ${hoverBorder} transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 cursor-pointer`}
+      className={`group p-8 rounded-[24px] bg-white/80 backdrop-blur-sm border border-border/40 ${hoverBorder} transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 cursor-pointer hover:bg-primary hover:border-primary/30`}
     >
-      <div className={`w-14 h-14 rounded-[16px] bg-gradient-to-br ${gradient} flex items-center justify-center mb-6 transition-transform duration-300 group-hover:scale-110 shadow-sm`}>
-        {icon}
+      <div className={`w-14 h-14 rounded-[16px] bg-gradient-to-br ${gradient} flex items-center justify-center mb-6 transition-all duration-300 group-hover:scale-110 shadow-sm group-hover:bg-white/20 group-hover:backdrop-blur-sm`}
+      >
+        <div className="text-foreground group-hover:text-white transition-colors">
+          {icon}
+        </div>
       </div>
-      <h3 className="font-medium text-[18px] text-foreground mb-1 group-hover:text-primary transition-colors">{title}</h3>
-      <p className="text-[13px] text-muted-foreground/60 mb-3">{subtitle}</p>
-      <p className="text-[14px] text-muted-foreground/70 leading-relaxed">{description}</p>
+      <h3 className="font-medium text-[18px] text-foreground mb-1 transition-all duration-300 group-hover:text-white group-hover:text-[22px]">
+        {title}
+      </h3>
+      {/* Hover on Home should become "blue-only" (no original copy) */}
+      <p className="text-[13px] text-muted-foreground/60 mb-3 transition-all duration-300 group-hover:opacity-0 group-hover:translate-y-1">{subtitle}</p>
+      <p className="text-[14px] text-muted-foreground/70 leading-relaxed transition-all duration-300 group-hover:opacity-0 group-hover:translate-y-1">{description}</p>
     </div>
   );
 }
 
 interface HomePageProps {
-  onNavigate?: (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'login' | 'register' | 'book-reader' | 'methodology-library', id?: string) => void;
+  onNavigate?: (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'login' | 'register' | 'book-reader' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai', id?: string) => void;
   onNavigateToDetail?: (type: 'article' | 'report' | 'topic', id: string) => void;
 }
 
 export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
-  const [hoveredModule, setHoveredModule] = useState<string | null>(null);
+  // NOTE: Legacy hover-detail behavior removed (cards now click to dedicated pages).
   const [isScrolled, setIsScrolled] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
 
@@ -606,7 +612,6 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
       {/* Strategy Companion - Apple Liquid Glass */}
       <section 
         className="py-24 px-4 sm:px-6 lg:px-8"
-        onMouseLeave={() => setHoveredModule(null)}
       >
         <div className="max-w-[1200px] mx-auto">
           {/* Section Header - Value Proposition */}
@@ -626,180 +631,56 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
             </p>
           </div>
 
-          {/* Module Cards with Hover Details */}
-          <div className="relative">
-            {/* Hover Detail Panels - Liquid Glass */}
-            {hoveredModule === 'strategy' && (
-              <div className="absolute inset-0 z-20">
-                <div className="w-full h-full bg-gradient-to-br from-primary/8 via-primary/5 to-accent/5 rounded-[24px] border border-primary/20 shadow-2xl shadow-primary/5 backdrop-blur-2xl backdrop-saturate-180">
-<div className="p-10 h-full flex flex-col">
-                    {/* Header */}
-                    <div className="flex items-center gap-5 mb-8">
-                      <div className="w-16 h-16 rounded-[20px] bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shadow-lg shadow-primary/15">
-                        <Target className="w-8 h-8 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="text-[26px] font-semibold text-foreground">战略路径清晰化</h3>
-                        <p className="text-[14px] text-muted-foreground/60">Strategy Path Clarification</p>
-                      </div>
-                    </div>
+          {/* 4-up cards. Hover → blue, hide copy. Click → intro pages */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <ModuleCard
+              icon={<Target className="w-6 h-6" />}
+              title="战略路径清晰化"
+              subtitle="从模糊方向到清晰路径"
+              description="把战略变成可执行的行动地图"
+              gradient="from-primary/15 to-primary/5"
+              onClick={() => handleNavigate('strategy-path')}
+              hoverBorder="hover:border-primary/25"
+            />
 
-                    {/* Content */}
-                    <div className="flex-1 space-y-6">
-                      <div className="bg-white/60 backdrop-blur-sm rounded-[20px] p-7 shadow-sm border border-white/50">
-                        <h4 className="font-semibold mb-3 text-[16px] text-foreground">核心观点</h4>
-                        <p className="text-muted-foreground/80 leading-relaxed text-[15px]">
-                          战略不是写在纸上的宏大叙事，而是能够指导日常决策的行动指南。我们帮助企业将战略意图转化为清晰、可执行的行动路径，让每个团队成员都能理解自己的工作如何支撑整体目标的实现。
-                        </p>
-                      </div>
+            <ModuleCard
+              icon={<Layers className="w-6 h-6" />}
+              title="业务设计体系化"
+              subtitle="从战略意图到业务模型"
+              description="把战略变成可交付的产品与方案"
+              gradient="from-primary/15 to-accent/5"
+              onClick={() => handleNavigate('business-design')}
+              hoverBorder="hover:border-primary/25"
+            />
 
-                      {/* Stats Grid */}
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="bg-white/60 backdrop-blur-sm rounded-[16px] p-5 shadow-sm border border-white/50 hover:shadow-md transition-all duration-300">
-                          <div className="text-[32px] font-semibold text-primary mb-1">500+</div>
-                          <div className="text-[12px] text-muted-foreground/60">战略规划项目</div>
-                        </div>
-                        <div className="bg-white/60 backdrop-blur-sm rounded-[16px] p-5 shadow-sm border border-white/50 hover:shadow-md transition-all duration-300">
-                          <div className="text-[32px] font-semibold text-primary mb-1">92%</div>
-                          <div className="text-[12px] text-muted-foreground/60">战略落地率</div>
-                        </div>
-                        <div className="bg-white/60 backdrop-blur-sm rounded-[16px] p-5 shadow-sm border border-white/50 hover:shadow-md transition-all duration-300">
-                          <div className="text-[32px] font-semibold text-primary mb-1">3个月</div>
-                          <div className="text-[12px] text-muted-foreground/60">完成周期</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            <ModuleCard
+              icon={<Users className="w-6 h-6" />}
+              title="组织效能重构"
+              subtitle="从组织诊断到效能提升"
+              description="让组织成为战略落地的引擎"
+              gradient="from-secondary/15 to-secondary/5"
+              onClick={() => handleNavigate('org-effectiveness')}
+              hoverBorder="hover:border-secondary/25"
+            />
 
-            {hoveredModule === 'organization' && (
-              <div className="absolute inset-0 z-20">
-                <div className="w-full h-full bg-gradient-to-br from-secondary/8 via-secondary/5 to-primary/5 rounded-[24px] border border-secondary/20 shadow-2xl shadow-secondary/5 backdrop-blur-2xl backdrop-saturate-180">
-                  <div className="p-10 h-full flex flex-col">
-                    <div className="flex items-center gap-5 mb-8">
-                      <div className="w-16 h-16 rounded-[20px] bg-gradient-to-br from-secondary/20 to-secondary/10 flex items-center justify-center shadow-lg shadow-secondary/15">
-                        <Users className="w-8 h-8 text-secondary" />
-                      </div>
-                      <div>
-                        <h3 className="text-[26px] font-semibold text-foreground">组织效能重构</h3>
-                        <p className="text-[14px] text-muted-foreground/60">Organization Effectiveness</p>
-                      </div>
-                    </div>
-
-                    <div className="flex-1 space-y-6">
-                      <div className="bg-white/60 backdrop-blur-sm rounded-[20px] p-7 shadow-sm border border-white/50">
-                        <h4 className="font-semibold mb-3 text-[16px] text-foreground">核心理念</h4>
-                        <p className="text-muted-foreground/80 leading-relaxed text-[15px]">
-                          组织效能的提升不是简单的裁员或架构调整，而是要建立与战略对齐的组织能力。我们从组织诊断出发，帮助企业识别效能瓶颈，设计针对性的解决方案，让组织成为战略落地的强大引擎。
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="bg-white/60 backdrop-blur-sm rounded-[16px] p-5 shadow-sm border border-white/50 hover:shadow-md transition-all duration-300">
-                          <div className="text-[32px] font-semibold text-secondary mb-1">300+</div>
-                          <div className="text-[12px] text-muted-foreground/60">组织诊断项目</div>
-                        </div>
-                        <div className="bg-white/60 backdrop-blur-sm rounded-[16px] p-5 shadow-sm border border-white/50 hover:shadow-md transition-all duration-300">
-                          <div className="text-[32px] font-semibold text-secondary mb-1">35%</div>
-                          <div className="text-[12px] text-muted-foreground/60">效能提升均值</div>
-                        </div>
-                        <div className="bg-white/60 backdrop-blur-sm rounded-[16px] p-5 shadow-sm border border-white/50 hover:shadow-md transition-all duration-300">
-                          <div className="text-[32px] font-semibold text-secondary mb-1">6个月</div>
-                          <div className="text-[12px] text-muted-foreground/60">改善周期</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {hoveredModule === 'digital' && (
-              <div className="absolute inset-0 z-20">
-                <div className="w-full h-full bg-gradient-to-br from-accent/8 via-accent/5 to-primary/5 rounded-[24px] border border-accent/20 shadow-2xl shadow-accent/5 backdrop-blur-2xl backdrop-saturate-180">
-                  <div className="p-10 h-full flex flex-col">
-                    <div className="flex items-center gap-5 mb-8">
-                      <div className="w-16 h-16 rounded-[20px] bg-gradient-to-br from-accent/20 to-accent/10 flex items-center justify-center shadow-lg shadow-accent/15">
-                        <Zap className="w-8 h-8 text-accent" />
-                      </div>
-                      <div>
-                        <h3 className="text-[26px] font-semibold text-foreground">数字化与AI落地赋能</h3>
-                        <p className="text-[14px] text-muted-foreground/60">Digital & AI Implementation</p>
-                      </div>
-                    </div>
-
-                    <div className="flex-1 space-y-6">
-                      <div className="bg-white/60 backdrop-blur-sm rounded-[20px] p-7 shadow-sm border border-white/50">
-                        <h4 className="font-semibold mb-3 text-[16px] text-foreground">核心价值</h4>
-                        <p className="text-muted-foreground/80 leading-relaxed text-[15px]">
-                          数字化转型的核心不是技术，而是组织学习能力的升级。我们帮助企业建立数据驱动的决策体系，落地AI工具到实际业务流程，让技术真正成为驱动业务增长的引擎，而不是成本中心。
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="bg-white/60 backdrop-blur-sm rounded-[16px] p-5 shadow-sm border border-white/50 hover:shadow-md transition-all duration-300">
-                          <div className="text-[32px] font-semibold text-accent mb-1">200+</div>
-                          <div className="text-[12px] text-muted-foreground/60">数字化项目</div>
-                        </div>
-                        <div className="bg-white/60 backdrop-blur-sm rounded-[16px] p-5 shadow-sm border border-white/50 hover:shadow-md transition-all duration-300">
-                          <div className="text-[32px] font-semibold text-accent mb-1">50%</div>
-                          <div className="text-[12px] text-muted-foreground/60">效率提升</div>
-                        </div>
-                        <div className="bg-white/60 backdrop-blur-sm rounded-[16px] p-5 shadow-sm border border-white/50 hover:shadow-md transition-all duration-300">
-                          <div className="text-[32px] font-semibold text-accent mb-1">4个月</div>
-                          <div className="text-[12px] text-muted-foreground/60">MVP周期</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Module Cards */}
-            <div className={`grid grid-cols-1 md:grid-cols-3 gap-5 transition-all duration-500 ${hoveredModule ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
-              <ModuleCard
-                icon={<Target className="w-6 h-6" />}
-                title="战略路径清晰化"
-                subtitle="从模糊方向到清晰路径"
-                description="把战略变成可执行的行动地图"
-                gradient="from-primary/15 to-primary/5"
-                onMouseEnter={() => setHoveredModule('strategy')}
-                onClick={() => handleNavigate('strategy')}
-                hoverBorder="hover:border-primary/25"
-              />
-              <ModuleCard
-                icon={<Users className="w-6 h-6" />}
-                title="组织效能重构"
-                subtitle="从组织诊断到效能提升"
-                description="让组织成为战略落地的引擎"
-                gradient="from-secondary/15 to-secondary/5"
-                onMouseEnter={() => setHoveredModule('organization')}
-                onClick={() => handleNavigate('strategy')}
-                hoverBorder="hover:border-secondary/25"
-              />
-              <ModuleCard
-                icon={<Zap className="w-6 h-6" />}
-                title="数字化与AI落地赋能"
-                subtitle="从技术引入到能力内化"
-                description="让数字化真正驱动业务增长"
-                gradient="from-accent/15 to-accent/5"
-                onMouseEnter={() => setHoveredModule('digital')}
-                onClick={() => handleNavigate('strategy')}
-                hoverBorder="hover:border-accent/25"
-              />
-            </div>
+            <ModuleCard
+              icon={<Zap className="w-6 h-6" />}
+              title="数字化与AI落地赋能"
+              subtitle="从技术引入到能力内化"
+              description="让数字化真正驱动业务增长"
+              gradient="from-accent/15 to-accent/5"
+              onClick={() => handleNavigate('digital-ai')}
+              hoverBorder="hover:border-accent/25"
+            />
           </div>
 
           {/* CTA */}
-          <div className={`text-center mt-12 transition-all duration-500 ${hoveredModule ? 'opacity-0' : 'opacity-100'}`}>
+          <div className="text-center mt-12">
             <button
-              onClick={() => handleNavigate('consult-apply')}
+              onClick={() => handleNavigate('strategy')}
               className="group inline-flex items-center gap-2 px-8 py-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/25"
             >
-              <span className="font-medium text-[15px]">申请战略咨询</span>
+              <span className="font-medium text-[15px]">查看成功案例</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
             </button>
           </div>
@@ -807,7 +688,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
       </section>
 
       {/* Trust Indicators - Minimal */}
-      <section className={`py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-transparent to-muted/8 transition-all duration-500 ${hoveredModule ? 'opacity-0 absolute w-full' : 'opacity-100'}`}>
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-transparent to-muted/8">
         <div className="max-w-[1200px] mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <TrustItem number="200+" label="服务企业" />

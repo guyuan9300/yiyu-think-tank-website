@@ -24,6 +24,7 @@ import { StrategyCompanionPage } from './components/StrategyCompanionPage';
 import AdminStrategyCompanionPage from './components/AdminStrategyCompanionPage';
 import { ConsultApplyPage } from './components/ConsultApplyPage';
 import { NotFoundPage } from './components/NotFoundPage';
+import { StrategyModuleIntroPage } from './components/StrategyModuleIntroPage';
 
 export default function App() {
   // Avoid browser trying to restore scroll position across in-app navigation.
@@ -66,6 +67,13 @@ export default function App() {
     'test',
     'methodology-library',
     'book-library',
+
+    // Strategy module intro pages (from Home "战略陪伴" cards)
+    'strategy-path',
+    'business-design',
+    'org-effectiveness',
+    'digital-ai',
+
     '404',
   ]);
 
@@ -159,7 +167,7 @@ export default function App() {
     }
   }, [currentPage, selectedDetailId, selectedCaseId, unknownPage]);
 
-  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'case' | 'admin' | 'user-center' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply' | 'book-library' | 'methodology-library', bookId?: string, caseId?: string) => {
+  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'case' | 'admin' | 'user-center' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply' | 'book-library' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai', bookId?: string, caseId?: string) => {
     // Reset scroll on page-level navigation so detail pages always open from the top.
     // (Otherwise the browser may keep the previous scroll position and look like it jumped to the bottom.)
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
@@ -489,6 +497,15 @@ export default function App() {
     return (
       <>
         <ConsultApplyPage onBack={() => handleNavigate('home')} />
+      </>
+    );
+  }
+
+  // Strategy Module Intro Pages
+  if (currentPage === 'strategy-path' || currentPage === 'business-design' || currentPage === 'org-effectiveness' || currentPage === 'digital-ai') {
+    return (
+      <>
+        <StrategyModuleIntroPage module={currentPage as any} onNavigate={(p: any) => handleNavigate(p)} />
       </>
     );
   }
