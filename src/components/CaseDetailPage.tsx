@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft, Clock, Eye, Download, Share2, Bookmark, FileText, Users, Target, CheckCircle, Zap } from 'lucide-react';
 import { Header } from './Header';
 
@@ -91,6 +91,23 @@ const casesData: Record<string, {
 export function CaseDetailPage({ caseId, onNavigate }: CaseDetailPageProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
+
+  // 监听用户登录状态（用于 Header 展示一致）
+  useEffect(() => {
+    const checkUserStatus = () => {
+      const userStr = (localStorage.getItem('yiyu_current_user') ?? sessionStorage.getItem('yiyu_current_user'));
+      setIsLoggedIn(Boolean(userStr));
+    };
+
+    checkUserStatus();
+    window.addEventListener('yiyu_user_updated', checkUserStatus);
+    window.addEventListener('storage', checkUserStatus);
+
+    return () => {
+      window.removeEventListener('yiyu_user_updated', checkUserStatus);
+      window.removeEventListener('storage', checkUserStatus);
+    };
+  }, []);
 
   const caseData = casesData[caseId] || casesData['blue-letter'];
 

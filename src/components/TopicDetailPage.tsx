@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft, Clock, Eye, MessageCircle, Users, TrendingUp, ChevronRight } from 'lucide-react';
 import { Header } from './Header';
 
@@ -10,6 +10,23 @@ interface TopicDetailPageProps {
 export function TopicDetailPage({ topicId, onNavigate }: TopicDetailPageProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'insights' | 'reports' | 'discussion'>('overview');
+
+  // 监听用户登录状态（用于 Header 展示一致）
+  useEffect(() => {
+    const checkUserStatus = () => {
+      const userStr = (localStorage.getItem('yiyu_current_user') ?? sessionStorage.getItem('yiyu_current_user'));
+      setIsLoggedIn(Boolean(userStr));
+    };
+
+    checkUserStatus();
+    window.addEventListener('yiyu_user_updated', checkUserStatus);
+    window.addEventListener('storage', checkUserStatus);
+
+    return () => {
+      window.removeEventListener('yiyu_user_updated', checkUserStatus);
+      window.removeEventListener('storage', checkUserStatus);
+    };
+  }, []);
 
   // Mock topic data - in production, fetch from Supabase
   const topic = {
