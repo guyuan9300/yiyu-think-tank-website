@@ -18,7 +18,7 @@ import { ResetPasswordPage } from './components/ResetPasswordPage';
 import { ArticleDetailPage } from './components/ArticleDetailPage';
 import { TopicDetailPage } from './components/TopicDetailPage';
 import { CaseDetailPage } from './components/CaseDetailPage';
-import { AdminDashboard } from './components/AdminDashboard';
+
 import UserCenterPage from './components/UserCenterPage';
 import { StrategyCompanionConceptPage } from './components/StrategyCompanionConceptPage';
 import AdminStrategyCompanionConceptPage from './components/AdminStrategyCompanionConceptPage';
@@ -455,27 +455,10 @@ export default function App() {
     
     return (
       <>
-        <AdminDashboard
-          onNavigateHome={() => handleNavigate('home')}
-          onLogout={() => {
-            localStorage.removeItem('yiyu_is_admin');
-            sessionStorage.removeItem('yiyu_is_admin');
-            localStorage.removeItem('yiyu_admin_email');
-            sessionStorage.removeItem('yiyu_admin_email');
-            // 同时清理当前用户（管理员）
-            const u = (localStorage.getItem('yiyu_current_user') ?? sessionStorage.getItem('yiyu_current_user'));
-            if (u) {
-              try {
-                const parsed = JSON.parse(u);
-                if (parsed?.id === 'admin') {
-                  localStorage.removeItem('yiyu_current_user');
-                  sessionStorage.removeItem('yiyu_current_user');
-                }
-              } catch {}
-            }
-            window.dispatchEvent(new Event('yiyu_user_updated'));
-            handleNavigate('login');
-          }}
+        <iframe
+          title="益语智库管理后台 · 数据概览"
+          src={`${import.meta.env.BASE_URL}admin.html`}
+          style={{ width: '100%', height: '100vh', border: '0', display: 'block' }}
         />
       </>
     );
