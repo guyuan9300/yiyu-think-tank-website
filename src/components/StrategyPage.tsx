@@ -472,22 +472,50 @@ challenge: '社区居民参与度低',
                 {/* Admin: client switcher (replaces "了解合作方式") */}
                 {(() => {
                   let isAdmin = false;
+                  let currentUser: any = null;
                   try {
                     const u = (localStorage.getItem('yiyu_current_user') ?? sessionStorage.getItem('yiyu_current_user'));
                     if (u) {
-                      const user = JSON.parse(u);
+                      currentUser = JSON.parse(u);
                       const adminEmails = ['guyuan9300@gmail.com'];
-                      isAdmin = adminEmails.includes(String(user?.email || '').toLowerCase());
+                      isAdmin = adminEmails.includes(String(currentUser?.email || '').toLowerCase());
                     }
                   } catch {}
 
+                  const goStrategyCompanion = (clientId?: string) => {
+                    const params = new URLSearchParams(window.location.search);
+                    params.set('page', 'strategy-companion');
+                    if (clientId) params.set('clientId', clientId);
+                    window.history.replaceState({}, '', `?${params.toString()}`);
+                    if (onNavigate) {
+                      onNavigate('strategy-companion' as any);
+                    } else {
+                      window.location.reload();
+                    }
+                  };
+
                   if (!isAdmin) {
+                    const orgHint = String(
+                      currentUser?.organization || currentUser?.orgName || currentUser?.org_name || currentUser?.company || ''
+                    ).trim();
+                    const clientHint = String(currentUser?.clientName || currentUser?.client || '').trim();
+                    const explicitClientId = String(currentUser?.clientId || currentUser?.orgId || currentUser?.org_id || '').trim();
+
+                    const matched = adminClients.find((c) =>
+                      (explicitClientId && c.id === explicitClientId) ||
+                      (orgHint && c.clientName.includes(orgHint)) ||
+                      (clientHint && c.clientName.includes(clientHint))
+                    );
+
+                    const fallback = adminClients[0];
+                    const targetClientId = matched?.id || fallback?.id;
+
                     return (
                       <button
-                        onClick={() => scrollToSection('cooperation')}
+                        onClick={() => goStrategyCompanion(targetClientId)}
                         className="group inline-flex items-center gap-1.5 text-[14px] text-[rgba(99,102,241,0.85)] hover:text-[rgba(99,102,241,1)] transition-colors font-medium"
                       >
-                        <span>了解合作方式</span>
+                        <span>进入战略陪伴页面</span>
                         <ArrowUpRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                       </button>
                     );
@@ -503,16 +531,7 @@ challenge: '社区居民参与度低',
                         onChange={(e) => {
                           const clientId = e.target.value;
                           if (!clientId) return;
-                          // Navigate to strategy companion page with clientId
-                          const params = new URLSearchParams(window.location.search);
-                          params.set('page', 'strategy-companion');
-                          params.set('clientId', clientId);
-                          window.history.replaceState({}, '', `?${params.toString()}`);
-                          if (onNavigate) {
-                            onNavigate('strategy-companion' as any);
-                          } else {
-                            window.location.reload();
-                          }
+                          goStrategyCompanion(clientId);
                         }}
                       >
                         <option value="">选择战略陪伴客户…</option>
