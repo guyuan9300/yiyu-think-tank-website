@@ -278,7 +278,7 @@ export function ReportLibraryPage({
       <section className="relative pt-32 pb-8 px-6 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent" />
 
-        <div className="relative max-w-7xl mx-auto">
+        <div className="relative max-w-4xl mx-auto">
           {/* 面包屑导航 */}
           <div className="flex items-center gap-2 mb-6 text-[13px] text-muted-foreground/60">
             <button
@@ -307,7 +307,7 @@ export function ReportLibraryPage({
           </p>
 
           {/* Access rule card (always visible) */}
-          <div className="mt-10 max-w-5xl">
+          <div className="mt-10 max-w-4xl">
             <AccessInfoCard />
           </div>
         </div>
@@ -315,7 +315,7 @@ export function ReportLibraryPage({
 
       {/* 筛选栏 - 固定定位 */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-border/40 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-4xl mx-auto px-6 py-4">
           <div className="flex flex-wrap items-center gap-4">
             {/* 搜索框 */}
             <div className="flex-1 min-w-64 relative">
@@ -376,7 +376,7 @@ export function ReportLibraryPage({
       </div>
 
       {/* 内容区域 */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-4xl mx-auto px-6 py-8">
         {/* 结果统计 */}
         <div className="flex items-center justify-between mb-8">
           <p className="text-[14px] text-muted-foreground/70">

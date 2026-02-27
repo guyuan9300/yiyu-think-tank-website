@@ -315,7 +315,7 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
 
       {/* 书籍信息头部 - 优化为紧凑布局 */}
       <div ref={bookInfoRef} className="bg-white border-b border-gray-200 pt-16">
-        <div className="max-w-[1600px] mx-auto px-6 py-4">
+        <div className="max-w-4xl mx-auto px-6 py-4">
           {/* 面包屑 */}
           <div className="flex items-center gap-2 mb-3 text-[13px] text-gray-500">
             <button

@@ -325,7 +325,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
 
       {/* 报告信息头部 */}
       <div ref={bookInfoRef} className="bg-white border-b border-gray-200 pt-16">
-        <div className="max-w-[1600px] mx-auto px-6 py-8">
+        <div className="max-w-4xl mx-auto px-6 py-8">
           {/* 面包屑 */}
           <div className="flex items-center gap-2 mb-4 text-[13px] text-gray-500">
             <button
