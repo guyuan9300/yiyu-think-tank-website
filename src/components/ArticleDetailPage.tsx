@@ -32,12 +32,29 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load article data from localStorage
+    // Load article data
     const data = getInsights();
     const found = data.find((a: InsightArticle) => a.id === articleId);
     setArticle(found || null);
     setIsLoading(false);
   }, [articleId]);
+
+  // 监听用户登录状态（用于启用评论等功能）
+  useEffect(() => {
+    const checkUserStatus = () => {
+      const userStr = (localStorage.getItem('yiyu_current_user') ?? sessionStorage.getItem('yiyu_current_user'));
+      setIsLoggedIn(Boolean(userStr));
+    };
+
+    checkUserStatus();
+    window.addEventListener('yiyu_user_updated', checkUserStatus);
+    window.addEventListener('storage', checkUserStatus);
+
+    return () => {
+      window.removeEventListener('yiyu_user_updated', checkUserStatus);
+      window.removeEventListener('storage', checkUserStatus);
+    };
+  }, []);
 
   // Fallback mock data for preview
   const mockArticle: InsightArticle = {

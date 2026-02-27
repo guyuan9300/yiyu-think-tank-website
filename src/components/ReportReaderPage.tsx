@@ -18,6 +18,8 @@ import {
   X,
   Crown,
   CheckCircle,
+  ThumbsUp,
+  Share2,
 } from 'lucide-react';
 import type { User } from '../lib/dataService';
 
@@ -40,6 +42,8 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [downloadFeedback, setDownloadFeedback] = useState<string | null>(null);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const bookInfoRef = useRef<HTMLDivElement>(null);
   const [contentHeightPx, setContentHeightPx] = useState<number>(() => {
@@ -464,6 +468,63 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
           </div>
         </div>
       </div>
+
+      {/* Action Bar + Comment Section (under reader) */}
+      {report && (
+        <div className="px-4 sm:px-6 lg:px-8 pb-16">
+          <div className="max-w-4xl mx-auto">
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => setIsLiked(!isLiked)}
+                  className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl transition-all duration-200 ${
+                    isLiked ? 'bg-green-600 text-white' : 'bg-gray-100 hover:bg-gray-200'
+                  }`}
+                >
+                  <ThumbsUp className="w-5 h-5" />
+                  <span className="font-medium">点赞</span>
+                </button>
+
+                <button
+                  onClick={() => setIsBookmarked(!isBookmarked)}
+                  className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl transition-all duration-200 ${
+                    isBookmarked ? 'bg-green-600 text-white' : 'bg-gray-100 hover:bg-gray-200'
+                  }`}
+                >
+                  <Bookmark className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`} />
+                  <span className="font-medium">{isBookmarked ? '已收藏' : '收藏'}</span>
+                </button>
+
+                <button
+                  onClick={async () => {
+                    const shareUrl = window.location.href;
+                    try {
+                      await navigator.clipboard.writeText(shareUrl);
+                      alert('已复制链接，可粘贴到微信/朋友圈');
+                    } catch {
+                      window.prompt('复制下面链接分享到微信/朋友圈：', shareUrl);
+                    }
+                  }}
+                  className="flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-gray-100 hover:bg-gray-200 transition-all duration-200"
+                >
+                  <Share2 className="w-5 h-5" />
+                  <span className="font-medium">分享到朋友圈</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-10">
+              <CommentSection
+                contentId={reportId}
+                contentType="report"
+                contentTitle={report.title}
+                isLoggedIn={isLoggedIn}
+                userName={currentUser?.nickname || '访客'}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
 
