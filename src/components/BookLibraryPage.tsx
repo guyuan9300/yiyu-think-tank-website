@@ -183,7 +183,7 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id
           </div>
         ) : viewMode === 'grid' ? (
           /* Grid View */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-7">
+          <div className={filteredBooks.length === 1 ? "grid grid-cols-1 gap-7" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-7"}>
             {filteredBooks.map((book) => (
               <article
                 key={book.id}
@@ -193,7 +193,7 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id
                   else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(book.id)}`);
                 }}
               >
-                <div className={`aspect-[3/4] bg-gradient-to-br ${book.coverColor || 'from-primary/20 to-accent/10'} relative overflow-hidden`}>
+                <div className={`aspect-[16/10] bg-gradient-to-br ${book.coverColor || 'from-primary/20 to-accent/10'} relative overflow-hidden`}>
                   {book.coverImage ? (
                     <img
                       src={book.coverImage}
