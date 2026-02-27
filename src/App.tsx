@@ -20,8 +20,8 @@ import { TopicDetailPage } from './components/TopicDetailPage';
 import { CaseDetailPage } from './components/CaseDetailPage';
 import { AdminDashboard } from './components/AdminDashboard';
 import UserCenterPage from './components/UserCenterPage';
-import { StrategyCompanionPage } from './components/StrategyCompanionPage';
-import AdminStrategyCompanionPage from './components/AdminStrategyCompanionPage';
+import { StrategyCompanionConceptPage } from './components/StrategyCompanionConceptPage';
+import AdminStrategyCompanionConceptPage from './components/AdminStrategyCompanionConceptPage';
 import { ConsultApplyPage } from './components/ConsultApplyPage';
 import { NotFoundPage } from './components/NotFoundPage';
 import { StrategyModuleIntroPage } from './components/StrategyModuleIntroPage';
@@ -487,7 +487,7 @@ export default function App() {
   if (currentPage === 'strategy-companion') {
     return (
       <>
-        <StrategyCompanionPage onNavigate={(page) => handleNavigate(page as any)} />
+        <StrategyCompanionConceptPage onNavigate={(page) => handleNavigate(page as any)} />
       </>
     );
   }
@@ -534,7 +534,7 @@ export default function App() {
     
     return (
       <>
-        <AdminStrategyCompanionPage />
+        <AdminStrategyCompanionConceptPage />
       </>
     );
   }
