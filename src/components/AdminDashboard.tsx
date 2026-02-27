@@ -32,7 +32,7 @@ import { isValidPdfFile, formatFileSize } from '../lib/pdfUtils';
 import { SettingsPage } from './SettingsPage';
 import { generateCoverImage, getHfModel, getHfToken, setHfModel, setHfToken } from '../lib/hfImageGen';
 import { UserManagementPage } from './UserManagementPage';
-import AdminStrategyCompanionPage from './AdminStrategyCompanionPage';
+import AdminStrategyCompanionConceptPage from './AdminStrategyCompanionConceptPage';
 import {
   getClientProjects as getStrategyClients,
   getCourseRecommendations,
@@ -1897,9 +1897,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
             <UserManagementPage />
           )}
 
-          {/* 战略客户管理 */}
+          {/* 战略客户管理（已替换为新设计后台页） */}
           {activeMenu === 'strategy-companion' && (
-            <AdminStrategyCompanionPage />
+            <AdminStrategyCompanionConceptPage />
           )}
 
           {/* 系统设置 */}
