@@ -975,20 +975,20 @@ export default function AdminStrategyCompanionConceptPage({ onNavigate, showHead
                 <textarea
                   value={heroData.mission}
                   onChange={(e) => setOverrideHero((prev) => ({ ...prev, [client]: { mission: e.target.value, vision: heroData.vision, values: heroData.values } }))}
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-[52px] sm:text-[56px] leading-[1.14] tracking-[-0.03em] font-semibold text-slate-900 mb-10 bg-white"
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-[46px] sm:text-[50px] leading-[1.16] tracking-[-0.028em] font-semibold text-slate-900 mb-10 bg-white"
                 />
               ) : (
-                <h2 className="text-[52px] sm:text-[56px] leading-[1.14] tracking-[-0.03em] font-semibold text-slate-900 mb-10">{heroData.mission}</h2>
+                <h2 className="text-[46px] sm:text-[50px] leading-[1.16] tracking-[-0.028em] font-semibold text-slate-900 mb-10">{heroData.mission}</h2>
               )}
 
               {mode === 'work' ? (
                 <textarea
                   value={heroData.vision}
                   onChange={(e) => setOverrideHero((prev) => ({ ...prev, [client]: { mission: heroData.mission, vision: e.target.value, values: heroData.values } }))}
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-[40px] sm:text-[42px] leading-[1.25] tracking-[-0.02em] font-medium text-slate-700 mb-10 bg-white"
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-[34px] sm:text-[36px] leading-[1.3] tracking-[-0.015em] font-medium text-slate-700 mb-10 bg-white"
                 />
               ) : (
-                <p className="text-[40px] sm:text-[42px] leading-[1.25] tracking-[-0.02em] font-medium text-slate-700 mb-10">{heroData.vision}</p>
+                <p className="text-[34px] sm:text-[36px] leading-[1.3] tracking-[-0.015em] font-medium text-slate-700 mb-10">{heroData.vision}</p>
               )}
 
               {mode === 'work' ? (
