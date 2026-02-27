@@ -393,6 +393,145 @@ export default function AdminStrategyCompanionConceptPage({ onNavigate, showHead
       extraLearning,
     };
     localStorage.setItem(ADMIN_OVERRIDE_STORAGE_KEY, JSON.stringify(payload));
+
+    // 同步写入前台原始数据源（dataServiceLocal 使用的 keys），避免“后台改了前台不变”。
+    try {
+      const now = new Date().toISOString();
+      const projectList = JSON.parse(localStorage.getItem('yiyu_client_projects') || '[]');
+      const targetName = overrideClientMeta[client]?.displayName;
+      const target = projectList.find((p: any) => p.clientName === client || (targetName && p.clientName === targetName));
+
+      if (target?.id) {
+        const projectId = target.id as string;
+
+        // 1) client 基础信息（名称/logo/使命愿景）
+        const displayName = overrideClientMeta[client]?.displayName || target.clientName;
+        const logoUrl = overrideClientMeta[client]?.logoUrl || target.logoUrl;
+        const nextProjects = projectList.map((p: any) =>
+          p.id === projectId
+            ? {
+                ...p,
+                clientName: displayName,
+                logoUrl,
+                mission: heroData.mission,
+                vision: heroData.vision,
+                values: heroData.values,
+                northStarMetric: northData.northStar,
+                yearlyDeliverables: northData.annualDeliverables,
+                updatedAt: now,
+              }
+            : p
+        );
+        localStorage.setItem('yiyu_client_projects', JSON.stringify(nextProjects));
+
+        // 2) 里程碑
+        const oldMilestones = JSON.parse(localStorage.getItem('yiyu_strategic_milestones') || '[]').filter((x: any) => x.projectId !== projectId);
+        const newMilestones = timelineData.map((t: any, idx: number) => ({
+          id: `ms_${crypto.randomUUID()}`,
+          projectId,
+          title: t.stage,
+          description: t.detail,
+          status: t.status === 'done' ? 'completed' : t.status === 'current' ? 'in-progress' : 'pending',
+          phaseOrder: idx + 1,
+          participants: [],
+          outputs: [],
+          milestoneDate: t.date,
+          sortOrder: idx + 1,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        }));
+        localStorage.setItem('yiyu_strategic_milestones', JSON.stringify([...oldMilestones, ...newMilestones]));
+
+        // 3) 目标
+        const oldGoals = JSON.parse(localStorage.getItem('yiyu_strategic_goals') || '[]').filter((x: any) => x.projectId !== projectId);
+        const newGoals = goalData.map((g: any) => ({
+          id: `goal_${crypto.randomUUID()}`,
+          projectId,
+          title: g.title,
+          description: g.oneLiner || g.description,
+          progress: Number(g.progress || 0),
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        }));
+        localStorage.setItem('yiyu_strategic_goals', JSON.stringify([...oldGoals, ...newGoals]));
+
+        // 4) 动态
+        const oldEvents = JSON.parse(localStorage.getItem('yiyu_project_events') || '[]').filter((x: any) => x.projectId !== projectId);
+        const newEvents = recentData.map((e: any, idx: number) => ({
+          id: `evt_${crypto.randomUUID()}`,
+          projectId,
+          type: 'meeting',
+          title: e.title,
+          description: e.scope || '',
+          eventDate: e.date || now.slice(0, 10),
+          details: [...(e.doneItems || []), ...(e.valueItems || [])].join('；'),
+          participants: Number((e.people || '').replace(/\D/g, '')) || undefined,
+          sortOrder: idx + 1,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        }));
+        localStorage.setItem('yiyu_project_events', JSON.stringify([...oldEvents, ...newEvents]));
+
+        // 5) 文档
+        const oldDocs = JSON.parse(localStorage.getItem('yiyu_project_documents') || '[]').filter((x: any) => x.projectId !== projectId);
+        const newDocs = docs.map((d: any, idx: number) => ({
+          id: `doc_${crypto.randomUUID()}`,
+          projectId,
+          category: 'strategy',
+          title: d.title,
+          description: d.desc || '',
+          docDate: d.date || now.slice(0, 10),
+          documentLink: d.link,
+          passwordProtected: false,
+          sortOrder: idx + 1,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        }));
+        localStorage.setItem('yiyu_project_documents', JSON.stringify([...oldDocs, ...newDocs]));
+
+        // 6) 会议
+        const oldMeetings = JSON.parse(localStorage.getItem('yiyu_project_meetings') || '[]').filter((x: any) => x.projectId !== projectId);
+        const newMeetings = meetings.map((m: any, idx: number) => ({
+          id: `meet_${crypto.randomUUID()}`,
+          projectId,
+          title: m.title,
+          meetingDate: m.date || now.slice(0, 10),
+          duration: m.duration,
+          participantsCount: Number((m.attendees || '').replace(/\D/g, '')) || undefined,
+          keyPoints: [m.topic || ''],
+          meetingLink: m.link,
+          passwordProtected: false,
+          sortOrder: idx + 1,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        }));
+        localStorage.setItem('yiyu_project_meetings', JSON.stringify([...oldMeetings, ...newMeetings]));
+
+        // 7) 学习资源
+        const oldCourses = JSON.parse(localStorage.getItem('yiyu_course_recommendations') || '[]').filter((x: any) => x.projectId !== projectId);
+        const newCourses = learning.map((c: any, idx: number) => ({
+          id: `course_${crypto.randomUUID()}`,
+          projectId,
+          title: c.title,
+          description: c.summary || '',
+          type: 'external',
+          url: c.link,
+          sortOrder: idx + 1,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        }));
+        localStorage.setItem('yiyu_course_recommendations', JSON.stringify([...oldCourses, ...newCourses]));
+      }
+    } catch (error) {
+      console.warn('全局保存同步前台数据失败:', error);
+    }
+
     window.dispatchEvent(new Event('yiyu_data_change'));
   }, [overrideHero, overrideNorth, overrideTimeline, overrideGoals, overrideRecent, overrideDocs, overrideMeetings, extraDocs, extraMeetings, extraLearning]);
 
