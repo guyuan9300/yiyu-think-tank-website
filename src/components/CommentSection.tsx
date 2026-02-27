@@ -27,22 +27,53 @@ export function CommentSection({
   userName = '访客',
   userAvatar,
 }: CommentSectionProps) {
+  // Global login fallback: if caller didn't wire isLoggedIn, infer from storage.
+  // This ensures comment input works consistently across pages.
+  const [derivedLoggedIn, setDerivedLoggedIn] = useState<boolean>(isLoggedIn);
+  const [derivedUserName, setDerivedUserName] = useState<string>(userName);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Login status (global)
+  useEffect(() => {
+    const readUser = () => {
+      const userStr = (localStorage.getItem('yiyu_current_user') ?? sessionStorage.getItem('yiyu_current_user'));
+      if (userStr) {
+        try {
+          const u = JSON.parse(userStr);
+          setDerivedLoggedIn(true);
+          setDerivedUserName((u?.nickname || u?.email || userName || '用户') as string);
+          return;
+        } catch {
+          // ignore
+        }
+      }
+      setDerivedLoggedIn(isLoggedIn);
+      setDerivedUserName(userName || '访客');
+    };
+
+    readUser();
+    window.addEventListener('yiyu_user_updated', readUser);
+    window.addEventListener('storage', readUser);
+    return () => {
+      window.removeEventListener('yiyu_user_updated', readUser);
+      window.removeEventListener('storage', readUser);
+    };
+  }, [isLoggedIn, userName]);
+
   // 加载评论
   useEffect(() => {
     loadComments();
-    
+
     // 监听数据变化事件
     const handleDataChange = () => {
       loadComments();
     };
-    
+
     window.addEventListener('yiyu_data_change', handleDataChange);
-    
+
     return () => {
       window.removeEventListener('yiyu_data_change', handleDataChange);
     };
@@ -71,8 +102,8 @@ export function CommentSection({
         contentId,
         contentType,
         contentTitle,
-        userId: isLoggedIn ? 'user_' + Date.now() : 'guest',
-        userName,
+        userId: derivedLoggedIn ? 'user_' + Date.now() : 'guest',
+        userName: derivedUserName,
         userAvatar,
         text: commentText.trim(),
       });
@@ -143,27 +174,27 @@ export function CommentSection({
           <div className="flex items-start gap-3">
             {/* 用户头像 */}
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-medium flex-shrink-0">
-              {userName.charAt(0)}
+              {derivedUserName.charAt(0)}
             </div>
             
             <div className="flex-1">
               <textarea
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                placeholder={isLoggedIn ? '写下你的评论...' : '请登录后发表评论'}
-                disabled={!isLoggedIn || isSubmitting}
+                placeholder={derivedLoggedIn ? '写下你的评论...' : '请登录后发表评论'}
+                disabled={!derivedLoggedIn || isSubmitting}
                 rows={3}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
               
               <div className="flex items-center justify-between mt-3">
                 <span className="text-sm text-gray-500">
-                  {isLoggedIn ? '发表评论需经管理员审核' : '请先登录'}
+                  {derivedLoggedIn ? '发表评论需经管理员审核' : '请先登录'}
                 </span>
                 
                 <button
                   type="submit"
-                  disabled={!isLoggedIn || !commentText.trim() || isSubmitting}
+                  disabled={!derivedLoggedIn || !commentText.trim() || isSubmitting}
                   className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (

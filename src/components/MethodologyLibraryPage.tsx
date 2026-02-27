@@ -34,6 +34,23 @@ export function MethodologyLibraryPage({
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
 
+  // 监听用户登录状态（用于启用评论等功能）
+  useEffect(() => {
+    const checkUserStatus = () => {
+      const userStr = (localStorage.getItem('yiyu_current_user') ?? sessionStorage.getItem('yiyu_current_user'));
+      setIsLoggedIn(Boolean(userStr));
+    };
+
+    checkUserStatus();
+    window.addEventListener('yiyu_user_updated', checkUserStatus);
+    window.addEventListener('storage', checkUserStatus);
+
+    return () => {
+      window.removeEventListener('yiyu_user_updated', checkUserStatus);
+      window.removeEventListener('storage', checkUserStatus);
+    };
+  }, []);
+
   const topicOptions: Array<{ id: 'all' | Topic; label: string }> = [
     { id: 'all', label: '全部' },
     { id: '战略', label: '战略' },
