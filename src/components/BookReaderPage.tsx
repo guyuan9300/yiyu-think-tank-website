@@ -363,12 +363,12 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
       </div>
 
       {/* 内容区域 */}
-      <div
-        className="w-full"
-        style={isMobile ? undefined : { height: `${contentHeightPx}px`, minHeight: '1040px' }}
-      >
-        {/* PDF阅读区域 */}
-        <div className={isMobile ? "w-full flex flex-col bg-white" : "max-w-4xl mx-auto w-full flex flex-col bg-white min-w-0"}>
+      <div className="px-4 sm:px-6 lg:px-8 pb-10">
+        {/* PDF阅读区域（四四方方的框，max-w-4xl） */}
+        <div
+          className="max-w-4xl mx-auto w-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col"
+          style={isMobile ? undefined : { height: `${contentHeightPx}px`, minHeight: '720px' }}
+        >
           {/* PDF工具条 - 精简版 */}
           <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
             <div className="flex items-center gap-4">
@@ -449,13 +449,14 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
               </div>
             )}
           </div>
+
+          {/* Reader bottom bar (inside frame) */}
+          <div className="h-10 bg-gray-50 border-t border-gray-200 flex items-center justify-center text-[12px] text-gray-500">
+            —
+          </div>
         </div>
       </div>
 
-      {/* Reader End Bar + Unified Footer */}
-      <div className="mt-8 h-10 bg-black border-t border-white/10 flex items-center justify-center text-[12px] text-white/60">
-        — 阅读结束 —
-      </div>
       <Footer onNavigate={(p) => onNavigate?.(p)} />
 
       {/* 升级会员弹窗 */}
