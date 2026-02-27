@@ -285,7 +285,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     { id: 'invite-codes', label: '邀请码管理', icon: <Gift className="w-5 h-5" /> },
     // 会员管理与用户管理为同一页，按需求隐藏入口
     // { id: 'membership', label: '会员管理', icon: <Crown className="w-5 h-5" /> }, 
-    { id: 'comments', label: '评论管理', icon: <MessageSquare className="w-5 h-5" />, badge: 24 },
+    { id: 'comments', label: '评论管理', icon: <MessageSquare className="w-5 h-5" /> },
     { id: 'settings', label: '系统设置', icon: <Settings className="w-5 h-5" /> },
   ];
 

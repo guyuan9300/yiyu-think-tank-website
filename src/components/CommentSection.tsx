@@ -242,8 +242,8 @@ export function CommentSection({
                     </span>
                   </div>
                   
-                  {/* 评论内容 */}
-                  <p className="text-gray-700 leading-relaxed">{comment.text}</p>
+                  {/* 评论内容（社媒风格：首行缩进，区分输入框与展示态） */}
+                  <p className="text-gray-700 leading-relaxed indent-6">{comment.text}</p>
                 </div>
               </div>
               
@@ -260,7 +260,7 @@ export function CommentSection({
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-purple-900 mb-1">管理员回复：</p>
-                      <p className="text-sm text-gray-800 leading-relaxed">{comment.reply}</p>
+                      <p className="text-sm text-gray-800 leading-relaxed indent-6">{comment.reply}</p>
                     </div>
                   </div>
                 </div>
