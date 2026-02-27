@@ -26,6 +26,7 @@ import AdminStrategyCompanionConceptPage from './components/AdminStrategyCompani
 import { ConsultApplyPage } from './components/ConsultApplyPage';
 import { NotFoundPage } from './components/NotFoundPage';
 import { StrategyModuleIntroPage } from './components/StrategyModuleIntroPage';
+import { AboutPremiumPage } from './components/AboutPremiumPage';
 
 export default function App() {
   // Avoid browser trying to restore scroll position across in-app navigation.
@@ -75,6 +76,9 @@ export default function App() {
     'business-design',
     'org-effectiveness',
     'digital-ai',
+
+    // standalone landing pages
+    'about-premium',
 
     '404',
   ]);
@@ -176,7 +180,7 @@ export default function App() {
     }
   }, [currentPage, selectedDetailId, selectedCaseId, unknownPage]);
 
-  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'case' | 'admin' | 'user-center' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply' | 'book-library' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai', bookId?: string, caseId?: string) => {
+  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'case' | 'admin' | 'user-center' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply' | 'book-library' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai' | 'about-premium', bookId?: string, caseId?: string) => {
     // Reset scroll on page-level navigation so detail pages always open from the top.
     // (Otherwise the browser may keep the previous scroll position and look like it jumped to the bottom.)
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
@@ -365,6 +369,14 @@ export default function App() {
     return (
       <>
         <AboutPage onNavigate={handleNavigate} />
+      </>
+    );
+  }
+
+  if (currentPage === 'about-premium') {
+    return (
+      <>
+        <AboutPremiumPage onNavigate={(p) => handleNavigate(p as any)} />
       </>
     );
   }
