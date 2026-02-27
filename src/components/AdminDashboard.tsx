@@ -33,6 +33,7 @@ import { SettingsPage } from './SettingsPage';
 import { generateCoverImage, getHfModel, getHfToken, setHfModel, setHfToken } from '../lib/hfImageGen';
 import { UserManagementPage } from './UserManagementPage';
 import AdminStrategyCompanionConceptPage from './AdminStrategyCompanionConceptPage';
+import AdminOpsCenterDashboard from './adminOps/AdminOpsCenterDashboard';
 import {
   getClientProjects as getStrategyClients,
   getCourseRecommendations,
@@ -834,7 +835,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         <main className="flex-1 min-h-0 p-6 overflow-auto">
           {activeMenu === 'dashboard' && (
             <div className="space-y-6">
-              {/* 消息提示 */}
+              {/* 消息提示（保留） */}
               {message && (
                 <div className={`p-4 rounded-xl flex items-center gap-2 ${
                   message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
@@ -844,64 +845,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 </div>
               )}
 
-              {/* 统计卡片 */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {stats.map((stat, index) => (
-                  <div 
-                    key={index}
-                    className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <p className="text-sm text-gray-500 mb-2">{stat.label}</p>
-                    <div className="flex items-end justify-between">
-                      <span className="text-3xl font-bold text-gray-900">{stat.value}</span>
-                      <span className={`text-sm font-medium ${
-                        stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {stat.change}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* 快捷入口 */}
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">快捷管理</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <button 
-                    onClick={() => setActiveMenu('insights')}
-                    className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl hover:shadow-md transition-shadow text-left"
-                  >
-                    <FileText className="w-8 h-8 text-blue-600 mb-2" />
-                    <p className="font-medium text-gray-900">洞察文章</p>
-                    <p className="text-sm text-gray-500">{insights.length} 篇</p>
-                  </button>
-                  <button 
-                    onClick={() => setActiveMenu('reports')}
-                    className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl hover:shadow-md transition-shadow text-left"
-                  >
-                    <Folder className="w-8 h-8 text-green-600 mb-2" />
-                    <p className="font-medium text-gray-900">报告管理</p>
-                    <p className="text-sm text-gray-500">{reports.length} 份</p>
-                  </button>
-                  <button 
-                    onClick={() => setActiveMenu('books')}
-                    className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl hover:shadow-md transition-shadow text-left"
-                  >
-                    <BookOpen className="w-8 h-8 text-purple-600 mb-2" />
-                    <p className="font-medium text-gray-900">书籍管理</p>
-                    <p className="text-sm text-gray-500">{books.length} 本</p>
-                  </button>
-                  <button 
-                    onClick={() => setActiveMenu('invite-codes')}
-                    className="p-4 bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl hover:shadow-md transition-shadow text-left"
-                  >
-                    <Gift className="w-8 h-8 text-amber-600 mb-2" />
-                    <p className="font-medium text-gray-900">邀请码</p>
-                    <p className="text-sm text-gray-500">{inviteCodes.length} 个</p>
-                  </button>
-                </div>
-              </div>
+              {/* 新静态运营中枢壳（不接数据） */}
+              <AdminOpsCenterDashboard />
             </div>
           )}
 
