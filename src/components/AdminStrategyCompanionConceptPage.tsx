@@ -322,11 +322,13 @@ type AdminOverridePayload = {
   extraDocs?: Record<string, ClientPreset['docs']>;
   extraMeetings?: Record<string, ClientPreset['meetings']>;
   extraLearning?: Record<string, ClientPreset['learning']>;
+  overrideClientMeta?: Record<string, { displayName: string; logoUrl: string }>;
 };
 
-export default function AdminStrategyCompanionConceptPage({ onNavigate, showHeader = true }: { onNavigate?: (page: string) => void; showHeader?: boolean }) {
+export default function AdminStrategyCompanionConceptPage({ onNavigate, showHeader = true, viewMode = 'admin', initialClient = '蓝信封' }: { onNavigate?: (page: string) => void; showHeader?: boolean; viewMode?: 'admin' | 'frontend'; initialClient?: '蓝信封' | '日慈基金会' }) {
+  const isFrontend = viewMode === 'frontend';
   const [mode, setMode] = useState<Mode>('immersive');
-  const [client, setClient] = useState<'蓝信封' | '日慈基金会'>('蓝信封');
+  const [client, setClient] = useState<'蓝信封' | '日慈基金会'>(initialClient);
   const data = clientData[client];
   const [extraDocs, setExtraDocs] = useState<Record<string, ClientPreset['docs']>>({});
   const [extraMeetings, setExtraMeetings] = useState<Record<string, ClientPreset['meetings']>>({});
@@ -346,6 +348,13 @@ export default function AdminStrategyCompanionConceptPage({ onNavigate, showHead
     if (m === 'immersive') setDrawerType(null);
   };
 
+  useEffect(() => {
+    if (isFrontend) {
+      setMode('immersive');
+      setDrawerType(null);
+    }
+  }, [isFrontend]);
+
   const inferLearningKind = (url: string): '文章' | '报告' | '课程' => {
     const u = url.toLowerCase();
     if (u.includes('report') || u.includes('pdf') || u.includes('insight')) return '报告';
@@ -358,6 +367,12 @@ export default function AdminStrategyCompanionConceptPage({ onNavigate, showHead
   const [overrideTimeline, setOverrideTimeline] = useState<Record<string, ClientPreset['timeline']>>({});
   const [overrideGoals, setOverrideGoals] = useState<Record<string, ClientPreset['goals']>>({});
   const [overrideRecent, setOverrideRecent] = useState<Record<string, ClientPreset['latest']>>({});
+  const [overrideClientMeta, setOverrideClientMeta] = useState<Record<string, { displayName: string; logoUrl: string }>>({});
+  const [saveHint, setSaveHint] = useState('');
+
+  useEffect(() => {
+    setClient(initialClient);
+  }, [initialClient]);
 
   useEffect(() => {
     try {
@@ -374,12 +389,13 @@ export default function AdminStrategyCompanionConceptPage({ onNavigate, showHead
       if (parsed.extraDocs) setExtraDocs(parsed.extraDocs);
       if (parsed.extraMeetings) setExtraMeetings(parsed.extraMeetings);
       if (parsed.extraLearning) setExtraLearning(parsed.extraLearning);
+      if (parsed.overrideClientMeta) setOverrideClientMeta(parsed.overrideClientMeta);
     } catch (error) {
       console.warn('读取战略客户后台覆盖数据失败:', error);
     }
   }, []);
 
-  useEffect(() => {
+  const publishAllChanges = () => {
     const payload: AdminOverridePayload = {
       overrideHero,
       overrideNorth,
@@ -391,6 +407,7 @@ export default function AdminStrategyCompanionConceptPage({ onNavigate, showHead
       extraDocs,
       extraMeetings,
       extraLearning,
+      overrideClientMeta,
     };
     localStorage.setItem(ADMIN_OVERRIDE_STORAGE_KEY, JSON.stringify(payload));
 
@@ -533,13 +550,16 @@ export default function AdminStrategyCompanionConceptPage({ onNavigate, showHead
     }
 
     window.dispatchEvent(new Event('yiyu_data_change'));
-  }, [overrideHero, overrideNorth, overrideTimeline, overrideGoals, overrideRecent, overrideDocs, overrideMeetings, extraDocs, extraMeetings, extraLearning]);
+    setSaveHint(`已全局保存并同步前台（${new Date().toLocaleTimeString('zh-CN', { hour12: false })}）`);
+  };
 
   const heroData = overrideHero[client] || {
     mission: data.mission,
     vision: data.vision,
     values: data.values,
   };
+  const currentDisplayName = overrideClientMeta[client]?.displayName || client;
+  const currentLogo = overrideClientMeta[client]?.logoUrl || clientMeta[client]?.logo || '';
   const northData = overrideNorth[client] || {
     northStar: data.northStar,
     northStarMetrics: data.northStarMetrics,
@@ -909,19 +929,43 @@ export default function AdminStrategyCompanionConceptPage({ onNavigate, showHead
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5">
-                <img src={clientMeta[client]?.logo} alt={client} className="w-8 h-8 rounded-lg object-cover border border-slate-100" />
-                <span className="text-[13px] font-medium text-slate-700">{client}</span>
+                {currentLogo ? <img src={currentLogo} alt={currentDisplayName} className="w-8 h-8 rounded-lg object-cover border border-slate-100" /> : <div className="w-8 h-8 rounded-lg bg-slate-100" />}
+                <span className="text-[13px] font-medium text-slate-700">{currentDisplayName}</span>
               </div>
-              <select className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-[14px]" value={client} onChange={(e) => setClient(e.target.value as any)}>
-                <option>蓝信封</option>
-                <option>日慈基金会</option>
-              </select>
-              <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
-                <button onClick={() => setModeWithDefaults('immersive')} className={`px-3 py-1.5 rounded-lg text-[13px] ${mode === 'immersive' ? 'bg-slate-900 text-white' : 'text-slate-600'}`}>沉浸模式</button>
-                <button onClick={() => setModeWithDefaults('work')} className={`px-3 py-1.5 rounded-lg text-[13px] ${mode === 'work' ? 'bg-slate-900 text-white' : 'text-slate-600'}`}>编辑模式</button>
-              </div>
+              {!isFrontend && (
+                <select className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-[14px]" value={client} onChange={(e) => setClient(e.target.value as any)}>
+                  <option>蓝信封</option>
+                  <option>日慈基金会</option>
+                </select>
+              )}
+              {!isFrontend && mode === 'work' && (
+                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5">
+                  <input
+                    value={currentDisplayName}
+                    onChange={(e) => setOverrideClientMeta((prev) => ({ ...prev, [client]: { displayName: e.target.value, logoUrl: currentLogo } }))}
+                    className="w-28 px-2 py-1 rounded-lg border border-slate-200 text-[12px]"
+                    placeholder="客户名称"
+                  />
+                  <input
+                    value={currentLogo}
+                    onChange={(e) => setOverrideClientMeta((prev) => ({ ...prev, [client]: { displayName: currentDisplayName, logoUrl: e.target.value } }))}
+                    className="w-52 px-2 py-1 rounded-lg border border-slate-200 text-[12px]"
+                    placeholder="Logo URL"
+                  />
+                </div>
+              )}
+              {!isFrontend && (
+                <>
+                  <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
+                    <button onClick={() => setModeWithDefaults('immersive')} className={`px-3 py-1.5 rounded-lg text-[13px] ${mode === 'immersive' ? 'bg-slate-900 text-white' : 'text-slate-600'}`}>沉浸模式</button>
+                    <button onClick={() => setModeWithDefaults('work')} className={`px-3 py-1.5 rounded-lg text-[13px] ${mode === 'work' ? 'bg-slate-900 text-white' : 'text-slate-600'}`}>编辑模式</button>
+                  </div>
+                  <button onClick={publishAllChanges} className="px-4 py-2 rounded-xl bg-blue-600 text-white text-[13px] font-medium hover:bg-blue-700">全局保存并同步前台</button>
+                </>
+              )}
             </div>
           </div>
+          {!isFrontend && saveHint ? <p className="mt-3 text-[12px] text-emerald-600">{saveHint}</p> : null}
         </section>
 
         <section className={`${card} p-8 sm:p-10`}>
