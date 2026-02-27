@@ -77,9 +77,8 @@ export default function App() {
     '404',
   ]);
 
-  // Route alias normalization. Keep backward compatibility for old links.
-  // - `?page=learning` should behave as `?page=library`
-  // - `?page=book-library` is deprecated; redirect to `library`
+  // Route alias normalization.
+  // Canonical URL: `?page=learning` (we keep internal page key as `library`).
   const initialPageRaw = initialParams.get('page') || 'home';
   // `learning` is an alias for `library`.
   const normalized = initialPageRaw === 'learning' ? 'library' : initialPageRaw;
@@ -96,13 +95,21 @@ export default function App() {
     const basePath = window.location.pathname;
 
     if (page === 'home') return basePath;
+    // Canonicalize: keep `?page=learning` as the only public URL for learning center.
+    // Internally we still use `currentPage='library'`.
+    if (page === 'library') return `?page=learning`;
     if (page === '404') {
       const from = unknownPage;
       return from ? `?page=404&from=${encodeURIComponent(from)}` : `?page=404`;
     }
 
-    if (page === 'article' || page === 'report' || page === 'topic' || page === 'methodology-library') {
+    if (page === 'article' || page === 'report' || page === 'topic') {
       return `?page=${page}&id=${encodeURIComponent(detailId || '')}`;
+    }
+
+    if (page === 'methodology-library') {
+      // List page should not show a trailing `&id=` when no id selected.
+      return detailId ? `?page=methodology-library&id=${encodeURIComponent(detailId)}` : `?page=methodology-library`;
     }
 
     if (page === 'case') {
@@ -125,7 +132,7 @@ export default function App() {
     const parseUrl = () => {
       const params = new URLSearchParams(window.location.search);
       const pageRaw = params.get('page') || 'home';
-      const normalizedPage = (pageRaw === 'learning' || pageRaw === 'book-library') ? 'library' : pageRaw;
+      const normalizedPage = (pageRaw === 'learning') ? 'library' : pageRaw;
       const unknown = ALLOWED_PAGES.has(normalizedPage) ? null : normalizedPage;
       const page = unknown ? '404' : normalizedPage;
       const id = params.get('id') || '';

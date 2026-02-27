@@ -11,7 +11,7 @@ import {
   Heart,
   Clock,
   ChevronRight,
-  RefreshCw
+
 } from 'lucide-react';
 import { getInsights, type InsightArticle } from '../lib/dataService';
 
@@ -336,19 +336,13 @@ export function ArticleCenterPage({
       </div>
 
       {/* 内容区域 */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-4xl mx-auto px-6 py-8">
         {/* 结果统计 */}
         <div className="flex items-center justify-between mb-8">
           <p className="text-[14px] text-muted-foreground/70">
             共找到 <span className="text-foreground font-medium">{filteredArticles.length}</span> 篇文章
           </p>
-          <button
-            onClick={handleRefresh}
-            className="group flex items-center gap-2 text-[13px] text-muted-foreground/70 hover:text-primary transition-colors"
-          >
-            <RefreshCw className="w-3.5 h-3.5 transition-transform group-hover:rotate-180" />
-            <span>刷新</span>
-          </button>
+          {/* 刷新按钮已移除 */}
         </div>
 
         {/* 空状态 */}

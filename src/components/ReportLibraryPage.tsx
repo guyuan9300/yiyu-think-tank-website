@@ -10,7 +10,6 @@ import {
   List,
   Eye,
   ChevronRight,
-  RefreshCw,
   ArrowRight
 } from 'lucide-react';
 import { getReports as getReportsLocal, type Report } from '../lib/dataService';
@@ -382,13 +381,7 @@ export function ReportLibraryPage({
           <p className="text-[14px] text-muted-foreground/70">
             共找到 <span className="text-foreground font-medium">{filteredReports.length}</span> 份报告
           </p>
-          <button
-            onClick={handleRefresh}
-            className="group flex items-center gap-2 text-[13px] text-muted-foreground/70 hover:text-primary transition-colors"
-          >
-            <RefreshCw className="w-3.5 h-3.5 transition-transform group-hover:rotate-180" />
-            <span>刷新</span>
-          </button>
+          {/* 刷新按钮已移除 */}
         </div>
 
         {/* 空状态 */}
