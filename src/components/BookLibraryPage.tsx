@@ -187,13 +187,14 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id
             {filteredBooks.map((book) => (
               <article 
                 key={book.id} 
-                className="bg-white/80 backdrop-blur-sm rounded-[20px] border border-border/40 overflow-hidden cursor-pointer group hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300"
+                className="group cursor-pointer"
                 onClick={() => {
                   if (onNavigate) onNavigate('book-reader', book.id);
                   else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(book.id)}`);
                 }}
               >
-                <div className={`aspect-[3/4] bg-gradient-to-br ${book.coverColor || 'from-primary/20 to-accent/10'} relative overflow-hidden`}>
+                <div className="relative bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-white/80 hover:border-border/60 hover:shadow-2xl hover:shadow-black/[0.04] hover:-translate-y-1">
+                  <div className={`relative aspect-[16/10] bg-gradient-to-br ${book.coverColor || 'from-primary/[0.03] to-accent/[0.03]'} overflow-hidden`}>
                   {book.coverImage ? (
                     <img
                       src={book.coverImage}
@@ -206,33 +207,23 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id
                       {book.title.charAt(0)}
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  
-                  {/* Hover Button */}
-                  <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (onNavigate) onNavigate('book-reader', book.id);
-                        else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(book.id)}`);
-                      }}
-                      className="w-full py-2.5 bg-white/90 backdrop-blur-sm rounded-[12px] text-[13px] font-medium text-foreground hover:bg-white transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span>详情</span>
-                    </button>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                    <span className="text-white text-[14px] font-medium">查看详情</span>
                   </div>
                 </div>
 
-                <div className="p-5">
-                  <h3 className="font-medium text-[15px] text-foreground mb-1.5 line-clamp-1 group-hover:text-primary transition-colors">
+                <div className="p-6">
+                  <h3 className="text-[18px] font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors leading-[1.4]">
                     {book.title}
                   </h3>
-                  <p className="text-[13px] text-muted-foreground/70 mb-3">{book.author}</p>
 
-                  {/* Meta */}
-                  <div className="flex items-center gap-4 text-[12px] text-muted-foreground/50">
+                  <p className="text-[14px] text-muted-foreground/70 line-clamp-1 leading-[1.6] mb-4">{book.author}</p>
+
+                  <p className="text-[14px] text-muted-foreground/70 line-clamp-2 leading-[1.6] mb-4">
+                    {book.description}
+                  </p>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-border/30 text-[12px] text-muted-foreground/50">
                     <span className="flex items-center gap-1">
                       <Clock className="w-3.5 h-3.5" />
                       {book.duration}
@@ -243,7 +234,8 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id
                     </span>
                   </div>
                 </div>
-              </article>
+              </div>
+            </article>
             ))}
           </div>
         ) : (
