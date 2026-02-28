@@ -1381,6 +1381,12 @@
             </span>
             <span class="nav__label">益语方法论</span>
           </a>
+          <a class="nav__item" href="#" data-jump="companion" title="战略陪伴">
+            <span class="nav__icon" aria-hidden="true">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M7 7h10v10H7z"></path><path d="M4 12h3M17 12h3M12 4v3M12 17v3"></path></svg>
+            </span>
+            <span class="nav__label">战略陪伴</span>
+          </a>
         </div>
 
         <div class="nav__group">
@@ -1405,39 +1411,6 @@
           </a>
         </div>
 
-        <div class="nav__group">
-          <div class="nav__group-title">战略陪伴</div>
-          <a class="nav__item" href="#" data-jump="companion/clients" title="战略客户">
-            <span class="nav__icon" aria-hidden="true">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M7 7h10v10H7z"></path><path d="M4 12h3M17 12h3M12 4v3M12 17v3"></path></svg>
-            </span>
-            <span class="nav__label">战略客户</span>
-          </a>
-          <a class="nav__item" href="#" data-jump="companion/pages" title="陪伴页内容">
-            <span class="nav__icon" aria-hidden="true">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M6 4h12v16H6z"></path><path d="M9 8h6M9 12h6M9 16h4"></path></svg>
-            </span>
-            <span class="nav__label">陪伴页内容</span>
-          </a>
-          <a class="nav__item" href="#" data-jump="companion/meetings" title="会议记录">
-            <span class="nav__icon" aria-hidden="true">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M8 7h8v10H8z"></path><path d="M6 9h2M16 9h2M6 15h2M16 15h2"></path></svg>
-            </span>
-            <span class="nav__label">会议记录</span>
-          </a>
-          <a class="nav__item" href="#" data-jump="companion/assets" title="文档资源">
-            <span class="nav__icon" aria-hidden="true">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M6 4h8l4 4v12H6z"></path><path d="M14 4v4h4"></path></svg>
-            </span>
-            <span class="nav__label">文档资源</span>
-          </a>
-          <a class="nav__item" href="#" data-jump="companion/reco" title="赋能推荐">
-            <span class="nav__icon" aria-hidden="true">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M12 3l3 6 6 .8-4.5 4.4 1 6-5.5-3-5.5 3 1-6L3 9.8 9 9z"></path></svg>
-            </span>
-            <span class="nav__label">赋能推荐</span>
-          </a>
-        </div>
 
         <div class="nav__group">
           <div class="nav__group-title">互动</div>
@@ -2328,6 +2301,7 @@
         'content/reports': { title: '报告管理', sub: '新后台模块：报告管理（承接旧后台）' },
         'content/books': { title: '书籍管理', sub: '新后台模块：书籍管理（承接旧后台）' },
         'content/methods': { title: '益语方法论', sub: '新后台模块：益语方法论管理（承接旧后台）' },
+        'companion': { title: '战略陪伴', sub: '新后台模块：战略陪伴（承接旧后台）' },
         'comments': { title: '评论管理', sub: '原有评论管理页面（承接旧后台）' },
       };
       const meta = map[view] || { title: '数据概览', sub: '运营中枢' };
@@ -2338,6 +2312,7 @@
         'content/reports': 'reports',
         'content/books': 'books',
         'content/methods': 'methodologies',
+        'companion': 'strategy-companion',
         'comments': 'comments',
       };
       const frame = document.getElementById('legacyFrame');
@@ -2359,11 +2334,15 @@
     }
 
     function handleJump(target) {
-      if (target === 'logout') {
+      const rawTarget = String(target || '');
+      const noQueryTarget = rawTarget.split('?')[0];
+      const normalizedTarget = noQueryTarget.startsWith('companion/') ? 'companion' : noQueryTarget;
+
+      if (normalizedTarget === 'logout') {
         showToast('退出登录功能待实现');
         return;
       }
-      if (target === 'homeBtn') {
+      if (normalizedTarget === 'homeBtn') {
         const basePath = window.location.pathname.replace(/admin\.html$/, '');
         const targetUrl = `${window.location.origin}${basePath}?page=home`;
         if (window.top && window.top !== window) {
@@ -2374,18 +2353,18 @@
         return;
       }
 
-      if (target === 'content/articles' || target === 'content/reports' || target === 'content/books' || target === 'content/methods' || target === 'comments') {
-        setAdminView(target);
+      if (normalizedTarget === 'content/articles' || normalizedTarget === 'content/reports' || normalizedTarget === 'content/books' || normalizedTarget === 'content/methods' || normalizedTarget === 'companion' || normalizedTarget === 'comments') {
+        setAdminView(normalizedTarget);
         return;
       }
 
-      if (target === 'dashboard') {
+      if (normalizedTarget === 'dashboard') {
         setAdminView('dashboard');
         return;
       }
 
-      if (target === 'profile' || target === 'settings' || target === 'settings/data') {
-        showToast(`跳转到: ${target}`);
+      if (normalizedTarget === 'profile' || normalizedTarget === 'settings' || normalizedTarget === 'settings/data') {
+        showToast(`跳转到: ${normalizedTarget}`);
         return;
       }
 
@@ -2395,20 +2374,16 @@
         'content/reports': '报告管理',
         'content/books': '书籍管理',
         'content/methods': '益语方法论',
+        'companion': '战略陪伴',
         'users': '用户管理',
         'billing': '会员&订单',
         'invites': '邀请码&机构',
-        'companion/clients': '战略客户',
-        'companion/pages': '陪伴页内容',
-        'companion/meetings': '会议记录',
-        'companion/assets': '文档资源',
-        'companion/reco': '赋能推荐',
         'comments': '评论管理',
         'settings': '系统设置',
         'audit': '权限&审计'
       };
 
-      const label = labels[target] || target;
+      const label = labels[normalizedTarget] || rawTarget;
       showToast(`跳转到: ${label}`);
     }
 
