@@ -2312,6 +2312,8 @@
         'users': { title: '用户管理', sub: '原有用户管理页面（承接旧后台）' },
         'companion': { title: '战略陪伴', sub: '新后台模块：战略陪伴（承接旧后台）' },
         'comments': { title: '评论管理', sub: '原有评论管理页面（承接旧后台）' },
+        'settings': { title: '系统设置', sub: '原有系统设置页面（承接旧后台）' },
+        'audit': { title: '权限&审计', sub: '原有权限审计页面（承接旧后台）' },
       };
       const meta = map[view] || { title: '数据概览', sub: '运营中枢' };
       if (pageTitleEl) pageTitleEl.textContent = meta.title;
@@ -2323,6 +2325,8 @@
         'content/methods': 'methodologies',
         'companion': 'strategy-companion',
         'comments': 'comments',
+        'settings': 'settings',
+        'audit': 'settings',
         'users': 'user-management',
       };
       const frame = document.getElementById('legacyFrame');
@@ -2365,7 +2369,7 @@
         return;
       }
 
-      if (normalizedTarget === 'content/articles' || normalizedTarget === 'content/reports' || normalizedTarget === 'content/books' || normalizedTarget === 'content/methods' || normalizedTarget === 'companion' || normalizedTarget === 'comments' || normalizedTarget === 'users') {
+      if (normalizedTarget === 'content/articles' || normalizedTarget === 'content/reports' || normalizedTarget === 'content/books' || normalizedTarget === 'content/methods' || normalizedTarget === 'companion' || normalizedTarget === 'comments' || normalizedTarget === 'users' || normalizedTarget === 'settings' || normalizedTarget === 'audit') {
         setAdminView(normalizedTarget);
         return;
       }
@@ -2375,7 +2379,7 @@
         return;
       }
 
-      if (normalizedTarget === 'profile' || normalizedTarget === 'settings' || normalizedTarget === 'settings/data') {
+      if (normalizedTarget === 'profile' || normalizedTarget === 'settings/data') {
         showToast(`跳转到: ${normalizedTarget}`);
         return;
       }
