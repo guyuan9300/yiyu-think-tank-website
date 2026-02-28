@@ -11,6 +11,8 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [tagOpen, setTagOpen] = useState(false);
+  const [yearOpen, setYearOpen] = useState(false);
   const [books, setBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -27,7 +29,20 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id
     return [{ id: 'all', label: '全部标签' }, ...tags.map((t) => ({ id: t, label: t }))];
   }, [books]);
 
+  
   useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest('[data-book-filter]')) return;
+      setTagOpen(false);
+      setYearOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, []);
+
+useEffect(() => {
     const loadData = () => {
       const booksData = getBooks();
       setBooks(booksData.filter(b => b.status === 'published'));
@@ -146,32 +161,79 @@ const filteredBooks = useMemo(() => {
               />
             </div>
 
-            {/* topics Filter */}
-            <div className="flex items-center gap-2">
+            {/* Tag + Year Filters */}
+            <div className="flex items-center gap-2" data-book-filter>
               <Filter className="w-4 h-4 text-muted-foreground/50" />
-              <select
-                value={selectedTag}
-                onChange={(e) => setSelectedTag(e.target.value)}
-                className="px-4 py-2.5 bg-muted/50 border border-border/60 rounded-full text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all cursor-pointer min-w-[120px]"
-              >
-                {tagOptions.map((opt) => (
-                  <option key={String(opt.id)} value={String(opt.id)}>
-                    {String(opt.id) === 'all' ? '全部标签' : String((opt as any).label ?? opt.id)}
-                  </option>
-                ))}
-              </select>
 
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
-                className="px-4 py-2.5 bg-muted/50 border border-border/60 rounded-full text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all cursor-pointer min-w-[120px]"
-              >
-                {yearOptions.map((y) => (
-                  <option key={String(y)} value={String(y)}>
-                    {String(y) === 'all' ? '全部年份' : String(y)}
-                  </option>
-                ))}
-              </select>
+              {/* 标签 */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTagOpen((v) => !v);
+                    setYearOpen(false);
+                  }}
+                  className="min-w-[128px] px-4 py-2.5 bg-muted/50 border border-border/60 rounded-full text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all cursor-pointer inline-flex items-center justify-between gap-2"
+                >
+                  <span className="truncate">
+                    {selectedTag === 'all' ? '全部标签' : selectedTag}
+                  </span>
+                  <span className="text-muted-foreground/60">▾</span>
+                </button>
+
+                {tagOpen ? (
+                  <div className="absolute right-0 mt-2 w-48 max-h-72 overflow-auto rounded-2xl border border-border/60 bg-white shadow-xl shadow-black/[0.06] p-1 z-20">
+                    {tagOptions.map((opt) => (
+                      <button
+                        key={String(opt.id)}
+                        type="button"
+                        onClick={() => {
+                          setSelectedTag(String(opt.id));
+                          setTagOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-xl text-[14px] hover:bg-muted/40 transition-colors ${String(opt.id) === String(selectedTag) ? 'bg-muted/40 text-foreground' : 'text-foreground'}`}
+                      >
+                        {String(opt.id) === 'all' ? '全部标签' : String((opt as any).label ?? opt.id)}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* 年份 */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setYearOpen((v) => !v);
+                    setTagOpen(false);
+                  }}
+                  className="min-w-[128px] px-4 py-2.5 bg-muted/50 border border-border/60 rounded-full text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all cursor-pointer inline-flex items-center justify-between gap-2"
+                >
+                  <span className="truncate">
+                    {selectedYear === 'all' ? '全部年份' : selectedYear}
+                  </span>
+                  <span className="text-muted-foreground/60">▾</span>
+                </button>
+
+                {yearOpen ? (
+                  <div className="absolute right-0 mt-2 w-40 max-h-72 overflow-auto rounded-2xl border border-border/60 bg-white shadow-xl shadow-black/[0.06] p-1 z-20">
+                    {yearOptions.map((y) => (
+                      <button
+                        key={String(y)}
+                        type="button"
+                        onClick={() => {
+                          setSelectedYear(String(y));
+                          setYearOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-xl text-[14px] hover:bg-muted/40 transition-colors ${String(y) === String(selectedYear) ? 'bg-muted/40 text-foreground' : 'text-foreground'}`}
+                      >
+                        {String(y) === 'all' ? '全部年份' : String(y)}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </div>
 
             {/* View Toggle */}
