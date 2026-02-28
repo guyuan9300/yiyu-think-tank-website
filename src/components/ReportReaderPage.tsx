@@ -524,7 +524,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
       {isVisitor && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div className="relative w-[92%] max-w-lg rounded-[28px] bg-white/92 backdrop-blur-xl border border-white/60 shadow-2xl p-7 sm:p-8">
+          <div className="relative w-[92%] max-w-lg rounded-[28px] bg-white border border-gray-200 shadow-2xl p-7 sm:p-8">
             <div className="text-center">
               <div className="text-[18px] sm:text-[20px] font-semibold text-gray-900 mb-2">请注册/登录，以解锁益语前沿报告</div>
               <div className="text-[14px] text-gray-600 leading-relaxed mb-6">登录后可查看报告详情与内容。</div>
