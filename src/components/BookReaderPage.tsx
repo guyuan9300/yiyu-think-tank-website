@@ -333,7 +333,7 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
 
           {/* 第2行：导读与收获 - 更紧凑 */}
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6">
-            <p className="text-[15px] text-gray-700 italic mb-4">
+            <p className="text-[16px] sm:text-[17px] text-gray-700 italic mb-4">
               "{(book as any).abstract || (book as any).description || ''}"
             </p>
             <div className="flex flex-wrap gap-2">

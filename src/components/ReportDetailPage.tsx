@@ -188,7 +188,7 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
               </h1>
 
               {/* 摘要描述 */}
-              <p className="text-[18px] text-muted-foreground/70 leading-[1.6] mb-8 font-light">
+              <p className="text-[16px] sm:text-[17px] text-muted-foreground/70 leading-[1.6] mb-8 font-light">
                 {report.summary}
               </p>
 
