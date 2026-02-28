@@ -9,6 +9,8 @@ import {
   Search,
   Filter,
   FileText,
+  Grid3X3,
+  List,
 } from 'lucide-react';
 import { Header } from './Header';
 import { Footer } from './Footer';
@@ -27,6 +29,8 @@ export function MethodologyLibraryPage({
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState<'all' | Topic>('all');
+  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [items, setItems] = useState<Methodology[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -87,6 +91,14 @@ export function MethodologyLibraryPage({
     };
   }, [methodologyId]);
 
+  const yearOptions = useMemo(() => {
+    const years = Array.from(
+      new Set(items.map((m) => String((m as any).publishDate || (m as any).updatedAt || '').slice(0, 4)).filter(Boolean))
+    );
+    years.sort((a, b) => (a < b ? 1 : -1));
+    return ['all', ...years];
+  }, [items]);
+
   const filtered = useMemo(() => {
     return items.filter((m) => {
       const matchesSearch =
@@ -95,9 +107,11 @@ export function MethodologyLibraryPage({
         (m.excerpt || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (m.topics || []).some((t) => String(t).toLowerCase().includes(searchQuery.toLowerCase()));
       const matchesTopic = selectedTopic === 'all' || (m.topics || []).includes(selectedTopic);
-      return matchesSearch && matchesTopic;
+      const year = String((m as any).publishDate || (m as any).updatedAt || '').slice(0, 4);
+      const matchesYear = selectedYear === 'all' || (year && year === selectedYear);
+      return matchesSearch && matchesTopic && matchesYear;
     });
-  }, [items, searchQuery, selectedTopic]);
+  }, [items, searchQuery, selectedTopic, selectedYear]);
 
   // Methodology reader view (match ArticleDetailPage grain)
   if (selected) {
@@ -322,6 +336,35 @@ export function MethodologyLibraryPage({
                   </option>
                 ))}
               </select>
+
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="px-4 py-2.5 bg-muted/30 border border-border/40 rounded-full text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all cursor-pointer"
+              >
+                {yearOptions.map((y) => (
+                  <option key={y} value={y}>
+                    {y === 'all' ? '全部年份' : y}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-full">
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded-full transition-all duration-300 ${viewMode === 'grid' ? 'bg-white shadow-sm text-primary' : 'text-muted-foreground/60 hover:text-foreground'}`}
+              >
+                <Grid3X3 className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={`p-2 rounded-full transition-all duration-300 ${viewMode === 'list' ? 'bg-white shadow-sm text-primary' : 'text-muted-foreground/60 hover:text-foreground'}`}
+              >
+                <List className="w-4 h-4" />
+              </button>
             </div>
           </div>
         </div>
@@ -334,59 +377,120 @@ export function MethodologyLibraryPage({
         ) : filtered.length === 0 ? (
           <div className="py-20 text-center text-muted-foreground/70">暂无内容</div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((m) => (
-              <article
-                key={m.id}
-                onClick={() => setSelected(m)}
-                className="group cursor-pointer"
-              >
-                <div className="relative bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-white/80 hover:border-border/60 hover:shadow-2xl hover:shadow-black/[0.04] hover:-translate-y-1">
-                  {/* 封面区域 */}
-                  <div className="relative aspect-[16/10] bg-gradient-to-br from-primary/[0.03] to-accent/[0.03] overflow-hidden">
-                    {m.coverImage ? (
-                      <img
-                        src={m.coverImage}
-                        alt={m.title}
-                        className="absolute inset-0 w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <FileText className="w-16 h-16 text-primary/10" />
+          <>
+            {viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filtered.map((m) => (
+                  <article
+                    key={m.id}
+                    onClick={() => setSelected(m)}
+                    className="group cursor-pointer"
+                  >
+                    <div className="relative bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-white/80 hover:border-border/60 hover:shadow-2xl hover:shadow-black/[0.04] hover:-translate-y-1">
+                      {/* 封面区域 */}
+                      <div className="relative aspect-[16/10] bg-gradient-to-br from-primary/[0.03] to-accent/[0.03] overflow-hidden">
+                        {m.coverImage ? (
+                          <img
+                            src={m.coverImage}
+                            alt={m.title}
+                            className="absolute inset-0 w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <FileText className="w-16 h-16 text-primary/10" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                          <span className="text-white text-[14px] font-medium">查看详情</span>
+                        </div>
                       </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                      <span className="text-white text-[14px] font-medium">查看详情</span>
-                    </div>
-                  </div>
 
-                  {/* 内容区域 */}
-                  <div className="p-6">
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      {(m.topics || []).slice(0, 2).map((t, idx) => (
-                        <span
-                          key={idx}
-                          className="px-3 py-1 rounded-full bg-primary/8 text-primary text-[11px] font-medium"
-                        >
-                          {t}
+                      {/* 内容区域 */}
+                      <div className="p-6">
+                        <div className="flex items-center gap-2 mb-3 flex-wrap">
+                          {(m.topics || []).slice(0, 2).map((t, idx) => (
+                            <span
+                              key={idx}
+                              className="px-3 py-1 rounded-full bg-primary/8 text-primary text-[11px] font-medium"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                          <span className="text-[12px] text-muted-foreground/50">{m.publishDate}</span>
+                        </div>
+
+                        <h3 className="text-[18px] font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors leading-[1.4]">
+                          {m.title}
+                        </h3>
+
+                        <p className="text-[14px] text-muted-foreground/70 line-clamp-2 leading-[1.6]">
+                          {m.excerpt}
+                        </p>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filtered.map((m) => (
+                  <div
+                    key={m.id}
+                    className="w-full group flex items-center gap-6 p-6 bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl hover:bg-white/80 hover:border-border/60 hover:shadow-lg hover:shadow-black/[0.04] transition-all cursor-pointer"
+                    onClick={() => setSelected(m)}
+                  >
+                    {/* 封面 */}
+                    <div className="w-32 h-20 rounded-[12px] overflow-hidden flex-shrink-0 bg-gradient-to-br from-primary/[0.03] to-accent/[0.03] relative">
+                      {m.coverImage ? (
+                        <img
+                          src={m.coverImage}
+                          alt={m.title}
+                          className="absolute inset-0 w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <FileText className="w-8 h-8 text-primary/20" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 内容 */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        {(m.topics || []).slice(0, 2).map((t, idx) => (
+                          <span
+                            key={idx}
+                            className="px-2.5 py-1 bg-primary/8 text-primary text-[11px] font-medium rounded-full"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                      <h3 className="font-medium text-[15px] text-foreground mb-1 truncate group-hover:text-primary transition-colors">
+                        {m.title}
+                      </h3>
+                      <p className="text-[13px] text-muted-foreground/70 line-clamp-1">
+                        {m.excerpt}
+                      </p>
+                    </div>
+
+                    {/* 元数据 */}
+                    <div className="flex flex-col items-end gap-1.5 text-[12px] text-muted-foreground/50 w-32">
+                      <span>{m.publishDate}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1">
+                          <Eye className="w-3 h-3" />
+                          {m.views?.toLocaleString?.() ? m.views.toLocaleString() : m.views}
                         </span>
-                      ))}
-                      <span className="text-[12px] text-muted-foreground/50">{m.publishDate}</span>
+                      </div>
                     </div>
-
-                    <h3 className="text-[18px] font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors leading-[1.4]">
-                      {m.title}
-                    </h3>
-
-                    <p className="text-[14px] text-muted-foreground/70 line-clamp-2 leading-[1.6] mb-4">
-                      {m.excerpt}
-                    </p>
                   </div>
-                </div>
-              </article>
-            ))}
-          </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
 

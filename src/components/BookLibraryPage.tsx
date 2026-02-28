@@ -9,18 +9,23 @@ import { useState, useEffect, useMemo } from 'react';
 export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id?: string) => void }) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTag, setSelectedTag] = useState<'all' | '战略' | '业务设计' | '组织' | 'AI 技术'>('all');
+  const [selectedTag, setSelectedTag] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [books, setBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const tagOptions: Array<{ id: 'all' | '战略' | '业务设计' | '组织' | 'AI 技术'; label: string }> = [
-    { id: 'all', label: '全部标签' },
-    { id: '战略', label: '战略' },
-    { id: '业务设计', label: '业务设计' },
-    { id: '组织', label: '组织' },
-    { id: 'AI 技术', label: 'AI 技术' },
-  ];
+  const tagOptions = useMemo(() => {
+    const tags = Array.from(
+      new Set(
+        books
+          .flatMap((b) => (b.topics || []) as any)
+          .map((t) => String(t).trim())
+          .filter(Boolean)
+      )
+    );
+    tags.sort((a, b) => a.localeCompare(b, 'zh'));
+    return [{ id: 'all', label: '全部标签' }, ...tags.map((t) => ({ id: t, label: t }))];
+  }, [books]);
 
   useEffect(() => {
     const loadData = () => {
@@ -70,7 +75,7 @@ const filteredBooks = useMemo(() => {
         book.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         book.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (book.topics || []).some((t: string) => t.toLowerCase().includes(searchQuery.toLowerCase()));
-      const matchesTag = selectedTag === 'all' || (book.topics || []).includes(selectedTag);
+      const matchesTag = selectedTag === 'all' || (book.topics || []).map(String).includes(String(selectedTag));
       const year = String(book.publishDate || book.updatedAt || "").slice(0, 4);
       const matchesYear = selectedYear === 'all' || (year && year === selectedYear);
       return matchesSearch && matchesTag && matchesYear;
@@ -146,7 +151,7 @@ const filteredBooks = useMemo(() => {
               <Filter className="w-4 h-4 text-muted-foreground/50" />
               <select
                 value={selectedTag}
-                onChange={(e) => setSelectedTag(e.target.value as any)}
+                onChange={(e) => setSelectedTag(e.target.value)}
                 className="px-4 py-2.5 bg-muted/50 border border-border/60 rounded-full text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all cursor-pointer"
               >
                 {tagOptions.map((opt) => (
@@ -277,7 +282,7 @@ const filteredBooks = useMemo(() => {
             {filteredBooks.map((book) => (
               <div
                 key={book.id}
-                className="group flex items-center gap-6 p-5 hover:bg-muted/20 transition-colors cursor-pointer rounded-2xl"
+                className="w-full group flex items-center gap-6 p-6 bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl hover:bg-white/80 hover:border-border/60 hover:shadow-lg hover:shadow-black/[0.04] transition-all cursor-pointer"
                 onClick={() => {
                   if (onNavigate) onNavigate('book-reader', book.id);
                   else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(book.id)}`);
