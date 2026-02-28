@@ -45,6 +45,7 @@ export function UserManagementPage() {
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [topTab, setTopTab] = useState<'member-db' | 'permissions'>('member-db');
 
   // 加载数据
   useEffect(() => {
@@ -212,6 +213,28 @@ export function UserManagementPage() {
 
   return (
     <div className="space-y-6">
+      {/* 顶层 Tab（会员数据库 / 权限管理） */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2 inline-flex gap-2">
+        <button
+          onClick={() => setTopTab('member-db')}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+            topTab === 'member-db' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          会员数据库
+        </button>
+        <button
+          onClick={() => setTopTab('permissions')}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+            topTab === 'permissions' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          权限管理
+        </button>
+      </div>
+
+      {topTab === 'member-db' && (
+      <>
       {/* 消息提示 */}
       {message && (
         <div className={`p-4 rounded-xl flex items-center gap-2 ${
@@ -714,6 +737,37 @@ export function UserManagementPage() {
                 <Save className="w-5 h-5" />
                 保存
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      </>
+      )}
+
+      {topTab === 'permissions' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">权限管理</h3>
+            <p className="text-sm text-gray-500 mb-4">这里先完成前端结构调整：后续将接入服务端权限策略与实时判权结果。</p>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-500 border-b border-gray-100">
+                    <th className="py-3 pr-6">资源</th>
+                    <th className="py-3 pr-6">Guest</th>
+                    <th className="py-3 pr-6">User</th>
+                    <th className="py-3 pr-6">Member</th>
+                    <th className="py-3 pr-6">Companion</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-800">
+                  <tr className="border-b border-gray-50"><td className="py-3 pr-6">article</td><td>预览20%</td><td>预览20%</td><td>全文</td><td>全文</td></tr>
+                  <tr className="border-b border-gray-50"><td className="py-3 pr-6">book</td><td>不可见</td><td>预览20%</td><td>全文</td><td>全文</td></tr>
+                  <tr className="border-b border-gray-50"><td className="py-3 pr-6">report</td><td>摘要</td><td>摘要</td><td>全文</td><td>全文</td></tr>
+                  <tr className="border-b border-gray-50"><td className="py-3 pr-6">download</td><td>不可下载</td><td>不可下载</td><td>允许</td><td>允许</td></tr>
+                  <tr><td className="py-3 pr-6">companion</td><td>不可见</td><td>不可见</td><td>不可见</td><td>仅本机构</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
