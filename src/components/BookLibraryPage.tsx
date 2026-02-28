@@ -9,12 +9,13 @@ import { useState, useEffect, useMemo } from 'react';
 export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id?: string) => void }) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTopic, setSelectedTopic] = useState<'all' | '战略' | '业务设计' | '组织' | 'AI 技术'>('all');
+  const [selectedTag, setSelectedTag] = useState<'all' | '战略' | '业务设计' | '组织' | 'AI 技术'>('all');
+  const [selectedYear, setSelectedYear] = useState<string>('all');
   const [books, setBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const topicOptions: Array<{ id: 'all' | '战略' | '业务设计' | '组织' | 'AI 技术'; label: string }> = [
-    { id: 'all', label: '全部' },
+  const tagOptions: Array<{ id: 'all' | '战略' | '业务设计' | '组织' | 'AI 技术'; label: string }> = [
+    { id: 'all', label: '全部标签' },
     { id: '战略', label: '战略' },
     { id: '业务设计', label: '业务设计' },
     { id: '组织', label: '组织' },
@@ -55,17 +56,26 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id
     };
   }, []);
 
-  const filteredBooks = useMemo(() => {
+  
+  const yearOptions = useMemo(() => {
+    const years = Array.from(new Set(books.map((b) => String((b as any).publishDate || (b as any).updatedAt || '').slice(0, 4)).filter(Boolean)));
+    years.sort((a, b) => (a < b ? 1 : -1));
+    return ['all', ...years];
+  }, [books]);
+
+const filteredBooks = useMemo(() => {
     return books.filter(book => {
       const matchesSearch = !searchQuery ||
         book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         book.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         book.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (book.topics || []).some((t: string) => t.toLowerCase().includes(searchQuery.toLowerCase()));
-      const matchesTopic = selectedTopic === 'all' || (book.topics || []).includes(selectedTopic);
-      return matchesSearch && matchesTopic;
+      const matchesTag = selectedTag === 'all' || (book.topics || []).includes(selectedTag);
+      const year = String(book.publishDate || book.updatedAt || "").slice(0, 4);
+      const matchesYear = selectedYear === 'all' || (year && year === selectedYear);
+      return matchesSearch && matchesTag && matchesYear;
     });
-  }, [books, searchQuery, selectedTopic]);
+  }, [books, searchQuery, selectedTag, selectedYear]);
 
   const handleRefresh = () => {
     setIsLoading(true);
@@ -135,13 +145,25 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-muted-foreground/50" />
               <select
-                value={selectedTopic}
-                onChange={(e) => setSelectedTopic(e.target.value as any)}
+                value={selectedTag}
+                onChange={(e) => setSelectedTag(e.target.value as any)}
                 className="px-4 py-2.5 bg-muted/50 border border-border/60 rounded-full text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all cursor-pointer"
               >
-                {topicOptions.map((opt) => (
+                {tagOptions.map((opt) => (
                   <option key={opt.id} value={opt.id}>
-                    {opt.id === 'all' ? '全部话题' : opt.label}
+                    {opt.id === 'all' ? '全部标签' : opt.label}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="px-4 py-2.5 bg-muted/50 border border-border/60 rounded-full text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all cursor-pointer"
+              >
+                {yearOptions.map((y) => (
+                  <option key={y} value={y}>
+                    {y === 'all' ? '全部年份' : y}
                   </option>
                 ))}
               </select>
@@ -240,18 +262,18 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id
           </div>
         ) : (
           /* List View */
-          <div className="space-y-4">
+          <div className="space-y-2">
             {filteredBooks.map((book) => (
-              <article
+              <div
                 key={book.id}
-                className="bg-white/80 backdrop-blur-sm rounded-[20px] border border-border/40 p-6 flex gap-6 cursor-pointer group hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
+                className="group flex items-center gap-6 p-5 hover:bg-muted/20 transition-colors cursor-pointer rounded-2xl"
                 onClick={() => {
                   if (onNavigate) onNavigate('book-reader', book.id);
                   else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(book.id)}`);
                 }}
               >
-                {/* Cover */}
-                <div className={`w-32 h-44 flex-shrink-0 rounded-[14px] bg-gradient-to-br ${book.coverColor || 'from-primary/20 to-accent/10'} flex items-center justify-center text-white text-4xl font-bold shadow-lg overflow-hidden relative`}>
+                {/* 封面 */}
+                <div className="w-32 h-20 rounded-[12px] overflow-hidden flex-shrink-0 bg-gradient-to-br from-primary/[0.03] to-accent/[0.03] relative">
                   {book.coverImage ? (
                     <img
                       src={book.coverImage}
@@ -260,53 +282,43 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id
                       loading="lazy"
                     />
                   ) : (
-                    book.title.charAt(0)
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <BookOpen className="w-8 h-8 text-primary/20" />
+                    </div>
                   )}
                 </div>
 
-                {/* Content */}
+                {/* 内容 */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-[18px] font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    {(book.topics || []).slice(0, 2).map((t, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2.5 py-1 bg-primary/8 text-primary text-[11px] font-medium rounded-full"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                  <h3 className="font-medium text-[15px] text-foreground mb-1 truncate group-hover:text-primary transition-colors">
                     {book.title}
                   </h3>
-                  <p className="text-[14px] text-muted-foreground/70 mb-3">{book.author}</p>
-                  <p className="text-[14px] text-muted-foreground/80 mb-4 line-clamp-2 leading-relaxed">
+                  <p className="text-[13px] text-muted-foreground/70 line-clamp-1">
                     {book.description}
                   </p>
+                </div>
 
-                  {/* Meta */}
-                  <div className="flex items-center gap-6 text-[13px] text-muted-foreground/50">
-                    <span className="flex items-center gap-1.5">
-                      <Clock className="w-4 h-4" />
-                      {book.duration}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <BookOpen className="w-4 h-4" />
-                      {book.pages}页
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                      {book.rating}
+                {/* 元数据 */}
+                <div className="flex flex-col items-end gap-1.5 text-[12px] text-muted-foreground/50 w-32">
+                  <span>{book.publishDate}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1">
+                      <Eye className="w-3 h-3" />
+                      {book.views?.toLocaleString?.() ? book.views.toLocaleString() : book.views}
                     </span>
                   </div>
                 </div>
-
-                {/* Action */}
-                <div className="flex-shrink-0 flex flex-col justify-center gap-3">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onNavigate) onNavigate('book-reader', book.id);
-                      else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(book.id)}`);
-                    }}
-                    className="px-5 py-2.5 rounded-full bg-primary/10 text-primary text-[14px] font-medium hover:bg-primary/20 transition-colors flex items-center gap-2"
-                  >
-                    <Eye className="w-4 h-4" />
-                    <span>查看详情</span>
-                  </button>
-                </div>
-              </article>
+              </div>
             ))}
           </div>
         )}
