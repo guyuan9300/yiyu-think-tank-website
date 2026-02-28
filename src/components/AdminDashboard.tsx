@@ -60,6 +60,8 @@ interface MenuItem {
 export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps) {
   const [activeMenu, setActiveMenu] = useState('dashboard');
 
+  const isEmbedded = new URLSearchParams(window.location.search).get('embed') === '1';
+
   // 支持从 URL hash 或临时会话参数直达指定后台模块（用于新 dashboard 跳转旧后台页面）
   useEffect(() => {
     const allowedMenus = new Set([
@@ -71,7 +73,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     const applyTargetMenu = () => {
       const fromHash = (window.location.hash || '').replace('#', '').trim();
       const fromSession = (sessionStorage.getItem('yiyu_admin_target_menu') || '').trim();
-      const target = fromSession || fromHash;
+      const fromQuery = (new URLSearchParams(window.location.search).get('legacyTab') || '').trim();
+      const target = fromQuery || fromSession || fromHash;
       if (allowedMenus.has(target)) {
         setActiveMenu(target);
       }
@@ -719,14 +722,15 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden">
       {/* 移动端菜单遮罩 */}
-      {isMobileMenuOpen && (
+      {!isEmbedded && isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
-      {/* 侧边栏 */}
+      {/* 侧边栏（嵌入模式下隐藏） */}
+      {!isEmbedded && (
       <aside className={`
         fixed lg:static inset-y-0 left-0 z-50
         bg-gradient-to-b from-gray-900 to-gray-800
@@ -789,24 +793,32 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         </nav>
 
       </aside>
+      )}
+
 
       {/* 主内容区 */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* 顶部栏 */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
           <div className="flex items-center gap-4">
+            {!isEmbedded && (
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
               className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
             >
               <Menu className="w-5 h-5" />
             </button>
+            )}
+
+            {!isEmbedded && (
             <button 
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="hidden lg:flex p-2 hover:bg-gray-100 rounded-lg"
             >
               <Menu className="w-5 h-5" />
             </button>
+            )}
+
             <h1 className="text-xl font-semibold text-gray-900">
               {menuItems.find(item => item.id === activeMenu)?.label || '管理后台'}
             </h1>

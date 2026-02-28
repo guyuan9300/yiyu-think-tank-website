@@ -2308,18 +2308,19 @@
         <div class="section-head">
           <div class="section-title">
             <h2 id="moduleTitle">模块</h2>
-            <p id="moduleSubtitle">新后台模块视图（替代旧后台页面跳转）</p>
+            <p id="moduleSubtitle">旧后台页面（iframe 承接）</p>
           </div>
           <div class="section-actions">
             <button class="btn btn--sm btn--outline" id="moduleBackBtn">返回数据概览</button>
-            <button class="btn btn--sm btn--primary">+ 新建</button>
           </div>
         </div>
-        <div class="section-body">
-          <div class="state-box">
-            <b id="moduleHintTitle">正在查看模块</b>
-            <p id="moduleHintDesc">这里是新后台内部承接区域，后续会把旧后台功能逐步迁移到这里。</p>
-          </div>
+        <div class="section-body" style="padding:0">
+          <iframe
+            id="legacyFrame"
+            title="Legacy Admin"
+            src=""
+            style="width:100%; height: calc(100vh - 140px); border:0; display:block; background:#fff;"
+          ></iframe>
         </div>
       </div>
     `;
@@ -2336,7 +2337,14 @@
       const meta = map[view] || { title: '数据概览', sub: '运营中枢' };
       if (pageTitleEl) pageTitleEl.textContent = meta.title;
 
-      if (view === 'dashboard') {
+            const legacyTabMap = {
+        'content/articles': 'insights',
+        'content/reports': 'reports',
+        'content/books': 'books',
+        'content/methods': 'methodologies',
+      };
+      const frame = document.getElementById('legacyFrame');
+if (view === 'dashboard') {
         allSections.forEach((s) => (s.style.display = 'block'));
         moduleView.style.display = 'none';
       } else {
@@ -2344,12 +2352,16 @@
         moduleView.style.display = 'block';
         const t = document.getElementById('moduleTitle');
         const st = document.getElementById('moduleSubtitle');
-        const ht = document.getElementById('moduleHintTitle');
-        const hd = document.getElementById('moduleHintDesc');
         if (t) t.textContent = meta.title;
         if (st) st.textContent = meta.sub;
-        if (ht) ht.textContent = `${meta.title} · 新后台页面`;
-        if (hd) hd.textContent = `你当前留在新后台内（未跳转旧页面）。下一步会在这里继续完善 ${meta.title} 的真实管理功能。`;
+
+        const tab = legacyTabMap[view] || 'insights';
+        const basePath = window.location.pathname.replace(/admin\.html$/, '');
+        const legacyUrl = `${window.location.origin}${basePath}?page=admin-legacy&legacyTab=${encodeURIComponent(tab)}&embed=1`;
+        if (frame) {
+          frame.src = 'about:blank';
+          setTimeout(() => { frame.src = legacyUrl; }, 0);
+        }
       }
     }
 
