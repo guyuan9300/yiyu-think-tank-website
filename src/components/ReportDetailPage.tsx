@@ -133,7 +133,7 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
       <Header onNavigate={(p) => onNavigate(p)} />
 
       {/* Hero 区域 - 左图右文布局 */}
-      <section className="relative pt-32 pb-20 px-6 overflow-hidden">
+      <section className="relative pt-24 sm:pt-32 pb-14 sm:pb-20 px-4 sm:px-6 overflow-hidden">
         {/* 微妙背景渐变 */}
         <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent" />
 
@@ -266,7 +266,7 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
       </section>
 
       {/* 内容区域 - 报告亮点 */}
-      <section className="py-20 px-6">
+      <section className="py-14 sm:py-20 px-4 sm:px-6">
         <div className="relative max-w-7xl mx-auto">
           {/* 亮点卡片 */}
           <div className="bg-white/60 backdrop-blur-sm rounded-3xl border border-border/40 p-10">
