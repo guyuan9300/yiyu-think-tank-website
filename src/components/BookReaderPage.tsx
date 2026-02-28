@@ -26,21 +26,8 @@ import {
   ThumbsUp,
   Share2,
 } from 'lucide-react';
+import { getBooks, type Book } from '../lib/dataService';
 import type { User } from '../lib/dataService';
-
-// 书籍详情接口
-interface BookDetail {
-  id: string;
-  title: string;
-  author: string;
-  subject: string;
-  duration: string;
-  publishDate: string;
-  guide: string;
-  takeaways: string[];
-  pdfUrl?: string;
-  coverColor?: string;
-}
 
 // AI对话消息接口
 interface ChatMessage {
@@ -118,6 +105,12 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
     };
   }, []);
 
+  // Keep total pages in sync with book metadata
+  useEffect(() => {
+    const pages = (book as any).pages;
+    if (typeof pages === 'number' && pages > 0) setTotalPages(pages);
+  }, [bookId]);
+
   // Mobile layout: avoid embedding PDF <object> (often blocks touch scrolling in WebView)
   // and avoid fixed-height containers that can make the page feel "stuck".
   useEffect(() => {
@@ -155,37 +148,40 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
 
   // 执行下载
   const handleDownload = () => {
-    if (book.pdfUrl) {
+    if ((book as any).fileUrl) {
       // 实际项目中，这里会调用真实的下载API
-      alert(`开始下载《${book.title}》PDF文件...\n\n文件: ${book.pdfUrl}`);
+      alert(`开始下载《${book.title}》PDF文件...\n\n文件: ${(book as any).fileUrl}`);
       // 模拟下载完成
-      console.log('PDF下载成功:', book.pdfUrl);
+      console.log('PDF下载成功:', (book as any).fileUrl);
     } else {
       alert('PDF文件暂未上传，无法下载');
     }
   };
 
-  // 书籍数据（后期从后台管理接入）
-  const booksDatabase: Record<string, BookDetail> = {
-    'shimeshiquanli': {
-      id: 'shimeshiquanli',
-      title: '什么是权力',
-      author: '李筠',
-      subject: '政治学通识',
-      duration: '60 min',
-      publishDate: '2026-02-26',
-      guide: '政治不是遥远的宏大叙事，而是发生在我们身边的真实关系。',
-      takeaways: [
-        '识别权力的三种来源',
-        '理解权力如何运作',
-        '形成现实判断框架'
-      ],
-      pdfUrl: `${import.meta.env.BASE_URL}docs/what-is-power.pdf`,
-      coverColor: 'from-blue-600 to-indigo-800'
-    }
-  };
-
-  const book = booksDatabase[bookId] || booksDatabase['shimeshiquanli'];
+  // 书籍数据：优先从 dataService 读取（统一 topics/updatedAt），没有则回退到内置示例
+  const bookFromStore: Book | undefined = getBooks().find((b) => b.id === bookId);
+  const book: Book = bookFromStore || ({
+    id: bookId,
+    title: '什么是权力',
+    author: '李筠',
+    description: '政治不是遥远的宏大叙事，而是发生在我们身边的真实关系。',
+    abstract: '政治不是遥远的宏大叙事，而是发生在我们身边的真实关系。',
+    topics: ['战略'],
+    pages: 328,
+    duration: '',
+    rating: 0,
+    coverImage: undefined,
+    coverColor: 'from-blue-600 to-indigo-800',
+    fileUrl: `${import.meta.env.BASE_URL}docs/what-is-power.pdf`,
+    fileSize: undefined,
+    publishDate: '2026-02-26',
+    status: 'published',
+    showOnHome: false,
+    views: 0,
+    reviews: 0,
+    createdAt: '2026-02-26',
+    updatedAt: '2026-02-26',
+  } as any);
 
   // 翻页控制
   const handlePageChange = (direction: 'prev' | 'next') => {
@@ -330,7 +326,7 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
               <div className="flex items-center gap-4 text-sm">
                 <span className="text-gray-600">作者：{book.author}</span>
                 <span className="text-gray-300">|</span>
-                <span className="text-gray-600">发布时间：{(book as any).publishDate || '—'}</span>
+                <span className="text-gray-600">发布时间：{(book as any).updatedAt || (book as any).publishDate || '—'}</span>
               </div>
             </div>
             
@@ -340,10 +336,10 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
           {/* 第2行：导读与收获 - 更紧凑 */}
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4">
             <p className="text-sm text-gray-700 italic mb-3">
-              "{book.guide}"
+              "{(book as any).abstract || (book as any).description || ''}"
             </p>
             <div className="flex flex-wrap gap-2">
-              {book.takeaways.map((t, index) => (
+              {((book as any).topics || []).map((t: string, index: number) => (
                 <span
                   key={index}
                   className="px-3 py-1 bg-white rounded-full text-xs text-gray-700 shadow-sm"
@@ -408,14 +404,14 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
 
           {/* PDF查看器 */}
           <div className={isMobile ? "w-full bg-white" : "flex-1 min-h-0 w-full bg-white"}>
-            {book.pdfUrl ? (
+            {(book as any).fileUrl ? (
               isMobile ? (
                 <div className="p-6">
                   <p className="text-sm text-gray-600 mb-4">
                     手机端为避免 PDF 预览组件拦截手势（导致无法下滑），这里改为使用系统自带的 PDF 查看器打开。
                   </p>
                   <a
-                    href={book.pdfUrl}
+                    href={(book as any).fileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -426,7 +422,7 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
                 </div>
               ) : (
                 <object
-                  data={`${book.pdfUrl}#view=FitH`}
+                  data={`${(book as any).fileUrl}#view=FitH`}
                   type="application/pdf"
                   className="w-full h-full"
                   style={{ width: '100%', height: '100%', display: 'block' }}
