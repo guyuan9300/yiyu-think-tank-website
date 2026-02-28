@@ -164,40 +164,11 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
                 className="w-full h-full object-cover"
               />
             </div>
-            <span className="text-white text-xl font-semibold">益语智库</span>
-          </div>
-          
-          
-          {/* 内容访问权限说明（面向用户的版本） */}
-          <div className="w-full max-w-xl mx-auto"> 
-            <div className="rounded-3xl bg-white/10 border border-white/20 backdrop-blur-sm p-8"> 
-              <h2 className="text-white text-[18px] font-semibold">内容访问权限说明</h2>
-              <div className="mt-5 space-y-4">
-                <div>
-                  <div className="text-white/90 font-medium">访客（未注册）</div>
-                  <ul className="mt-2 space-y-2 text-white/80 text-[14px]">
-                    <li className="flex gap-2"><span className="text-white/90">✓</span><span>可浏览大部分公开内容</span></li>
-                    <li className="flex gap-2"><span className="text-white/90">✓</span><span>不含前沿洞察/战略陪伴里的报告全文</span></li>
-                  </ul>
-                </div>
-                <div className="pt-4 border-t border-white/15">
-                  <div className="text-white/90 font-medium">注册会员（未付费）</div>
-                  <ul className="mt-2 space-y-2 text-white/80 text-[14px]">
-                    <li className="flex gap-2"><span className="text-white/90">✓</span><span>在访客基础上解锁更多内容入口</span></li>
-                    <li className="flex gap-2"><span className="text-white/90">✓</span><span>可预览各类报告前 20%</span></li>
-                  </ul>
-                </div>
-                <div className="pt-4 border-t border-white/15">
-                  <div className="text-white/90 font-medium">付费会员（298元/年）</div>
-                  <ul className="mt-2 space-y-2 text-white/80 text-[14px]">
-                    <li className="flex gap-2"><span className="text-white/90">✓</span><span>可查看所有内容</span></li>
-                    <li className="flex gap-2"><span className="text-white/90">✓</span><span>含报告全文与战略陪伴资源</span></li>
-                  </ul>
-                </div>
-              </div>
+            <div className="flex flex-col">
+              <span className="text-white text-xl font-semibold leading-tight">益语智库</span>
+              <span className="text-white/70 text-[13px] mt-1">提供可落地的增长咨询</span>
             </div>
           </div>
-
         </div>
         
         {/* Footer */}

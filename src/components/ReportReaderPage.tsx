@@ -524,10 +524,13 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
       {isVisitor && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div className="relative w-[92%] max-w-md rounded-3xl bg-white/90 backdrop-blur-xl border border-white/60 shadow-2xl p-6">
-            <div className="text-[18px] font-semibold text-gray-900 mb-2">请注册/登录，以解锁益语前沿报告</div>
-            <div className="text-[14px] text-gray-600 leading-relaxed mb-5">登录后可查看报告详情与内容。</div>
-            <div className="flex items-center gap-3">
+          <div className="relative w-[92%] max-w-lg rounded-[28px] bg-white/92 backdrop-blur-xl border border-white/60 shadow-2xl p-7 sm:p-8">
+            <div className="text-center">
+              <div className="text-[18px] sm:text-[20px] font-semibold text-gray-900 mb-2">请注册/登录，以解锁益语前沿报告</div>
+              <div className="text-[14px] text-gray-600 leading-relaxed mb-6">登录后可查看报告详情与内容。</div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 onClick={() => {
                   const params = new URLSearchParams(window.location.search);
@@ -535,7 +538,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
                   params.delete('id');
                   window.location.href = `${window.location.pathname}?${params.toString()}`;
                 }}
-                className="flex-1 px-4 py-3 rounded-2xl bg-green-600 text-white text-[15px] font-medium hover:bg-green-700 transition"
+                className="w-full px-4 py-3 rounded-2xl bg-green-600 text-white text-[15px] font-medium hover:bg-green-700 transition"
               >
                 去登录/注册
               </button>
@@ -546,7 +549,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
                   params.delete('id');
                   window.location.href = `${window.location.pathname}?${params.toString()}`;
                 }}
-                className="px-4 py-3 rounded-2xl bg-white text-gray-700 text-[15px] font-medium border border-gray-200 hover:bg-gray-50 transition"
+                className="w-full px-4 py-3 rounded-2xl bg-white text-gray-700 text-[15px] font-medium border border-gray-200 hover:bg-gray-50 transition"
               >
                 返回
               </button>
