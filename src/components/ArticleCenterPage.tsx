@@ -62,17 +62,6 @@ function ArticleCardGrid({ article, onClick }: { article: InsightArticle; onClic
             {article.excerpt}
           </p>
 
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {(article.topics || []).slice(0, 3).map((tag: string, index: number) => (
-              <span
-                key={index}
-                className="px-2.5 py-1 rounded-full bg-muted/40 text-muted-foreground/60 text-[11px]"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-
           <div className="flex items-center justify-between pt-4 border-t border-border/30 text-[12px] text-muted-foreground/50">
             <span>{article.publishDate}</span>
             <div className="flex items-center gap-3">
