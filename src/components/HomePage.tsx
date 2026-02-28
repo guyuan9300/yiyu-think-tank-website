@@ -58,7 +58,7 @@ function TopicCard({ id, name, description, icon: Icon, color, updates, onClick 
   return (
     <button
       onClick={onClick}
-      className="min-w-[280px] p-6 rounded-[20px] bg-white/80 backdrop-blur-sm border border-border/40 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 text-left"
+      className="w-full sm:min-w-[280px] p-5 sm:p-6 rounded-[18px] sm:rounded-[20px] bg-white/80 backdrop-blur-sm border border-border/40 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 text-left"
     >
       <div className="flex items-start justify-between mb-4">
         <div className={`w-10 h-10 rounded-[12px] bg-gradient-to-br ${color} flex items-center justify-center shadow-sm transition-transform duration-300 group-hover:scale-110`}>
@@ -140,7 +140,7 @@ function ModuleCard({ icon, title, subtitle, description, gradient, onMouseEnter
     <div
       onMouseEnter={onMouseEnter}
       onClick={onClick}
-      className={`group p-8 rounded-[24px] bg-white/80 backdrop-blur-sm border border-border/40 ${hoverBorder} transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 cursor-pointer hover:bg-primary hover:border-primary/30`}
+      className={`group p-6 sm:p-8 rounded-[22px] sm:rounded-[24px] bg-white/80 backdrop-blur-sm border border-border/40 ${hoverBorder} transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 cursor-pointer hover:bg-primary hover:border-primary/30`}
     >
       <div className={`w-14 h-14 rounded-[16px] bg-gradient-to-br ${gradient} flex items-center justify-center mb-6 transition-all duration-300 group-hover:scale-110 shadow-sm group-hover:bg-white/20 group-hover:backdrop-blur-sm`}
       >
@@ -384,7 +384,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
       {/* Hero Section - Apple Style with Depth */}
       <section 
         ref={heroRef}
-        className="relative pt-24 sm:pt-32 pb-20 sm:pb-28 px-4 sm:px-6 lg:px-8 overflow-hidden"
+        className="relative pt-16 sm:pt-32 pb-14 sm:pb-28 px-4 sm:px-6 lg:px-8 overflow-hidden"
       >
         {/* Sophisticated Background Layers */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/4 via-transparent to-accent/4" />
@@ -436,7 +436,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
       {/* 首页：按需求隐藏「免费预约组织诊断」后到「战略陪伴」前的内容（3张跳转卡片 / 热门内容 / 战略前沿报告） */}
 
       {/* 最新内容 */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8">
+      <section className="py-14 sm:py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center max-w-3xl mx-auto">
             <h2 className="text-[32px] font-semibold tracking-tight mb-3 text-foreground">最新内容</h2>
@@ -610,7 +610,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
 
       {/* Strategy Companion - Apple Liquid Glass */}
       <section 
-        className="py-24 px-4 sm:px-6 lg:px-8"
+        className="py-14 sm:py-24 px-4 sm:px-6 lg:px-8"
       >
         <div className="max-w-[1200px] mx-auto">
           {/* Section Header - Value Proposition */}
@@ -687,7 +687,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
       </section>
 
       {/* Trust Indicators - Minimal */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-transparent to-muted/8">
+      <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-transparent to-muted/8">
         <div className="max-w-[1200px] mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <TrustItem number="200+" label="服务企业" />
