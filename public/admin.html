@@ -2333,7 +2333,7 @@
       const meta = map[view] || { title: '数据概览', sub: '运营中枢' };
       if (pageTitleEl) pageTitleEl.textContent = meta.title;
 
-            const legacyTabMap = {
+      const legacyTabMap = {
         'content/articles': 'insights',
         'content/reports': 'reports',
         'content/books': 'books',
@@ -2341,16 +2341,12 @@
         'comments': 'comments',
       };
       const frame = document.getElementById('legacyFrame');
-if (view === 'dashboard') {
+      if (view === 'dashboard') {
         allSections.forEach((s) => (s.style.display = 'block'));
         moduleView.style.display = 'none';
       } else {
         allSections.forEach((s) => (s.style.display = 'none'));
         moduleView.style.display = 'block';
-        const t = document.getElementById('moduleTitle');
-        const st = document.getElementById('moduleSubtitle');
-        if (t) t.textContent = meta.title;
-        if (st) st.textContent = meta.sub;
 
         const tab = legacyTabMap[view] || 'insights';
         const basePath = window.location.pathname.replace(/admin\.html$/, '');
@@ -2361,15 +2357,6 @@ if (view === 'dashboard') {
         }
       }
     }
-
-    moduleView.addEventListener('click', (e) => {
-      const btn = e.target.closest('#moduleBackBtn');
-      if (!btn) return;
-      setAdminView('dashboard');
-      $$('.nav__item').forEach(i => i.classList.remove('is-active'));
-      const dashboardNav = document.querySelector('.nav__item[data-jump="dashboard"]');
-      if (dashboardNav) dashboardNav.classList.add('is-active');
-    });
 
     function handleJump(target) {
       if (target === 'logout') {
