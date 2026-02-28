@@ -15,8 +15,9 @@ const MOCK_USERS = [
   { email: 'user@example.com', password: 'user123' },
 
   // 注意：当前项目为纯前端联调模式（无后端鉴权），任何写在代码里的账号/密码都会被公开。
-  // 该账号仅用于测试“普通会员”权限流程。
-  { email: '13631445251@phone.local', password: 'immomobot' },
+  // 这些账号仅用于测试不同会员等级的权限流程。
+  { email: '13631445251@phone.local', password: 'immomobot' }, // 普通会员
+  { email: '18027370767@phone.local', password: 'imdoubaobot' }, // 黄金会员
 ];
 
 type LoginMode = 'email' | 'phone';
