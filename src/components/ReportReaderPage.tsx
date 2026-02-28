@@ -343,7 +343,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
           </div>
 
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6">
-            <p className="text-lg text-gray-700 italic mb-4">
+            <p className="text-[16px] sm:text-[17px] text-gray-700 italic mb-4">
               "{report.summary}"
             </p>
             <div className="flex flex-wrap gap-2">
