@@ -382,17 +382,6 @@ export function MethodologyLibraryPage({
                     <p className="text-[14px] text-muted-foreground/70 line-clamp-2 leading-[1.6] mb-4">
                       {m.excerpt}
                     </p>
-
-                    <div className="flex flex-wrap gap-1.5">
-                      {(m.topics || []).slice(0, 3).map((tag: string, index: number) => (
-                        <span
-                          key={index}
-                          className="px-2.5 py-1 rounded-full bg-muted/40 text-muted-foreground/60 text-[11px]"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
                   </div>
                 </div>
               </article>
