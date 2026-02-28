@@ -318,24 +318,22 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
             <span className="text-gray-900">详情</span>
           </div>
           {/* 第1行：书名、作者信息、下载按钮 */}
-          <div className="flex items-center justify-between gap-6 mb-3">
-            <div className="flex items-center gap-6 flex-1">
-              <h1 className="text-2xl font-bold text-gray-900">
+          <div className="flex items-center justify-between gap-6 mb-4">
+            <div className="flex flex-col gap-2 flex-1">
+              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
                 {book.title}
               </h1>
-              <div className="flex items-center gap-4 text-sm">
+              <div className="flex flex-wrap items-center gap-3 text-sm">
                 <span className="text-gray-600">作者：{book.author}</span>
                 <span className="text-gray-300">|</span>
-                <span className="text-gray-600">发布时间：{(book as any).updatedAt || (book as any).publishDate || '—'}</span>
+                <span className="text-gray-600">发布时间：{String((book as any).updatedAt || (book as any).publishDate || '').split('T')[0] || '—'}</span>
               </div>
             </div>
-            
-
           </div>
 
           {/* 第2行：导读与收获 - 更紧凑 */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4">
-            <p className="text-sm text-gray-700 italic mb-3">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6">
+            <p className="text-[15px] text-gray-700 italic mb-4">
               "{(book as any).abstract || (book as any).description || ''}"
             </p>
             <div className="flex flex-wrap gap-2">
