@@ -320,7 +320,12 @@
       5) Command Bar
     ========================== */
     .command-bar{
-      display: none;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(247,248,251,0.92);
+      backdrop-filter: saturate(140%) blur(10px);
+      border-bottom: 1px solid rgba(233,236,242,0.9);
     }
     .command-bar__inner{
       max-width: var(--container-max);
@@ -2304,21 +2309,12 @@
     moduleView.style.display = 'none';
     moduleView.innerHTML = `
       <div class="section-card" data-state="ready">
-        <div class="section-head">
-          <div class="section-title">
-            <h2 id="moduleTitle">模块</h2>
-            <p id="moduleSubtitle">旧后台页面（iframe 承接）</p>
-          </div>
-          <div class="section-actions">
-            <button class="btn btn--sm btn--outline" id="moduleBackBtn">返回数据概览</button>
-          </div>
-        </div>
         <div class="section-body" style="padding:0">
           <iframe
             id="legacyFrame"
             title="Legacy Admin"
             src=""
-            style="width:100%; height: calc(100vh - 140px); border:0; display:block; background:#fff;"
+            style="width:100%; height: calc(100vh - 88px); border:0; display:block; background:#fff;"
           ></iframe>
         </div>
       </div>

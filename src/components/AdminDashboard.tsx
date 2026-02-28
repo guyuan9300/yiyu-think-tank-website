@@ -798,26 +798,23 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
       {/* 主内容区 */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        {/* 顶部栏 */}
+        {/* 顶部栏（嵌入模式下隐藏，避免双层表头） */}
+        {!isEmbedded && (
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
           <div className="flex items-center gap-4">
-            {!isEmbedded && (
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
               className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
             >
               <Menu className="w-5 h-5" />
             </button>
-            )}
 
-            {!isEmbedded && (
             <button 
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="hidden lg:flex p-2 hover:bg-gray-100 rounded-lg"
             >
               <Menu className="w-5 h-5" />
             </button>
-            )}
 
             <h1 className="text-xl font-semibold text-gray-900">
               {menuItems.find(item => item.id === activeMenu)?.label || '管理后台'}
@@ -867,6 +864,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
             </div>
           </div>
         </header>
+        )}
 
         {/* 页面内容（自适应全屏 + 可滚动） */}
         <main className="flex-1 min-h-0 p-6 overflow-auto">
