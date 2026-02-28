@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
-import { AccessInfoCard } from './AccessInfoCard';
 import {
   ArrowLeft,
   Eye,
@@ -27,6 +26,22 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
   const [isLoading, setIsLoading] = useState(true);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [downloadFeedback, setDownloadFeedback] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // 监听登录状态（访客 gating 用）
+  useEffect(() => {
+    const check = () => {
+      const userStr = (localStorage.getItem('yiyu_current_user') ?? sessionStorage.getItem('yiyu_current_user'));
+      setIsLoggedIn(Boolean(userStr));
+    };
+    check();
+    window.addEventListener('storage', check);
+    window.addEventListener('yiyu_user_updated', check as any);
+    return () => {
+      window.removeEventListener('storage', check);
+      window.removeEventListener('yiyu_user_updated', check as any);
+    };
+  }, []);
 
   // 加载报告数据
   useEffect(() => {
@@ -107,6 +122,8 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
     window.setTimeout(() => setDownloadFeedback(null), 3500);
   };
 
+  const isVisitor = !isLoggedIn;
+
   if (!report) {
     return (
       <div className="min-h-screen bg-background">
@@ -133,7 +150,7 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
       <Header onNavigate={(p) => onNavigate(p)} />
 
       {/* Hero 区域 - 左图右文布局 */}
-      <section className="relative pt-24 sm:pt-32 pb-14 sm:pb-20 px-4 sm:px-6 overflow-hidden">
+      <section className={`relative pt-24 sm:pt-32 pb-14 sm:pb-20 px-4 sm:px-6 overflow-hidden ${isVisitor ? "blur-sm pointer-events-none select-none" : ""}`}>
         {/* 微妙背景渐变 */}
         <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent" />
 
@@ -224,11 +241,6 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
                 ))}
               </div>
 
-              {/* Access rule card (always visible) */}
-              <div className="mb-7">
-                <AccessInfoCard compact />
-              </div>
-
               {/* 操作按钮 */}
               <div className="flex flex-wrap items-center gap-4">
                 <button
@@ -266,7 +278,7 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
       </section>
 
       {/* 内容区域 - 报告亮点 */}
-      <section className="py-14 sm:py-20 px-4 sm:px-6">
+      <section className={`py-14 sm:py-20 px-4 sm:px-6 ${isVisitor ? "blur-sm pointer-events-none select-none" : ""}`}>
         <div className="relative max-w-7xl mx-auto">
           {/* 亮点卡片 */}
           <div className="bg-white/60 backdrop-blur-sm rounded-3xl border border-border/40 p-10">
@@ -331,6 +343,31 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
         </div>
       </section>
 
+
+
+      {isVisitor && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="relative w-[92%] max-w-md rounded-3xl bg-white/90 backdrop-blur-xl border border-white/60 shadow-2xl p-6">
+            <div className="text-[18px] font-semibold text-foreground mb-2">请注册/登录，以解锁益语前沿报告</div>
+            <div className="text-[14px] text-muted-foreground/70 leading-relaxed mb-5">登录后可查看报告详情与内容。</div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => onNavigate('login')}
+                className="flex-1 px-4 py-3 rounded-2xl bg-primary text-primary-foreground text-[15px] font-medium hover:bg-primary/90 transition"
+              >
+                去登录/注册
+              </button>
+              <button
+                onClick={() => onNavigate('report-library')}
+                className="px-4 py-3 rounded-2xl bg-muted/40 text-muted-foreground/80 text-[15px] font-medium hover:bg-muted/60 transition"
+              >
+                返回
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <Footer onNavigate={(p) => onNavigate(p)} />
     </div>
   );
