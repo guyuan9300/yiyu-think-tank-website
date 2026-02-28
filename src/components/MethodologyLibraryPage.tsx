@@ -142,17 +142,6 @@ export function MethodologyLibraryPage({
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
 
                 <div className="absolute inset-x-0 bottom-0 p-6 sm:p-10">
-                  <div className="flex items-center gap-2 mb-4 flex-wrap">
-                    {(selected.topics || []).slice(0, 3).map((t, idx) => (
-                      <span
-                        key={idx}
-                        className="px-3 py-1 rounded-full bg-white/75 text-foreground text-[12px] font-medium border border-white/50"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-
                   <h1 className="text-white text-[28px] sm:text-[38px] font-semibold leading-[1.2] tracking-tight">
                     {selected.title}
                   </h1>
@@ -160,63 +149,35 @@ export function MethodologyLibraryPage({
                   <p className="mt-3 text-white/85 text-[14px] max-w-3xl line-clamp-2">
                     {selected.excerpt}
                   </p>
+                </div>
+              </div>
 
-                  <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[12px] text-white/75">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        <span>{selected.publishDate}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Eye className="w-4 h-4" />
-                        <span>{selected.views.toLocaleString?.() ? selected.views.toLocaleString() : selected.views}</span>
-                      </div>
-                    </div>
-
+              {/* Meta row (match Article cover) */}
+              <div className="px-6 sm:px-8 py-5 sm:py-6 bg-white/45 backdrop-blur-xl">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-muted-foreground/70">
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setIsBookmarked(!isBookmarked)}
-                        className={`px-3 py-2 rounded-full text-[13px] font-medium border transition ${
-                          isBookmarked
-                            ? 'bg-amber-500/10 text-amber-100 border-amber-200/40'
-                            : 'bg-white/15 text-white border-white/30 hover:bg-white/20'
-                        }`}
-                        title="收藏"
-                      >
-                        <span className="inline-flex items-center gap-2">
-                          <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
-                          收藏
-                        </span>
-                      </button>
-
-                      <button
-                        onClick={async () => {
-                          const base = window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, '');
-                          const shareUrl = `${base}/?page=methodology-library`;
-                          try {
-                            await navigator.clipboard.writeText(shareUrl);
-                            alert('已复制分享链接');
-                          } catch {
-                            window.prompt('复制下面链接分享到微信/朋友圈：', shareUrl);
-                          }
-                        }}
-                        className="px-3 py-2 rounded-full bg-white/15 text-white border border-white/30 hover:bg-white/20 transition text-[13px] font-medium"
-                        title="分享到朋友圈"
-                      >
-                        <span className="inline-flex items-center gap-2">
-                          <Share2 className="w-4 h-4" />
-                          分享
-                        </span>
-                      </button>
-
-                      <button
-                        onClick={() => setSelected(null)}
-                        className="px-3 py-2 rounded-full bg-white/15 text-white border border-white/30 hover:bg-white/20 transition text-[13px] font-medium"
-                      >
-                        ← 返回列表
-                      </button>
+                      <Calendar className="w-4 h-4" />
+                      <span>{selected.publishDate}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Eye className="w-4 h-4" />
+                      <span>{selected.views.toLocaleString?.() ? selected.views.toLocaleString() : selected.views}</span>
                     </div>
                   </div>
+
+                  {selected.topics?.length ? (
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {selected.topics.map((topic: string, index: number) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1.5 rounded-full bg-white/60 text-muted-foreground/80 text-[12px] border border-border/40 hover:bg-white/80 transition-colors"
+                        >
+                          {topic}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>
