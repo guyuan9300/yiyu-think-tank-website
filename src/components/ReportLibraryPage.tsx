@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
-import { AccessInfoCard } from './AccessInfoCard';
 import {
   FileText,
   Search,
@@ -305,10 +304,6 @@ export function ReportLibraryPage({
             汇集行业研究报告、市场分析和政策解读，助力科学决策
           </p>
 
-          {/* Access rule card (always visible) */}
-          <div className="mt-10 max-w-4xl">
-            <AccessInfoCard />
-          </div>
         </div>
       </section>
 
