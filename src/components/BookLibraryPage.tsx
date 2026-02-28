@@ -152,11 +152,11 @@ const filteredBooks = useMemo(() => {
               <select
                 value={selectedTag}
                 onChange={(e) => setSelectedTag(e.target.value)}
-                className="px-4 py-2.5 bg-muted/50 border border-border/60 rounded-full text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all cursor-pointer"
+                className="px-4 py-2.5 bg-muted/50 border border-border/60 rounded-full text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all cursor-pointer min-w-[120px]"
               >
                 {tagOptions.map((opt) => (
-                  <option key={opt.id} value={opt.id}>
-                    {opt.id === 'all' ? '全部标签' : opt.label}
+                  <option key={String(opt.id)} value={String(opt.id)}>
+                    {String(opt.id) === 'all' ? '全部标签' : String((opt as any).label ?? opt.id)}
                   </option>
                 ))}
               </select>
@@ -164,11 +164,11 @@ const filteredBooks = useMemo(() => {
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(e.target.value)}
-                className="px-4 py-2.5 bg-muted/50 border border-border/60 rounded-full text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all cursor-pointer"
+                className="px-4 py-2.5 bg-muted/50 border border-border/60 rounded-full text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all cursor-pointer min-w-[120px]"
               >
                 {yearOptions.map((y) => (
-                  <option key={y} value={y}>
-                    {y === 'all' ? '全部年份' : y}
+                  <option key={String(y)} value={String(y)}>
+                    {String(y) === 'all' ? '全部年份' : String(y)}
                   </option>
                 ))}
               </select>
