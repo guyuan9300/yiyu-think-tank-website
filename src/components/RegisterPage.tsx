@@ -1,18 +1,15 @@
 import { useState } from 'react';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, User, Smartphone, CheckCircle } from 'lucide-react';
-import { WeChatLoginModal } from './WeChatLoginModal';
-import { WeChatIcon } from './WeChatIcon';
 import {
   sendSMSCode,
   sendEmailCode,
   registerWithPhone,
-  registerWithEmail,
-  loginWithWechat
+  registerWithEmail
 } from '../lib/auth';
 
 // NOTE: 邮箱验证邮件的跳转地址由 auth.ts 内的 emailRedirectTo 控制（需包含 BASE_URL 子路径）。
 
-type RegisterTab = 'phone' | 'email' | 'wechat';
+type RegisterTab = 'phone' | 'email';
 
 interface RegisterPageProps {
   onNavigate?: (page: 'login' | 'register' | 'home') => void;
@@ -40,14 +37,12 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [showWeChatModal, setShowWeChatModal] = useState(false);
   const [countdown, setCountdown] = useState(0);
 
   // Tab配置
   const tabs = [
     { id: 'phone' as RegisterTab, label: '手机注册', icon: Smartphone },
     { id: 'email' as RegisterTab, label: '邮箱注册', icon: Mail },
-    { id: 'wechat' as RegisterTab, label: '微信注册', icon: WeChatIcon },
   ];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,7 +123,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
     setSuccess('');
 
     // 验证表单
-    if (activeTab !== 'wechat') {
+    if (true) {
       if (formData.password.length < 8) {
         setError('密码长度至少为8位');
         return;
@@ -153,7 +148,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
     setIsLoading(true);
 
     try {
-      let result;
+      let result: any;
 
       if (activeTab === 'phone') {
         result = await registerWithPhone(
@@ -169,9 +164,6 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
           formData.verifyCode,
           formData.nickname || undefined
         );
-      } else {
-        // 微信注册
-        result = await loginWithWechat('code_from_wechat');
       }
 
       if (result.success) {
@@ -413,30 +405,8 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
               </>
             )}
 
-            {/* 微信注册表单 */}
-            {activeTab === 'wechat' && (
-              <div className="py-10 text-center animate-fadeIn">
-                <div className="w-24 h-24 bg-[#07C160]/10 rounded-full flex items-center justify-center mx-auto mb-6 hover:scale-110 transition-transform duration-300">
-                  <div className="w-20 h-20 bg-[#07C160] rounded-full flex items-center justify-center shadow-lg shadow-[#07C160]/30">
-                    <WeChatIcon className="w-10 h-10 text-white" />
-                  </div>
-                </div>
-                <p className="text-muted-foreground mb-8 text-[15px]">
-                  使用微信注册，一键完成，方便快捷
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setShowWeChatModal(true)}
-                  className="px-8 py-4 bg-[#07C160] text-white rounded-2xl font-medium hover:bg-[#06AD56] hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-3 mx-auto shadow-lg shadow-[#07C160]/30 hover:shadow-xl"
-                >
-                  <WeChatIcon className="w-5 h-5" />
-                  微信一键注册
-                </button>
-              </div>
-            )}
-
             {/* 密码输入（手机和邮箱需要） */}
-            {activeTab !== 'wechat' && (
+            {true && (
               <>
                 <div className="animate-fadeInUp" style={{ animationDelay: '200ms' }}>
                   <label className="block text-sm font-medium text-foreground mb-2.5">
@@ -518,7 +488,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
             </div>
 
             {/* Submit Button */}
-            {activeTab !== 'wechat' && (
+            {true && (
               <button
                 type="submit"
                 disabled={isLoading || !agreedToTerms}
@@ -539,19 +509,6 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
         </div>
       </div>
 
-      {/* 微信登录弹窗 */}
-      <WeChatLoginModal
-        isOpen={showWeChatModal}
-        onClose={() => setShowWeChatModal(false)}
-        onSuccess={() => {
-          setShowWeChatModal(false);
-          if (onRegisterSuccess) {
-            onRegisterSuccess();
-          } else if (onNavigate) {
-            onNavigate('home');
-          }
-        }}
-      />
     </div>
   );
 }

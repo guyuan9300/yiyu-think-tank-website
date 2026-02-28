@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import { WeChatLoginModal } from './WeChatLoginModal';
-import { WeChatIcon } from './WeChatIcon';
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, Smartphone } from 'lucide-react';
 import { saveUser, getUserByEmail, recordUserLogin, type User } from '../lib/dataService';
 import { saveUserRaw, setSavedItem, ADMIN_FLAG_KEY, ADMIN_EMAIL_KEY } from '../lib/storage';
 
@@ -17,6 +15,8 @@ const MOCK_USERS = [
   { email: 'user@example.com', password: 'user123' }
 ];
 
+type LoginMode = 'email' | 'phone';
+
 interface LoginPageProps {
   onNavigate?: (page: 'login' | 'register' | 'home' | 'forgot-password' | 'admin') => void;
   onLoginSuccess?: () => void;
@@ -24,12 +24,13 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPageProps) {
+  const [loginMode, setLoginMode] = useState<LoginMode>('email');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showWeChatModal, setShowWeChatModal] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   
   useEffect(() => {
@@ -86,20 +87,21 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
         return;
       }
       
-      if (!email || !password) {
+      if ((loginMode === 'email' && !email) || (loginMode === 'phone' && !phone) || !password) {
         setError('请输入邮箱和密码');
         setIsLoading(false);
         return;
       }
       
-      const mockUser = MOCK_USERS.find(u => u.email === email && u.password === password);
+      const loginId = loginMode === 'phone' ? `${phone}@phone.local` : email;
+      const mockUser = MOCK_USERS.find(u => u.email === loginId && u.password === password);
       if (mockUser) {
-        let user = getUserByEmail(email);
+        let user = getUserByEmail(loginId);
         
         if (!user) {
           user = saveUser({
-            email: email,
-            nickname: email.split('@')[0],
+            email: loginId,
+            nickname: (loginMode === 'phone' ? phone : loginId.split('@')[0]),
             memberType: 'regular',
             status: 'active',
             loginCount: 1,
@@ -128,14 +130,6 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
       setError('登录失败，请稍后重试');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleSocialLogin = (provider: string) => {
-    if (provider === 'wechat') {
-      setShowWeChatModal(true);
-    } else {
-      console.log(`Login with ${provider}`);
     }
   };
 
@@ -190,22 +184,22 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
             </button>
           </p>
 
-          {/* Social Login */}
-          <div className="space-y-3 mb-6">
+          {/* Login Mode */}
+          <div className="grid grid-cols-2 gap-2 mb-6">
             <button
-              onClick={() => handleSocialLogin('wechat')}
-              className="w-full py-3 px-4 rounded-full border border-border/60 hover:border-[#07C160]/50 transition-all flex items-center justify-center gap-3 group bg-[#07C160] hover:bg-[#06AD56] text-white shadow-lg shadow-[#07C160]/20"
+              type="button"
+              onClick={() => setLoginMode('email')}
+              className={`px-4 py-2.5 rounded-2xl border text-[14px] font-medium transition ${loginMode === 'email' ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-white/60 border-border/40 text-muted-foreground/80 hover:bg-white'}`}
             >
-              <WeChatIcon className="w-5 h-5" />
-              <span className="font-medium text-[14px]">微信一键登录</span>
+              <span className="inline-flex items-center gap-2"><Mail className="w-4 h-4" />邮箱登录</span>
             </button>
-          </div>
-
-          {/* Divider */}
-          <div className="flex items-center gap-4 mb-6">
-            <div className="flex-1 h-px bg-border/40" />
-            <span className="text-[12px] text-muted-foreground/60 uppercase tracking-wide">或使用邮箱登录</span>
-            <div className="flex-1 h-px bg-border/40" />
+            <button
+              type="button"
+              onClick={() => setLoginMode('phone')}
+              className={`px-4 py-2.5 rounded-2xl border text-[14px] font-medium transition ${loginMode === 'phone' ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-white/60 border-border/40 text-muted-foreground/80 hover:bg-white'}`}
+            >
+              <span className="inline-flex items-center gap-2"><Smartphone className="w-4 h-4" />手机登录</span>
+            </button>
           </div>
 
           {/* Error Message */}
@@ -217,23 +211,40 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email */}
-            <div>
-              <label className="block text-[13px] font-medium text-muted-foreground/70 mb-2">邮箱地址</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="请输入邮箱地址"
-                  className="w-full py-3 pl-12 pr-4 rounded-full border border-border/60 text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all bg-white/80"
-                  required
-                />
+            {/* Credentials */}
+            {loginMode === 'email' ? (
+              <div>
+                <label className="block text-[13px] font-medium text-muted-foreground/70 mb-2">邮箱地址</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="请输入邮箱地址"
+                    className="w-full py-3 pl-12 pr-4 rounded-full border border-border/60 text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all bg-white/80"
+                    required
+                  />
+                </div>
               </div>
-            </div>
+            ) : (
+              <div>
+                <label className="block text-[13px] font-medium text-muted-foreground/70 mb-2">手机号码</label>
+                <div className="relative">
+                  <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="请输入手机号码"
+                    className="w-full py-3 pl-12 pr-4 rounded-full border border-border/60 text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all bg-white/80"
+                    required
+                  />
+                </div>
+              </div>
+            )
 
-            {/* Password */}
+            /* Password */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-[13px] font-medium text-muted-foreground/70">密码</label>
@@ -325,10 +336,6 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
       </div>
 
       {/* WeChat Login Modal */}
-      <WeChatLoginModal
-        isOpen={showWeChatModal}
-        onClose={() => setShowWeChatModal(false)}
-      />
     </div>
   );
 }
