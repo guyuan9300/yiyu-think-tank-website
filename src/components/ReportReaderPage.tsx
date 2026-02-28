@@ -400,13 +400,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
                 <Maximize className="w-5 h-5" />
               </button>
 
-              <button
-                onClick={handleDownloadClick}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all shadow-sm"
-              >
-                <Download className="w-4 h-4" />
-                <span className="text-sm font-medium">下载报告</span>
-              </button>
+
             </div>
 
             <div className="flex items-center gap-2">
