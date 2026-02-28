@@ -121,6 +121,15 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
         }
         
         saveUserRaw(JSON.stringify(user), rememberMe);
+
+        // 非管理员登录：清理可能残留的管理员标记，避免普通账号看到/访问管理后台
+        try {
+          localStorage.removeItem(ADMIN_FLAG_KEY);
+          sessionStorage.removeItem(ADMIN_FLAG_KEY);
+          localStorage.removeItem(ADMIN_EMAIL_KEY);
+          sessionStorage.removeItem(ADMIN_EMAIL_KEY);
+        } catch {}
+
         
         if (onLoginSuccess) {
           onLoginSuccess();
