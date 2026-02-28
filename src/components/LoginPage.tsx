@@ -145,7 +145,7 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex items-center justify-center">
       {/* Left Side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary to-accent p-12 flex-col justify-between relative overflow-hidden">
         {/* Background Pattern */}
@@ -177,11 +177,11 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
         </div>
       </div>
 
-      {/* Right Side - Login Form */}
-      <div className="flex-1 flex items-start justify-start p-6 lg:p-12">
+      {/* Login Form */}
+      <div className="w-full max-w-[520px] px-4 py-10">
         <div className="w-full max-w-md">
-          {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
+          {/* Brand */}
+          <div className="flex items-center gap-3 mb-8 justify-center">
             <div className="w-12 h-12 rounded-[12px] bg-gradient-to-br from-primary to-accent flex items-center justify-center overflow-hidden">
               <img
                 src={`${import.meta.env.BASE_URL}yiyu-avatar.png`}

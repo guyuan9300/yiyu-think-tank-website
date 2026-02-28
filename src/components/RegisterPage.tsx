@@ -194,7 +194,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex items-center justify-center">
       {/* Left Side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-accent via-primary to-primary p-12 flex-col justify-between relative overflow-hidden">
         {/* Animated Background */}
@@ -227,11 +227,11 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
         </div>
       </div>
 
-      {/* Right Side - Register Form */}
-      <div className="flex-1 flex items-start justify-start p-6 lg:p-12 overflow-y-auto bg-gradient-to-b from-background to-background/50">
+      {/* Register Form */}
+      <div className="w-full max-w-[560px] px-4 py-10">
         <div className="w-full max-w-md py-4">
-          {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
+          {/* Brand */}
+          <div className="flex items-center justify-center gap-3 mb-8">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20 overflow-hidden">
               <img
                 src={`${import.meta.env.BASE_URL}yiyu-avatar.png`}
@@ -239,7 +239,10 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                 className="w-full h-full object-cover"
               />
             </div>
-            <span className="text-xl font-semibold">益语智库</span>
+            <div className="flex flex-col items-start">
+              <span className="text-xl font-semibold text-foreground leading-tight">益语智库</span>
+              <span className="text-[13px] text-muted-foreground/70 mt-1">提供可落地的增长咨询</span>
+            </div>
           </div>
 
           {/* Back Button */}
