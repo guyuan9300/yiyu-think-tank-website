@@ -12,7 +12,11 @@ const ADMIN_CREDENTIALS = {
 // Mock users (for testing)
 const MOCK_USERS = [
   { email: 'test@example.com', password: 'test123' },
-  { email: 'user@example.com', password: 'user123' }
+  { email: 'user@example.com', password: 'user123' },
+
+  // 注意：当前项目为纯前端联调模式（无后端鉴权），任何写在代码里的账号/密码都会被公开。
+  // 该账号仅用于测试“普通会员”权限流程。
+  { email: '13631445251@phone.local', password: 'immomobot' },
 ];
 
 type LoginMode = 'email' | 'phone';
