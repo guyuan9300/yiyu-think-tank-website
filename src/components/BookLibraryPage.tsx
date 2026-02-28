@@ -241,6 +241,17 @@ const filteredBooks = useMemo(() => {
 
                   <p className="text-[14px] text-muted-foreground/70 line-clamp-1 leading-[1.6] mb-4">{book.author}</p>
 
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {(book.topics || []).slice(0, 3).map((tag: string, index: number) => (
+                      <span
+                        key={index}
+                        className="px-2.5 py-1 rounded-full bg-muted/40 text-muted-foreground/60 text-[11px]"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+
                   <p className="text-[14px] text-muted-foreground/70 line-clamp-2 leading-[1.6] mb-4">
                     {book.description}
                   </p>
