@@ -101,13 +101,19 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
       const loginId = loginMode === 'phone' ? `${phone}@phone.local` : email;
       const mockUser = MOCK_USERS.find(u => u.email === loginId && u.password === password);
       if (mockUser) {
+        const phoneProfileMap: Record<string, { nickname: string; memberType: 'regular' | 'gold' | 'diamond' }> = {
+          '13631445251': { nickname: '默默的同事', memberType: 'regular' },
+          '18027370767': { nickname: '豆包的同事', memberType: 'gold' },
+        };
+
         let user = getUserByEmail(loginId);
+        const profile = loginMode === 'phone' ? phoneProfileMap[phone] : undefined;
         
         if (!user) {
           user = saveUser({
             email: loginId,
-            nickname: (loginMode === 'phone' ? phone : loginId.split('@')[0]),
-            memberType: 'regular',
+            nickname: (profile?.nickname || (loginMode === 'phone' ? phone : loginId.split('@')[0])),
+            memberType: (profile?.memberType || 'regular'),
             status: 'active',
             loginCount: 1,
             commentsCount: 0,
@@ -117,6 +123,16 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
           });
           console.log('新用户注册成功:', user);
         } else {
+          // 如果是内置测试手机号账号，确保昵称/会员类型按预期对齐（避免本地存储里残留旧昵称）
+          if (profile && (user.nickname !== profile.nickname || user.memberType !== profile.memberType || user.phone !== phone)) {
+            user = saveUser({
+              id: user.id,
+              nickname: profile.nickname,
+              memberType: profile.memberType,
+              phone,
+            });
+          }
+
           recordUserLogin(user.id);
           console.log('用户登录成功，已更新登录记录:', user);
         }
