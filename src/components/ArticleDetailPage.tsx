@@ -151,14 +151,6 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
               <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/10 to-transparent" />
               <div className="absolute inset-0 bg-[radial-gradient(1000px_circle_at_18%_12%,rgba(255,255,255,0.35),transparent_55%)]" />
 
-              {/* Badges */}
-              <div className="absolute top-5 left-5 flex items-center gap-2">
-                <span className="px-3 py-1.5 rounded-full bg-white/70 text-foreground text-[12px] font-medium border border-white/60 shadow-sm">
-                  {displayArticle.topics?.[0] || '洞察'}
-                </span>
-                {/* featured removed (topics-only schema) */}
-              </div>
-
               {/* Title on cover (mobile-first) */}
               <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8">
                 <h1 className="text-white text-[30px] sm:text-[40px] font-semibold leading-[1.12] tracking-[-0.02em] drop-shadow-sm">
@@ -185,59 +177,20 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
                   </div>
                 </div>
 
-                {/* Actions: human-useful only */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setIsBookmarked(!isBookmarked)}
-                    className={`px-3 py-2 rounded-full text-[13px] font-medium border transition ${
-                      isBookmarked
-                        ? 'bg-amber-500/10 text-amber-700 border-amber-500/20'
-                        : 'bg-white/60 text-foreground/80 border-border/40 hover:bg-white/80'
-                    }`}
-                    title="收藏"
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
-                      收藏
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={async () => {
-                      const slug = (displayArticle as any)?.shareSlug || displayArticle.id;
-                      const base = window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, '');
-                      const shareUrl = `${base}/share/article/${encodeURIComponent(slug)}/`;
-                      try {
-                        await navigator.clipboard.writeText(shareUrl);
-                        alert('已复制分享链接');
-                      } catch {
-                        window.prompt('复制下面链接分享：', shareUrl);
-                      }
-                    }}
-                    className="px-3 py-2 rounded-full bg-white/60 text-foreground/80 border border-border/40 hover:bg-white/80 transition text-[13px] font-medium"
-                    title="复制分享链接"
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <Share2 className="w-4 h-4" />
-                      分享
-                    </span>
-                  </button>
-                </div>
+                {/* Topics (moved here) */}
+                {displayArticle.topics?.length ? (
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {displayArticle.topics.map((topic: string, index: number) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1.5 rounded-full bg-white/60 text-muted-foreground/80 text-[12px] border border-border/40 hover:bg-white/80 transition-colors"
+                      >
+                        {topic}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
               </div>
-
-              {/* Topics */}
-              {displayArticle.topics?.length ? (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {displayArticle.topics.map((topic: string, index: number) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1.5 rounded-full bg-muted/40 text-muted-foreground/70 text-[12px] hover:bg-muted/60 transition-colors"
-                    >
-                      {topic}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
             </div>
           </div>
         </div>
