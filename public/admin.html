@@ -2172,13 +2172,18 @@
       const menu = $(`#${menuId}`);
       if (!trigger || !menu) return;
 
+      // 防御性处理：即使某些样式加载异常，也先用 hidden 保证菜单不平铺显示
+      menu.hidden = true;
+
       function open() {
+        menu.hidden = false;
         menu.classList.add('is-open');
         trigger.setAttribute('aria-expanded', 'true');
       }
 
       function close() {
         menu.classList.remove('is-open');
+        menu.hidden = true;
         trigger.setAttribute('aria-expanded', 'false');
       }
 
