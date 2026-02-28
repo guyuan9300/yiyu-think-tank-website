@@ -348,19 +348,22 @@ export function ReportDetailPage({ reportId, onNavigate }: ReportDetailPageProps
       {isVisitor && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div className="relative w-[92%] max-w-md rounded-3xl bg-white/90 backdrop-blur-xl border border-white/60 shadow-2xl p-6">
-            <div className="text-[18px] font-semibold text-foreground mb-2">请注册/登录，以解锁益语前沿报告</div>
-            <div className="text-[14px] text-muted-foreground/70 leading-relaxed mb-5">登录后可查看报告详情与内容。</div>
-            <div className="flex items-center gap-3">
+          <div className="relative w-[92%] max-w-lg rounded-[28px] bg-white/92 backdrop-blur-xl border border-white/60 shadow-2xl p-7 sm:p-8">
+            <div className="text-center">
+              <div className="text-[18px] sm:text-[20px] font-semibold text-foreground mb-2">请注册/登录，以解锁益语前沿报告</div>
+              <div className="text-[14px] text-muted-foreground/70 leading-relaxed mb-6">登录后可查看报告详情与内容。</div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 onClick={() => onNavigate('login')}
-                className="flex-1 px-4 py-3 rounded-2xl bg-primary text-primary-foreground text-[15px] font-medium hover:bg-primary/90 transition"
+                className="w-full px-4 py-3 rounded-2xl bg-primary text-primary-foreground text-[15px] font-medium hover:bg-primary/90 transition"
               >
                 去登录/注册
               </button>
               <button
                 onClick={() => onNavigate('report-library')}
-                className="px-4 py-3 rounded-2xl bg-muted/40 text-muted-foreground/80 text-[15px] font-medium hover:bg-muted/60 transition"
+                className="w-full px-4 py-3 rounded-2xl bg-muted/40 text-muted-foreground/80 text-[15px] font-medium hover:bg-muted/60 transition"
               >
                 返回
               </button>
