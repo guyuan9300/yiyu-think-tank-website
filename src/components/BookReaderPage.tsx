@@ -35,6 +35,7 @@ interface BookDetail {
   author: string;
   subject: string;
   duration: string;
+  publishDate: string;
   guide: string;
   takeaways: string[];
   pdfUrl?: string;
@@ -172,6 +173,7 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
       author: '李筠',
       subject: '政治学通识',
       duration: '60 min',
+      publishDate: '2026-02-26',
       guide: '政治不是遥远的宏大叙事，而是发生在我们身边的真实关系。',
       takeaways: [
         '识别权力的三种来源',
@@ -328,20 +330,11 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
               <div className="flex items-center gap-4 text-sm">
                 <span className="text-gray-600">作者：{book.author}</span>
                 <span className="text-gray-300">|</span>
-                <span className="text-gray-600">主题：{book.subject}</span>
-                <span className="text-gray-300">|</span>
-                <span className="text-gray-600">时长：{book.duration}</span>
+                <span className="text-gray-600">发布时间：{(book as any).publishDate || '—'}</span>
               </div>
             </div>
             
-            {/* 下载按钮移到标题行 */}
-            <button
-              onClick={handleDownloadClick}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all shadow-sm flex-shrink-0"
-            >
-              <Download className="w-4 h-4" />
-              <span className="text-sm font-medium">下载PDF</span>
-            </button>
+
           </div>
 
           {/* 第2行：导读与收获 - 更紧凑 */}
@@ -350,16 +343,13 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
               "{book.guide}"
             </p>
             <div className="flex flex-wrap gap-2">
-              {book.takeaways.map((takeaway, index) => (
-                <div
+              {book.takeaways.map((t, index) => (
+                <span
                   key={index}
-                  className="flex items-center gap-2 bg-white rounded-full px-3 py-1 shadow-sm"
+                  className="px-3 py-1 bg-white rounded-full text-xs text-gray-700 shadow-sm"
                 >
-                  <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
-                    带走
-                  </span>
-                  <span className="text-xs text-gray-700">{takeaway}</span>
-                </div>
+                  {t}
+                </span>
               ))}
             </div>
           </div>

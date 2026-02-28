@@ -338,16 +338,8 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
             {report.title}
           </h1>
 
-          <div className="flex flex-wrap items-center gap-6 mb-6">
-            <span className="text-gray-600">机构：{report.publisher || '益语智库'}</span>
-            <span className="text-gray-400">|</span>
-            <span className="text-gray-600">主题：{(report.topics || []).join(' / ') || '—'}</span>
-            <span className="text-gray-400">|</span>
-            <span className="text-gray-600">页数：{report.pages || totalPages}页</span>
-            <span className="text-gray-400">|</span>
-            <span className="text-gray-600">下载：{(report.downloads ?? 0).toLocaleString()} 次下载</span>
-            <span className="text-gray-400">|</span>
-            <span className="text-gray-600">发布时间：{report.publishDate}</span>
+          <div className="flex items-center gap-2 mb-6 text-[14px] text-gray-600">
+            <span>发布时间：{report.publishDate}</span>
           </div>
 
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6">
