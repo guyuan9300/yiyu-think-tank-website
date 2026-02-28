@@ -145,43 +145,15 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      {/* Left Side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary to-accent p-12 flex-col justify-between relative overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-white rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-white rounded-full blur-2xl" />
-        </div>
-        
-        {/* Content */}
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-10">
-            <div className="w-12 h-12 rounded-[12px] bg-white/20 backdrop-blur-sm flex items-center justify-center overflow-hidden">
-              <img
-                src={`${import.meta.env.BASE_URL}yiyu-avatar.png`}
-                alt="益语智库"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-white text-xl font-semibold leading-tight">益语智库</span>
-              <span className="text-white/70 text-[13px] mt-1">提供可落地的增长咨询</span>
-            </div>
-          </div>
-        </div>
-        
-        {/* Footer */}
-        <div className="relative z-10 text-white/60 text-[12px]">
-          © 2026 益语智库 Yiyu Think Tank. All rightsreserved.
-        </div>
-      </div>
-
+    <div className="min-h-screen bg-background">
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/[0.04] via-transparent to-transparent" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(900px_circle_at_20%_10%,rgba(59,130,246,0.10),transparent_55%)]" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(900px_circle_at_80%_20%,rgba(168,85,247,0.08),transparent_55%)]" />
       {/* Login Form */}
-      <div className="w-full max-w-[520px] px-4 py-10">
-        <div className="w-full max-w-md">
+      <div className="min-h-screen flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-md rounded-[28px] bg-white/80 backdrop-blur-xl border border-border/40 shadow-2xl shadow-black/[0.06] p-6 sm:p-8">
           {/* Brand */}
-          <div className="flex items-center gap-3 mb-8 justify-center">
+          <div className="flex items-center gap-3 mb-8">
             <div className="w-12 h-12 rounded-[12px] bg-gradient-to-br from-primary to-accent flex items-center justify-center overflow-hidden">
               <img
                 src={`${import.meta.env.BASE_URL}yiyu-avatar.png`}
@@ -189,7 +161,10 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
                 className="w-full h-full object-cover"
               />
             </div>
-            <span className="text-xl font-semibold text-foreground">益语智库</span>
+            <div className="flex flex-col">
+              <span className="text-xl font-semibold text-foreground leading-tight">益语智库</span>
+              <span className="text-[13px] text-muted-foreground/70 mt-1">提供可落地的增长咨询</span>
+            </div>
           </div>
 
           {/* Back Button */}

@@ -194,44 +194,15 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      {/* Left Side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-accent via-primary to-primary p-12 flex-col justify-between relative overflow-hidden">
-        {/* Animated Background */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/3 right-1/3 w-80 h-80 bg-white/20 rounded-full blur-3xl animate-pulse-soft" />
-          <div className="absolute bottom-1/3 left-1/3 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-pulse-soft delay-700" />
-          {/* Decorative elements */}
-          <div className="absolute top-20 right-20 w-20 h-20 border border-white/20 rounded-full animate-fadeIn" />
-          <div className="absolute bottom-40 left-20 w-12 h-12 border border-white/20 rounded-full animate-fadeIn delay-300" />
-        </div>
-
-        {/* Content */}
-        <div className="relative z-10">
-          {/* Logo */}
-          <div className="flex items-center gap-3 mb-12">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 shadow-lg overflow-hidden">
-              <img
-                src={`${import.meta.env.BASE_URL}yiyu-avatar.png`}
-                alt="益语智库"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <span className="text-white text-2xl font-semibold tracking-wide">益语智库</span>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="relative z-10 text-white/50 text-sm font-medium">
-          © 2026 益语智库 Yiyu Think Tank. All rights reserved.
-        </div>
-      </div>
-
+    <div className="min-h-screen bg-background">
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/[0.04] via-transparent to-transparent" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(900px_circle_at_20%_10%,rgba(59,130,246,0.10),transparent_55%)]" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(900px_circle_at_80%_20%,rgba(168,85,247,0.08),transparent_55%)]" />
       {/* Register Form */}
-      <div className="w-full max-w-[560px] px-4 py-10">
-        <div className="w-full max-w-md py-4">
+      <div className="min-h-screen flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-xl rounded-[28px] bg-white/80 backdrop-blur-xl border border-border/40 shadow-2xl shadow-black/[0.06] p-6 sm:p-8">
           {/* Brand */}
-          <div className="flex items-center justify-center gap-3 mb-8">
+          <div className="flex items-center gap-3 mb-8">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20 overflow-hidden">
               <img
                 src={`${import.meta.env.BASE_URL}yiyu-avatar.png`}
