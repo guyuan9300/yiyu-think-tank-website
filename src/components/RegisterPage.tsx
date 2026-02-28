@@ -192,10 +192,10 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(900px_circle_at_80%_20%,rgba(168,85,247,0.08),transparent_55%)]" />
       {/* Register Form */}
       <div className="min-h-screen flex items-center justify-center px-4 py-10">
-        <div className="w-full max-w-md rounded-[28px] bg-white/80 backdrop-blur-xl border border-border/40 shadow-2xl shadow-black/[0.06] p-6 sm:p-8">
+        <div className="w-full max-w-md rounded-[28px] bg-white border border-border/40 shadow-2xl shadow-black/[0.06] p-6 sm:p-8">
           {/* Brand */}
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20 overflow-hidden">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center overflow-hidden">
               <img
                 src={`${import.meta.env.BASE_URL}yiyu-avatar.png`}
                 alt="益语智库"
@@ -211,7 +211,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
           {/* Back Button */}
           <button
             onClick={() => onNavigate?.('home')}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors duration-200 mb-6 group"
+            className="flex items-center gap-2 text-gray-500 hover:text-foreground transition-colors duration-200 mb-6 group"
           >
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-200" />
             <span className="text-sm font-medium">返回首页</span>
@@ -221,10 +221,10 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
 
           {/* Title Section */}
           <div className="mb-8">
-            <h2 className="text-[32px] font-semibold text-foreground mb-2 tracking-tight">
+            <h2 className="text-[28px] font-semibold text-foreground mb-2 tracking-tight">
               创建账户
             </h2>
-            <p className="text-muted-foreground text-[15px]">
+            <p className="text-gray-500 text-[13px]">
               已有账号？{' '}
               <button
                 onClick={() => onNavigate?.('login')}
@@ -237,7 +237,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex gap-2 p-1 bg-gray-100/80 backdrop-blur-sm rounded-2xl mb-8">
+          <div className="flex gap-2 p-1 bg-gray-100/80  rounded-2xl mb-8 text-[13px]">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -249,7 +249,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                 className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2 relative overflow-hidden ${
                   activeTab === tab.id
                     ? 'bg-white text-primary shadow-md'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-white/50'
+                    : 'text-gray-500 hover:text-foreground hover:bg-white/50'
                 }`}
               >
                 {activeTab === tab.id && (
@@ -263,7 +263,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
 
           {/* Success Message */}
           {success && (
-            <div className="mb-6 p-4 rounded-2xl bg-green-50/80 backdrop-blur-sm border border-green-200/50 text-green-600 text-sm flex items-center gap-3 animate-fadeIn">
+            <div className="mb-6 p-4 rounded-2xl bg-green-50/80  border border-green-200/50 text-green-600 text-sm flex items-center gap-3 animate-fadeIn">
               <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                 <CheckCircle className="w-4 h-4" />
               </div>
@@ -273,7 +273,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 rounded-2xl bg-red-50/80 backdrop-blur-sm border border-red-200/50 text-red-600 text-sm animate-fadeIn">
+            <div className="mb-6 p-4 rounded-2xl bg-red-50/80  border border-red-200/50 text-red-600 text-sm animate-fadeIn">
               <span className="font-medium">{error}</span>
             </div>
           )}
@@ -282,18 +282,18 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* 昵称（所有方式都需要） */}
             <div className="animate-fadeInUp" style={{ animationDelay: '0ms' }}>
-              <label className="block text-sm font-medium text-foreground mb-2.5">
+              <label className="block text-[13px] font-medium text-foreground mb-2">
                 昵称
               </label>
               <div className="relative group">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors duration-200" />
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-primary transition-colors duration-200" />
                 <input
                   type="text"
                   name="nickname"
                   value={formData.nickname}
                   onChange={handleChange}
                   placeholder="请输入您的昵称"
-                  className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white/60 backdrop-blur-sm focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60"
+                  className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white  focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60 text-[13px]"
                   required
                 />
               </div>
@@ -303,37 +303,37 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
             {activeTab === 'phone' && (
               <>
                 <div className="animate-fadeInUp" style={{ animationDelay: '100ms' }}>
-                  <label className="block text-sm font-medium text-foreground mb-2.5">
+                  <label className="block text-[13px] font-medium text-foreground mb-2">
                     手机号码
                   </label>
                   <div className="relative group">
-                    <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors duration-200" />
+                    <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-primary transition-colors duration-200" />
                     <input
                       type="tel"
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
                       placeholder="请输入手机号码"
-                      className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white/60 backdrop-blur-sm focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60"
+                      className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white  focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60 text-[13px]"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="animate-fadeInUp" style={{ animationDelay: '150ms' }}>
-                  <label className="block text-sm font-medium text-foreground mb-2.5">
+                  <label className="block text-[13px] font-medium text-foreground mb-2">
                     验证码
                   </label>
                   <div className="flex gap-3">
                     <div className="relative flex-1 group">
-                      <CheckCircle className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors duration-200" />
+                      <CheckCircle className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-primary transition-colors duration-200" />
                       <input
                         type="text"
                         name="verifyCode"
                         value={formData.verifyCode}
                         onChange={handleChange}
                         placeholder="请输入验证码"
-                        className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white/60 backdrop-blur-sm focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60"
+                        className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white  focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60 text-[13px]"
                         required
                       />
                     </div>
@@ -341,7 +341,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                       type="button"
                       onClick={handleSendCode}
                       disabled={isSendingCode || countdown > 0}
-                      className="px-5 py-3.5 bg-gray-100/80 backdrop-blur-sm text-gray-700 rounded-2xl font-medium hover:bg-gray-200 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm hover:shadow-md"
+                      className="px-5 py-3.5 bg-gray-100/80  text-gray-700 rounded-2xl font-medium hover:bg-gray-200 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm hover:shadow-md text-[13px]"
                     >
                       {countdown > 0 ? `${countdown}s` : '获取验证码'}
                     </button>
@@ -354,37 +354,37 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
             {activeTab === 'email' && (
               <>
                 <div className="animate-fadeInUp" style={{ animationDelay: '100ms' }}>
-                  <label className="block text-sm font-medium text-foreground mb-2.5">
+                  <label className="block text-[13px] font-medium text-foreground mb-2">
                     邮箱地址
                   </label>
                   <div className="relative group">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors duration-200" />
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-primary transition-colors duration-200" />
                     <input
                       type="email"
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="请输入邮箱地址"
-                      className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white/60 backdrop-blur-sm focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60"
+                      className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white  focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60 text-[13px]"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="animate-fadeInUp" style={{ animationDelay: '150ms' }}>
-                  <label className="block text-sm font-medium text-foreground mb-2.5">
+                  <label className="block text-[13px] font-medium text-foreground mb-2">
                     验证码
                   </label>
                   <div className="flex gap-3">
                     <div className="relative flex-1 group">
-                      <CheckCircle className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors duration-200" />
+                      <CheckCircle className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-primary transition-colors duration-200" />
                       <input
                         type="text"
                         name="verifyCode"
                         value={formData.verifyCode}
                         onChange={handleChange}
                         placeholder="请输入验证码"
-                        className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white/60 backdrop-blur-sm focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60"
+                        className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white  focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60 text-[13px]"
                         required
                       />
                     </div>
@@ -392,12 +392,12 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                       type="button"
                       onClick={handleSendCode}
                       disabled={isSendingCode || countdown > 0}
-                      className="px-5 py-3.5 bg-gray-100/80 backdrop-blur-sm text-gray-700 rounded-2xl font-medium hover:bg-gray-200 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm hover:shadow-md"
+                      className="px-5 py-3.5 bg-gray-100/80  text-gray-700 rounded-2xl font-medium hover:bg-gray-200 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm hover:shadow-md text-[13px]"
                     >
                       {countdown > 0 ? `${countdown}s` : '获取验证码'}
                     </button>
                   </div>
-                  <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1.5">
+                  <p className="mt-2 text-xs text-gray-500 flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5" />
                     验证码将发送到您的邮箱，请注意查收
                   </p>
@@ -409,24 +409,24 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
             {true && (
               <>
                 <div className="animate-fadeInUp" style={{ animationDelay: '200ms' }}>
-                  <label className="block text-sm font-medium text-foreground mb-2.5">
+                  <label className="block text-[13px] font-medium text-foreground mb-2">
                     设置密码
                   </label>
                   <div className="relative group">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors duration-200" />
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-primary transition-colors duration-200" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       name="password"
                       value={formData.password}
                       onChange={handleChange}
                       placeholder="请设置密码（至少8位）"
-                      className="w-full py-3.5 pl-12 pr-12 rounded-2xl border border-border/40 bg-white/60 backdrop-blur-sm focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60"
+                      className="w-full py-3.5 pl-12 pr-12 rounded-2xl border border-border/40 bg-white  focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60 text-[13px]"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-200 p-1"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-foreground transition-colors duration-200 p-1"
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -434,18 +434,18 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                 </div>
 
                 <div className="animate-fadeInUp" style={{ animationDelay: '250ms' }}>
-                  <label className="block text-sm font-medium text-foreground mb-2.5">
+                  <label className="block text-[13px] font-medium text-foreground mb-2">
                     确认密码
                   </label>
                   <div className="relative group">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors duration-200" />
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-primary transition-colors duration-200" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       name="confirmPassword"
                       value={formData.confirmPassword}
                       onChange={handleChange}
                       placeholder="请再次输入密码"
-                      className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white/60 backdrop-blur-sm focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60"
+                      className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white  focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60 text-[13px]"
                       required
                     />
                   </div>
@@ -455,19 +455,16 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
 
             {/* Terms Agreement */}
             <div className="flex items-start gap-3 pt-2 animate-fadeInUp" style={{ animationDelay: '300ms' }}>
-              <div className="relative mt-0.5">
+              <div className="mt-0.5">
                 <input
                   type="checkbox"
                   id="terms"
                   checked={agreedToTerms}
                   onChange={(e) => setAgreedToTerms(e.target.checked)}
-                  className="w-5 h-5 rounded-lg border-border/40 text-primary focus:ring-primary/20 cursor-pointer appearance-none checked:bg-primary checked:border-primary transition-all duration-200"
+                  className="w-4 h-4 rounded border border-gray-900 accent-black focus:ring-0 focus:ring-offset-0"
                 />
-                {agreedToTerms && (
-                  <CheckCircle className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 text-white" />
-                )}
               </div>
-              <label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
+              <label htmlFor="terms" className="text-[13px] text-gray-600 leading-relaxed cursor-pointer">
                 我已阅读并同意
                 <a
                   href="#"
@@ -492,7 +489,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
               <button
                 type="submit"
                 disabled={isLoading || !agreedToTerms}
-                className="w-full py-4 rounded-2xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed mt-2 shadow-lg shadow-primary/20 hover:shadow-xl animate-fadeInUp"
+                className="w-full py-3.5 rounded-2xl bg-primary text-primary-foreground text-[14px] font-medium hover:bg-primary/90 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed mt-2 shadow-lg shadow-primary/20 hover:shadow-xl animate-fadeInUp text-[13px]"
                 style={{ animationDelay: '350ms' }}
               >
                 {isLoading ? (
