@@ -1219,6 +1219,19 @@ export const importAllData = (jsonData: string): boolean => {
 // 初始化默认用户数据（包含一些测试用户）
 const initDefaultUsers = (): User[] => [
   {
+    id: 'user_momo_colleague',
+    email: '13631445251@phone.local',
+    nickname: '默默的同事',
+    phone: '13631445251',
+    memberType: 'regular',
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    lastLoginAt: undefined,
+    loginCount: 0,
+    commentsCount: 0,
+    favoritesCount: 0,
+  },
+  {
     id: 'user_001',
     email: 'test@example.com',
     nickname: '测试用户',
