@@ -1,3 +1,5 @@
+import { appConfig } from './config';
+
 /**
  * 知晓云(ZhiXiaoYun) SDK集成配置
  * 
@@ -14,16 +16,16 @@
 // 知晓云配置
 export const ZHIXIAOYUN_CONFIG = {
   // 应用ID - 在知晓云后台的"应用设置"中获取
-  appId: import.meta.env.VITE_ZHIXIAOYUN_APP_ID || 'your_app_id',
+  appId: appConfig.zhixiaoyun.appId,
   
   // API Key - 在知晓云后台的"API设置"中获取
-  apiKey: import.meta.env.VITE_ZHIXIAOYUN_API_KEY || 'your_api_key',
+  apiKey: appConfig.zhixiaoyun.apiKey,
   
   // 服务器地址（通常不需要修改）
-  serverURL: 'https://api.zhixiaoyun.com',
+  serverURL: appConfig.zhixiaoyun.serverURL,
   
   // 应用版本（通常不需要修改）
-  version: '1.0.0',
+  version: appConfig.zhixiaoyun.version,
 };
 
 // 会员套餐配置
@@ -99,7 +101,7 @@ export const INVITE_CODE_TYPES = {
 // 微信登录配置
 export const WECHAT_LOGIN_CONFIG = {
   // 微信开放平台AppID
-  appId: import.meta.env.VITE_WECHAT_APP_ID || 'your_wechat_app_id',
+  appId: appConfig.wechat.appId,
   
   // 回调地址
   redirectUri: encodeURIComponent(

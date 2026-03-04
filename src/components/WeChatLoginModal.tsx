@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { WeChatIcon } from './WeChatIcon';
+import { notifyNotOpenYet } from '../lib/uxFeedback';
+import { appConfig } from '../lib/config';
 
 // 微信登录模式类型
 type WeChatLoginMode = 'normal' | 'demo' | 'configured';
@@ -16,19 +18,14 @@ export function WeChatLoginModal({ isOpen, onClose, onSuccess, mode = 'normal', 
   const [countdown, setCountdown] = useState(5);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
-  // P0: 按钮/链接必须有结果（已实现/未开放/权限不足）
-  const handleNotOpenYet = (label: string) => {
-    alert(`「${label}」暂未开放\n\n当前为建造期联调模式（vBuild-1.0），如需提前获取内容请联系管理员。`);
-  };
-
   // 获取真实的微信AppID
   const getAppId = (): string | null => {
     if (appId && appId !== 'your_app_id') {
       return appId;
     }
     // 从环境变量获取
-    const envAppId = (import.meta as unknown as { env: { VITE_WECHAT_APP_ID?: string } }).env?.VITE_WECHAT_APP_ID;
-    if (envAppId && envAppId !== 'your_app_id') {
+    const envAppId = appConfig.wechat.appId;
+    if (envAppId && envAppId !== 'your_app_id' && envAppId !== 'your_wechat_app_id') {
       return envAppId;
     }
     return null;
@@ -194,7 +191,7 @@ export function WeChatLoginModal({ isOpen, onClose, onSuccess, mode = 'normal', 
               className="text-[#07C160] hover:underline"
               onClick={(e) => {
                 e.preventDefault();
-                handleNotOpenYet('服务条款');
+                notifyNotOpenYet('服务条款');
               }}
             >
               {' '}服务条款
@@ -206,7 +203,7 @@ export function WeChatLoginModal({ isOpen, onClose, onSuccess, mode = 'normal', 
               className="text-[#07C160] hover:underline"
               onClick={(e) => {
                 e.preventDefault();
-                handleNotOpenYet('隐私政策');
+                notifyNotOpenYet('隐私政策');
               }}
             >
               {' '}隐私政策

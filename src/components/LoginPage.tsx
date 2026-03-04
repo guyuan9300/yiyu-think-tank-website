@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Smartphone } from 'lucide-react';
 import { saveUser, getUserByEmail, recordUserLogin, type User } from '../lib/dataService';
 import { saveUserRaw, setSavedItem, ADMIN_FLAG_KEY, ADMIN_EMAIL_KEY } from '../lib/storage';
+import { notifyNotOpenYet } from '../lib/uxFeedback';
+import { logger } from '../lib/logger';
 
 // Admin credentials (global constant)
 const ADMIN_CREDENTIALS = {
@@ -42,7 +44,7 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
     const params = new URLSearchParams(window.location.search);
     const page = params.get('page');
     if (page === 'admin') {
-      console.log('检测到管理员登录跳转');
+      logger.info('login', '检测到管理员登录跳转');
     }
   }, []);
 
@@ -51,19 +53,21 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
     setError('');
     setIsLoading(true);
 
-    const isAdmin = email === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password;
+    const normalizedEmail = email.trim();
+    const normalizedPhone = phone.trim();
+    const isAdmin = normalizedEmail === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password;
     
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
       
       if (isAdmin) {
         setSavedItem(ADMIN_FLAG_KEY, 'true', rememberMe);
-        setSavedItem(ADMIN_EMAIL_KEY, email, rememberMe);
+        setSavedItem(ADMIN_EMAIL_KEY, normalizedEmail, rememberMe);
 
         // 同时写入当前用户信息，确保从后台回到前台后依然保持“已登录/管理员”状态
         const adminUser: User = {
           id: 'admin',
-          email,
+          email: normalizedEmail,
           nickname: '超级管理员',
           memberType: 'diamond',
           status: 'active',
@@ -87,18 +91,18 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
         }
 
         const baseUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
-        console.log('管理员登录成功，跳转URL:', baseUrl + '?page=admin');
+        logger.info('login', '管理员登录成功，跳转URL', baseUrl + '?page=admin');
         window.location.href = baseUrl + '?page=admin';
         return;
       }
       
-      if ((loginMode === 'email' && !email) || (loginMode === 'phone' && !phone) || !password) {
-        setError('请输入邮箱和密码');
+      if ((loginMode === 'email' && !normalizedEmail) || (loginMode === 'phone' && !normalizedPhone) || !password) {
+        setError(loginMode === 'phone' ? '请输入手机号和密码' : '请输入邮箱和密码');
         setIsLoading(false);
         return;
       }
       
-      const loginId = loginMode === 'phone' ? `${phone}@phone.local` : email;
+      const loginId = loginMode === 'phone' ? `${normalizedPhone}@phone.local` : normalizedEmail;
       const mockUser = MOCK_USERS.find(u => u.email === loginId && u.password === password);
       if (mockUser) {
         const phoneProfileMap: Record<string, { nickname: string; memberType: 'regular' | 'gold' | 'diamond' }> = {
@@ -107,12 +111,12 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
         };
 
         let user = getUserByEmail(loginId);
-        const profile = loginMode === 'phone' ? phoneProfileMap[phone] : undefined;
+        const profile = loginMode === 'phone' ? phoneProfileMap[normalizedPhone] : undefined;
         
         if (!user) {
           user = saveUser({
             email: loginId,
-            nickname: (profile?.nickname || (loginMode === 'phone' ? phone : loginId.split('@')[0])),
+            nickname: (profile?.nickname || (loginMode === 'phone' ? normalizedPhone : loginId.split('@')[0])),
             memberType: (profile?.memberType || 'regular'),
             status: 'active',
             loginCount: 1,
@@ -121,20 +125,20 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
             createdAt: new Date().toISOString(),
             lastLoginAt: new Date().toISOString(),
           });
-          console.log('新用户注册成功:', user);
+          logger.info('login', '新用户注册成功', user);
         } else {
           // 如果是内置测试手机号账号，确保昵称/会员类型按预期对齐（避免本地存储里残留旧昵称）
-          if (profile && (user.nickname !== profile.nickname || user.memberType !== profile.memberType || user.phone !== phone)) {
+          if (profile && (user.nickname !== profile.nickname || user.memberType !== profile.memberType || user.phone !== normalizedPhone)) {
             user = saveUser({
               id: user.id,
               nickname: profile.nickname,
               memberType: profile.memberType,
-              phone,
+              phone: normalizedPhone,
             });
           }
 
           recordUserLogin(user.id);
-          console.log('用户登录成功，已更新登录记录:', user);
+          logger.info('login', '用户登录成功，已更新登录记录', user);
         }
         
         saveUserRaw(JSON.stringify(user), rememberMe);
@@ -161,11 +165,6 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleNotOpenYet = (label: string) => {
-    // P0: 按钮/链接必须有结果（已实现/未开放/权限不足）
-    alert(`「${label}」暂未开放\n\n当前为建造期联调模式（vBuild-1.0），如需提前获取内容请联系管理员。`);
   };
 
   return (
@@ -345,7 +344,7 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
               className="text-primary hover:underline"
               onClick={(e) => {
                 e.preventDefault();
-                handleNotOpenYet('服务条款');
+                notifyNotOpenYet('服务条款');
               }}
             >
               服务条款
@@ -356,7 +355,7 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
               className="text-primary hover:underline"
               onClick={(e) => {
                 e.preventDefault();
-                handleNotOpenYet('隐私政策');
+                notifyNotOpenYet('隐私政策');
               }}
             >
               隐私政策

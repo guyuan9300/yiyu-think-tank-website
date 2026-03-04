@@ -6,6 +6,7 @@ import {
   registerWithPhone,
   registerWithEmail
 } from '../lib/auth';
+import { notifyNotOpenYet, preventDefaultAndRun } from '../lib/uxFeedback';
 
 // NOTE: 邮箱验证邮件的跳转地址由 auth.ts 内的 emailRedirectTo 控制（需包含 BASE_URL 子路径）。
 
@@ -54,23 +55,22 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
     setSuccess('');
   };
 
-  const handleUnavailableLink = (label: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
-    alert(`「${label}」暂未开放\n\n当前为建造期联调模式（vBuild-1.0），如需提前获取内容请联系管理员。`);
-  };
+  const handleUnavailableLink = (label: string) => preventDefaultAndRun(() => notifyNotOpenYet(label));
 
   // 发送验证码
   const handleSendCode = async () => {
     setError('');
+    const normalizedPhone = formData.phone.trim();
+    const normalizedEmail = formData.email.trim();
 
     if (activeTab === 'phone') {
-      if (!/^1[3-9]\d{9}$/.test(formData.phone)) {
+      if (!/^1[3-9]\d{9}$/.test(normalizedPhone)) {
         setError('请输入正确的手机号码');
         return;
       }
 
       setIsSendingCode(true);
-      const result = await sendSMSCode(formData.phone);
+      const result = await sendSMSCode(normalizedPhone);
       setIsSendingCode(false);
 
       if (result.success) {
@@ -89,13 +89,13 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
         setError(result.error || '发送失败，请稍后重试');
       }
     } else if (activeTab === 'email') {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
         setError('请输入正确的邮箱地址');
         return;
       }
 
       setIsSendingCode(true);
-      const result = await sendEmailCode(formData.email);
+      const result = await sendEmailCode(normalizedEmail);
       setIsSendingCode(false);
 
       if (result.success) {
@@ -122,8 +122,18 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
     setError('');
     setSuccess('');
 
+    const normalizedNickname = formData.nickname.trim();
+    const normalizedPhone = formData.phone.trim();
+    const normalizedEmail = formData.email.trim();
+    const normalizedCode = formData.verifyCode.trim();
+
     // 验证表单
     if (true) {
+      if (!normalizedNickname) {
+        setError('请输入昵称');
+        return;
+      }
+
       if (formData.password.length < 8) {
         setError('密码长度至少为8位');
         return;
@@ -134,8 +144,18 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
         return;
       }
 
-      if (!formData.verifyCode) {
+      if (!normalizedCode) {
         setError('请输入验证码');
+        return;
+      }
+
+      if (activeTab === 'phone' && !/^1[3-9]\d{9}$/.test(normalizedPhone)) {
+        setError('请输入正确的手机号码');
+        return;
+      }
+
+      if (activeTab === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+        setError('请输入正确的邮箱地址');
         return;
       }
     }
@@ -152,17 +172,17 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
 
       if (activeTab === 'phone') {
         result = await registerWithPhone(
-          formData.phone,
+          normalizedPhone,
           formData.password,
-          formData.verifyCode,
-          formData.nickname || undefined
+          normalizedCode,
+          normalizedNickname || undefined
         );
       } else if (activeTab === 'email') {
         result = await registerWithEmail(
-          formData.email,
+          normalizedEmail,
           formData.password,
-          formData.verifyCode,
-          formData.nickname || undefined
+          normalizedCode,
+          normalizedNickname || undefined
         );
       }
 

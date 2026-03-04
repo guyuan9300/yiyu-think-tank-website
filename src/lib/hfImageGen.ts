@@ -1,5 +1,7 @@
 // Hugging Face image generation (client-side; token stored in localStorage)
 // NOTE: For production security, move this to a server-side proxy.
+import { httpRequest } from './httpClient';
+import { logger } from './logger';
 
 export const HF_TOKEN_STORAGE_KEY = 'yiyu_hf_token';
 export const HF_MODEL_STORAGE_KEY = 'yiyu_hf_model';
@@ -88,7 +90,9 @@ async function callHfImageModel(prompt: string): Promise<string> {
   const model = getHfModel();
   const url = `https://api-inference.huggingface.co/models/${encodeURIComponent(model)}`;
 
-  const resp = await fetch(url, {
+  logger.info('hfImageGen', `request image generation model=${model}`);
+
+  const resp = await httpRequest(url, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -126,6 +130,7 @@ async function callHfImageModel(prompt: string): Promise<string> {
   }
 
   const blob = await resp.blob();
+  logger.info('hfImageGen', `image generation success bytes=${blob.size}`);
   return await blobToDataUrl(blob);
 }
 
