@@ -33,7 +33,7 @@ jobs:
       - name: Build (GitHub Pages base path)
         env:
           VITE_BASE: /${{ github.event.repository.name }}/
-        run: npm run build
+        run: npm run build:gh
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

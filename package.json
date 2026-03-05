@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && node scripts/generate-share-pages.mjs",
+    "build:ip": "VITE_BASE=/ npm run build",
+    "build:gh": "VITE_BASE=${VITE_BASE:-/yiyu-think-tank-website/} npm run build",
     "preview": "vite preview",
     "ark:proxy": "node scripts/ark-proxy-server.mjs"
   },
