@@ -1,4 +1,3 @@
-import { appConfig } from './config';
 
 export type AuthChannel = 'phone' | 'email';
 export type AuthScene = 'register' | 'reset';
@@ -25,7 +24,7 @@ export interface LoginResponseData {
   user: AuthApiUser;
 }
 
-const AUTH_BASE = appConfig.auth.baseUrl || '/api/auth';
+const AUTH_BASE = (import.meta as any)?.env?.VITE_AUTH_API_BASE_URL || '/api/auth';
 
 async function post<T = any>(path: string, payload: Record<string, any>): Promise<ApiResult<T>> {
   try {
