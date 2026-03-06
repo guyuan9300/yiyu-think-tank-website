@@ -1,0 +1,67 @@
+name: Deploy to IP Server
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ip-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy-ip:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build for IP
+        run: npm run build:ip
+
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.IP_SERVER_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: Trust host key
+        env:
+          HOST: ${{ secrets.IP_SERVER_HOST }}
+        run: |
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload dist to temp dir
+        env:
+          HOST: ${{ secrets.IP_SERVER_HOST }}
+          USER: ${{ secrets.IP_SERVER_USER }}
+          PORT: ${{ secrets.IP_SERVER_PORT }}
+        run: |
+          rsync -az --delete -e "ssh -i ~/.ssh/id_rsa -p ${PORT:-22}" dist/ "$USER@$HOST:/tmp/yiyu-site-dist/"
+
+      - name: Publish to web root
+        env:
+          HOST: ${{ secrets.IP_SERVER_HOST }}
+          USER: ${{ secrets.IP_SERVER_USER }}
+          PORT: ${{ secrets.IP_SERVER_PORT }}
+          DEPLOY_PATH: ${{ secrets.IP_DEPLOY_PATH }}
+        run: |
+          ssh -i ~/.ssh/id_rsa -p ${PORT:-22} "$USER@$HOST" "sudo rsync -a --delete /tmp/yiyu-site-dist/ ${DEPLOY_PATH:-/var/www/yiyu-site}/ && sudo chown -R www-data:www-data ${DEPLOY_PATH:-/var/www/yiyu-site} && sudo find ${DEPLOY_PATH:-/var/www/yiyu-site} -type d -exec chmod 755 {} \\; && sudo find ${DEPLOY_PATH:-/var/www/yiyu-site} -type f -exec chmod 644 {} \\;"
+
+      - name: Smoke check
+        env:
+          HOST: ${{ secrets.IP_SERVER_HOST }}
+        run: |
+          curl -fsS "http://$HOST/" >/dev/null
+          echo "IP deploy completed"
