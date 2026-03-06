@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Header } from './Header';
-import { SettingsPage } from './SettingsPage';
 import { clearUser, getSavedUserRaw, saveUserRaw, USER_KEY } from '../lib/storage';
 import { generateAvatarImage } from '../lib/hfImageGen';
+import { resetPasswordByCode, sendVerifyCode } from '../lib/authApi';
 import {
   User as UserIcon,
   Crown,
@@ -10,6 +10,10 @@ import {
   LogOut,
   Settings as SettingsIcon,
   ChevronRight,
+  Lock,
+  Eye,
+  EyeOff,
+  KeyRound,
 } from 'lucide-react';
 
 type MemberType = 'regular' | 'gold' | 'diamond';
@@ -17,11 +21,13 @@ type MemberType = 'regular' | 'gold' | 'diamond';
 type LocalUser = {
   id: string;
   email?: string;
+  phone?: string;
   nickname?: string;
   memberType?: MemberType;
   status?: string;
   avatarUrl?: string;
   preferences?: string[];
+  plainPassword?: string;
 };
 
 type UserCenterPageProps = {
@@ -30,10 +36,18 @@ type UserCenterPageProps = {
 
 export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
   const [user, setUser] = useState<LocalUser | null>(null);
-  const [activeTab, setActiveTab] = useState<'profile' | 'settings'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
   const [avatarKeywords, setAvatarKeywords] = useState('');
   const [prefInput, setPrefInput] = useState('');
   const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
+
+  const [showSavedPassword, setShowSavedPassword] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [verifyCode, setVerifyCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [securityMessage, setSecurityMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const isAdmin = useMemo(() => {
     const flag = localStorage.getItem('yiyu_is_admin') ?? sessionStorage.getItem('yiyu_is_admin');
@@ -50,7 +64,6 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
       try {
         const u = JSON.parse(raw);
         setUser(u);
-        // prefill
         setAvatarKeywords(u?.nickname || u?.email || '');
       } catch {
         setUser(null);
@@ -77,8 +90,6 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
     }
 
     const next = { ...current, ...patch };
-
-    // Decide remember mode by where the user is stored.
     const remember = localStorage.getItem(USER_KEY) != null;
     saveUserRaw(JSON.stringify(next), remember);
     setUser(next);
@@ -98,7 +109,6 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
 
   const handleLogout = () => {
     clearUser();
-    // legacy keys cleanup
     localStorage.removeItem('yiyu_current_user');
     sessionStorage.removeItem('yiyu_current_user');
     localStorage.removeItem('yiyu_is_admin');
@@ -110,6 +120,77 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
     if (onNavigate) onNavigate('home');
   };
 
+  const getAuthTarget = () => {
+    if (!user) return null;
+    if (user.phone) return { channel: 'phone' as const, target: user.phone };
+    if (user.email) return { channel: 'email' as const, target: user.email };
+    return null;
+  };
+
+  const handleSendCode = async () => {
+    const auth = getAuthTarget();
+    if (!auth) {
+      setSecurityMessage({ type: 'error', text: '当前账号缺少邮箱/手机号，无法发送验证码。' });
+      return;
+    }
+
+    setIsSendingCode(true);
+    setSecurityMessage(null);
+    const result = await sendVerifyCode(auth.channel, auth.target, 'reset');
+    setIsSendingCode(false);
+
+    if (!result.ok) {
+      setSecurityMessage({ type: 'error', text: result.error || '验证码发送失败，请稍后重试。' });
+      return;
+    }
+
+    setSecurityMessage({
+      type: 'success',
+      text: auth.channel === 'phone' ? '验证码已发送到你的手机号。' : '验证码已发送到你的邮箱。',
+    });
+  };
+
+  const handleChangePassword = async () => {
+    const auth = getAuthTarget();
+    if (!auth) {
+      setSecurityMessage({ type: 'error', text: '当前账号缺少邮箱/手机号，无法重置密码。' });
+      return;
+    }
+    if (!verifyCode.trim()) {
+      setSecurityMessage({ type: 'error', text: '请输入验证码。' });
+      return;
+    }
+    if (newPassword.length < 8) {
+      setSecurityMessage({ type: 'error', text: '新密码至少 8 位。' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setSecurityMessage({ type: 'error', text: '两次输入的新密码不一致。' });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    setSecurityMessage(null);
+    const result = await resetPasswordByCode({
+      channel: auth.channel,
+      target: auth.target,
+      code: verifyCode.trim(),
+      newPassword,
+    });
+    setIsChangingPassword(false);
+
+    if (!result.ok) {
+      setSecurityMessage({ type: 'error', text: result.error || '密码修改失败，请稍后重试。' });
+      return;
+    }
+
+    persistUserPatch({ plainPassword: newPassword });
+    setVerifyCode('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setSecurityMessage({ type: 'success', text: '密码已修改成功。' });
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen bg-background">
@@ -117,7 +198,7 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
         <div className="pt-24 px-6 max-w-3xl mx-auto">
           <div className="bg-white/70 backdrop-blur rounded-3xl border border-border/40 p-10 text-center">
             <p className="text-lg font-semibold mb-2">请先登录</p>
-            <p className="text-sm text-muted-foreground/70 mb-6">登录后即可查看个人中心与设置</p>
+            <p className="text-sm text-muted-foreground/70 mb-6">登录后即可查看个人中心与账号设置</p>
             <button
               className="px-5 py-3 rounded-2xl bg-primary text-primary-foreground font-medium"
               onClick={() => onNavigate?.('login')}
@@ -135,7 +216,6 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
       <Header onNavigate={(p) => onNavigate?.(p)} isLoggedIn={true} userType="member" />
 
       <div className="pt-24 px-6 pb-16 max-w-5xl mx-auto">
-        {/* Top card */}
         <div className="bg-white/70 backdrop-blur rounded-3xl border border-border/40 p-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl overflow-hidden border border-border/40 bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-xl font-bold">
@@ -147,7 +227,7 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
             </div>
             <div>
               <div className="text-xl font-semibold">{user.nickname || '用户'}</div>
-              <div className="text-sm text-muted-foreground/70 break-all">{user.email || ''}</div>
+              <div className="text-sm text-muted-foreground/70 break-all">{user.email || user.phone || ''}</div>
               <div className={`inline-flex items-center gap-2 mt-3 px-3 py-1.5 rounded-full border text-xs font-medium ${memberBadge.cls}`}>
                 {memberBadge.icon}
                 <span>{memberBadge.label}</span>
@@ -157,11 +237,11 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setActiveTab('settings')}
+              onClick={() => setActiveTab('security')}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl border border-border/50 hover:bg-muted/30 transition"
             >
               <SettingsIcon className="w-4 h-4" />
-              <span className="text-sm font-medium">设置</span>
+              <span className="text-sm font-medium">账号设置</span>
             </button>
             <button
               onClick={handleLogout}
@@ -173,7 +253,6 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="mt-8 flex items-center gap-2">
           <button
             onClick={() => setActiveTab('profile')}
@@ -182,14 +261,13 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
             个人信息
           </button>
           <button
-            onClick={() => setActiveTab('settings')}
-            className={`px-4 py-2 rounded-2xl text-sm font-medium transition ${activeTab === 'settings' ? 'bg-foreground text-white' : 'bg-white/70 border border-border/40 text-muted-foreground/70 hover:text-foreground'}`}
+            onClick={() => setActiveTab('security')}
+            className={`px-4 py-2 rounded-2xl text-sm font-medium transition ${activeTab === 'security' ? 'bg-foreground text-white' : 'bg-white/70 border border-border/40 text-muted-foreground/70 hover:text-foreground'}`}
           >
-            设置
+            账号安全
           </button>
         </div>
 
-        {/* Content */}
         {activeTab === 'profile' ? (
           <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 bg-white/70 backdrop-blur rounded-3xl border border-border/40 p-6">
@@ -203,6 +281,10 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
                   <span className="text-muted-foreground/70">邮箱</span>
                   <span className="font-medium break-all">{user.email || '-'}</span>
                 </div>
+                <div className="flex items-center justify-between py-2 border-b border-border/30">
+                  <span className="text-muted-foreground/70">手机号</span>
+                  <span className="font-medium">{user.phone || '-'}</span>
+                </div>
                 <div className="flex items-center justify-between py-2">
                   <span className="text-muted-foreground/70">会员等级</span>
                   <span className="font-medium">{memberBadge.label}</span>
@@ -211,16 +293,41 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
               <div className="mt-6">
                 <button
                   className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80"
-                  onClick={() => setActiveTab('settings')}
+                  onClick={() => setActiveTab('security')}
                 >
-                  去设置
+                  去账号安全
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            {/* Avatar & Preferences */}
-            <div className="lg:col-span-2 bg-white/70 backdrop-blur rounded-3xl border border-border/40 p-6">
+            <div className="bg-white/70 backdrop-blur rounded-3xl border border-border/40 p-6">
+              <h3 className="text-base font-semibold mb-4">快捷入口</h3>
+              <div className="space-y-2">
+                <button
+                  className="w-full text-left px-4 py-3 rounded-2xl hover:bg-muted/30 border border-border/30 transition text-sm"
+                  onClick={() => onNavigate?.('my-learning')}
+                >
+                  我的学习
+                </button>
+                <button
+                  className="w-full text-left px-4 py-3 rounded-2xl hover:bg-muted/30 border border-border/30 transition text-sm"
+                  onClick={() => onNavigate?.('strategy-companion')}
+                >
+                  战略陪伴
+                </button>
+                {isAdmin && (
+                  <button
+                    className="w-full text-left px-4 py-3 rounded-2xl hover:bg-amber-50 border border-amber-200 text-amber-700 transition text-sm"
+                    onClick={() => onNavigate?.('admin')}
+                  >
+                    后台管理
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="lg:col-span-3 bg-white/70 backdrop-blur rounded-3xl border border-border/40 p-6">
               <h3 className="text-base font-semibold mb-4">头像与偏好</h3>
 
               <div className="flex flex-col sm:flex-row gap-6">
@@ -357,37 +464,93 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
                 </div>
               </div>
             </div>
-
-            <div className="bg-white/70 backdrop-blur rounded-3xl border border-border/40 p-6">
-              <h3 className="text-base font-semibold mb-4">快捷入口</h3>
-              <div className="space-y-2">
-                <button
-                  className="w-full text-left px-4 py-3 rounded-2xl hover:bg-muted/30 border border-border/30 transition text-sm"
-                  onClick={() => onNavigate?.('my-learning')}
-                >
-                  我的学习
-                </button>
-                <button
-                  className="w-full text-left px-4 py-3 rounded-2xl hover:bg-muted/30 border border-border/30 transition text-sm"
-                  onClick={() => onNavigate?.('strategy-companion')}
-                >
-                  战略陪伴
-                </button>
-              </div>
-            </div>
           </div>
         ) : (
-          <div className="mt-6">
-            {!isAdmin ? (
-              <div className="bg-white/70 backdrop-blur rounded-3xl border border-border/40 p-10 text-center">
-                <p className="text-sm text-muted-foreground/70">当前账号没有管理员权限，暂不展示系统设置。</p>
+          <div className="mt-6 bg-white/70 backdrop-blur rounded-3xl border border-border/40 p-6 md:p-8">
+            <h3 className="text-base font-semibold mb-5">密码与安全</h3>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="rounded-2xl border border-border/40 p-5 bg-white/80">
+                <div className="flex items-center gap-2 text-sm font-medium mb-3">
+                  <KeyRound className="w-4 h-4" />
+                  已存密码（当前会话）
+                </div>
+
+                <div className="text-xs text-muted-foreground/70 mb-3">
+                  这里展示的是当前账号在本机会话保存的密码；若为空，先完成一次“修改密码”后会显示。
+                </div>
+
+                <div className="flex items-center gap-2 rounded-xl border border-border/40 px-3 py-2 bg-muted/20">
+                  <span className="text-sm font-mono flex-1">
+                    {user.plainPassword ? (showSavedPassword ? user.plainPassword : '•'.repeat(Math.max(8, user.plainPassword.length))) : '未保存'}
+                  </span>
+                  <button
+                    type="button"
+                    className="p-1.5 rounded-lg hover:bg-muted/40"
+                    onClick={() => setShowSavedPassword((v) => !v)}
+                    disabled={!user.plainPassword}
+                  >
+                    {showSavedPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
-            ) : (
-              <div className="bg-white/70 backdrop-blur rounded-3xl border border-border/40 overflow-hidden">
-                {/* Reuse existing SettingsPage (merged into personal center) */}
-                <SettingsPage onBack={() => setActiveTab('profile')} />
+
+              <div className="rounded-2xl border border-border/40 p-5 bg-white/80">
+                <div className="flex items-center gap-2 text-sm font-medium mb-3">
+                  <Lock className="w-4 h-4" />
+                  修改密码
+                </div>
+
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={handleSendCode}
+                    disabled={isSendingCode}
+                    className="w-full px-4 py-2 rounded-xl border border-border/50 hover:bg-muted/30 text-sm disabled:opacity-60"
+                  >
+                    {isSendingCode ? '发送中…' : '发送验证码'}
+                  </button>
+
+                  <input
+                    value={verifyCode}
+                    onChange={(e) => setVerifyCode(e.target.value)}
+                    placeholder="验证码"
+                    className="w-full px-3 py-2 rounded-xl border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="新密码（至少8位）"
+                    className="w-full px-3 py-2 rounded-xl border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="确认新密码"
+                    className="w-full px-3 py-2 rounded-xl border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={handleChangePassword}
+                    disabled={isChangingPassword}
+                    className="w-full px-4 py-2 rounded-xl bg-foreground text-white hover:bg-foreground/90 text-sm disabled:opacity-60"
+                  >
+                    {isChangingPassword ? '提交中…' : '确认修改密码'}
+                  </button>
+                </div>
+
+                {securityMessage && (
+                  <div className={`mt-3 text-xs px-3 py-2 rounded-xl ${securityMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                    {securityMessage.text}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         )}
       </div>

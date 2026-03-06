@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Smartphone } from 'lucide-react';
-import { saveUser, getUserByEmail, recordUserLogin, type User } from '../lib/dataService';
+import { type User } from '../lib/dataService';
 import { saveUserRaw, setSavedItem, ADMIN_FLAG_KEY, ADMIN_EMAIL_KEY } from '../lib/storage';
+import { loginByPassword, normalizeLoginUser } from '../lib/authApi';
 import { notifyNotOpenYet } from '../lib/uxFeedback';
 import { logger } from '../lib/logger';
 
@@ -11,16 +12,12 @@ const ADMIN_CREDENTIALS = {
   password: 'Guyuan9300'
 };
 
-// Mock users (for testing)
-const MOCK_USERS = [
-  { email: 'test@example.com', password: 'test123' },
-  { email: 'user@example.com', password: 'user123' },
-
-  // 注意：当前项目为纯前端联调模式（无后端鉴权），任何写在代码里的账号/密码都会被公开。
-  // 这些账号仅用于测试不同会员等级的权限流程。
-  { email: '13631445251@phone.local', password: 'immomobot' }, // 普通会员
-  { email: '18027370767@phone.local', password: 'imdoubaobot' }, // 黄金会员
+// 兼容保留账号（在 Auth API 尚未接通或迁移期失败时兜底）
+const LEGACY_TEST_ACCOUNTS = [
+  { channel: 'phone' as const, target: '13631445251', password: 'immomobot', nickname: '默默的同事', memberType: 'regular' as const },
+  { channel: 'phone' as const, target: '18027370767', password: 'imdoubaobot', nickname: '豆包的同事', memberType: 'gold' as const },
 ];
+
 
 type LoginMode = 'email' | 'phone';
 
@@ -65,7 +62,7 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
         setSavedItem(ADMIN_EMAIL_KEY, normalizedEmail, rememberMe);
 
         // 同时写入当前用户信息，确保从后台回到前台后依然保持“已登录/管理员”状态
-        const adminUser: User = {
+        const adminUser: User & { plainPassword?: string } = {
           id: 'admin',
           email: normalizedEmail,
           nickname: '超级管理员',
@@ -76,6 +73,7 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
           favoritesCount: 0,
           createdAt: new Date().toISOString(),
           lastLoginAt: new Date().toISOString(),
+          plainPassword: password,
         };
         saveUserRaw(JSON.stringify(adminUser), rememberMe);
         window.dispatchEvent(new Event('yiyu_user_updated'));
@@ -101,64 +99,63 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
         setIsLoading(false);
         return;
       }
-      
-      const loginId = loginMode === 'phone' ? `${normalizedPhone}@phone.local` : normalizedEmail;
-      const mockUser = MOCK_USERS.find(u => u.email === loginId && u.password === password);
-      if (mockUser) {
-        const phoneProfileMap: Record<string, { nickname: string; memberType: 'regular' | 'gold' | 'diamond' }> = {
-          '13631445251': { nickname: '默默的同事', memberType: 'regular' },
-          '18027370767': { nickname: '豆包的同事', memberType: 'gold' },
+
+      const result = await loginByPassword({
+        channel: loginMode,
+        target: loginMode === 'phone' ? normalizedPhone : normalizedEmail,
+        password,
+      });
+
+      if (!result.ok || !result.data?.user) {
+        // 迁移期兜底：保留既有可登录测试账号
+        const legacy = LEGACY_TEST_ACCOUNTS.find((a) => a.channel === loginMode && a.target === (loginMode === 'phone' ? normalizedPhone : normalizedEmail) && a.password === password);
+        if (!legacy) {
+          setError(result.error || '登录失败，请检查账号或密码');
+          return;
+        }
+
+        const now = new Date().toISOString();
+        const legacyUser: User & { plainPassword?: string } = {
+          id: `legacy_${legacy.target}`,
+          email: `${legacy.target}@phone.local`,
+          phone: legacy.target,
+          nickname: legacy.nickname,
+          memberType: legacy.memberType,
+          status: 'active',
+          loginCount: 1,
+          commentsCount: 0,
+          favoritesCount: 0,
+          createdAt: now,
+          lastLoginAt: now,
+          plainPassword: password,
         };
+        saveUserRaw(JSON.stringify(legacyUser), rememberMe);
+        window.dispatchEvent(new Event('yiyu_user_updated'));
 
-        let user = getUserByEmail(loginId);
-        const profile = loginMode === 'phone' ? phoneProfileMap[normalizedPhone] : undefined;
-        
-        if (!user) {
-          user = saveUser({
-            email: loginId,
-            nickname: (profile?.nickname || (loginMode === 'phone' ? normalizedPhone : loginId.split('@')[0])),
-            memberType: (profile?.memberType || 'regular'),
-            status: 'active',
-            loginCount: 1,
-            commentsCount: 0,
-            favoritesCount: 0,
-            createdAt: new Date().toISOString(),
-            lastLoginAt: new Date().toISOString(),
-          });
-          logger.info('login', '新用户注册成功', user);
-        } else {
-          // 如果是内置测试手机号账号，确保昵称/会员类型按预期对齐（避免本地存储里残留旧昵称）
-          if (profile && (user.nickname !== profile.nickname || user.memberType !== profile.memberType || user.phone !== normalizedPhone)) {
-            user = saveUser({
-              id: user.id,
-              nickname: profile.nickname,
-              memberType: profile.memberType,
-              phone: normalizedPhone,
-            });
-          }
+        if (onLoginSuccess) onLoginSuccess();
+        else if (onNavigate) onNavigate('home');
+        return;
+      }
 
-          recordUserLogin(user.id);
-          logger.info('login', '用户登录成功，已更新登录记录', user);
-        }
-        
-        saveUserRaw(JSON.stringify(user), rememberMe);
+      const user = normalizeLoginUser(result.data.user) as User & { plainPassword?: string };
+      user.plainPassword = password;
+      saveUserRaw(JSON.stringify(user), rememberMe);
+      window.dispatchEvent(new Event('yiyu_user_updated'));
 
-        // 非管理员登录：清理可能残留的管理员标记，避免普通账号看到/访问管理后台
-        try {
-          localStorage.removeItem(ADMIN_FLAG_KEY);
-          sessionStorage.removeItem(ADMIN_FLAG_KEY);
-          localStorage.removeItem(ADMIN_EMAIL_KEY);
-          sessionStorage.removeItem(ADMIN_EMAIL_KEY);
-        } catch {}
+      // 非管理员登录：清理可能残留的管理员标记，避免普通账号看到/访问管理后台
+      try {
+        localStorage.removeItem(ADMIN_FLAG_KEY);
+        sessionStorage.removeItem(ADMIN_FLAG_KEY);
+        localStorage.removeItem(ADMIN_EMAIL_KEY);
+        sessionStorage.removeItem(ADMIN_EMAIL_KEY);
+      } catch {}
 
-        
-        if (onLoginSuccess) {
-          onLoginSuccess();
-        } else if (onNavigate) {
-          onNavigate('home');
-        }
-      } else {
-        setError('邮箱或密码错误，请检查输入');
+      logger.info('login', '用户登录成功', { id: user.id, loginMode });
+
+      if (onLoginSuccess) {
+        onLoginSuccess();
+      } else if (onNavigate) {
+        onNavigate('home');
       }
     } catch (err) {
       setError('登录失败，请稍后重试');

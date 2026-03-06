@@ -302,7 +302,7 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
                       }}
                     >
                       <SettingsIcon className="w-4 h-4 text-gray-500" />
-                      设置
+                      账号设置
                     </button>
 
                     {(() => {
@@ -318,7 +318,7 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
                           }}
                         >
                           <Crown className="w-4 h-4 text-amber-500" />
-                          管理后台
+                          后台管理
                         </button>
                       );
                     })()}
@@ -407,8 +407,21 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
                   }}
                   className="w-full px-4 py-3 rounded-xl hover:bg-muted/30 transition-all text-left"
                 >
-                  个人中心 / 设置
+                  个人中心 / 账号设置
                 </button>
+
+                {((localStorage.getItem('yiyu_is_admin') ?? sessionStorage.getItem('yiyu_is_admin')) === 'true') && (
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      if (onNavigate) onNavigate('admin');
+                      else window.location.assign(`${window.location.pathname}?page=admin`);
+                    }}
+                    className="w-full px-4 py-3 rounded-xl hover:bg-amber-50 text-amber-700 transition-all text-left"
+                  >
+                    后台管理
+                  </button>
+                )}
                 
                 <button 
                   onClick={handleLogout}
