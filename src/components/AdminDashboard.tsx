@@ -122,11 +122,21 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const [showReportForm, setShowReportForm] = useState(false);
   const [showBookForm, setShowBookForm] = useState(false);
   const [editingItem, setEditingItem] = useState<Report | InsightArticle | Methodology | Book | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [insightSearchQuery, setInsightSearchQuery] = useState('');
+  const [methodologySearchQuery, setMethodologySearchQuery] = useState('');
+  const [reportSearchQuery, setReportSearchQuery] = useState('');
+  const [bookSearchQuery, setBookSearchQuery] = useState('');
+  const [commentSearchQuery, setCommentSearchQuery] = useState('');
 
-  // 内容筛选：统一标签（四类，可多选）
-  const [filterTopics, setFilterTopics] = useState<ResourceTopic[]>([]);
-  const [topicFilterOpen, setTopicFilterOpen] = useState(false);
+  // 内容筛选：按菜单隔离的标签（四类，可多选）
+  const [insightFilterTopics, setInsightFilterTopics] = useState<ResourceTopic[]>([]);
+  const [methodologyFilterTopics, setMethodologyFilterTopics] = useState<ResourceTopic[]>([]);
+  const [reportFilterTopics, setReportFilterTopics] = useState<ResourceTopic[]>([]);
+  const [bookFilterTopics, setBookFilterTopics] = useState<ResourceTopic[]>([]);
+  const [insightTopicFilterOpen, setInsightTopicFilterOpen] = useState(false);
+  const [methodologyTopicFilterOpen, setMethodologyTopicFilterOpen] = useState(false);
+  const [reportTopicFilterOpen, setReportTopicFilterOpen] = useState(false);
+  const [bookTopicFilterOpen, setBookTopicFilterOpen] = useState(false);
 
   // 评论筛选：状态
   const [commentStatusFilter, setCommentStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'has_reply'>('all');
@@ -441,9 +451,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   };
 
   // 筛选内容（按搜索 + topics）
-  const filterContent = (items: any[]) => {
-    const q = searchQuery.trim().toLowerCase();
-    const selected = (filterTopics || []).filter(Boolean);
+  const filterContent = (items: any[], query: string, topics: ResourceTopic[]) => {
+    const q = query.trim().toLowerCase();
+    const selected = (topics || []).filter(Boolean);
 
     return items.filter((item) => {
       const title = (item.title || '').toString().toLowerCase();
@@ -457,6 +467,33 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
       return matchesSearch && matchesTopics;
     });
+  };
+
+  const filteredInsights = filterContent(insights, insightSearchQuery, insightFilterTopics);
+  const filteredMethodologies = filterContent(methodologies, methodologySearchQuery, methodologyFilterTopics);
+  const filteredReports = filterContent(reports, reportSearchQuery, reportFilterTopics);
+  const filteredBooks = filterContent(books, bookSearchQuery, bookFilterTopics);
+
+  const filteredComments = comments.filter((comment) => {
+    const q = commentSearchQuery.trim().toLowerCase();
+    const matchesSearch = !q ||
+      comment.text.toLowerCase().includes(q) ||
+      comment.userName.toLowerCase().includes(q) ||
+      comment.contentTitle.toLowerCase().includes(q);
+    const matchesStatus = (
+      commentStatusFilter === 'all'
+        ? true
+        : commentStatusFilter === 'has_reply'
+          ? Boolean(comment.reply && comment.reply.trim())
+          : comment.status === commentStatusFilter
+    );
+    return matchesSearch && matchesStatus;
+  });
+
+  const clearInsightFilters = () => {
+    setInsightSearchQuery('');
+    setInsightFilterTopics([]);
+    setInsightTopicFilterOpen(false);
   };
 
   // 处理文件上传
@@ -904,8 +941,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       <input
                         type="text"
                         placeholder="搜索文章..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        value={insightSearchQuery}
+                        onChange={(e) => setInsightSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                     </div>
@@ -914,20 +951,20 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                     <div className="relative">
                       <button
                         type="button"
-                        onClick={() => setTopicFilterOpen((v) => !v)}
+                        onClick={() => setInsightTopicFilterOpen((v) => !v)}
                         className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
                         title="全部标签（可多选）"
                       >
-                        {filterTopics.length === 0 ? '全部标签' : `标签：${filterTopics.join('、')}`}
+                        {insightFilterTopics.length === 0 ? '全部标签' : `标签：${insightFilterTopics.join('、')}`}
                       </button>
 
-                      {topicFilterOpen && (
+                      {insightTopicFilterOpen && (
                         <div className="absolute z-20 mt-2 w-56 rounded-xl border border-gray-200 bg-white shadow-lg p-3">
                           <div className="flex items-center justify-between mb-2">
                             <div className="text-sm font-medium text-gray-800">全部标签</div>
                             <button
                               type="button"
-                              onClick={() => setFilterTopics([])}
+                              onClick={() => setInsightFilterTopics([])}
                               className="text-xs text-gray-500 hover:text-gray-800"
                             >
                               清空
@@ -935,7 +972,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                           </div>
                           <div className="space-y-2">
                             {RESOURCE_TOPICS.map((t) => {
-                              const checked = filterTopics.includes(t);
+                              const checked = insightFilterTopics.includes(t);
                               return (
                                 <label key={t} className="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
                                   <input
@@ -943,7 +980,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                     checked={checked}
                                     onChange={(e) => {
                                       const on = e.target.checked;
-                                      setFilterTopics((prev) => (on ? Array.from(new Set([...prev, t])) : prev.filter((x) => x !== t)));
+                                      setInsightFilterTopics((prev) => (on ? Array.from(new Set([...prev, t])) : prev.filter((x) => x !== t)));
                                     }}
                                     className="w-4 h-4 text-purple-600 rounded"
                                   />
@@ -986,7 +1023,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {filterContent(insights).map((article) => (
+                      {filteredInsights.map((article) => (
                         <tr key={article.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
@@ -1070,11 +1107,27 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   </table>
                 </div>
                 
-                {filterContent(insights).length === 0 && (
+                {filteredInsights.length === 0 && (
                   <div className="p-12 text-center text-gray-500">
                     <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p>暂无文章</p>
-                    <p className="text-sm mt-2">点击上方按钮添加新文章</p>
+                    {insights.length === 0 ? (
+                      <>
+                        <p>还没有文章</p>
+                        <p className="text-sm mt-2">点击上方按钮添加第一篇文章</p>
+                      </>
+                    ) : (
+                      <>
+                        <p>当前筛选条件下没有匹配文章</p>
+                        <p className="text-sm mt-2">请清空搜索词或切换标签后再查看</p>
+                        <button
+                          type="button"
+                          onClick={clearInsightFilters}
+                          className="mt-4 px-4 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                        >
+                          清空筛选
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -1092,8 +1145,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       <input
                         type="text"
                         placeholder="搜索方法论..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        value={methodologySearchQuery}
+                        onChange={(e) => setMethodologySearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                     </div>
@@ -1102,20 +1155,20 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                     <div className="relative">
                       <button
                         type="button"
-                        onClick={() => setTopicFilterOpen((v) => !v)}
+                        onClick={() => setMethodologyTopicFilterOpen((v) => !v)}
                         className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
                         title="全部标签（可多选）"
                       >
-                        {filterTopics.length === 0 ? '全部标签' : `标签：${filterTopics.join('、')}`}
+                        {methodologyFilterTopics.length === 0 ? '全部标签' : `标签：${methodologyFilterTopics.join('、')}`}
                       </button>
 
-                      {topicFilterOpen && (
+                      {methodologyTopicFilterOpen && (
                         <div className="absolute z-20 mt-2 w-56 rounded-xl border border-gray-200 bg-white shadow-lg p-3">
                           <div className="flex items-center justify-between mb-2">
                             <div className="text-sm font-medium text-gray-800">全部标签</div>
                             <button
                               type="button"
-                              onClick={() => setFilterTopics([])}
+                              onClick={() => setMethodologyFilterTopics([])}
                               className="text-xs text-gray-500 hover:text-gray-800"
                             >
                               清空
@@ -1123,7 +1176,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                           </div>
                           <div className="space-y-2">
                             {RESOURCE_TOPICS.map((t) => {
-                              const checked = filterTopics.includes(t);
+                              const checked = methodologyFilterTopics.includes(t);
                               return (
                                 <label key={t} className="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
                                   <input
@@ -1131,7 +1184,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                     checked={checked}
                                     onChange={(e) => {
                                       const on = e.target.checked;
-                                      setFilterTopics((prev) => (on ? Array.from(new Set([...prev, t])) : prev.filter((x) => x !== t)));
+                                      setMethodologyFilterTopics((prev) => (on ? Array.from(new Set([...prev, t])) : prev.filter((x) => x !== t)));
                                     }}
                                     className="w-4 h-4 text-purple-600 rounded"
                                   />
@@ -1171,7 +1224,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {filterContent(methodologies).map((item) => (
+                      {filteredMethodologies.map((item) => (
                         <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4">
                             <div>
@@ -1222,7 +1275,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   </table>
                 </div>
 
-                {filterContent(methodologies).length === 0 && (
+                {filteredMethodologies.length === 0 && (
                   <div className="p-12 text-center text-gray-500">
                     <Tag className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                     <p>暂无方法论</p>
@@ -1252,8 +1305,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       <input
                         type="text"
                         placeholder="搜索报告..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        value={reportSearchQuery}
+                        onChange={(e) => setReportSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                     </div>
@@ -1262,20 +1315,20 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                     <div className="relative">
                       <button
                         type="button"
-                        onClick={() => setTopicFilterOpen((v) => !v)}
+                        onClick={() => setReportTopicFilterOpen((v) => !v)}
                         className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
                         title="全部标签（可多选）"
                       >
-                        {filterTopics.length === 0 ? '全部标签' : `标签：${filterTopics.join('、')}`}
+                        {reportFilterTopics.length === 0 ? '全部标签' : `标签：${reportFilterTopics.join('、')}`}
                       </button>
 
-                      {topicFilterOpen && (
+                      {reportTopicFilterOpen && (
                         <div className="absolute z-20 mt-2 w-56 rounded-xl border border-gray-200 bg-white shadow-lg p-3">
                           <div className="flex items-center justify-between mb-2">
                             <div className="text-sm font-medium text-gray-800">全部标签</div>
                             <button
                               type="button"
-                              onClick={() => setFilterTopics([])}
+                              onClick={() => setReportFilterTopics([])}
                               className="text-xs text-gray-500 hover:text-gray-800"
                             >
                               清空
@@ -1283,7 +1336,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                           </div>
                           <div className="space-y-2">
                             {RESOURCE_TOPICS.map((t) => {
-                              const checked = filterTopics.includes(t);
+                              const checked = reportFilterTopics.includes(t);
                               return (
                                 <label key={t} className="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
                                   <input
@@ -1291,7 +1344,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                     checked={checked}
                                     onChange={(e) => {
                                       const on = e.target.checked;
-                                      setFilterTopics((prev) => (on ? Array.from(new Set([...prev, t])) : prev.filter((x) => x !== t)));
+                                      setReportFilterTopics((prev) => (on ? Array.from(new Set([...prev, t])) : prev.filter((x) => x !== t)));
                                     }}
                                     className="w-4 h-4 text-purple-600 rounded"
                                   />
@@ -1339,7 +1392,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {filterContent(reports).map((report) => (
+                      {filteredReports.map((report) => (
                         <tr key={report.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
@@ -1423,7 +1476,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   </table>
                 </div>
                 
-                {filterContent(reports).length === 0 && (
+                {filteredReports.length === 0 && (
                   <div className="p-12 text-center text-gray-500">
                     <Folder className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                     <p>暂无报告</p>
@@ -1453,8 +1506,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       <input
                         type="text"
                         placeholder="搜索书籍..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        value={bookSearchQuery}
+                        onChange={(e) => setBookSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                     </div>
@@ -1463,20 +1516,20 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                     <div className="relative">
                       <button
                         type="button"
-                        onClick={() => setTopicFilterOpen((v) => !v)}
+                        onClick={() => setBookTopicFilterOpen((v) => !v)}
                         className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
                         title="全部标签（可多选）"
                       >
-                        {filterTopics.length === 0 ? '全部标签' : `标签：${filterTopics.join('、')}`}
+                        {bookFilterTopics.length === 0 ? '全部标签' : `标签：${bookFilterTopics.join('、')}`}
                       </button>
 
-                      {topicFilterOpen && (
+                      {bookTopicFilterOpen && (
                         <div className="absolute z-20 mt-2 w-56 rounded-xl border border-gray-200 bg-white shadow-lg p-3">
                           <div className="flex items-center justify-between mb-2">
                             <div className="text-sm font-medium text-gray-800">全部标签</div>
                             <button
                               type="button"
-                              onClick={() => setFilterTopics([])}
+                              onClick={() => setBookFilterTopics([])}
                               className="text-xs text-gray-500 hover:text-gray-800"
                             >
                               清空
@@ -1484,7 +1537,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                           </div>
                           <div className="space-y-2">
                             {RESOURCE_TOPICS.map((t) => {
-                              const checked = filterTopics.includes(t);
+                              const checked = bookFilterTopics.includes(t);
                               return (
                                 <label key={t} className="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
                                   <input
@@ -1492,7 +1545,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                     checked={checked}
                                     onChange={(e) => {
                                       const on = e.target.checked;
-                                      setFilterTopics((prev) => (on ? Array.from(new Set([...prev, t])) : prev.filter((x) => x !== t)));
+                                      setBookFilterTopics((prev) => (on ? Array.from(new Set([...prev, t])) : prev.filter((x) => x !== t)));
                                     }}
                                     className="w-4 h-4 text-purple-600 rounded"
                                   />
@@ -1536,7 +1589,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {filterContent(books).map((book) => (
+                      {filteredBooks.map((book) => (
                         <tr key={book.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
@@ -1620,7 +1673,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   </table>
                 </div>
                 
-                {filterContent(books).length === 0 && (
+                {filteredBooks.length === 0 && (
                   <div className="p-12 text-center text-gray-500">
                     <BookOpen className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                     <p>暂无书籍</p>
@@ -2010,8 +2063,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                     <input
                       type="text"
                       placeholder="搜索评论内容或用户名..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      value={commentSearchQuery}
+                      onChange={(e) => setCommentSearchQuery(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
@@ -2032,44 +2085,14 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
               {/* 评论列表 */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                {comments
-                  .filter(comment => {
-                    const matchesSearch = !searchQuery || 
-                      comment.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      comment.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      comment.contentTitle.toLowerCase().includes(searchQuery.toLowerCase());
-                    const matchesStatus = (
-                      commentStatusFilter === 'all'
-                        ? true
-                        : commentStatusFilter === 'has_reply'
-                          ? Boolean(comment.reply && comment.reply.trim())
-                          : comment.status === commentStatusFilter
-                    );
-                    return matchesSearch && matchesStatus;
-                  })
-                  .length === 0 ? (
+                {filteredComments.length === 0 ? (
                   <div className="p-12 text-center text-gray-500">
                     <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                     <p>暂无评论</p>
                   </div>
                 ) : (
                   <div className="divide-y divide-gray-100">
-                    {comments
-                      .filter(comment => {
-                        const matchesSearch = !searchQuery || 
-                          comment.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          comment.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          comment.contentTitle.toLowerCase().includes(searchQuery.toLowerCase());
-                        const matchesStatus = (
-                          commentStatusFilter === 'all'
-                            ? true
-                            : commentStatusFilter === 'has_reply'
-                              ? Boolean(comment.reply && comment.reply.trim())
-                              : comment.status === commentStatusFilter
-                        );
-                        return matchesSearch && matchesStatus;
-                      })
-                      .map((comment) => (
+                    {filteredComments.map((comment) => (
                         <div key={comment.id} className="p-6 hover:bg-gray-50 transition-colors">
                           {/* 评论头部 */}
                           <div className="flex items-start justify-between mb-3">
@@ -2255,9 +2278,10 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   selectedProjectIds: syncClientIds,
                 });
                 refreshAllData();
+                clearInsightFilters();
                 setShowInsightForm(false);
                 setEditingItem(null);
-                setMessage({ type: 'success', text: '文章已保存，前台洞察页面可见！' });
+                setMessage({ type: 'success', text: '文章已保存，已返回未筛选的文章列表。' });
               }}
               strategyClients={strategyClients}
               syncClientIds={syncClientIds}
