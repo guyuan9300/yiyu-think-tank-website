@@ -10,6 +10,9 @@
  */
 
 import { ZHIXIAOYUN_CONFIG, MEMBERSHIP_PLANS } from './zhixiaoyun';
+import { getSavedUserRaw, getSavedAuthToken, saveAuthToken, saveUserRaw, clearUser, USER_KEY } from './storage';
+import { getSessionUser } from './authState';
+import { loginByPassword, registerByCode, resetPasswordByCode, sendVerifyCode } from './authApi';
 
 // 用户类型定义
 export interface User {
@@ -97,19 +100,15 @@ let authToken: string | null = null;
 
 // 初始化认证状态
 export function initAuth() {
-  // 从localStorage恢复登录状态
-  const savedUser = localStorage.getItem('yiyu_user');
-  const savedToken = localStorage.getItem('yiyu_token');
-  
+  const savedUser = getSavedUserRaw();
+  const savedToken = getSavedAuthToken();
   if (savedUser && savedToken) {
     try {
       currentUser = JSON.parse(savedUser);
       authToken = savedToken;
       return true;
-    } catch (e) {
-      // 解析失败，清除数据
-      localStorage.removeItem('yiyu_user');
-      localStorage.removeItem('yiyu_token');
+    } catch {
+      clearUser();
     }
   }
   return false;
@@ -117,31 +116,21 @@ export function initAuth() {
 
 // 获取当前用户
 export function getCurrentUser(): User | null {
-  return currentUser;
+  return (getSessionUser() as User | null) || currentUser;
 }
 
 // 检查是否已登录
 export function isLoggedIn(): boolean {
-  return currentUser !== null;
+  return !!getCurrentUser();
 }
 
 // 检查是否是付费会员
 export function isPremiumMember(): boolean {
-  if (!currentUser) return false;
-  
-  if (currentUser.membershipType === 'lifetime') {
-    return true;
-  }
-  
-  if (currentUser.membershipType === 'premium') {
-    if (currentUser.membershipExpireAt) {
-      const expireDate = new Date(currentUser.membershipExpireAt);
-      return expireDate > new Date();
-    }
-    return true;
-  }
-  
-  return false;
+  const user = getCurrentUser();
+  if (!user) return false;
+  if (user.membershipType === 'lifetime' || user.membershipType === 'premium') return true;
+  const mt = (user as any).memberType;
+  return mt === 'gold' || mt === 'diamond';
 }
 
 // 获取会员剩余天数
@@ -160,36 +149,14 @@ export function getMembershipDays(): number | null {
 
 // 发送短信验证码
 export async function sendSMSCode(phone: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    // TODO: 调用知晓云短信发送接口
-    // const response = await fetch(`${ZHIXIAOYUN_CONFIG.serverURL}/sms/send`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ phone, template: 'register' })
-    // });
-    
-    // 模拟发送
-    console.log(`发送短信验证码到: ${phone}`);
-    
-    // 存储验证码（测试用）
-    localStorage.setItem(`verify_code_${phone}`, '123456');
-    
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
+  const result = await sendVerifyCode('phone', phone, 'register');
+  return { success: result.ok, error: result.error };
 }
 
 // 发送邮箱验证码（已废弃，使用 Supabase Auth 自动发送验证邮件）
 export async function sendEmailCode(email: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    // Supabase Auth 在注册时会自动发送验证邮件，无需单独调用
-    // 这个函数保留是为了向后兼容
-    console.log(`Supabase 将在注册时自动发送验证邮件到: ${email}`);
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
+  const result = await sendVerifyCode('email', email, 'register');
+  return { success: result.ok, error: result.error };
 }
 
 // 验证验证码
