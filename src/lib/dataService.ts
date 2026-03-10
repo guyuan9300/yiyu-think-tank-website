@@ -475,6 +475,16 @@ export const PG_SYNC_KEYS = new Set<string>([
 ]);
 
 const pgSyncTimers = new Map<string, number>();
+const CONTENT_STORAGE_KEYS = new Set<string>([
+  STORAGE_KEYS.reports,
+  STORAGE_KEYS.insights,
+  STORAGE_KEYS.methodologies,
+  STORAGE_KEYS.books,
+  STORAGE_KEYS.tags,
+  STORAGE_KEYS.categories,
+  STORAGE_KEYS.systemSettings,
+]);
+const contentMemoryCache = new Map<string, any>();
 
 export const schedulePgSync = (key: string, data: any) => {
   if (typeof window === 'undefined' || !PG_SYNC_KEYS.has(key)) return;
@@ -502,23 +512,30 @@ export const schedulePgSync = (key: string, data: any) => {
   pgSyncTimers.set(key, timer);
 };
 
-// 工具函数：保存数据到localStorage
+// 工具函数：保存数据（内容域走内存缓存，非内容域仍可用 localStorage）
 const saveToStorage = (key: string, data: any) => {
   try {
+    if (CONTENT_STORAGE_KEYS.has(key)) {
+      contentMemoryCache.set(key, data);
+      schedulePgSync(key, data);
+      return;
+    }
     localStorage.setItem(key, JSON.stringify(data));
-    schedulePgSync(key, data);
   } catch (error) {
-    console.error('Failed to save to localStorage:', error);
+    console.error('Failed to save data:', error);
   }
 };
 
-// 工具函数：从localStorage读取数据
+// 工具函数：读取数据（内容域优先读内存缓存）
 const loadFromStorage = (key: string, defaultData: any) => {
   try {
+    if (CONTENT_STORAGE_KEYS.has(key)) {
+      return contentMemoryCache.has(key) ? contentMemoryCache.get(key) : defaultData;
+    }
     const data = localStorage.getItem(key);
     return data ? JSON.parse(data) : defaultData;
   } catch (error) {
-    console.error('Failed to load from localStorage:', error);
+    console.error('Failed to load data:', error);
     return defaultData;
   }
 };
@@ -1220,7 +1237,13 @@ export const bootstrapFromPgApi = async (): Promise<boolean> => {
     }
 
     for (const [key, value] of writes) {
-      localStorage.setItem(key, JSON.stringify(value));
+      contentMemoryCache.set(key, value);
+      try { localStorage.removeItem(key); } catch {}
+    }
+
+    // 清理浏览器内历史内容缓存，避免误导排查
+    for (const key of CONTENT_STORAGE_KEYS) {
+      try { localStorage.removeItem(key); } catch {}
     }
 
     try {
@@ -1240,8 +1263,10 @@ export const clearAllCache = (): boolean => {
     // 保存系统设置，其他数据清空
     const settings = getSystemSettings();
     Object.keys(STORAGE_KEYS).forEach(key => {
+      const storageKey = STORAGE_KEYS[key as keyof typeof STORAGE_KEYS];
       if (key !== 'systemSettings') {
-        localStorage.removeItem(STORAGE_KEYS[key as keyof typeof STORAGE_KEYS]);
+        if (CONTENT_STORAGE_KEYS.has(storageKey)) contentMemoryCache.delete(storageKey);
+        localStorage.removeItem(storageKey);
       }
     });
     notifyDataChange();
