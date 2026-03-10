@@ -1,11 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, User, Smartphone, CheckCircle } from 'lucide-react';
-import {
-  sendSMSCode,
-  sendEmailCode,
-  registerWithPhone,
-  registerWithEmail
-} from '../lib/auth';
+import { registerByCode, sendVerifyCode } from '../lib/authApi';
 import { notifyNotOpenYet, preventDefaultAndRun } from '../lib/uxFeedback';
 
 // NOTE: 邮箱验证邮件的跳转地址由 auth.ts 内的 emailRedirectTo 控制（需包含 BASE_URL 子路径）。
@@ -70,10 +65,10 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
       }
 
       setIsSendingCode(true);
-      const result = await sendSMSCode(normalizedPhone);
+      const result = await sendVerifyCode('phone', normalizedPhone, 'register');
       setIsSendingCode(false);
 
-      if (result.success) {
+      if (result.ok) {
         setSuccess('验证码已发送，请查收短信');
         setCountdown(60);
         const timer = setInterval(() => {
@@ -95,10 +90,10 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
       }
 
       setIsSendingCode(true);
-      const result = await sendEmailCode(normalizedEmail);
+      const result = await sendVerifyCode('email', normalizedEmail, 'register');
       setIsSendingCode(false);
 
-      if (result.success) {
+      if (result.ok) {
         setSuccess('验证码已发送，请查收邮件');
         setCountdown(60);
         const timer = setInterval(() => {
@@ -171,22 +166,24 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
       let result: any;
 
       if (activeTab === 'phone') {
-        result = await registerWithPhone(
-          normalizedPhone,
-          formData.password,
-          normalizedCode,
-          normalizedNickname || undefined
-        );
+        result = await registerByCode({
+          channel: 'phone',
+          target: normalizedPhone,
+          code: normalizedCode,
+          password: formData.password,
+          nickname: normalizedNickname || undefined,
+        });
       } else if (activeTab === 'email') {
-        result = await registerWithEmail(
-          normalizedEmail,
-          formData.password,
-          normalizedCode,
-          normalizedNickname || undefined
-        );
+        result = await registerByCode({
+          channel: 'email',
+          target: normalizedEmail,
+          code: normalizedCode,
+          password: formData.password,
+          nickname: normalizedNickname || undefined,
+        });
       }
 
-      if (result.success) {
+      if (result.ok) {
         setSuccess('注册成功！正在跳转...');
         setTimeout(() => {
           if (onRegisterSuccess) {
