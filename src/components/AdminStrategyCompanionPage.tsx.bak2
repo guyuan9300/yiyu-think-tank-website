@@ -5,10 +5,10 @@
  * 使用方法：
  * 1. 此版本使用 localStorage 进行数据存储
  * 2. 所有数据保存在浏览器本地，无需连接数据库
- * 3. 测试通过后，切换回 dataServiceSupabase.ts 使用线上数据库
+ * 3. 内容域不再回切 Supabase；后续统一走腾讯云 PG / content API。
  * 
  * 切换方法：将下面的导入改为
- * import { ... } from '../lib/dataServiceSupabase';
+ * （已弃用）不要再从 dataServiceSupabase 引内容数据。
  */
 import React, { useState, useEffect, useMemo } from 'react';
 import {

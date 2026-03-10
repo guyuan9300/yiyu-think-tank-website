@@ -247,8 +247,8 @@ export async function registerWithEmail(
   nickname?: string
 ): Promise<AuthResult> {
   try {
-    // 导入 Supabase 客户端
-    const { supabase } = await import('./dataServiceSupabase');
+    // 导入 Supabase 客户端（认证域暂时保留，内容域已脱钩）
+    const { supabase } = await import('./supabase');
     
     // 使用 Supabase Auth 注册（会自动发送验证邮件）
     const { data, error } = await supabase.auth.signUp({
@@ -331,8 +331,8 @@ export async function loginWithPhone(phone: string, password: string): Promise<A
 // 邮箱登录（使用 Supabase Auth）
 export async function loginWithEmail(email: string, password: string): Promise<AuthResult> {
   try {
-    // 导入 Supabase 客户端
-    const { supabase } = await import('./dataServiceSupabase');
+    // 导入 Supabase 客户端（认证域暂时保留，内容域已脱钩）
+    const { supabase } = await import('./supabase');
     
     // 使用 Supabase Auth 登录
     const { data, error } = await supabase.auth.signInWithPassword({

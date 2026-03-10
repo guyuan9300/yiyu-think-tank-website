@@ -647,7 +647,7 @@ export const calculateReadTime = (pages: number): string => {
 
 // 获取所有报告
 export const getReports = (): Report[] => {
-  const list = loadFromStorage(STORAGE_KEYS.reports, initDefaultReports());
+  const list = loadFromStorage(STORAGE_KEYS.reports, []);
   return migrateList(STORAGE_KEYS.reports, list, 'report') as Report[];
 };
 
@@ -725,7 +725,7 @@ export const deleteReport = (id: string): boolean => {
 // ========== 洞察文章管理 ==========
 
 export const getInsights = (): InsightArticle[] => {
-  const list = loadFromStorage(STORAGE_KEYS.insights, initDefaultInsights());
+  const list = loadFromStorage(STORAGE_KEYS.insights, []);
   return migrateList(STORAGE_KEYS.insights, list, 'insight') as InsightArticle[];
 };
 
@@ -734,7 +734,7 @@ export const getInsights = (): InsightArticle[] => {
 const initDefaultMethodologies = (): Methodology[] => [];
 
 export const getMethodologies = (): Methodology[] => {
-  const list = loadFromStorage(STORAGE_KEYS.methodologies, initDefaultMethodologies());
+  const list = loadFromStorage(STORAGE_KEYS.methodologies, []);
   return migrateList(STORAGE_KEYS.methodologies, list, 'methodology') as Methodology[];
 };
 
@@ -846,7 +846,7 @@ export const deleteInsight = (id: string): boolean => {
 // ========== 书籍管理 ==========
 
 export const getBooks = (): Book[] => {
-  const list = loadFromStorage(STORAGE_KEYS.books, initDefaultBooks());
+  const list = loadFromStorage(STORAGE_KEYS.books, []);
   return migrateList(STORAGE_KEYS.books, list, 'book') as Book[];
 };
 
@@ -911,7 +911,7 @@ export const deleteBook = (id: string): boolean => {
 
 // 获取所有标签（带使用次数）
 export const getTags = (): Tag[] => {
-  return loadFromStorage(STORAGE_KEYS.tags, defaultTags);
+  return loadFromStorage(STORAGE_KEYS.tags, []);
 };
 
 // 获取历史使用过的标签（按最近使用排序）
@@ -940,7 +940,7 @@ export const addUsedTag = (tag: string) => {
 // ========== 分类管理 ==========
 
 export const getCategories = (): Category[] => {
-  return loadFromStorage(STORAGE_KEYS.categories, defaultCategories);
+  return loadFromStorage(STORAGE_KEYS.categories, []);
 };
 
 export const saveCategory = (category: Category): void => {
