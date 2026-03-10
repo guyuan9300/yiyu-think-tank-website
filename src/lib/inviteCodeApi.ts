@@ -1,18 +1,6 @@
-export type InviteCodeType = '30days' | '365days' | '1095days';
-export type InviteCodeStatus = 'valid' | 'redeemed' | 'disabled';
+import type { InviteCode, InviteCodeType } from './inviteCodeTypes';
 
-export interface InviteCodeDto {
-  id: string;
-  code: string;
-  type: InviteCodeType;
-  bonusDays: number;
-  maxUses: number;
-  usedCount: number;
-  status: InviteCodeStatus;
-  createdBy: string;
-  createdAt: string;
-  usedBy?: string[];
-}
+export type InviteCodeDto = InviteCode;
 
 interface ApiResult<T = any> {
   ok: boolean;

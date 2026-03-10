@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X, CheckCircle2 } from 'lucide-react';
-import { isPremiumMember, getCurrentUser } from '../lib/auth';
+import { getSessionUser, isPremiumLike } from '../lib/authState';
 
 export type SubscriptionFrequency = 'weekly';
 
@@ -48,7 +48,7 @@ export function saveSubscriptionPrefs(prefs: SubscriptionPrefs) {
 }
 
 function defaultPrefs(): SubscriptionPrefs {
-  const user = getCurrentUser();
+  const user = getSessionUser();
   return {
     enabled: true,
     email: user?.email || '',
@@ -79,7 +79,7 @@ export function canUseSubscription(): boolean {
   // (We'll refine once the user model is clarified.)
   const isAdmin = (localStorage.getItem('yiyu_is_admin') ?? sessionStorage.getItem('yiyu_is_admin')) === 'true';
   const isStrategy = localStorage.getItem('yiyu_is_strategy_client') === 'true';
-  return isPremiumMember() || isAdmin || isStrategy;
+  return isPremiumLike(getSessionUser()) || isAdmin || isStrategy;
 }
 
 export function SubscriptionSheet({

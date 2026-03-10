@@ -11,7 +11,7 @@ import {
   BookOpen, Tag, Folder, Upload, Image, File, Send, Check, Calendar,
   User, Globe, TrendingUp, MoreHorizontal, Clock, FileText, Target, RotateCcw
 } from 'lucide-react';
-import { INVITE_CODE_TYPES, type InviteCode, type InviteCodeType } from '../lib/auth';
+import { INVITE_CODE_TYPES, type InviteCode, type InviteCodeType } from '../lib/inviteCodeTypes';
 import { createInviteCode, deleteInviteCodeApi, disableInviteCodeApi, fetchInviteCodes } from '../lib/inviteCodeApi';
 import {
   getReports,
