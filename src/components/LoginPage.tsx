@@ -12,12 +12,6 @@ const ADMIN_CREDENTIALS = {
   password: 'Guyuan9300'
 };
 
-// 兼容保留账号（在 Auth API 尚未接通或迁移期失败时兜底）
-const LEGACY_TEST_ACCOUNTS = [
-  { channel: 'phone' as const, target: '13631445251', password: 'immomobot', nickname: '默默的同事', memberType: 'regular' as const },
-  { channel: 'phone' as const, target: '18027370767', password: 'imdoubaobot', nickname: '豆包的同事', memberType: 'gold' as const },
-];
-
 
 type LoginMode = 'email' | 'phone';
 
@@ -107,33 +101,7 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
       });
 
       if (!result.ok || !result.data?.user) {
-        // 迁移期兜底：保留既有可登录测试账号
-        const legacy = LEGACY_TEST_ACCOUNTS.find((a) => a.channel === loginMode && a.target === (loginMode === 'phone' ? normalizedPhone : normalizedEmail) && a.password === password);
-        if (!legacy) {
-          setError(result.error || '登录失败，请检查账号或密码');
-          return;
-        }
-
-        const now = new Date().toISOString();
-        const legacyUser: User & { plainPassword?: string } = {
-          id: `legacy_${legacy.target}`,
-          email: `${legacy.target}@phone.local`,
-          phone: legacy.target,
-          nickname: legacy.nickname,
-          memberType: legacy.memberType,
-          status: 'active',
-          loginCount: 1,
-          commentsCount: 0,
-          favoritesCount: 0,
-          createdAt: now,
-          lastLoginAt: now,
-          plainPassword: password,
-        };
-        saveUserRaw(JSON.stringify(legacyUser), rememberMe);
-        window.dispatchEvent(new Event('yiyu_user_updated'));
-
-        if (onLoginSuccess) onLoginSuccess();
-        else if (onNavigate) onNavigate('home');
+        setError(result.error || '登录失败，请检查账号或密码');
         return;
       }
 
