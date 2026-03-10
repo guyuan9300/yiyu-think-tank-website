@@ -13,6 +13,8 @@ import { ZHIXIAOYUN_CONFIG, MEMBERSHIP_PLANS } from './zhixiaoyun';
 import { getSavedUserRaw, getSavedAuthToken, saveAuthToken, saveUserRaw, clearUser, USER_KEY } from './storage';
 import { getSessionUser } from './authState';
 import { loginByPassword, registerByCode, resetPasswordByCode, sendVerifyCode } from './authApi';
+import { createInviteCode, deleteInviteCodeApi, disableInviteCodeApi, fetchInviteCodes } from './inviteCodeApi';
+import { INVITE_CODE_TYPES, type InviteCode, type InviteCodeType } from './inviteCodeTypes';
 
 // 用户类型定义
 export interface User {
@@ -30,44 +32,6 @@ export interface User {
   lastLoginAt?: string;
 }
 
-// 邀请码类型：30天、365天、3年（1095天）
-export type InviteCodeType = '30days' | '365days' | '1095days';
-
-// 邀请码状态
-export type InviteCodeStatus = 'valid' | 'redeemed' | 'disabled';
-
-// 邀请码接口
-export interface InviteCode {
-  id: string;
-  code: string;           // 12位随机邀请码
-  type: InviteCodeType;   // 类型
-  bonusDays: number;      // 奖励天数
-  maxUses: number;        // 最大使用次数
-  usedCount: number;      // 已使用次数
-  status: InviteCodeStatus; // 状态
-  createdBy: string;      // 创建者ID
-  createdAt: string;      // 创建时间
-  usedBy?: string[];      // 使用者ID列表
-}
-
-// 邀请码类型配置
-export const INVITE_CODE_TYPES: Record<InviteCodeType, { label: string; bonusDays: number; description: string }> = {
-  '30days': {
-    label: '30天会员',
-    bonusDays: 30,
-    description: '有效期30天的会员邀请码'
-  },
-  '365days': {
-    label: '年卡会员',
-    bonusDays: 365,
-    description: '有效期365天的会员邀请码'
-  },
-  '1095days': {
-    label: '三年会员',
-    bonusDays: 1095,
-    description: '有效期3年的会员邀请码'
-  }
-};
 
 export interface RegisterParams {
   type: 'phone' | 'email' | 'wechat';
@@ -308,7 +272,8 @@ export async function loginWithWechat(code: string): Promise<AuthResult> {
     
     currentUser = mockUser;
     authToken = generateToken();
-    saveAuthState();
+    saveUserRaw(JSON.stringify(currentUser), true);
+    if (authToken) saveAuthToken(authToken, true);
     
     return { success: true, user: mockUser, token: authToken };
   } catch (error: any) {
@@ -370,66 +335,14 @@ export async function generateInvitationCode(
   type: InviteCodeType,
   maxUses: number = 1
 ): Promise<{ success: boolean; code?: InviteCode; error?: string }> {
-  try {
-    // 检查是否是有效的邀请码类型
-    if (!INVITE_CODE_TYPES[type]) {
-      return { success: false, error: '无效的邀请码类型' };
-    }
-    
-    // 生成12位安全的随机邀请码
-    let newCode: string;
-    let isUnique = false;
-    let attempts = 0;
-    const maxAttempts = 10;
-    
-    // 确保邀请码唯一
-    do {
-      newCode = generateSecureInviteCode();
-      if (!mockInviteCodes.has(newCode)) {
-        isUnique = true;
-      }
-      attempts++;
-    } while (!isUnique && attempts < maxAttempts);
-    
-    if (!isUnique) {
-      return { success: false, error: '生成邀请码失败，请重试' };
-    }
-    
-    const config = INVITE_CODE_TYPES[type];
-    const inviteCode: InviteCode = {
-      id: generateUUID(),
-      code: newCode,
-      type: type,
-      bonusDays: config.bonusDays,
-      maxUses: maxUses,
-      usedCount: 0,
-      status: 'valid',
-      createdBy: currentUser?.id || 'admin',
-      createdAt: new Date().toISOString(),
-      usedBy: []
-    };
-    
-    // 存储邀请码
-    mockInviteCodes.set(newCode, inviteCode);
-    
-    console.log(`生成邀请码: ${newCode}, 类型: ${config.label}, 最大使用次数: ${maxUses}`);
-    
-    return { success: true, code: inviteCode };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
+  const result = await createInviteCode(type, maxUses);
+  return { success: result.ok, code: result.data as InviteCode | undefined, error: result.error };
 }
 
 // 获取所有邀请码
 export async function getAllInviteCodes(): Promise<InviteCode[]> {
-  try {
-    return Array.from(mockInviteCodes.values()).sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  } catch (error) {
-    console.error('Failed to get invite codes:', error);
-    return [];
-  }
+  const result = await fetchInviteCodes();
+  return result.ok && result.data ? (result.data as InviteCode[]) : [];
 }
 
 // 验证邀请码
@@ -439,184 +352,40 @@ export async function verifyInviteCode(code: string): Promise<{
   message?: string;
   inviteCode?: InviteCode;
 }> {
-  try {
-    const normalizedCode = code.trim().toUpperCase();
-    
-    if (!normalizedCode) {
-      return { success: false, valid: false, message: '请输入邀请码' };
-    }
-    
-    const inviteCode = mockInviteCodes.get(normalizedCode);
-    
-    if (!inviteCode) {
-      return { success: false, valid: false, message: '邀请码不存在' };
-    }
-    
-    if (inviteCode.status === 'disabled') {
-      return { success: false, valid: false, message: '邀请码已禁用' };
-    }
-    
-    if (inviteCode.status === 'redeemed' && inviteCode.usedCount >= inviteCode.maxUses) {
-      return { success: false, valid: false, message: '邀请码已兑换完毕' };
-    }
-    
-    return { success: true, valid: true, inviteCode };
-  } catch (error: any) {
-    return { success: false, valid: false, message: '验证失败' };
-  }
+  const normalizedCode = code.trim().toUpperCase();
+  if (!normalizedCode) return { success: false, valid: false, message: '请输入邀请码' };
+  const list = await getAllInviteCodes();
+  const inviteCode = list.find((x) => x.code === normalizedCode);
+  if (!inviteCode) return { success: false, valid: false, message: '邀请码不存在' };
+  if (inviteCode.status === 'disabled') return { success: false, valid: false, message: '邀请码已禁用' };
+  if (inviteCode.status === 'redeemed' && inviteCode.usedCount >= inviteCode.maxUses) return { success: false, valid: false, message: '邀请码已兑换完毕' };
+  return { success: true, valid: true, inviteCode };
 }
 
 // 使用邀请码
-export async function useInviteCode(code: string, userId: string): Promise<{ 
+export async function useInviteCode(_code: string, _userId: string): Promise<{ 
   success: boolean; 
   message?: string;
   bonusDays?: number;
 }> {
-  try {
-    const normalizedCode = code.trim().toUpperCase();
-    
-    // 检查是否已登录
-    if (!currentUser) {
-      return { success: false, message: '请先登录' };
-    }
-    
-    // 检查用户是否已使用过邀请码
-    if (currentUser.inviteCodeUsed) {
-      return { success: false, message: '您已使用过邀请码' };
-    }
-    
-    // 验证邀请码
-    const verifyResult = await verifyInviteCode(normalizedCode);
-    if (!verifyResult.success || !verifyResult.valid) {
-      return { success: false, message: verifyResult.message };
-    }
-    
-    const inviteCode = verifyResult.inviteCode!;
-    
-    // 检查是否还能使用
-    if (inviteCode.usedCount >= inviteCode.maxUses) {
-      return { success: false, message: '邀请码已兑换完毕' };
-    }
-    
-    // 更新邀请码状态
-    inviteCode.usedCount++;
-    inviteCode.usedBy?.push(userId);
-    
-    if (inviteCode.usedCount >= inviteCode.maxUses) {
-      inviteCode.status = 'redeemed';
-    }
-    
-    // 更新用户会员状态
-    const expireDate = new Date();
-    expireDate.setDate(expireDate.getDate() + inviteCode.bonusDays);
-    
-    currentUser.membershipType = 'premium';
-    currentUser.membershipExpireAt = expireDate.toISOString();
-    currentUser.inviteCodeUsed = true;
-    currentUser.invitedBy = inviteCode.createdBy;
-    
-    // 保存状态
-    saveAuthState();
-    
-    console.log(`用户 ${userId} 使用邀请码 ${normalizedCode}，获得 ${inviteCode.bonusDays} 天会员`);
-    
-    return { 
-      success: true, 
-      message: `恭喜！成功获得 ${inviteCode.bonusDays} 天会员时长`,
-      bonusDays: inviteCode.bonusDays
-    };
-  } catch (error: any) {
-    return { success: false, message: error.message };
-  }
+  return { success: false, message: '邀请码兑换链路待迁移到腾讯云 Auth API，当前前端本地实现已停用' };
 }
 
 // 禁用邀请码
 export async function disableInviteCode(code: string): Promise<{ success: boolean; message?: string }> {
-  try {
-    const normalizedCode = code.trim().toUpperCase();
-    const inviteCode = mockInviteCodes.get(normalizedCode);
-    
-    if (!inviteCode) {
-      return { success: false, message: '邀请码不存在' };
-    }
-    
-    inviteCode.status = 'disabled';
-    console.log(`邀请码 ${normalizedCode} 已禁用`);
-    
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, message: error.message };
-  }
+  const result = await disableInviteCodeApi(code);
+  return { success: result.ok, message: result.error };
 }
 
 // 删除邀请码
 export async function deleteInviteCode(code: string): Promise<{ success: boolean; message?: string }> {
-  try {
-    const normalizedCode = code.trim().toUpperCase();
-    
-    if (!mockInviteCodes.has(normalizedCode)) {
-      return { success: false, message: '邀请码不存在' };
-    }
-    
-    mockInviteCodes.delete(normalizedCode);
-    console.log(`邀请码 ${normalizedCode} 已删除`);
-    
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, message: error.message };
-  }
+  const result = await deleteInviteCodeApi(code);
+  return { success: result.ok, message: result.error };
 }
 
 // 获取用户的邀请码
-export async function getUserInvitationCode(userId: string): Promise<string> {
-  try {
-    // 查找用户是否已被分配了邀请码
-    const codes = Array.from(mockInviteCodes.values());
-    const userCode = codes.find(code => 
-      code.usedBy?.includes(userId)
-    );
-    
-    if (userCode) {
-      return userCode.code;
-    }
-    
-    // 为用户生成一个专属邀请码
-    let newCode: string;
-    let isUnique = false;
-    let attempts = 0;
-    
-    do {
-      newCode = generateSecureInviteCode();
-      if (!mockInviteCodes.has(newCode)) {
-        isUnique = true;
-      }
-      attempts++;
-    } while (!isUnique && attempts < 10);
-    
-    if (!isUnique) {
-      // 返回一个基于用户ID的编码
-      return 'INV' + userId.replace(/[^a-zA-Z0-9]/g, '').substring(0, 9).toUpperCase();
-    }
-    
-    const inviteCode: InviteCode = {
-      id: generateUUID(),
-      code: newCode,
-      type: '30days',
-      bonusDays: 30,
-      maxUses: 1,
-      usedCount: 0,
-      status: 'valid',
-      createdBy: userId,
-      createdAt: new Date().toISOString(),
-      usedBy: []
-    };
-    
-    mockInviteCodes.set(newCode, inviteCode);
-    return newCode;
-  } catch (error) {
-    console.error('Failed to get invitation code:', error);
-    return '';
-  }
+export async function getUserInvitationCode(_userId: string): Promise<string> {
+  return '';
 }
 
 // 获取会员套餐列表
@@ -681,94 +450,6 @@ function generateUserId(): string {
 function generateToken(): string {
   return 'token_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 16);
 }
-
-// 生成安全的12位随机邀请码
-function generateSecureInviteCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 去除易混淆字符（I、O、0、1）
-  const length = 12;
-  const randomValues = new Uint32Array(length);
-  crypto.getRandomValues(randomValues);
-  
-  let code = '';
-  for (let i = 0; i < length; i++) {
-    code += chars[randomValues[i] % chars.length];
-  }
-  
-  // 添加前缀标识类型
-  return 'INV' + code;
-}
-
-// 生成UUID（用于邀请码ID）
-function generateUUID(): string {
-  return crypto.randomUUID?.() || 
-    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
-}
-
-function saveAuthState() {
-  if (currentUser && authToken) {
-    localStorage.setItem('yiyu_user', JSON.stringify(currentUser));
-    localStorage.setItem('yiyu_token', authToken);
-  }
-}
-
-// 模拟邀请码存储（实际应该存储在后端数据库）
-const mockInviteCodes: Map<string, InviteCode> = new Map();
-
-// 初始化一些测试邀请码
-function initMockInviteCodes() {
-  if (mockInviteCodes.size === 0) {
-    // 添加一些示例邀请码
-    const sampleCodes: InviteCode[] = [
-      {
-        id: generateUUID(),
-        code: generateSecureInviteCode(),
-        type: '30days',
-        bonusDays: 30,
-        maxUses: 5,
-        usedCount: 2,
-        status: 'valid',
-        createdBy: 'admin',
-        createdAt: new Date().toISOString(),
-        usedBy: ['user1', 'user2']
-      },
-      {
-        id: generateUUID(),
-        code: generateSecureInviteCode(),
-        type: '365days',
-        bonusDays: 365,
-        maxUses: 1,
-        usedCount: 0,
-        status: 'valid',
-        createdBy: 'admin',
-        createdAt: new Date().toISOString(),
-        usedBy: []
-      },
-      {
-        id: generateUUID(),
-        code: generateSecureInviteCode(),
-        type: '1095days',
-        bonusDays: 1095,
-        maxUses: 1,
-        usedCount: 1,
-        status: 'redeemed',
-        createdBy: 'admin',
-        createdAt: new Date().toISOString(),
-        usedBy: ['user3']
-      }
-    ];
-    
-    sampleCodes.forEach(code => {
-      mockInviteCodes.set(code.code, code);
-    });
-  }
-}
-
-// 初始化
-initMockInviteCodes();
 
 export default {
   initAuth,

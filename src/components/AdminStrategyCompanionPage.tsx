@@ -3,12 +3,12 @@
  * Strategic Companion Admin Page - Local Development Version
  * 
  * 使用方法：
- * 1. 此版本使用 localStorage 进行数据存储
- * 2. 所有数据保存在浏览器本地，无需连接数据库
+ * 1. 此版本是战略客户模块的本地开发实现
+ * 2. 与官网正式内容/认证真源无关；正式内容与认证已迁往腾讯云链路
  * 3. 内容域不再回切 Supabase；后续统一走腾讯云 PG / content API。
  * 
- * 切换方法：将下面的导入改为
- * （已弃用）不要再从 dataServiceSupabase 引内容数据。
+ * 说明：该本地开发页与官网正式内容/认证真源无关。
+ * 正式内容与认证均统一走腾讯云链路，不再从 dataServiceSupabase 引内容数据。
  */
 import React, { useState, useEffect, useMemo } from 'react';
 import {
