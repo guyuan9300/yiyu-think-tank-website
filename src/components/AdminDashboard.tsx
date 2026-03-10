@@ -16,15 +16,24 @@ import {
   deleteInviteCode, INVITE_CODE_TYPES, type InviteCode, type InviteCodeType
 } from '../lib/auth';
 import {
-  getReports, saveReport, deleteReport as deleteReportFromService,
-  getInsights, saveInsight, deleteInsight as deleteInsightFromService,
-  getMethodologies, saveMethodology, deleteMethodology as deleteMethodologyFromService,
-  getBooks, saveBook, deleteBook as deleteBookFromService,
-  getCategories, calculateReadTime,
-  getComments, updateCommentStatus, replyComment,
-  type Report, type InsightArticle, type Methodology, type Book, type Category, type Comment,
+  saveMethodology, deleteMethodology as deleteMethodologyFromService,
+  calculateReadTime,
+  updateCommentStatus, replyComment,
+  type Methodology, type Category, type Comment,
   type ResourceTopic
 } from '../lib/dataService';
+import {
+  saveReport,
+  deleteReport as deleteReportFromService,
+  saveInsight,
+  deleteInsight as deleteInsightFromService,
+  saveBook,
+  deleteBook as deleteBookFromService,
+  type Report,
+  type InsightArticle,
+  type Book,
+} from '../lib/dataServiceSupabase';
+import { getAdminSnapshot } from '../lib/adminSnapshot';
 
 const RESOURCE_TOPICS: ResourceTopic[] = ['战略', '业务设计', '组织', 'AI 技术'];
 
@@ -156,14 +165,19 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
   // 初始化数据
   useEffect(() => {
-    const loadData = () => {
-      setReports(getReports());
-      setInsights(getInsights());
-      setMethodologies(getMethodologies());
-      setBooks(getBooks());
-      setCategories(getCategories());
-      // usedTags removed (topics-only schema)
-      setComments(getComments());
+    const loadData = async () => {
+      try {
+        const snapshot = await getAdminSnapshot();
+        setReports(snapshot.reports);
+        setInsights(snapshot.insights);
+        setMethodologies(snapshot.methodologies);
+        setBooks(snapshot.books);
+        setCategories(snapshot.categories);
+        setComments(snapshot.comments);
+      } catch (e) {
+        console.error('加载 admin snapshot 失败:', e);
+        setMessage({ type: 'error', text: '后台数据加载失败，请稍后重试' });
+      }
       loadInviteCodes();
     };
     
@@ -302,14 +316,19 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   };
 
   // 刷新所有数据
-  const refreshAllData = useCallback(() => {
-    setReports(getReports());
-    setInsights(getInsights());
-    setMethodologies(getMethodologies());
-    setBooks(getBooks());
-    setCategories(getCategories());
-    // usedTags removed (topics-only schema)
-    setComments(getComments());
+  const refreshAllData = useCallback(async () => {
+    try {
+      const snapshot = await getAdminSnapshot();
+      setReports(snapshot.reports);
+      setInsights(snapshot.insights);
+      setMethodologies(snapshot.methodologies);
+      setBooks(snapshot.books);
+      setCategories(snapshot.categories);
+      setComments(snapshot.comments);
+    } catch (e) {
+      console.error('刷新 admin snapshot 失败:', e);
+      setMessage({ type: 'error', text: '刷新后台数据失败，请稍后重试' });
+    }
   }, []);
 
   // 菜单配置
@@ -653,7 +672,11 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       fileSize: reportFile ? reportFile.size : current?.fileSize,
     };
 
-    const saved = saveReport(reportData);
+    const saved = await saveReport(reportData);
+    if (!saved) {
+      setMessage({ type: 'error', text: '报告保存失败' });
+      return;
+    }
     // 同步到战略陪伴客户（多选）
     await syncInternalCourseRecommendations({
       internalType: 'report',
@@ -675,7 +698,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   // 删除报告
   const handleDeleteReport = async (id: string) => {
     if (window.confirm('确定要删除这份报告吗？')) {
-      deleteReportFromService(id);
+      await deleteReportFromService(id);
       await syncInternalCourseRecommendations({ internalType: 'report', internalId: id, title: '', selectedProjectIds: [] });
       refreshAllData();
       setMessage({ type: 'success', text: '报告已删除' });
@@ -685,7 +708,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   // 删除洞察文章
   const handleDeleteInsight = async (id: string) => {
     if (window.confirm('确定要删除这篇文章吗？')) {
-      deleteInsightFromService(id);
+      await deleteInsightFromService(id);
       await syncInternalCourseRecommendations({ internalType: 'article', internalId: id, title: '', selectedProjectIds: [] });
       refreshAllData();
       setMessage({ type: 'success', text: '文章已删除' });
@@ -705,7 +728,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   // 删除书籍
   const handleDeleteBook = async (id: string) => {
     if (window.confirm('确定要删除这本书吗？')) {
-      deleteBookFromService(id);
+      await deleteBookFromService(id);
       await syncInternalCourseRecommendations({ internalType: 'book', internalId: id, title: '', selectedProjectIds: [] });
       refreshAllData();
       setMessage({ type: 'success', text: '书籍已删除' });
@@ -2270,7 +2293,11 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   shareImage: (formData.get('shareImage') as string) || undefined,
                 };
 
-                const saved = saveInsight(articleData);
+                const saved = await saveInsight(articleData);
+                if (!saved) {
+                  setMessage({ type: 'error', text: '文章保存失败' });
+                  return;
+                }
                 await syncInternalCourseRecommendations({
                   internalType: 'article',
                   internalId: saved.id,
@@ -2365,7 +2392,11 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   showOnHome: formData.get('showOnHome') === 'on',
                 };
                 
-                const saved = saveBook(bookData);
+                const saved = await saveBook(bookData);
+                if (!saved) {
+                  setMessage({ type: 'error', text: '书籍保存失败' });
+                  return;
+                }
                 await syncInternalCourseRecommendations({
                   internalType: 'book',
                   internalId: saved.id,

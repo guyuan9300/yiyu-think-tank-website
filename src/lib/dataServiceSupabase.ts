@@ -44,6 +44,11 @@ export interface InsightArticle {
   showOnHome: boolean;
   views: number;
   likes: number;
+  shareEnabled?: boolean;
+  shareSlug?: string;
+  shareTitle?: string;
+  shareDescription?: string;
+  shareImage?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -334,6 +339,11 @@ export const saveInsight = async (article: Partial<InsightArticle>): Promise<Ins
     show_on_home: article.showOnHome,
     views: article.views,
     likes: article.likes,
+    share_enabled: article.shareEnabled,
+    share_slug: article.shareSlug,
+    share_title: article.shareTitle,
+    share_description: article.shareDescription,
+    share_image: article.shareImage,
   };
 
   let result: { data: Record<string, unknown> | null; error: unknown | null };
@@ -381,6 +391,11 @@ export const saveInsight = async (article: Partial<InsightArticle>): Promise<Ins
     showOnHome: Boolean((item as any).show_on_home),
     views: Number((item as any).views) || 0,
     likes: Number((item as any).likes) || 0,
+    shareEnabled: Boolean((item as any).share_enabled),
+    shareSlug: (item as any).share_slug as string | undefined,
+    shareTitle: (item as any).share_title as string | undefined,
+    shareDescription: (item as any).share_description as string | undefined,
+    shareImage: (item as any).share_image as string | undefined,
     createdAt: String((item as any).created_at || ''),
     updatedAt: String((item as any).updated_at || ''),
   };
