@@ -56,7 +56,7 @@ export async function registerByCode(params: {
   password: string;
   nickname?: string;
 }) {
-  return post<{ user: AuthApiUser }>('/register', params);
+  return post<LoginResponseData>('/register', params);
 }
 
 export async function loginByPassword(params: {

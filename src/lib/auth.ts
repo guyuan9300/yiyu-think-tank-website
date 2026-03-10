@@ -173,34 +173,26 @@ export async function registerWithPhone(
   nickname?: string
 ): Promise<AuthResult> {
   try {
-    // 验证验证码
-    if (!verifyCode(phone, code)) {
-      return { success: false, error: '验证码错误或已过期' };
+    const result = await registerByCode({ channel: 'phone', target: phone.trim(), code: code.trim(), password, nickname });
+    if (!result.ok || !result.data?.user) {
+      return { success: false, error: result.error || '注册失败，请稍后重试' };
     }
-    
-    // TODO: 调用知晓云注册接口
-    // const response = await fetch(`${ZHIXIAOYUN_CONFIG.serverURL}/auth/register/phone`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ phone, password, nickname })
-    // });
-    
-    // 模拟注册成功
-    const mockUser: User = {
-      id: generateUserId(),
-      phone,
-      nickname: nickname || `用户${phone.slice(-4)}`,
+    const user: User = {
+      id: result.data.user.id,
+      phone: result.data.user.phone || phone,
+      email: result.data.user.email,
+      nickname: result.data.user.nickname || nickname || `用户${phone.slice(-4)}`,
       membershipType: 'free',
       inviteCodeUsed: false,
-      createdAt: new Date().toISOString()
+      createdAt: result.data.user.createdAt || new Date().toISOString(),
+      lastLoginAt: result.data.user.lastLoginAt,
     };
-    
-    // 保存登录状态
-    currentUser = mockUser;
-    authToken = generateToken();
-    saveAuthState();
-    
-    return { success: true, user: mockUser, token: authToken };
+    currentUser = user;
+    authToken = result.data.token || null;
+    const remember = localStorage.getItem(USER_KEY) != null;
+    saveUserRaw(JSON.stringify(user), remember);
+    if (result.data.token) saveAuthToken(result.data.token, remember);
+    return { success: true, user, token: result.data.token };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -210,61 +202,31 @@ export async function registerWithPhone(
 export async function registerWithEmail(
   email: string,
   password: string,
-  code: string,  // 保留参数以向后兼容，但不再使用
+  code: string,
   nickname?: string
 ): Promise<AuthResult> {
   try {
-    // 导入 Supabase 客户端（认证域暂时保留，内容域已脱钩）
-    const { supabase } = await import('./supabase');
-    
-    // 使用 Supabase Auth 注册（会自动发送验证邮件）
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          nickname: nickname || `用户${email.split('@')[0]}`,
-        },
-        // GitHub Pages 部署在子路径（/yiyu-think-tank-website/），不能只用 origin。
-        // 必须包含 BASE_URL，否则邮箱验证跳转会落到 https://guyuan9300.github.io/?page=... 导致打不开。
-        emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}?page=login&verified=true`
-      }
-    });
-    
-    if (error) {
-      console.error('Supabase 注册失败:', error);
-      return { success: false, error: error.message };
+    const result = await registerByCode({ channel: 'email', target: email.trim().toLowerCase(), code: code.trim(), password, nickname });
+    if (!result.ok || !result.data?.user) {
+      return { success: false, error: result.error || '注册失败，请稍后重试' };
     }
-    
-    if (!data.user) {
-      return { success: false, error: '注册失败，请稍后重试' };
-    }
-    
-    // 创建用户对象
-    const mockUser: User = {
-      id: data.user.id,
-      email: data.user.email || email,
-      nickname: nickname || `用户${email.split('@')[0]}`,
+    const user: User = {
+      id: result.data.user.id,
+      email: result.data.user.email || email,
+      phone: result.data.user.phone,
+      nickname: result.data.user.nickname || nickname || `用户${email.split('@')[0]}`,
       membershipType: 'free',
       inviteCodeUsed: false,
-      createdAt: new Date().toISOString()
+      createdAt: result.data.user.createdAt || new Date().toISOString(),
+      lastLoginAt: result.data.user.lastLoginAt,
     };
-    
-    // 保存会话信息
-    if (data.session) {
-      currentUser = mockUser;
-      authToken = data.session.access_token;
-      saveAuthState();
-    }
-    
-    return { 
-      success: true, 
-      user: mockUser, 
-      token: data.session?.access_token,
-      error: data.user.email_confirmed_at ? undefined : '请查收邮箱验证邮件以完成注册'
-    };
+    currentUser = user;
+    authToken = result.data.token || null;
+    const remember = localStorage.getItem(USER_KEY) != null;
+    saveUserRaw(JSON.stringify(user), remember);
+    if (result.data.token) saveAuthToken(result.data.token, remember);
+    return { success: true, user, token: result.data.token };
   } catch (error: any) {
-    console.error('邮箱注册异常:', error);
     return { success: false, error: error.message || '注册失败，请稍后重试' };
   }
 }
@@ -272,24 +234,26 @@ export async function registerWithEmail(
 // 手机号登录
 export async function loginWithPhone(phone: string, password: string): Promise<AuthResult> {
   try {
-    // TODO: 调用知晓云登录接口
-    
-    // 模拟登录成功
-    const mockUser: User = {
-      id: generateUserId(),
-      phone,
-      nickname: `用户${phone.slice(-4)}`,
+    const result = await loginByPassword({ channel: 'phone', target: phone.trim(), password });
+    if (!result.ok || !result.data?.user) {
+      return { success: false, error: result.error || '登录失败，请稍后重试' };
+    }
+    const user: User = {
+      id: result.data.user.id,
+      phone: result.data.user.phone || phone,
+      email: result.data.user.email,
+      nickname: result.data.user.nickname || `用户${phone.slice(-4)}`,
       membershipType: 'free',
       inviteCodeUsed: false,
-      createdAt: new Date().toISOString(),
-      lastLoginAt: new Date().toISOString()
+      createdAt: result.data.user.createdAt || new Date().toISOString(),
+      lastLoginAt: result.data.user.lastLoginAt || new Date().toISOString(),
     };
-    
-    currentUser = mockUser;
-    authToken = generateToken();
-    saveAuthState();
-    
-    return { success: true, user: mockUser, token: authToken };
+    currentUser = user;
+    authToken = result.data.token || null;
+    const remember = localStorage.getItem(USER_KEY) != null;
+    saveUserRaw(JSON.stringify(user), remember);
+    if (result.data.token) saveAuthToken(result.data.token, remember);
+    return { success: true, user, token: result.data.token };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -298,49 +262,27 @@ export async function loginWithPhone(phone: string, password: string): Promise<A
 // 邮箱登录（使用 Supabase Auth）
 export async function loginWithEmail(email: string, password: string): Promise<AuthResult> {
   try {
-    // 导入 Supabase 客户端（认证域暂时保留，内容域已脱钩）
-    const { supabase } = await import('./supabase');
-    
-    // 使用 Supabase Auth 登录
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    
-    if (error) {
-      console.error('Supabase 登录失败:', error);
-      return { success: false, error: '邮箱或密码错误' };
+    const result = await loginByPassword({ channel: 'email', target: email.trim().toLowerCase(), password });
+    if (!result.ok || !result.data?.user) {
+      return { success: false, error: result.error || '邮箱或密码错误' };
     }
-    
-    if (!data.user || !data.session) {
-      return { success: false, error: '登录失败，请稍后重试' };
-    }
-    
-    // 检查邮箱是否已验证
-    if (!data.user.email_confirmed_at) {
-      return { success: false, error: '请先验证您的邮箱后再登录' };
-    }
-    
-    // 创建用户对象
-    const mockUser: User = {
-      id: data.user.id,
-      email: data.user.email || email,
-      nickname: data.user.user_metadata?.nickname || `用户${email.split('@')[0]}`,
-      avatarUrl: data.user.user_metadata?.avatar_url || undefined,
+    const user: User = {
+      id: result.data.user.id,
+      email: result.data.user.email || email,
+      phone: result.data.user.phone,
+      nickname: result.data.user.nickname || `用户${email.split('@')[0]}`,
       membershipType: 'free',
       inviteCodeUsed: false,
-      createdAt: data.user.created_at || new Date().toISOString(),
-      lastLoginAt: new Date().toISOString()
+      createdAt: result.data.user.createdAt || new Date().toISOString(),
+      lastLoginAt: result.data.user.lastLoginAt || new Date().toISOString(),
     };
-    
-    // 保存会话信息
-    currentUser = mockUser;
-    authToken = data.session.access_token;
-    saveAuthState();
-    
-    return { success: true, user: mockUser, token: authToken || undefined };
+    currentUser = user;
+    authToken = result.data.token || null;
+    const remember = localStorage.getItem(USER_KEY) != null;
+    saveUserRaw(JSON.stringify(user), remember);
+    if (result.data.token) saveAuthToken(result.data.token, remember);
+    return { success: true, user, token: result.data.token };
   } catch (error: any) {
-    console.error('邮箱登录异常:', error);
     return { success: false, error: error.message || '登录失败，请稍后重试' };
   }
 }
@@ -378,8 +320,7 @@ export async function loginWithWechat(code: string): Promise<AuthResult> {
 export function logout() {
   currentUser = null;
   authToken = null;
-  localStorage.removeItem('yiyu_user');
-  localStorage.removeItem('yiyu_token');
+  clearUser();
 }
 
 // 创建付费订单
