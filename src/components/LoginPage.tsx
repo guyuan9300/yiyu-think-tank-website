@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Smartphone } from 'lucide-react';
 import { type User } from '../lib/dataService';
-import { saveUserRaw, setSavedItem, ADMIN_FLAG_KEY, ADMIN_EMAIL_KEY } from '../lib/storage';
+import { saveUserRaw, saveAuthToken, setSavedItem, ADMIN_FLAG_KEY, ADMIN_EMAIL_KEY } from '../lib/storage';
 import { loginByPassword, normalizeLoginUser } from '../lib/authApi';
 import { notifyNotOpenYet } from '../lib/uxFeedback';
 import { logger } from '../lib/logger';
@@ -140,6 +140,9 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
       const user = normalizeLoginUser(result.data.user) as User & { plainPassword?: string };
       user.plainPassword = password;
       saveUserRaw(JSON.stringify(user), rememberMe);
+      if (result.data.token) {
+        saveAuthToken(result.data.token, rememberMe);
+      }
       window.dispatchEvent(new Event('yiyu_user_updated'));
 
       // 非管理员登录：清理可能残留的管理员标记，避免普通账号看到/访问管理后台

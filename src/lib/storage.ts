@@ -7,6 +7,7 @@
 // Reading always checks both, so users can still be recognized regardless of how they logged in.
 
 export const USER_KEY = 'yiyu_current_user';
+export const AUTH_TOKEN_KEY = 'yiyu_auth_token';
 export const ADMIN_FLAG_KEY = 'yiyu_is_admin';
 export const ADMIN_EMAIL_KEY = 'yiyu_admin_email';
 
@@ -36,8 +37,17 @@ export function saveUserRaw(raw: string, remember: boolean) {
   setSavedItem(USER_KEY, raw, remember);
 }
 
+export function getSavedAuthToken(): string | null {
+  return getSavedItem(AUTH_TOKEN_KEY);
+}
+
+export function saveAuthToken(token: string, remember: boolean) {
+  setSavedItem(AUTH_TOKEN_KEY, token, remember);
+}
+
 export function clearUser() {
   removeSavedItem(USER_KEY);
+  removeSavedItem(AUTH_TOKEN_KEY);
   removeSavedItem(ADMIN_FLAG_KEY);
   removeSavedItem(ADMIN_EMAIL_KEY);
 }

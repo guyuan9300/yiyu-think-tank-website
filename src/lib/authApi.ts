@@ -22,6 +22,8 @@ interface ApiResult<T = any> {
 
 export interface LoginResponseData {
   user: AuthApiUser;
+  token?: string;
+  expiresAt?: string;
 }
 
 const AUTH_BASE = (import.meta as any)?.env?.VITE_AUTH_API_BASE_URL || '/api/auth';

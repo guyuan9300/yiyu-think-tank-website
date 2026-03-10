@@ -1,0 +1,16 @@
+[Unit]
+Description=Yiyu Auth API (Tencent PG)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/srv/yiyu-auth-api
+EnvironmentFile=/srv/yiyu-auth-api/.env
+ExecStart=/usr/bin/node /srv/yiyu-auth-api/pg-auth-api.mjs
+Restart=always
+RestartSec=3
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target
