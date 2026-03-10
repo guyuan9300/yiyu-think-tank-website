@@ -11,10 +11,8 @@ import {
   BookOpen, Tag, Folder, Upload, Image, File, Send, Check, Calendar,
   User, Globe, TrendingUp, MoreHorizontal, Clock, FileText, Target, RotateCcw
 } from 'lucide-react';
-import {
-  generateInvitationCode, getAllInviteCodes, disableInviteCode,
-  deleteInviteCode, INVITE_CODE_TYPES, type InviteCode, type InviteCodeType
-} from '../lib/auth';
+import { INVITE_CODE_TYPES, type InviteCode, type InviteCodeType } from '../lib/auth';
+import { createInviteCode, deleteInviteCodeApi, disableInviteCodeApi, fetchInviteCodes } from '../lib/inviteCodeApi';
 import {
   getReports,
   getInsights,
@@ -288,8 +286,12 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
   // 加载邀请码
   const loadInviteCodes = async () => {
-    const codes = await getAllInviteCodes();
-    setInviteCodes(codes);
+    const result = await fetchInviteCodes();
+    if (result.ok && result.data) {
+      setInviteCodes(result.data as any);
+    } else {
+      setInviteCodes([]);
+    }
     setSelectedInviteIds([]);
   };
 
@@ -365,13 +367,14 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     
     try {
       console.log('调用generateInvitationCode，类型:', selectedType, '最大使用次数:', maxUses);
-      const result = await generateInvitationCode(selectedType, maxUses);
+      const result = await createInviteCode(selectedType, maxUses);
       console.log('生成结果:', result);
       
-      if (result.success && result.code) {
+      if (result.ok && result.data) {
+        const created = result.data as any;
         setMessage({ 
           type: 'success', 
-          text: `成功生成邀请码: ${result.code.code} (${INVITE_CODE_TYPES[selectedType].label})` 
+          text: `成功生成邀请码: ${created.code} (${INVITE_CODE_TYPES[selectedType].label})` 
         });
         await loadInviteCodes();
       } else {
@@ -393,8 +396,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
   // 禁用邀请码
   const handleDisableCode = async (code: string) => {
-    const result = await disableInviteCode(code);
-    if (result.success) {
+    const result = await disableInviteCodeApi(code);
+    if (result.ok) {
       setMessage({ type: 'success', text: '邀请码已禁用' });
       await loadInviteCodes();
     } else {
@@ -408,8 +411,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       return;
     }
     
-    const result = await deleteInviteCode(code);
-    if (result.success) {
+    const result = await deleteInviteCodeApi(code);
+    if (result.ok) {
       setMessage({ type: 'success', text: '邀请码已删除' });
       await loadInviteCodes();
     } else {

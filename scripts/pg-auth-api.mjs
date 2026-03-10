@@ -118,6 +118,34 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/auth/register') { const channel = normalizeChannel(body.channel); const target = normalizeTarget(channel, body.target); const code = String(body.code || '').trim(); const password = String(body.password || ''); const nickname = String(body.nickname || '').trim(); if (!channel || !target || !code) return json(res, 400, { ok: false, error: '参数不完整' }); if (password.length < 8) return json(res, 400, { ok: false, error: '密码至少8位' }); const existed = await findUserByChannel(channel, target); if (existed) return json(res, 400, { ok: false, error: '账号已存在' }); await consumeValidCode(channel, target, 'register', code); const id = crypto.randomUUID(); await pool.query(`INSERT INTO auth_users(id, phone, email, nickname, password_hash) VALUES ($1,$2,$3,$4,$5)`, [id, channel === 'phone' ? target : null, channel === 'email' ? target : null, nickname || null, hashPassword(password)]); const userRes = await pool.query('SELECT * FROM auth_users WHERE id=$1', [id]); const session = await createSession(id, req); return json(res, 200, { ok: true, data: { user: mapUser(userRes.rows[0]), token: session.token, expiresAt: session.expiresAt } }); }
     if (url.pathname === '/api/auth/login') { const channel = normalizeChannel(body.channel); const target = normalizeTarget(channel, body.target); const password = String(body.password || ''); if (!channel || !target || !password) return json(res, 400, { ok: false, error: '参数不完整' }); const row = await findUserByChannel(channel, target); if (!row) return json(res, 400, { ok: false, error: '账号或密码错误' }); if (row.status !== 'active') return json(res, 403, { ok: false, error: '账号不可用，请联系管理员' }); if (!verifyPassword(password, row.password_hash)) return json(res, 400, { ok: false, error: '账号或密码错误' }); await pool.query('UPDATE auth_users SET last_login_at=now() WHERE id=$1', [row.id]); const updated = await pool.query('SELECT * FROM auth_users WHERE id=$1', [row.id]); const session = await createSession(row.id, req); return json(res, 200, { ok: true, data: { user: mapUser(updated.rows[0]), token: session.token, expiresAt: session.expiresAt } }); }
     if (url.pathname === '/api/auth/reset-password') { const channel = normalizeChannel(body.channel); const target = normalizeTarget(channel, body.target); const code = String(body.code || '').trim(); const newPassword = String(body.newPassword || ''); if (!channel || !target || !code) return json(res, 400, { ok: false, error: '参数不完整' }); if (newPassword.length < 8) return json(res, 400, { ok: false, error: '密码至少8位' }); const row = await findUserByChannel(channel, target); if (!row) return json(res, 400, { ok: false, error: '账号不存在' }); await consumeValidCode(channel, target, 'reset', code); await pool.query('UPDATE auth_users SET password_hash=$1 WHERE id=$2', [hashPassword(newPassword), row.id]); return json(res, 200, { ok: true, message: '密码重置成功' }); }
+    if (url.pathname === '/api/auth/invite-codes' && req.method === 'GET') {
+      const q = await pool.query('SELECT id, code, type, bonus_days, max_uses, used_count, status, created_by, created_at, used_by FROM invite_codes ORDER BY created_at DESC');
+      return json(res, 200, { ok: true, data: q.rows.map(r => ({ id: r.id, code: r.code, type: r.type, bonusDays: r.bonus_days, maxUses: r.max_uses, usedCount: r.used_count, status: r.status, createdBy: r.created_by, createdAt: r.created_at, usedBy: r.used_by || [] })) });
+    }
+    if (url.pathname === '/api/auth/invite-codes' && req.method === 'POST') {
+      const type = String(body.type || '');
+      const maxUses = Number(body.maxUses || 1);
+      const bonusDays = type === '30days' ? 30 : type === '365days' ? 365 : type === '1095days' ? 1095 : 0;
+      if (!bonusDays) return json(res, 400, { ok: false, error: '无效的邀请码类型' });
+      const code = crypto.randomBytes(6).toString('base64url').toUpperCase().slice(0, 12);
+      const id = crypto.randomUUID();
+      await pool.query('INSERT INTO invite_codes(id, code, type, bonus_days, max_uses, used_count, status, created_by, used_by) VALUES ($1,$2,$3,$4,$5,0,\'valid\',$6,\'[]\'::jsonb)', [id, code, type, bonusDays, maxUses, 'admin']);
+      const q = await pool.query('SELECT id, code, type, bonus_days, max_uses, used_count, status, created_by, created_at, used_by FROM invite_codes WHERE id=$1', [id]);
+      const r = q.rows[0];
+      return json(res, 200, { ok: true, data: { id: r.id, code: r.code, type: r.type, bonusDays: r.bonus_days, maxUses: r.max_uses, usedCount: r.used_count, status: r.status, createdBy: r.created_by, createdAt: r.created_at, usedBy: r.used_by || [] } });
+    }
+    const disableMatch = url.pathname.match(/^\/api\/auth\/invite-codes\/([^/]+)\/disable$/);
+    if (disableMatch && req.method === 'POST') {
+      const code = decodeURIComponent(disableMatch[1]);
+      await pool.query('UPDATE invite_codes SET status=\'disabled\' WHERE code=$1', [code]);
+      return json(res, 200, { ok: true, message: '邀请码已禁用' });
+    }
+    const deleteMatch = url.pathname.match(/^\/api\/auth\/invite-codes\/([^/]+)$/);
+    if (deleteMatch && req.method === 'DELETE') {
+      const code = decodeURIComponent(deleteMatch[1]);
+      await pool.query('DELETE FROM invite_codes WHERE code=$1', [code]);
+      return json(res, 200, { ok: true, message: '邀请码已删除' });
+    }
     return json(res, 404, { ok: false, error: 'not found' });
   } catch (err) { return json(res, 500, { ok: false, error: err instanceof Error ? err.message : String(err) }); }
 });
