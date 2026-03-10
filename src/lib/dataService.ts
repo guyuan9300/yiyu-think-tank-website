@@ -225,7 +225,7 @@ export interface ConsultRequest {
 }
 
 // 存储键
-const STORAGE_KEYS = {
+export const STORAGE_KEYS = {
   reports: 'yiyu_reports',
   insights: 'yiyu_insights',
   methodologies: 'yiyu_methodologies',
@@ -464,10 +464,49 @@ const initDefaultBooks = (): Book[] => [
   },
 ];
 
+export const PG_SYNC_KEYS = new Set<string>([
+  'yiyu_reports',
+  'yiyu_insights',
+  'yiyu_methodologies',
+  'yiyu_books',
+  'yiyu_categories',
+  'yiyu_tags',
+  'yiyu_system_settings',
+]);
+
+const pgSyncTimers = new Map<string, number>();
+
+export const schedulePgSync = (key: string, data: any) => {
+  if (typeof window === 'undefined' || !PG_SYNC_KEYS.has(key)) return;
+
+  const existing = pgSyncTimers.get(key);
+  if (existing) window.clearTimeout(existing);
+
+  const timer = window.setTimeout(async () => {
+    try {
+      const res = await fetch('/api/content-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, data }),
+      });
+      if (!res.ok) {
+        console.error('PG sync failed:', key, res.status, await res.text());
+      }
+    } catch (error) {
+      console.error('PG sync request failed:', key, error);
+    } finally {
+      pgSyncTimers.delete(key);
+    }
+  }, 600);
+
+  pgSyncTimers.set(key, timer);
+};
+
 // 工具函数：保存数据到localStorage
 const saveToStorage = (key: string, data: any) => {
   try {
     localStorage.setItem(key, JSON.stringify(data));
+    schedulePgSync(key, data);
   } catch (error) {
     console.error('Failed to save to localStorage:', error);
   }
@@ -1149,6 +1188,50 @@ export const resetSystemSettings = (): SystemSettings => {
   notifyDataChange();
   
   return resetSettings;
+};
+
+export const bootstrapFromPgApi = async (): Promise<boolean> => {
+  if (typeof window === 'undefined') return false;
+
+  try {
+    const res = await fetch('/api/content-snapshot', { cache: 'no-store' });
+    if (!res.ok) {
+      console.error('content-snapshot request failed:', res.status, await res.text());
+      return false;
+    }
+
+    const payload = await res.json();
+    if (!payload || payload.ok !== true) {
+      console.error('content-snapshot payload invalid:', payload);
+      return false;
+    }
+
+    const writes: Array<[string, any]> = [
+      [STORAGE_KEYS.reports, payload.reports || []],
+      [STORAGE_KEYS.insights, payload.insights || []],
+      [STORAGE_KEYS.methodologies, payload.methodologies || []],
+      [STORAGE_KEYS.books, payload.books || []],
+      [STORAGE_KEYS.categories, payload.categories || []],
+      [STORAGE_KEYS.tags, payload.tags || []],
+    ];
+
+    if (payload.systemSettings) {
+      writes.push([STORAGE_KEYS.systemSettings, payload.systemSettings]);
+    }
+
+    for (const [key, value] of writes) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    try {
+      window.dispatchEvent(new Event('yiyu_data_change'));
+    } catch {}
+
+    return true;
+  } catch (error) {
+    console.error('bootstrapFromPgApi failed:', error);
+    return false;
+  }
 };
 
 // 清除缓存（清除所有localStorage数据）
