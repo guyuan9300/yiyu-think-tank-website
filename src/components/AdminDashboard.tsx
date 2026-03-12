@@ -22,9 +22,6 @@ import {
   getBooks,
   getCategories,
   calculateReadTime,
-  getComments,
-  updateCommentStatus,
-  replyComment,
   type Report,
   type InsightArticle,
   type Methodology,
@@ -44,6 +41,12 @@ import {
   saveMethodologyDirect,
   saveReportDirect,
 } from '../lib/adminContentService';
+import {
+  deleteCommentApi,
+  fetchAdminComments,
+  replyCommentApi,
+  updateCommentStatusApi,
+} from '../lib/commentApi';
 
 const RESOURCE_TOPICS: ResourceTopic[] = ['战略', '业务设计', '组织', 'AI 技术'];
 
@@ -152,6 +155,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
   // 评论管理状态
   const [comments, setComments] = useState<Comment[]>([]);
+  const [isCommentsLoading, setIsCommentsLoading] = useState(false);
   const [showCommentReplyModal, setShowCommentReplyModal] = useState(false);
   const [replyingComment, setReplyingComment] = useState<Comment | null>(null);
   const [replyText, setReplyText] = useState('');
@@ -194,6 +198,18 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const bookCoverFileInputRef = useRef<HTMLInputElement>(null);
   // tagInputRef removed (topics-only schema)
 
+  const loadAdminComments = useCallback(async () => {
+    setIsCommentsLoading(true);
+    const result = await fetchAdminComments('all');
+    if (result.ok && result.data) {
+      setComments(result.data);
+    } else {
+      setComments([]);
+      setMessage({ type: 'error', text: result.error || '评论数据加载失败' });
+    }
+    setIsCommentsLoading(false);
+  }, []);
+
   // 初始化数据
   useEffect(() => {
     const loadData = async () => {
@@ -203,11 +219,10 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       setMethodologies(getMethodologies());
       setBooks(getBooks());
       setCategories(getCategories());
-      // usedTags removed (topics-only schema)
-      setComments(getComments());
+      await loadAdminComments();
     };
-    
-    loadData();
+
+    void loadData();
 
     // 监听粘贴事件 - 支持直接粘贴图片到报告封面
     const handlePaste = (e: ClipboardEvent) => {
@@ -238,13 +253,19 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     return () => {
       document.removeEventListener('paste', handlePaste);
     };
-  }, [showReportForm]);
+  }, [loadAdminComments, showReportForm]);
 
   useEffect(() => {
     if (activeMenu === 'invite-codes') {
       void loadInviteCodes();
     }
   }, [activeMenu]);
+
+  useEffect(() => {
+    if (activeMenu === 'comments') {
+      void loadAdminComments();
+    }
+  }, [activeMenu, loadAdminComments]);
 
   // 打开内容编辑表单时：自动读取已同步的客户勾选
   useEffect(() => {
@@ -333,9 +354,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     setMethodologies(getMethodologies());
     setBooks(getBooks());
     setCategories(getCategories());
-    // usedTags removed (topics-only schema)
-    setComments(getComments());
-  }, []);
+    await loadAdminComments();
+  }, [loadAdminComments]);
 
   // 菜单配置
   const menuItems: MenuItem[] = [
@@ -738,27 +758,36 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   };
 
   // 评论可见性：显示
-  const handleShowComment = (commentId: string) => {
-    if (updateCommentStatus(commentId, 'approved')) {
-      refreshAllData();
-      setMessage({ type: 'success', text: '已设置为：显示' });
+  const handleShowComment = async (commentId: string) => {
+    const result = await updateCommentStatusApi(commentId, 'approved');
+    if (!result.ok) {
+      setMessage({ type: 'error', text: result.error || '评论显示失败' });
+      return;
     }
+    await refreshAllData();
+    setMessage({ type: 'success', text: '已设置为：显示' });
   };
 
   // 评论可见性：不显示
-  const handleHideComment = (commentId: string) => {
-    if (updateCommentStatus(commentId, 'rejected')) {
-      refreshAllData();
-      setMessage({ type: 'success', text: '已设置为：不显示' });
+  const handleHideComment = async (commentId: string) => {
+    const result = await updateCommentStatusApi(commentId, 'rejected');
+    if (!result.ok) {
+      setMessage({ type: 'error', text: result.error || '评论隐藏失败' });
+      return;
     }
+    await refreshAllData();
+    setMessage({ type: 'success', text: '已设置为：不显示' });
   };
 
   // 撤回管理员回复（清空 reply）
-  const handleWithdrawReply = (commentId: string) => {
-    if (replyComment(commentId, '')) {
-      refreshAllData();
-      setMessage({ type: 'success', text: '管理员回复已撤回' });
+  const handleWithdrawReply = async (commentId: string) => {
+    const result = await replyCommentApi(commentId, '');
+    if (!result.ok) {
+      setMessage({ type: 'error', text: result.error || '撤回回复失败' });
+      return;
     }
+    await refreshAllData();
+    setMessage({ type: 'success', text: '管理员回复已撤回' });
   };
 
   // 打开回复评论对话框
@@ -769,16 +798,33 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   };
 
   // 提交回复
-  const handleSubmitReply = () => {
+  const handleSubmitReply = async () => {
     if (!replyingComment) return;
-    
-    if (replyComment(replyingComment.id, replyText)) {
-      refreshAllData();
-      setMessage({ type: 'success', text: '回复已保存' });
-      setShowCommentReplyModal(false);
-      setReplyingComment(null);
-      setReplyText('');
+
+    const result = await replyCommentApi(replyingComment.id, replyText);
+    if (!result.ok) {
+      setMessage({ type: 'error', text: result.error || '回复保存失败' });
+      return;
     }
+
+    await refreshAllData();
+    setMessage({ type: 'success', text: '回复已保存' });
+    setShowCommentReplyModal(false);
+    setReplyingComment(null);
+    setReplyText('');
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!window.confirm('确定要删除这条评论吗？删除后无法恢复。')) {
+      return;
+    }
+    const result = await deleteCommentApi(commentId);
+    if (!result.ok) {
+      setMessage({ type: 'error', text: result.error || '评论删除失败' });
+      return;
+    }
+    await refreshAllData();
+    setMessage({ type: 'success', text: '评论已删除' });
   };
 
   return (
@@ -2126,7 +2172,12 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
               {/* 评论列表 */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                {filteredComments.length === 0 ? (
+                {isCommentsLoading ? (
+                  <div className="p-12 text-center text-gray-500">
+                    <RefreshCw className="w-8 h-8 mx-auto mb-4 text-gray-300 animate-spin" />
+                    <p>正在加载评论...</p>
+                  </div>
+                ) : filteredComments.length === 0 ? (
                   <div className="p-12 text-center text-gray-500">
                     <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                     <p>暂无评论</p>
@@ -2192,7 +2243,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                           {/* 操作按钮 */}
                           <div className="flex items-center gap-2 mt-3">
                             <button
-                              onClick={() => handleShowComment(comment.id)}
+                              onClick={() => void handleShowComment(comment.id)}
                               className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors text-sm ${
                                 comment.status === 'approved'
                                   ? 'bg-green-600 text-white hover:bg-green-700'
@@ -2203,7 +2254,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                               显示
                             </button>
                             <button
-                              onClick={() => handleHideComment(comment.id)}
+                              onClick={() => void handleHideComment(comment.id)}
                               className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors text-sm ${
                                 comment.status === 'rejected'
                                   ? 'bg-red-600 text-white hover:bg-red-700'
@@ -2224,13 +2275,21 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
                             {comment.reply && (
                               <button
-                                onClick={() => handleWithdrawReply(comment.id)}
+                                onClick={() => void handleWithdrawReply(comment.id)}
                                 className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
                               >
                                 <RotateCcw className="w-4 h-4" />
                                 撤回
                               </button>
                             )}
+
+                            <button
+                              onClick={() => void handleDeleteComment(comment.id)}
+                              className="flex items-center gap-1 px-3 py-1.5 bg-rose-50 text-rose-700 rounded-lg hover:bg-rose-100 transition-colors text-sm"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              删除
+                            </button>
                           </div>
                         </div>
                       ))}

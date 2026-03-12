@@ -23,6 +23,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
     confirmPassword: '',
     verifyCode: '',
     nickname: '',
+    inviteCode: '',
   });
 
   // 状态
@@ -118,6 +119,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
     const normalizedPhone = formData.phone.trim();
     const normalizedEmail = formData.email.trim();
     const normalizedCode = formData.verifyCode.trim();
+    const normalizedInviteCode = formData.inviteCode.trim().toUpperCase();
 
     // 验证表单
     if (true) {
@@ -169,6 +171,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
           code: normalizedCode,
           password: formData.password,
           nickname: normalizedNickname || undefined,
+          inviteCode: normalizedInviteCode || undefined,
         });
       } else if (activeTab === 'email') {
         result = await registerByCode({
@@ -177,11 +180,13 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
           code: normalizedCode,
           password: formData.password,
           nickname: normalizedNickname || undefined,
+          inviteCode: normalizedInviteCode || undefined,
         });
       }
 
       if (result.ok) {
-        setSuccess('注册成功！正在跳转...');
+        const upgradedByInvite = result.data?.user?.paidSource === 'invite_code' || result.data?.user?.memberType === 'gold';
+        setSuccess(upgradedByInvite ? '注册成功，已为你开通付费会员，正在跳转...' : '注册成功！正在跳转...');
         setTimeout(() => {
           if (onRegisterSuccess) {
             onRegisterSuccess();
@@ -418,6 +423,23 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                 </div>
               </>
             )}
+
+            <div className="animate-fadeInUp" style={{ animationDelay: '180ms' }}>
+              <label className="block text-[13px] font-medium text-foreground mb-2">
+                邀请码（选填）
+              </label>
+              <div className="relative group">
+                <CheckCircle className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-primary transition-colors duration-200" />
+                <input
+                  type="text"
+                  name="inviteCode"
+                  value={formData.inviteCode}
+                  onChange={handleChange}
+                  placeholder="如有邀请码，可注册时直接开通付费会员"
+                  className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60 text-[13px]"
+                />
+              </div>
+            </div>
 
             {/* 密码输入（手机和邮箱需要） */}
             {true && (

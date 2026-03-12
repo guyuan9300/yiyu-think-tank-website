@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Smartphone } from 'lucide-react';
-import { type User } from '../lib/dataService';
 import { saveUserRaw, saveAuthToken, setSavedItem, ADMIN_FLAG_KEY, ADMIN_EMAIL_KEY } from '../lib/storage';
 import { loginByPassword, normalizeLoginUser } from '../lib/authApi';
 import { logger } from '../lib/logger';
@@ -45,48 +44,10 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
 
     const normalizedEmail = email.trim();
     const normalizedPhone = phone.trim();
-    const isAdmin = normalizedEmail === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password;
-    
+
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
-      
-      if (isAdmin) {
-        setSavedItem(ADMIN_FLAG_KEY, 'true', rememberMe);
-        setSavedItem(ADMIN_EMAIL_KEY, normalizedEmail, rememberMe);
 
-        // 同时写入当前用户信息，确保从后台回到前台后依然保持“已登录/管理员”状态
-        const adminUser: User & { plainPassword?: string } = {
-          id: 'admin',
-          email: normalizedEmail,
-          nickname: '超级管理员',
-          memberType: 'diamond',
-          status: 'active',
-          loginCount: 1,
-          commentsCount: 0,
-          favoritesCount: 0,
-          createdAt: new Date().toISOString(),
-          lastLoginAt: new Date().toISOString(),
-          plainPassword: password,
-        };
-        saveUserRaw(JSON.stringify(adminUser), rememberMe);
-        window.dispatchEvent(new Event('yiyu_user_updated'));
-
-        // Prefer SPA navigation when available (avoid full reload / webview click issues)
-        if (onAdminLogin) {
-          onAdminLogin();
-          return;
-        }
-        if (onNavigate) {
-          onNavigate('admin');
-          return;
-        }
-
-        const baseUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
-        logger.info('login', '管理员登录成功，跳转URL', baseUrl + '?page=admin');
-        window.location.href = baseUrl + '?page=admin';
-        return;
-      }
-      
       if ((loginMode === 'email' && !normalizedEmail) || (loginMode === 'phone' && !normalizedPhone) || !password) {
         setError(loginMode === 'phone' ? '请输入手机号和密码' : '请输入邮箱和密码');
         setIsLoading(false);
@@ -116,15 +77,36 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
         return;
       }
 
-      const user = normalizeLoginUser(result.data.user) as User & { plainPassword?: string };
-      user.plainPassword = password;
+      const user = {
+        ...normalizeLoginUser(result.data.user),
+        plainPassword: password,
+      };
       saveUserRaw(JSON.stringify(user), rememberMe);
       if (result.data.token) {
         saveAuthToken(result.data.token, rememberMe);
       }
       window.dispatchEvent(new Event('yiyu_user_updated'));
 
-      // 非管理员登录：清理可能残留的管理员标记，避免普通账号看到/访问管理后台
+      const isAdmin = user.adminRole === 'admin' || (normalizedEmail === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password);
+      if (isAdmin) {
+        setSavedItem(ADMIN_FLAG_KEY, 'true', rememberMe);
+        setSavedItem(ADMIN_EMAIL_KEY, user.email || normalizedEmail, rememberMe);
+        logger.info('login', '管理员登录成功', { id: user.id, loginMode });
+
+        if (onAdminLogin) {
+          onAdminLogin();
+          return;
+        }
+        if (onNavigate) {
+          onNavigate('admin');
+          return;
+        }
+
+        const baseUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
+        window.location.href = `${baseUrl}?page=admin`;
+        return;
+      }
+
       try {
         localStorage.removeItem(ADMIN_FLAG_KEY);
         sessionStorage.removeItem(ADMIN_FLAG_KEY);

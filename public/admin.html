@@ -2165,23 +2165,7 @@
     // Dashboard data
     // =========================
     const DASHBOARD_CARD_IDS = ['kpiCard', 'overviewCard', 'opsCard', 'hotCard'];
-    const DEFAULT_USERS = [
-      { id: 'user_momo_colleague', nickname: '默默的同事', email: '13631445251@phone.local', phone: '13631445251', memberType: 'regular', status: 'active', createdAt: new Date().toISOString() },
-      { id: 'user_doubao_colleague', nickname: '豆包的同事', email: '18027370767@phone.local', phone: '18027370767', memberType: 'gold', status: 'active', paidSource: 'manual', paidExpiresAt: '2026-12-31T23:59:59.000Z', createdAt: new Date().toISOString() },
-      { id: 'user_001', nickname: '测试用户', email: 'test@example.com', phone: '13800138000', memberType: 'gold', status: 'active', paidSource: 'manual', paidExpiresAt: '2026-04-15T10:00:00.000Z', createdAt: '2026-01-15T10:00:00.000Z', lastLoginAt: '2026-02-01T08:30:00.000Z' },
-      { id: 'user_002', nickname: '示例普通用户', email: 'user@example.com', memberType: 'regular', status: 'active', createdAt: '2026-01-20T14:20:00.000Z', lastLoginAt: '2026-01-31T16:45:00.000Z' },
-      { id: 'user_003', nickname: '示例付费用户', email: 'diamond@example.com', memberType: 'gold', status: 'active', invitationCode: 'DIAMOND2026', paidSource: 'invite_code', paidExpiresAt: '2027-01-10T09:00:00.000Z', createdAt: '2026-01-10T09:00:00.000Z', lastLoginAt: '2026-02-01T20:15:00.000Z' },
-    ];
-
-    function safeParse(raw, fallback) {
-      if (!raw) return fallback;
-      try {
-        const parsed = JSON.parse(raw);
-        return Array.isArray(fallback) ? (Array.isArray(parsed) ? parsed : fallback) : (parsed ?? fallback);
-      } catch {
-        return fallback;
-      }
-    }
+    const AUTH_TOKEN_KEY = 'yiyu_auth_token';
 
     function setDashboardState(state) {
       DASHBOARD_CARD_IDS.forEach((id) => {
@@ -2195,12 +2179,8 @@
       if (el) el.textContent = String(value);
     }
 
-    function getUsersSnapshot() {
-      return safeParse(localStorage.getItem('yiyu_users'), DEFAULT_USERS);
-    }
-
-    function getCommentsSnapshot() {
-      return safeParse(localStorage.getItem('yiyu_comments'), []);
+    function getSavedAuthToken() {
+      return localStorage.getItem(AUTH_TOKEN_KEY) || sessionStorage.getItem(AUTH_TOKEN_KEY) || '';
     }
 
     function isWithinDays(dateInput, days) {
@@ -2219,9 +2199,16 @@
       return diff > 0 && diff <= days * 24 * 3600 * 1000;
     }
 
-    async function fetchJson(url, fallback) {
+    async function fetchJson(url, fallback, options = {}) {
       try {
-        const res = await fetch(url, { cache: 'no-store' });
+        const headers = {};
+        if (options.auth) {
+          const token = getSavedAuthToken();
+          if (token) {
+            headers.Authorization = `Bearer ${token}`;
+          }
+        }
+        const res = await fetch(url, { cache: 'no-store', headers });
         if (!res.ok) return fallback;
         const json = await res.json();
         return json;
@@ -2270,8 +2257,12 @@
       setDashboardState('loading');
 
       try {
-        const contentPayload = await fetchJson('/api/content-snapshot', { ok: false });
-        const invitePayload = await fetchJson('/api/auth/invite-codes', { ok: false, data: [] });
+        const [contentPayload, usersPayload, invitePayload, commentsPayload] = await Promise.all([
+          fetchJson('/api/content-snapshot', { ok: false }),
+          fetchJson('/api/auth/admin/users', { ok: false, data: [] }, { auth: true }),
+          fetchJson('/api/auth/invite-codes', { ok: false, data: [] }, { auth: true }),
+          fetchJson('/api/auth/comments?scope=admin', { ok: false, data: [] }, { auth: true }),
+        ]);
 
         const insights = Array.isArray(contentPayload?.insights) ? contentPayload.insights : [];
         const reports = Array.isArray(contentPayload?.reports) ? contentPayload.reports : [];
@@ -2279,12 +2270,17 @@
         const methodologies = Array.isArray(contentPayload?.methodologies) ? contentPayload.methodologies : [];
         const allContent = [...insights, ...reports, ...books, ...methodologies];
 
-        const users = getUsersSnapshot();
-        const comments = getCommentsSnapshot();
+        if (!Array.isArray(usersPayload?.data) || !Array.isArray(invitePayload?.data) || !Array.isArray(commentsPayload?.data)) {
+          throw new Error('后台概览数据加载失败');
+        }
+
+        const users = usersPayload.data;
+        const comments = commentsPayload.data;
         const inviteCodes = Array.isArray(invitePayload?.data) ? invitePayload.data : [];
 
-        const paidUsers = users.filter((user) => user.memberType !== 'regular');
-        const regularUsers = users.filter((user) => user.memberType === 'regular');
+        const adminUsers = users.filter((user) => user.adminRole === 'admin');
+        const paidUsers = users.filter((user) => user.adminRole !== 'admin' && user.memberType !== 'regular');
+        const regularUsers = users.filter((user) => user.adminRole !== 'admin' && user.memberType === 'regular');
         const disabledUsers = users.filter((user) => user.status === 'disabled');
         const recentLogins = users.filter((user) => isWithinDays(user.lastLoginAt, 7));
         const expiringPaid = paidUsers.filter((user) => isFutureWithinDays(user.paidExpiresAt, 30));
@@ -2307,7 +2303,7 @@
         const recentContent = allContent.filter((item) => isWithinDays(item.createdAt || item.publishDate, 30)).length;
 
         setText('metricUsersTotal', users.length);
-        setText('metricUsersHint', `近 7 天活跃 ${recentLogins.length}`);
+        setText('metricUsersHint', `近 7 天活跃 ${recentLogins.length} · 管理员 ${adminUsers.length}`);
         setText('metricPaidMembers', paidUsers.length);
         setText('metricPaidHint', `普通会员 ${regularUsers.length}`);
         setText('metricInviteValid', validInvites.length);

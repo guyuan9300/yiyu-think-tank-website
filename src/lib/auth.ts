@@ -13,8 +13,9 @@ import { ZHIXIAOYUN_CONFIG, MEMBERSHIP_PLANS } from './zhixiaoyun';
 import { getSavedUserRaw, getSavedAuthToken, saveAuthToken, saveUserRaw, clearUser, USER_KEY } from './storage';
 import { getSessionUser } from './authState';
 import { loginByPassword, registerByCode, resetPasswordByCode, sendVerifyCode } from './authApi';
-import { createInviteCode, deleteInviteCodeApi, disableInviteCodeApi, fetchInviteCodes } from './inviteCodeApi';
+import { createInviteCode, deleteInviteCodeApi, disableInviteCodeApi, fetchInviteCodes, redeemInviteCodeApi } from './inviteCodeApi';
 import { INVITE_CODE_TYPES, type InviteCode, type InviteCodeType } from './inviteCodeTypes';
+import { createPaymentOrderApi } from './paymentApi';
 
 // 用户类型定义
 export interface User {
@@ -146,8 +147,10 @@ export async function registerWithPhone(
       phone: result.data.user.phone || phone,
       email: result.data.user.email,
       nickname: result.data.user.nickname || nickname || `用户${phone.slice(-4)}`,
-      membershipType: 'free',
-      inviteCodeUsed: false,
+      membershipType: result.data.user.memberType === 'regular' ? 'free' : 'premium',
+      membershipExpireAt: result.data.user.paidExpiresAt,
+      invitedBy: result.data.user.invitedBy,
+      inviteCodeUsed: Boolean(result.data.user.invitationCode),
       createdAt: result.data.user.createdAt || new Date().toISOString(),
       lastLoginAt: result.data.user.lastLoginAt,
     };
@@ -179,8 +182,10 @@ export async function registerWithEmail(
       email: result.data.user.email || email,
       phone: result.data.user.phone,
       nickname: result.data.user.nickname || nickname || `用户${email.split('@')[0]}`,
-      membershipType: 'free',
-      inviteCodeUsed: false,
+      membershipType: result.data.user.memberType === 'regular' ? 'free' : 'premium',
+      membershipExpireAt: result.data.user.paidExpiresAt,
+      invitedBy: result.data.user.invitedBy,
+      inviteCodeUsed: Boolean(result.data.user.invitationCode),
       createdAt: result.data.user.createdAt || new Date().toISOString(),
       lastLoginAt: result.data.user.lastLoginAt,
     };
@@ -207,8 +212,10 @@ export async function loginWithPhone(phone: string, password: string): Promise<A
       phone: result.data.user.phone || phone,
       email: result.data.user.email,
       nickname: result.data.user.nickname || `用户${phone.slice(-4)}`,
-      membershipType: 'free',
-      inviteCodeUsed: false,
+      membershipType: result.data.user.memberType === 'regular' ? 'free' : 'premium',
+      membershipExpireAt: result.data.user.paidExpiresAt,
+      invitedBy: result.data.user.invitedBy,
+      inviteCodeUsed: Boolean(result.data.user.invitationCode),
       createdAt: result.data.user.createdAt || new Date().toISOString(),
       lastLoginAt: result.data.user.lastLoginAt || new Date().toISOString(),
     };
@@ -235,8 +242,10 @@ export async function loginWithEmail(email: string, password: string): Promise<A
       email: result.data.user.email || email,
       phone: result.data.user.phone,
       nickname: result.data.user.nickname || `用户${email.split('@')[0]}`,
-      membershipType: 'free',
-      inviteCodeUsed: false,
+      membershipType: result.data.user.memberType === 'regular' ? 'free' : 'premium',
+      membershipExpireAt: result.data.user.paidExpiresAt,
+      invitedBy: result.data.user.invitedBy,
+      inviteCodeUsed: Boolean(result.data.user.invitationCode),
       createdAt: result.data.user.createdAt || new Date().toISOString(),
       lastLoginAt: result.data.user.lastLoginAt || new Date().toISOString(),
     };
@@ -302,29 +311,18 @@ export async function createPaymentOrder(
       return { success: false, error: '无效的套餐' };
     }
     
-    // 生成订单号
-    const orderNo = `ORDER_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    // TODO: 调用支付接口创建订单
-    // const response = await fetch(`${ZHIXIAOYUN_CONFIG.serverURL}/payment/create`, {
-    //   method: 'POST',
-    //   headers: { 
-    //     'Content-Type': 'application/json',
-    //     'Authorization': `Bearer ${authToken}`
-    //   },
-    //   body: JSON.stringify({
-    //     userId: currentUser.id,
-    //     planId,
-    //     amount: plan.price,
-    //     orderNo
-    //   })
-    // });
-    
-    // 模拟创建成功，返回支付链接
-    const paymentUrl = `${window.location.origin}/payment?order=${orderNo}&plan=${planId}`;
-    console.log(`创建订单: ${orderNo}, 金额: ${plan.price} ${plan.currency}`);
-    
-    return { success: true, orderNo, paymentUrl };
+    const result = await createPaymentOrderApi(planId);
+    if (!result.ok || !result.data?.order) {
+      return { success: false, error: result.error || '创建订单失败，请稍后重试' };
+    }
+
+    console.log(`创建订单: ${result.data.order.orderNo}, 金额: ${plan.price} ${plan.currency}`);
+    return {
+      success: true,
+      orderNo: result.data.order.orderNo,
+      paymentUrl: result.data.paymentUrl || undefined,
+      message: result.message,
+    };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -363,12 +361,16 @@ export async function verifyInviteCode(code: string): Promise<{
 }
 
 // 使用邀请码
-export async function useInviteCode(_code: string, _userId: string): Promise<{ 
+export async function useInviteCode(code: string, _userId: string): Promise<{ 
   success: boolean; 
   message?: string;
   bonusDays?: number;
 }> {
-  return { success: false, message: '邀请码兑换链路待迁移到腾讯云 Auth API，当前前端本地实现已停用' };
+  const result = await redeemInviteCodeApi(code);
+  return {
+    success: result.ok,
+    message: result.ok ? (result.message || '邀请码兑换成功') : result.error,
+  };
 }
 
 // 禁用邀请码

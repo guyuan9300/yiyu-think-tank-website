@@ -134,18 +134,23 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
 
   // 获取会员类型显示信息
   const getMemberTypeInfo = (memberType: string) => {
+    const isAdmin = (currentUser as any)?.adminRole === 'admin'
+      || localStorage.getItem('yiyu_is_admin') === 'true'
+      || sessionStorage.getItem('yiyu_is_admin') === 'true';
+    if (isAdmin) {
+      return {
+        label: '管理员',
+        icon: <Award className="w-3 h-3" />,
+        color: 'bg-gradient-to-r from-purple-500 to-pink-500',
+        textColor: 'text-purple-700',
+        bgColor: 'bg-purple-50'
+      };
+    }
     switch (memberType) {
       case 'diamond':
-        return {
-          label: '钻石会员',
-          icon: <Award className="w-3 h-3" />,
-          color: 'bg-gradient-to-r from-purple-500 to-pink-500',
-          textColor: 'text-purple-700',
-          bgColor: 'bg-purple-50'
-        };
       case 'gold':
         return {
-          label: '黄金会员',
+          label: '付费会员',
           icon: <Crown className="w-3 h-3" />,
           color: 'bg-gradient-to-r from-amber-400 to-yellow-500',
           textColor: 'text-amber-700',

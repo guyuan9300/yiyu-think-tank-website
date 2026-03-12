@@ -1,3 +1,4 @@
+import { authRequest, type ApiResult } from './authHttp';
 
 export type AuthChannel = 'phone' | 'email';
 export type AuthScene = 'register' | 'reset';
@@ -9,15 +10,18 @@ export interface AuthApiUser {
   nickname?: string;
   memberType?: 'regular' | 'gold' | 'diamond';
   status?: 'active' | 'disabled';
+  adminRole?: 'admin';
+  invitationCode?: string;
+  invitedBy?: string;
+  paidSource?: 'manual' | 'invite_code' | 'payment' | 'strategy_client';
+  paidStartedAt?: string;
+  paidExpiresAt?: string;
+  paidNote?: string;
   createdAt?: string;
   lastLoginAt?: string;
-}
-
-interface ApiResult<T = any> {
-  ok: boolean;
-  error?: string;
-  message?: string;
-  data?: T;
+  loginCount?: number;
+  commentsCount?: number;
+  favoritesCount?: number;
 }
 
 export interface LoginResponseData {
@@ -26,27 +30,11 @@ export interface LoginResponseData {
   expiresAt?: string;
 }
 
-const AUTH_BASE = (import.meta as any)?.env?.VITE_AUTH_API_BASE_URL || '/api/auth';
-
-async function post<T = any>(path: string, payload: Record<string, any>): Promise<ApiResult<T>> {
-  try {
-    const res = await fetch(`${AUTH_BASE}${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok || json?.ok === false) {
-      return { ok: false, error: json?.error || `请求失败(${res.status})` };
-    }
-    return { ok: true, data: json?.data, message: json?.message };
-  } catch (e: any) {
-    return { ok: false, error: e?.message || '网络异常，请稍后重试' };
-  }
-}
-
 export async function sendVerifyCode(channel: AuthChannel, target: string, scene: AuthScene) {
-  return post('/send-code', { channel, target, scene });
+  return authRequest('/send-code', {
+    method: 'POST',
+    body: JSON.stringify({ channel, target, scene }),
+  });
 }
 
 export async function registerByCode(params: {
@@ -55,8 +43,12 @@ export async function registerByCode(params: {
   code: string;
   password: string;
   nickname?: string;
+  inviteCode?: string;
 }) {
-  return post<LoginResponseData>('/register', params);
+  return authRequest<LoginResponseData>('/register', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
 }
 
 export async function loginByPassword(params: {
@@ -64,7 +56,10 @@ export async function loginByPassword(params: {
   target: string;
   password: string;
 }) {
-  return post<LoginResponseData>('/login', params);
+  return authRequest<LoginResponseData>('/login', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
 }
 
 export async function resetPasswordByCode(params: {
@@ -73,12 +68,20 @@ export async function resetPasswordByCode(params: {
   code: string;
   newPassword: string;
 }) {
-  return post('/reset-password', params);
+  return authRequest('/reset-password', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
+}
+
+export async function fetchCurrentSession() {
+  return authRequest<{ user: AuthApiUser; expiresAt?: string }>('/session', undefined, { withAuth: true });
 }
 
 export function normalizeLoginUser(u: AuthApiUser) {
   const now = new Date().toISOString();
   const email = u.email || (u.phone ? `${u.phone}@phone.local` : '');
+
   return {
     id: u.id,
     email,
@@ -86,10 +89,19 @@ export function normalizeLoginUser(u: AuthApiUser) {
     nickname: u.nickname || (u.phone ? `用户${u.phone.slice(-4)}` : (email?.split('@')[0] || '用户')),
     memberType: u.memberType || 'regular',
     status: u.status || 'active',
-    loginCount: 1,
-    commentsCount: 0,
-    favoritesCount: 0,
+    adminRole: u.adminRole,
+    invitationCode: u.invitationCode,
+    invitedBy: u.invitedBy,
+    paidSource: u.paidSource,
+    paidStartedAt: u.paidStartedAt,
+    paidExpiresAt: u.paidExpiresAt,
+    paidNote: u.paidNote,
+    loginCount: u.loginCount ?? 1,
+    commentsCount: u.commentsCount ?? 0,
+    favoritesCount: u.favoritesCount ?? 0,
     createdAt: u.createdAt || now,
     lastLoginAt: u.lastLoginAt || now,
   };
 }
+
+export type { ApiResult };

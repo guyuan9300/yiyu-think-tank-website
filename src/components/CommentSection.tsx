@@ -4,11 +4,8 @@
  */
 import { useState, useEffect } from 'react';
 import { MessageSquare, Send, User, Clock, CheckCircle, AlertCircle } from 'lucide-react';
-import { 
-  getCommentsByContent, 
-  saveComment,
-  type Comment 
-} from '../lib/dataService';
+import { type Comment } from '../lib/dataService';
+import { createCommentApi, fetchCommentsByContent } from '../lib/commentApi';
 
 interface CommentSectionProps {
   contentId: string;
@@ -65,23 +62,25 @@ export function CommentSection({
 
   // 加载评论
   useEffect(() => {
-    loadComments();
+    void loadComments();
 
     // 监听数据变化事件
     const handleDataChange = () => {
-      loadComments();
+      void loadComments();
     };
 
+    window.addEventListener('yiyu_comments_updated', handleDataChange);
     window.addEventListener('yiyu_data_change', handleDataChange);
 
     return () => {
+      window.removeEventListener('yiyu_comments_updated', handleDataChange);
       window.removeEventListener('yiyu_data_change', handleDataChange);
     };
   }, [contentId, contentType]);
 
-  const loadComments = () => {
-    const loadedComments = getCommentsByContent(contentId, contentType);
-    setComments(loadedComments);
+  const loadComments = async () => {
+    const result = await fetchCommentsByContent(contentId, contentType);
+    setComments(result.ok && result.data ? result.data : []);
   };
 
   // 提交评论
@@ -97,8 +96,7 @@ export function CommentSection({
     setMessage(null);
 
     try {
-      // 保存评论
-      saveComment({
+      const result = await createCommentApi({
         contentId,
         contentType,
         contentTitle,
@@ -107,12 +105,16 @@ export function CommentSection({
         userAvatar,
         text: commentText.trim(),
       });
+      if (!result.ok) {
+        throw new Error(result.error || '提交失败，请稍后重试');
+      }
 
       setCommentText('');
       setMessage({ 
         type: 'success', 
         text: '评论已提交，待管理员审核后将显示在评论列表中' 
       });
+      window.dispatchEvent(new Event('yiyu_comments_updated'));
 
       // 3秒后清除提示
       setTimeout(() => {

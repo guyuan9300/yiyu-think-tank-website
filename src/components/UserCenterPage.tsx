@@ -3,6 +3,7 @@ import { Header } from './Header';
 import { clearUser, getSavedUserRaw, saveUserRaw, USER_KEY } from '../lib/storage';
 import { generateAvatarImage } from '../lib/hfImageGen';
 import { resetPasswordByCode, sendVerifyCode } from '../lib/authApi';
+import { redeemInviteCodeApi } from '../lib/inviteCodeApi';
 import {
   User as UserIcon,
   Crown,
@@ -24,10 +25,17 @@ type LocalUser = {
   phone?: string;
   nickname?: string;
   memberType?: MemberType;
+  adminRole?: 'admin';
   status?: string;
   avatarUrl?: string;
   preferences?: string[];
   plainPassword?: string;
+  invitationCode?: string;
+  invitedBy?: string;
+  paidSource?: 'manual' | 'invite_code' | 'payment' | 'strategy_client';
+  paidStartedAt?: string;
+  paidExpiresAt?: string;
+  paidNote?: string;
 };
 
 type UserCenterPageProps = {
@@ -48,11 +56,14 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [securityMessage, setSecurityMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [inviteCodeInput, setInviteCodeInput] = useState('');
+  const [isRedeemingInvite, setIsRedeemingInvite] = useState(false);
+  const [membershipMessage, setMembershipMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const isAdmin = useMemo(() => {
     const flag = localStorage.getItem('yiyu_is_admin') ?? sessionStorage.getItem('yiyu_is_admin');
-    return flag === 'true' || user?.id === 'admin';
-  }, [user?.id]);
+    return flag === 'true' || user?.adminRole === 'admin' || user?.id === 'admin';
+  }, [user?.adminRole, user?.id]);
 
   useEffect(() => {
     const load = () => {
@@ -98,14 +109,14 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
 
   const memberBadge = useMemo(() => {
     const t = user?.memberType || 'regular';
-    if (t === 'diamond') {
-      return { label: '钻石会员', icon: <Shield className="w-4 h-4" />, cls: 'bg-purple-50 text-purple-700 border-purple-100' };
+    if (isAdmin) {
+      return { label: '管理员', icon: <Shield className="w-4 h-4" />, cls: 'bg-purple-50 text-purple-700 border-purple-100' };
     }
-    if (t === 'gold') {
-      return { label: '黄金会员', icon: <Crown className="w-4 h-4" />, cls: 'bg-amber-50 text-amber-700 border-amber-100' };
+    if (t === 'gold' || t === 'diamond') {
+      return { label: '付费会员', icon: <Crown className="w-4 h-4" />, cls: 'bg-amber-50 text-amber-700 border-amber-100' };
     }
     return { label: '普通会员', icon: <UserIcon className="w-4 h-4" />, cls: 'bg-slate-50 text-slate-700 border-slate-200' };
-  }, [user?.memberType]);
+  }, [isAdmin, user?.memberType]);
 
   const handleLogout = () => {
     clearUser();
@@ -189,6 +200,37 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
     setNewPassword('');
     setConfirmPassword('');
     setSecurityMessage({ type: 'success', text: '密码已修改成功。' });
+  };
+
+  const handleRedeemInviteCode = async () => {
+    const code = inviteCodeInput.trim().toUpperCase();
+    if (!code) {
+      setMembershipMessage({ type: 'error', text: '请输入邀请码。' });
+      return;
+    }
+
+    setIsRedeemingInvite(true);
+    setMembershipMessage(null);
+    const result = await redeemInviteCodeApi(code);
+    setIsRedeemingInvite(false);
+
+    if (!result.ok || !result.data?.user) {
+      setMembershipMessage({ type: 'error', text: result.error || '邀请码兑换失败，请稍后重试。' });
+      return;
+    }
+
+    persistUserPatch({
+      memberType: result.data.user.memberType || user?.memberType,
+      adminRole: result.data.user.adminRole,
+      invitationCode: result.data.user.invitationCode,
+      invitedBy: result.data.user.invitedBy,
+      paidSource: result.data.user.paidSource,
+      paidStartedAt: result.data.user.paidStartedAt,
+      paidExpiresAt: result.data.user.paidExpiresAt,
+      paidNote: result.data.user.paidNote,
+    });
+    setInviteCodeInput('');
+    setMembershipMessage({ type: 'success', text: result.message || '邀请码兑换成功，付费资格已更新。' });
   };
 
   if (!user) {
@@ -325,6 +367,82 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
                   </button>
                 )}
               </div>
+            </div>
+
+            <div className="lg:col-span-3 bg-white/70 backdrop-blur rounded-3xl border border-border/40 p-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="text-base font-semibold">付费资格</h3>
+                  <p className="text-sm text-muted-foreground/70 mt-1">这里显示你的当前会员状态、开通来源和到期时间。</p>
+                </div>
+                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium ${memberBadge.cls}`}>
+                  {memberBadge.icon}
+                  <span>{memberBadge.label}</span>
+                </div>
+              </div>
+
+              <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="rounded-2xl border border-border/40 bg-white/80 p-5">
+                  <div className="text-xs text-muted-foreground/70">当前状态</div>
+                  <div className="mt-2 text-lg font-semibold text-foreground">{memberBadge.label}</div>
+                </div>
+                <div className="rounded-2xl border border-border/40 bg-white/80 p-5">
+                  <div className="text-xs text-muted-foreground/70">开通来源</div>
+                  <div className="mt-2 text-lg font-semibold text-foreground">
+                    {user.paidSource === 'invite_code'
+                      ? '邀请码开通'
+                      : user.paidSource === 'payment'
+                        ? '支付开通'
+                        : user.paidSource === 'strategy_client'
+                          ? '战略客户'
+                          : user.paidSource === 'manual'
+                            ? '手动开通'
+                            : '未开通'}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-border/40 bg-white/80 p-5">
+                  <div className="text-xs text-muted-foreground/70">到期时间</div>
+                  <div className="mt-2 text-lg font-semibold text-foreground">
+                    {user.paidExpiresAt
+                      ? new Date(user.paidExpiresAt).toLocaleDateString('zh-CN')
+                      : (user.memberType === 'gold' || user.memberType === 'diamond')
+                        ? '长期有效'
+                        : '未开通'}
+                  </div>
+                </div>
+              </div>
+
+              {!isAdmin && (
+                <div className="mt-6 rounded-2xl border border-border/40 bg-white/80 p-5">
+                  <div className="text-sm font-medium text-foreground">兑换邀请码</div>
+                  <div className="text-xs text-muted-foreground/70 mt-1">
+                    已有邀请码时，可在这里直接升级为付费会员或延长有效期。
+                  </div>
+
+                  <div className="mt-4 flex flex-col sm:flex-row gap-3">
+                    <input
+                      value={inviteCodeInput}
+                      onChange={(e) => setInviteCodeInput(e.target.value.toUpperCase())}
+                      placeholder="请输入邀请码"
+                      className="flex-1 px-4 py-2 rounded-2xl border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRedeemInviteCode}
+                      disabled={isRedeemingInvite}
+                      className="px-5 py-2 rounded-2xl bg-foreground text-white hover:bg-foreground/90 text-sm disabled:opacity-60"
+                    >
+                      {isRedeemingInvite ? '兑换中…' : '兑换邀请码'}
+                    </button>
+                  </div>
+
+                  {membershipMessage && (
+                    <div className={`mt-3 text-xs px-3 py-2 rounded-xl ${membershipMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                      {membershipMessage.text}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="lg:col-span-3 bg-white/70 backdrop-blur rounded-3xl border border-border/40 p-6">
