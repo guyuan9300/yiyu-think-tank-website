@@ -51,6 +51,7 @@ import { isValidPdfFile, formatFileSize } from '../lib/pdfUtils';
 import { SettingsPage } from './SettingsPage';
 import { generateCoverImage, getHfModel, getHfToken, setHfModel, setHfToken } from '../lib/hfImageGen';
 import { UserManagementPage } from './UserManagementPage';
+import { PaymentManagementPage } from './PaymentManagementPage';
 import AdminStrategyCompanionConceptPage from './AdminStrategyCompanionConceptPage';
 import {
   getClientProjects as getStrategyClients,
@@ -340,6 +341,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const menuItems: MenuItem[] = [
     { id: 'dashboard', label: '后台首页', description: '查看正式后台入口与当前可维护模块。', icon: <BarChart3 className="w-5 h-5" /> },
     { id: 'user-management', label: '用户管理', description: '查看用户、用户类型与访问规则。', icon: <Users className="w-5 h-5" /> },
+    { id: 'membership', label: '付费管理', description: '查看付费资格、续期状态与后续支付接入情况。', icon: <Crown className="w-5 h-5" /> },
+    { id: 'invite-codes', label: '邀请码管理', description: '查看邀请码状态与开通来源。', icon: <Gift className="w-5 h-5" /> },
+    { id: 'strategy-companion', label: '战略陪伴', description: '查看当前战略陪伴概念页与后续实装入口。', icon: <Target className="w-5 h-5" /> },
     { id: 'insights', label: '洞察文章', description: '维护前台展示的洞察文章内容。', icon: <FileText className="w-5 h-5" /> },
     { id: 'reports', label: '报告管理', description: '管理报告上传、状态与前台展示。', icon: <Folder className="w-5 h-5" /> },
     { id: 'books', label: '书籍管理', description: '维护书籍条目、封面与展示状态。', icon: <BookOpen className="w-5 h-5" /> },
@@ -941,9 +945,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       {ADMIN_SURFACE_ROLE_META.admin.label}
                     </div>
                     <div>
-                      <h2 className="text-2xl font-semibold text-gray-900">正式后台入口已统一</h2>
+                      <h2 className="text-2xl font-semibold text-gray-900">后台模块继续围绕统一入口推进</h2>
                       <p className="text-sm text-gray-600 mt-2 max-w-2xl">
-                        当前后台只保留已经可维护的模块。未完成的会员、邀请码和战略陪伴模块已从正式导航移除，后续将在腾讯云真实架构统一后再开放。
+                        当前页面用于直达各后台模块。第二阶段会逐步把付费管理、邀请码管理和评论审核从“占位页”推进到真实可运营页。
                       </p>
                     </div>
                   </div>
@@ -1747,9 +1751,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
             <UserManagementPage />
           )}
 
-          {/* 会员与订单（暂时承接到用户管理） */}
+          {/* 付费管理 */}
           {activeMenu === 'membership' && (
-            <UserManagementPage />
+            <PaymentManagementPage />
           )}
 
           {/* 邀请码管理 */}

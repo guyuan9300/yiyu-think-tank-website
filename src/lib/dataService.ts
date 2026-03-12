@@ -188,6 +188,10 @@ export interface User {
   phone?: string;
   memberType: 'regular' | 'gold' | 'diamond';
   status: 'active' | 'disabled';
+  paidSource?: 'manual' | 'invite_code' | 'payment' | 'strategy_client';
+  paidStartedAt?: string;
+  paidExpiresAt?: string;
+  paidNote?: string;
   invitationCode?: string;        // 使用哪个邀请码注册
   invitedBy?: string;             // 邀请人ID
   createdAt: string;
@@ -1346,6 +1350,10 @@ const initDefaultUsers = (): User[] => [
     phone: '18027370767',
     memberType: 'gold',
     status: 'active',
+    paidSource: 'manual',
+    paidStartedAt: '2026-01-12T10:00:00.000Z',
+    paidExpiresAt: '2026-12-31T23:59:59.000Z',
+    paidNote: '历史付费会员测试账号',
     createdAt: new Date().toISOString(),
     lastLoginAt: undefined,
     loginCount: 0,
@@ -1359,6 +1367,9 @@ const initDefaultUsers = (): User[] => [
     phone: '13800138000',
     memberType: 'gold',
     status: 'active',
+    paidSource: 'manual',
+    paidStartedAt: '2026-01-15T10:00:00.000Z',
+    paidExpiresAt: '2026-04-15T10:00:00.000Z',
     createdAt: '2026-01-15T10:00:00.000Z',
     lastLoginAt: '2026-02-01T08:30:00.000Z',
     loginCount: 45,
@@ -1381,8 +1392,12 @@ const initDefaultUsers = (): User[] => [
     id: 'user_003',
     email: 'diamond@example.com',
     nickname: '示例付费用户',
-    memberType: 'diamond',
+    memberType: 'gold',
     status: 'active',
+    paidSource: 'invite_code',
+    paidStartedAt: '2026-01-10T09:00:00.000Z',
+    paidExpiresAt: '2027-01-10T09:00:00.000Z',
+    paidNote: '通过邀请码转为付费会员',
     invitationCode: 'DIAMOND2026',
     createdAt: '2026-01-10T09:00:00.000Z',
     lastLoginAt: '2026-02-01T20:15:00.000Z',
@@ -1437,6 +1452,10 @@ export const saveUser = (user: Partial<User> | User): User => {
     phone: user.phone,
     memberType: user.memberType || 'regular',
     status: user.status || 'active',
+    paidSource: user.paidSource,
+    paidStartedAt: user.paidStartedAt,
+    paidExpiresAt: user.paidExpiresAt,
+    paidNote: user.paidNote,
     invitationCode: user.invitationCode,
     invitedBy: user.invitedBy,
     createdAt: user.createdAt || now,
@@ -1541,6 +1560,7 @@ export const getUserStats = () => {
     regular: users.filter(u => u.memberType === 'regular').length,
     gold: users.filter(u => u.memberType === 'gold').length,
     diamond: users.filter(u => u.memberType === 'diamond').length,
+    paid: users.filter(u => u.memberType !== 'regular').length,
     membershipRate: users.length > 0 
       ? Math.round((users.filter(u => u.memberType !== 'regular').length / users.length) * 100) 
       : 0,

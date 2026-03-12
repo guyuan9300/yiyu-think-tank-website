@@ -1400,17 +1400,17 @@
             </span>
             <span class="nav__label">用户管理</span>
           </a>
-          <a class="nav__item" href="#" data-jump="billing" title="会员&订单">
+          <a class="nav__item" href="#" data-jump="billing" title="付费管理">
             <span class="nav__icon" aria-hidden="true">
               <svg class="icon" viewBox="0 0 24 24"><path d="M4 7h16v10H4z"></path><path d="M4 10h16"></path><path d="M8 15h3"></path></svg>
             </span>
-            <span class="nav__label">会员&订单</span>
+            <span class="nav__label">付费管理</span>
           </a>
-          <a class="nav__item" href="#" data-jump="invites" title="邀请码&机构">
+          <a class="nav__item" href="#" data-jump="invites" title="邀请码管理">
             <span class="nav__icon" aria-hidden="true">
               <svg class="icon" viewBox="0 0 24 24"><path d="M12 7l3 3-6 6-3-3z"></path><path d="M16 4h4v4"></path><path d="M20 4l-6 6"></path></svg>
             </span>
-            <span class="nav__label">邀请码&机构</span>
+            <span class="nav__label">邀请码管理</span>
           </a>
           <a class="nav__item" href="#" data-jump="comments" title="评论管理">
             <span class="nav__icon" aria-hidden="true">
@@ -1499,7 +1499,7 @@
             <!-- Search -->
             <div class="search" id="searchBox" role="search">
               <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 21l-4.3-4.3"></path><path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z"></path></svg>
-              <input id="globalSearch" type="search" placeholder="搜索用户 / 内容 / 订单 / 机构…" aria-label="全局搜索" />
+              <input id="globalSearch" type="search" placeholder="搜索用户 / 内容 / 付费 / 邀请码…" aria-label="全局搜索" />
               <button class="search__clear" id="searchClear" title="清空" aria-label="清空搜索">✕</button>
             </div>
 
@@ -1532,7 +1532,7 @@
 
             <!-- Icons + Avatar -->
             <div class="icon-group">
-              <button class="btn btn--icon" id="refreshBtn" title="刷新（模拟 Loading）" aria-label="刷新">
+              <button class="btn btn--icon" id="refreshBtn" title="刷新数据" aria-label="刷新">
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"></path><path d="M21 3v7h-7"></path></svg>
               </button>
 
@@ -1573,16 +1573,15 @@
             <div class="section-card" id="kpiCard" data-state="ready">
               <div class="section-head">
                 <div class="section-title">
-                  <h2>核心指标</h2>
-                  <p>用户、会员与陪伴业务的关键数字（KPI）</p>
+                  <h2>运营总览</h2>
+                  <p>从后台现有模块里提取可解释、可点击、可追溯的数据卡片</p>
                 </div>
                 <div class="section-actions">
-                  <span class="pill" title="静态页面占位">数据接入后将显示变化与趋势</span>
+                  <span class="pill" title="概览口径">优先展示当前后台已经能解释的数据</span>
                 </div>
               </div>
 
               <div class="section-body">
-                <!-- Loading -->
                 <div class="state state--loading">
                   <div class="kpi-grid">
                     <div class="quiet-card"><div class="skeleton skeleton-row md"></div><div class="skeleton skeleton-row lg"></div><div class="skeleton skeleton-row sm"></div></div>
@@ -1591,118 +1590,62 @@
                     <div class="quiet-card"><div class="skeleton skeleton-row md"></div><div class="skeleton skeleton-row lg"></div><div class="skeleton skeleton-row sm"></div></div>
                     <div class="quiet-card"><div class="skeleton skeleton-row md"></div><div class="skeleton skeleton-row lg"></div><div class="skeleton skeleton-row sm"></div></div>
                     <div class="quiet-card"><div class="skeleton skeleton-row md"></div><div class="skeleton skeleton-row lg"></div><div class="skeleton skeleton-row sm"></div></div>
+                    <div class="quiet-card"><div class="skeleton skeleton-row md"></div><div class="skeleton skeleton-row lg"></div><div class="skeleton skeleton-row sm"></div></div>
+                    <div class="quiet-card"><div class="skeleton skeleton-row md"></div><div class="skeleton skeleton-row lg"></div><div class="skeleton skeleton-row sm"></div></div>
                   </div>
                 </div>
 
-                <!-- Empty -->
-                <div class="state state--empty">
-                  <div class="state-box">
-                    <b>暂无 KPI 数据</b>
-                    <p>可能原因：数据源未配置或日期范围无数据。你可以先检查数据接入，或切换日期范围。</p>
-                    <div class="row">
-                      <button class="btn btn--sm btn--primary" data-jump="settings/data">去配置数据源</button>
-                      <button class="btn btn--sm btn--outline" id="retryKpi">重试</button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Error -->
                 <div class="state state--error">
                   <div class="state-box">
-                    <b>加载失败</b>
-                    <p>无法获取 KPI。请重试或联系管理员排查。</p>
+                    <b>概览加载失败</b>
+                    <p>请重试，或检查内容接口与本地后台缓存是否可用。</p>
                     <div class="row">
-                      <button class="btn btn--sm btn--primary" id="retryKpi2">重试</button>
-                      <span class="err-id">ERR-0001</span>
+                      <button class="btn btn--sm btn--primary" id="retryDashboard">重试</button>
                     </div>
                   </div>
                 </div>
 
-                <!-- Ready -->
                 <div class="state state--ready">
                   <div class="kpi-grid">
-                    <a class="quiet-card" href="#" data-jump="users?scope=registered" aria-label="注册用户总数">
-                      <div class="kpi-title">
-                        <span>注册用户总数</span>
-                        <span class="dropdown__meta">Users</span>
-                      </div>
-                      <div class="kpi-value">—</div>
-                      <div class="kpi-foot">
-                        <span class="delta">—</span>
-                        <svg class="sparkline" viewBox="0 0 100 30" aria-hidden="true">
-                          <path d="M2 22 C 18 10, 30 24, 44 14 C 56 7, 70 24, 98 10" stroke="rgba(15,23,42,0.45)" fill="none" stroke-width="2"></path>
-                        </svg>
-                      </div>
+                    <a class="quiet-card" href="#" data-jump="users" aria-label="注册用户总数">
+                      <div class="kpi-title"><span>注册用户总数</span><span class="dropdown__meta">Users</span></div>
+                      <div class="kpi-value" id="metricUsersTotal">—</div>
+                      <div class="kpi-foot"><span class="delta" id="metricUsersHint">当前后台可识别账号</span></div>
                     </a>
-
-                    <a class="quiet-card" href="#" data-jump="users?scope=active_7d" aria-label="活跃用户（近7天）">
-                      <div class="kpi-title">
-                        <span>活跃用户（近 7 天）</span>
-                        <span class="dropdown__meta">Active</span>
-                      </div>
-                      <div class="kpi-value">—</div>
-                      <div class="kpi-foot">
-                        <span class="delta">—</span>
-                        <svg class="sparkline" viewBox="0 0 100 30" aria-hidden="true">
-                          <path d="M2 18 C 20 8, 34 22, 48 13 C 60 6, 76 20, 98 12" stroke="rgba(15,23,42,0.45)" fill="none" stroke-width="2"></path>
-                        </svg>
-                      </div>
+                    <a class="quiet-card" href="#" data-jump="billing" aria-label="付费会员">
+                      <div class="kpi-title"><span>付费会员</span><span class="dropdown__meta">Paid</span></div>
+                      <div class="kpi-value" id="metricPaidMembers">—</div>
+                      <div class="kpi-foot"><span class="delta" id="metricPaidHint">含人工开通与邀请码开通</span></div>
                     </a>
-
-                    <a class="quiet-card" href="#" data-jump="billing?scope=member_active" aria-label="付费会员（Active）">
-                      <div class="kpi-title">
-                        <span>付费会员（active）</span>
-                        <span class="dropdown__meta">Member</span>
-                      </div>
-                      <div class="kpi-value">—</div>
-                      <div class="kpi-foot">
-                        <span class="delta">—</span>
-                        <svg class="sparkline" viewBox="0 0 100 30" aria-hidden="true">
-                          <path d="M2 20 C 22 6, 38 24, 52 12 C 66 3, 80 26, 98 9" stroke="rgba(15,23,42,0.45)" fill="none" stroke-width="2"></path>
-                        </svg>
-                      </div>
+                    <a class="quiet-card" href="#" data-jump="invites" aria-label="有效邀请码">
+                      <div class="kpi-title"><span>有效邀请码</span><span class="dropdown__meta">Invite</span></div>
+                      <div class="kpi-value" id="metricInviteValid">—</div>
+                      <div class="kpi-foot"><span class="delta" id="metricInviteHint">可继续发放使用</span></div>
                     </a>
-
-                    <a class="quiet-card" href="#" data-jump="billing?scope=conversion" aria-label="会员转化率">
-                      <div class="kpi-title">
-                        <span>会员转化率</span>
-                        <span class="dropdown__meta">CR</span>
-                      </div>
-                      <div class="kpi-value">—<small>%</small></div>
-                      <div class="kpi-foot">
-                        <span class="delta">—</span>
-                        <svg class="sparkline" viewBox="0 0 100 30" aria-hidden="true">
-                          <path d="M2 21 C 18 9, 32 24, 46 14 C 62 3, 78 20, 98 11" stroke="rgba(15,23,42,0.45)" fill="none" stroke-width="2"></path>
-                        </svg>
-                      </div>
+                    <a class="quiet-card" href="#" data-jump="comments" aria-label="待审核评论">
+                      <div class="kpi-title"><span>待审核评论</span><span class="dropdown__meta">Review</span></div>
+                      <div class="kpi-value" id="metricPendingComments">—</div>
+                      <div class="kpi-foot"><span class="delta" id="metricCommentsHint">优先处理前台可见互动</span></div>
                     </a>
-
-                    <a class="quiet-card" href="#" data-jump="billing?scope=revenue_month" aria-label="本月收入">
-                      <div class="kpi-title">
-                        <span>本月收入</span>
-                        <span class="dropdown__meta">Revenue</span>
-                      </div>
-                      <div class="kpi-value" style="font-size:22px; font-weight:720;">建设中</div>
-                      <div class="kpi-foot">
-                        <span class="delta">无支付模块时不展示假数据</span>
-                        <svg class="sparkline" viewBox="0 0 100 30" aria-hidden="true">
-                          <path d="M2 18 C 20 10, 40 10, 60 10 C 78 10, 90 10, 98 10" stroke="rgba(15,23,42,0.28)" fill="none" stroke-width="2"></path>
-                        </svg>
-                      </div>
+                    <a class="quiet-card" href="#" data-jump="content/articles" aria-label="已发布洞察">
+                      <div class="kpi-title"><span>已发布洞察</span><span class="dropdown__meta">Insight</span></div>
+                      <div class="kpi-value" id="metricInsightsPublished">—</div>
+                      <div class="kpi-foot"><span class="delta" id="metricInsightsHint">前台可见文章</span></div>
                     </a>
-
-                    <a class="quiet-card" href="#" data-jump="companion/clients?scope=overview" aria-label="战略陪伴客户/机构">
-                      <div class="kpi-title">
-                        <span>战略陪伴客户 / 机构</span>
-                        <span class="dropdown__meta">Companion</span>
-                      </div>
-                      <div class="kpi-value">—</div>
-                      <div class="kpi-foot">
-                        <span class="delta">—</span>
-                        <svg class="sparkline" viewBox="0 0 100 30" aria-hidden="true">
-                          <path d="M2 23 C 20 12, 38 22, 52 14 C 64 6, 80 25, 98 12" stroke="rgba(15,23,42,0.45)" fill="none" stroke-width="2"></path>
-                        </svg>
-                      </div>
+                    <a class="quiet-card" href="#" data-jump="content/reports" aria-label="已发布报告">
+                      <div class="kpi-title"><span>已发布报告</span><span class="dropdown__meta">Report</span></div>
+                      <div class="kpi-value" id="metricReportsPublished">—</div>
+                      <div class="kpi-foot"><span class="delta" id="metricReportsHint">报告库当前上线数量</span></div>
+                    </a>
+                    <a class="quiet-card" href="#" data-jump="content/books" aria-label="已上架书籍">
+                      <div class="kpi-title"><span>已上架书籍</span><span class="dropdown__meta">Book</span></div>
+                      <div class="kpi-value" id="metricBooksPublished">—</div>
+                      <div class="kpi-foot"><span class="delta" id="metricBooksHint">书籍库当前上线数量</span></div>
+                    </a>
+                    <a class="quiet-card" href="#" data-jump="content/methods" aria-label="已发布方法论">
+                      <div class="kpi-title"><span>已发布方法论</span><span class="dropdown__meta">Method</span></div>
+                      <div class="kpi-value" id="metricMethodsPublished">—</div>
+                      <div class="kpi-foot"><span class="delta" id="metricMethodsHint">方法论库当前上线数量</span></div>
                     </a>
                   </div>
                 </div>
@@ -1710,293 +1653,63 @@
             </div>
           </section>
 
-          <!-- 3) Conversion Funnel -->
+          <!-- 3) Module Overview -->
           <section class="section">
-            <div class="section-card" id="funnelCard" data-state="ready">
+            <div class="section-card" id="overviewCard" data-state="ready">
               <div class="section-head">
                 <div class="section-title">
-                  <h2>转化漏斗 <span style="color:var(--muted); font-weight:600;">· Conversion Funnel</span></h2>
-                  <p>从浏览到付费，从付费到战略陪伴</p>
+                  <h2>模块速览</h2>
+                  <p>把具体模块里最有价值的数字拉到首页，不再做脱离数据的概念漏斗</p>
                 </div>
                 <div class="section-actions">
-                  <button class="btn btn--sm btn--outline" data-jump="users?scope=funnel_detail">查看漏斗详情</button>
-                </div>
-              </div>
-
-              <div class="section-body">
-                <div class="state state--loading">
-                  <div class="funnel-wrap">
-                    <div class="state-box">
-                      <div class="skeleton skeleton-row lg"></div>
-                      <div class="skeleton skeleton-row md"></div>
-                      <div class="skeleton skeleton-row md"></div>
-                      <div class="skeleton skeleton-row md"></div>
-                    </div>
-                    <div class="state-box">
-                      <div class="skeleton skeleton-row lg"></div>
-                      <div class="skeleton skeleton-row md"></div>
-                      <div class="skeleton skeleton-row md"></div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="state state--ready">
-                  <div class="funnel-wrap">
-                    <div class="funnel-bar" aria-label="转化漏斗条">
-                      <div class="funnel-row">
-                        <button class="funnel-seg" data-jump="users?role=guest" aria-label="Guest">
-                          <div class="seg-top">
-                            <span class="seg-name">Guest</span>
-                            <span class="seg-tag">浏览</span>
-                          </div>
-                          <div class="seg-metrics">
-                            <div>人数：<b>—</b></div>
-                            <div>转化：<b>—%</b> · vs 上周期 <b>—</b></div>
-                          </div>
-                        </button>
-
-                        <button class="funnel-seg" data-jump="users?role=user" aria-label="User">
-                          <div class="seg-top">
-                            <span class="seg-name">User</span>
-                            <span class="seg-tag">注册</span>
-                          </div>
-                          <div class="seg-metrics">
-                            <div>人数：<b>—</b></div>
-                            <div>转化：<b>—%</b> · vs 上周期 <b>—</b></div>
-                          </div>
-                        </button>
-
-                        <button class="funnel-seg" data-jump="billing?member_status=active" aria-label="Member">
-                          <div class="seg-top">
-                            <span class="seg-name">Member</span>
-                            <span class="seg-tag">付费</span>
-                          </div>
-                          <div class="seg-metrics">
-                            <div>人数：<b>—</b></div>
-                            <div>转化：<b>—%</b> · vs 上周期 <b>—</b></div>
-                          </div>
-                        </button>
-
-                        <button class="funnel-seg" data-jump="companion/clients?scope=active" aria-label="Companion">
-                          <div class="seg-top">
-                            <span class="seg-name">Companion</span>
-                            <span class="seg-tag">陪伴</span>
-                          </div>
-                          <div class="seg-metrics">
-                            <div>人数：<b>—</b></div>
-                            <div>转化：<b>—%</b> · vs 上周期 <b>—</b></div>
-                          </div>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div class="factors" aria-label="关键影响因素">
-                      <div class="row" data-jump="billing?scope=paywall">
-                        <span>Paywall 触发次数</span><b>—</b>
-                      </div>
-                      <div class="row" data-jump="billing?scope=payment_success">
-                        <span>支付成功率</span><b>—</b>
-                      </div>
-                      <div class="row" data-jump="billing?scope=churn_7d">
-                        <span>到期流失（7天）</span><b>—</b>
-                      </div>
-                      <div class="row" data-jump="billing?scope=refunds">
-                        <span>退款 / 异常</span><b>—</b>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="state state--empty">
-                  <div class="state-box">
-                    <b>暂无漏斗数据</b>
-                    <p>可能原因：当前范围内无访问/注册/支付记录。建议切换到「近 30 天」观察趋势。</p>
-                    <div class="row">
-                      <button class="btn btn--sm btn--primary" id="set30d">切换到近30天</button>
-                      <button class="btn btn--sm btn--outline" data-jump="users">去用户管理</button>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="state state--error">
-                  <div class="state-box">
-                    <b>漏斗加载失败</b>
-                    <p>请重试，或检查统计服务状态。</p>
-                    <div class="row">
-                      <button class="btn btn--sm btn--primary" id="retryFunnel">重试</button>
-                      <span class="err-id">ERR-1002</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <!-- 4) Content Production + Health -->
-          <section class="section">
-            <div class="section-card" id="contentCard" data-state="ready">
-              <div class="section-head">
-                <div class="section-title">
-                  <h2>内容生产与质量</h2>
-                  <p>数量与内容健康同屏，帮助团队快速发现可运营问题</p>
-                </div>
-                <div class="section-actions">
-                  <button class="btn btn--sm btn--outline" data-jump="content/overview">进入内容总览</button>
+                  <button class="btn btn--sm btn--outline" data-jump="users">进入用户与付费</button>
                 </div>
               </div>
 
               <div class="section-body">
                 <div class="state state--loading">
                   <div class="two-col">
-                    <div class="state-box">
-                      <div class="skeleton skeleton-row lg"></div>
-                      <div class="skeleton skeleton-row md"></div>
-                      <div class="skeleton skeleton-row md"></div>
-                      <div class="skeleton skeleton-row md"></div>
-                    </div>
-                    <div class="state-box">
-                      <div class="skeleton skeleton-row lg"></div>
-                      <div class="skeleton skeleton-row md"></div>
-                      <div class="skeleton skeleton-row md"></div>
-                      <div class="skeleton skeleton-row md"></div>
-                    </div>
+                    <div class="state-box"><div class="skeleton skeleton-row lg"></div><div class="skeleton skeleton-row md"></div><div class="skeleton skeleton-row md"></div></div>
+                    <div class="state-box"><div class="skeleton skeleton-row lg"></div><div class="skeleton skeleton-row md"></div><div class="skeleton skeleton-row md"></div></div>
                   </div>
                 </div>
 
                 <div class="state state--ready">
                   <div class="two-col">
-                    <!-- Production -->
                     <div class="subcard">
                       <div class="subcard-head">
                         <div>
-                          <h3>内容产出 <span style="color:var(--muted); font-weight:600;">· Production</span></h3>
-                          <p>本周新增与发布节奏</p>
+                          <h3>内容库速览</h3>
+                          <p>每个内容模块都显示已发布 / 草稿</p>
                         </div>
-                        <button class="btn btn--sm btn--outline" data-jump="content/calendar">生产日历</button>
+                        <button class="btn btn--sm btn--outline" data-jump="content/articles">进入内容区</button>
                       </div>
                       <div class="subcard-body">
-                        <div class="production-grid">
-                          <div class="mini-kpi" tabindex="0" data-jump="content/articles?scope=weekly_new">
-                            <div class="top">
-                              <span>本周新增文章</span>
-                              <span class="dropdown__meta">Article</span>
-                            </div>
-                            <div class="val">—</div>
-                            <div class="meta">
-                              <a href="#" data-jump="content/articles?status=draft">草稿：—</a>
-                              <a href="#" data-jump="content/articles?status=pending">待发布：—</a>
-                              <a href="#" data-jump="content/articles?status=published">已发布：—</a>
-                            </div>
-                          </div>
-
-                          <div class="mini-kpi" tabindex="0" data-jump="content/reports?scope=weekly_new">
-                            <div class="top">
-                              <span>本周新增报告</span>
-                              <span class="dropdown__meta">Report</span>
-                            </div>
-                            <div class="val">—</div>
-                            <div class="meta">
-                              <a href="#" data-jump="content/reports?status=draft">草稿：—</a>
-                              <a href="#" data-jump="content/reports?status=pending">待发布：—</a>
-                              <a href="#" data-jump="content/reports?status=published">已发布：—</a>
-                            </div>
-                          </div>
-
-                          <div class="mini-kpi" tabindex="0" data-jump="content/books?scope=weekly_new">
-                            <div class="top">
-                              <span>本周上架书籍</span>
-                              <span class="dropdown__meta">Book</span>
-                            </div>
-                            <div class="val">—</div>
-                            <div class="meta">
-                              <a href="#" data-jump="content/books?status=draft">草稿：—</a>
-                              <a href="#" data-jump="content/books?status=pending">待上架：—</a>
-                              <a href="#" data-jump="content/books?status=published">已上架：—</a>
-                            </div>
-                          </div>
-
-                          <div class="mini-kpi" tabindex="0" data-jump="content/methods?scope=weekly_new">
-                            <div class="top">
-                              <span>本周新增方法论工具</span>
-                              <span class="dropdown__meta">Tool</span>
-                            </div>
-                            <div class="val">—</div>
-                            <div class="meta">
-                              <a href="#" data-jump="content/methods?status=draft">草稿：—</a>
-                              <a href="#" data-jump="content/methods?status=pending">待发布：—</a>
-                              <a href="#" data-jump="content/methods?status=published">已发布：—</a>
-                            </div>
-                          </div>
+                        <div class="list" role="list" aria-label="内容库速览">
+                          <div class="list-row" role="listitem"><div class="left"><b>洞察文章</b><span>当前前台文章库的真实发布量</span></div><div class="right"><span class="count" id="overviewInsights">—</span><button class="btn btn--sm btn--outline" data-jump="content/articles">查看</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>报告管理</b><span>报告库发布量与待整理草稿</span></div><div class="right"><span class="count" id="overviewReports">—</span><button class="btn btn--sm btn--outline" data-jump="content/reports">查看</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>书籍管理</b><span>书籍库上架数量与草稿</span></div><div class="right"><span class="count" id="overviewBooks">—</span><button class="btn btn--sm btn--outline" data-jump="content/books">查看</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>益语方法论</b><span>当前方法论库的发布状态</span></div><div class="right"><span class="count" id="overviewMethods">—</span><button class="btn btn--sm btn--outline" data-jump="content/methods">查看</button></div></div>
                         </div>
                       </div>
                     </div>
 
-                    <!-- Health -->
                     <div class="subcard">
                       <div class="subcard-head">
                         <div>
-                          <h3>内容健康 <span style="color:var(--muted); font-weight:600;">· Content Health</span></h3>
-                          <p>功能性检查 + 排版质量检查</p>
+                          <h3>用户与运营</h3>
+                          <p>把用户、付费、评论、邀请码放到同一层看清楚</p>
                         </div>
-                        <button class="btn btn--sm btn--outline" data-jump="content/health">查看全部</button>
+                        <button class="btn btn--sm btn--outline" data-jump="billing">进入付费管理</button>
                       </div>
                       <div class="subcard-body">
-                        <div class="list" role="list" aria-label="内容健康问题列表">
-                          <div class="list-row" role="listitem">
-                            <div class="left">
-                              <b>缺封面</b>
-                              <span>建议：补齐封面以提升前台点击与一致性</span>
-                            </div>
-                            <div class="right">
-                              <span class="count">—</span>
-                              <button class="btn btn--sm btn--outline" data-jump="content?filter=missing_cover">去修复</button>
-                            </div>
-                          </div>
-
-                          <div class="list-row" role="listitem">
-                            <div class="left">
-                              <b>缺标签</b>
-                              <span>建议：统一标签体系，方便运营筛选与推荐</span>
-                            </div>
-                            <div class="right">
-                              <span class="count">—</span>
-                              <button class="btn btn--sm btn--outline" data-jump="content?filter=missing_tags">去修复</button>
-                            </div>
-                          </div>
-
-                          <div class="list-row" role="listitem">
-                            <div class="left">
-                              <b>摘要过短/无标点</b>
-                              <span>建议：补齐摘要，避免前台展示"空洞感"</span>
-                            </div>
-                            <div class="right">
-                              <span class="count">—</span>
-                              <button class="btn btn--sm btn--outline" data-jump="content?filter=bad_summary">去修复</button>
-                            </div>
-                          </div>
-
-                          <div class="list-row" role="listitem">
-                            <div class="left">
-                              <b>纯图片/纯视频内容</b>
-                              <span>建议：补充文字描述，提升SEO与可访问性</span>
-                            </div>
-                            <div class="right">
-                              <span class="count">—</span>
-                              <button class="btn btn--sm btn--outline" data-jump="content?filter=no_text">去修复</button>
-                            </div>
-                          </div>
+                        <div class="list" role="list" aria-label="用户与运营数据">
+                          <div class="list-row" role="listitem"><div class="left"><b>普通会员</b><span>当前已注册但未转为付费的用户</span></div><div class="right"><span class="count" id="overviewRegularUsers">—</span><button class="btn btn--sm btn--outline" data-jump="users">查看</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>付费会员</b><span>当前已开通付费资格的用户</span></div><div class="right"><span class="count" id="overviewPaidUsers">—</span><button class="btn btn--sm btn--outline" data-jump="billing">查看</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>评论总数</b><span>前台评论池中已记录的评论</span></div><div class="right"><span class="count" id="overviewComments">—</span><button class="btn btn--sm btn--outline" data-jump="comments">查看</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>邀请码使用情况</b><span>显示有效、已兑换与已禁用的邀请码数量</span></div><div class="right"><span class="count" id="overviewInvites">—</span><button class="btn btn--sm btn--outline" data-jump="invites">查看</button></div></div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="state state--empty">
-                  <div class="state-box">
-                    <b>暂无内容</b>
-                    <p>内容库为空。建议先去创建一些内容，或检查数据源。</p>
-                    <div class="row">
-                      <button class="btn btn--sm btn--primary" data-jump="content/articles/new">新建文章</button>
                     </div>
                   </div>
                 </div>
@@ -2004,124 +1717,115 @@
             </div>
           </section>
 
-          <!-- 5) Companion Ops -->
+          <!-- 4) Operations -->
           <section class="section">
-            <div class="section-card" id="companionCard" data-state="ready">
+            <div class="section-card" id="opsCard" data-state="ready">
               <div class="section-head">
                 <div class="section-title">
-                  <h2>战略陪伴运营</h2>
-                  <p>当前陪伴客户的关键动作与待办</p>
+                  <h2>待处理事项</h2>
+                  <p>优先把评论、草稿、邀请码和付费续期这类真问题拉到首页</p>
                 </div>
                 <div class="section-actions">
-                  <button class="btn btn--sm btn--outline" data-jump="companion/clients">进入陪伴客户</button>
+                  <button class="btn btn--sm btn--outline" data-jump="comments">进入评论管理</button>
                 </div>
               </div>
 
               <div class="section-body">
                 <div class="state state--loading">
-                  <div class="metrics-row">
-                    <div class="metric"><div class="skeleton skeleton-row md"></div><div class="skeleton skeleton-row lg"></div></div>
-                    <div class="metric"><div class="skeleton skeleton-row md"></div><div class="skeleton skeleton-row lg"></div></div>
-                    <div class="metric"><div class="skeleton skeleton-row md"></div><div class="skeleton skeleton-row lg"></div></div>
+                  <div class="two-col">
+                    <div class="state-box"><div class="skeleton skeleton-row lg"></div><div class="skeleton skeleton-row md"></div><div class="skeleton skeleton-row md"></div></div>
+                    <div class="state-box"><div class="skeleton skeleton-row lg"></div><div class="skeleton skeleton-row md"></div><div class="skeleton skeleton-row md"></div></div>
                   </div>
                 </div>
 
                 <div class="state state--ready">
-                  <div class="metrics-row">
-                    <div class="metric" tabindex="0" data-jump="companion/clients?scope=active">
-                      <span class="label">进行中的陪伴</span>
-                      <span class="value">—</span>
+                  <div class="two-col">
+                    <div class="subcard">
+                      <div class="subcard-head">
+                        <div>
+                          <h3>运营提醒</h3>
+                          <p>优先级最高的几类待处理问题</p>
+                        </div>
+                      </div>
+                      <div class="subcard-body">
+                        <div class="list" role="list" aria-label="运营提醒">
+                          <div class="list-row" role="listitem"><div class="left"><b>待审核评论</b><span>前台评论默认待审，优先避免积压</span></div><div class="right"><span class="count" id="opsPendingComments">—</span><button class="btn btn--sm btn--outline" data-jump="comments">去处理</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>内容草稿</b><span>四类内容合计的草稿数量</span></div><div class="right"><span class="count" id="opsDraftContent">—</span><button class="btn btn--sm btn--outline" data-jump="content/articles">去整理</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>30 天内到期的付费会员</b><span>需要人工确认续期或转化跟进</span></div><div class="right"><span class="count" id="opsExpiringPaid">—</span><button class="btn btn--sm btn--outline" data-jump="billing">去处理</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>已禁用账号</b><span>需要确认是否误封或仍需保留禁用</span></div><div class="right"><span class="count" id="opsDisabledUsers">—</span><button class="btn btn--sm btn--outline" data-jump="users">去检查</button></div></div>
+                        </div>
+                      </div>
                     </div>
 
-                    <div class="metric" tabindex="0" data-jump="companion/meetings?scope=upcoming">
-                      <span class="label">本周待办会议</span>
-                      <span class="value">—</span>
-                    </div>
-
-                    <div class="metric" tabindex="0" data-jump="companion/reco?scope=pending">
-                      <span class="label">待发送赋能推荐</span>
-                      <span class="value">—</span>
+                    <div class="subcard">
+                      <div class="subcard-head">
+                        <div>
+                          <h3>内容与分发</h3>
+                          <p>适合放在概览首页的内容侧指标</p>
+                        </div>
+                      </div>
+                      <div class="subcard-body">
+                        <div class="list" role="list" aria-label="内容与分发数据">
+                          <div class="list-row" role="listitem"><div class="left"><b>首页展示内容</b><span>当前被标记为首页展示的总内容量</span></div><div class="right"><span class="count" id="opsHomeFeatured">—</span><button class="btn btn--sm btn--outline" data-jump="content/articles">查看</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>最近 30 天新增内容</b><span>以创建时间统计的新增总量</span></div><div class="right"><span class="count" id="opsRecentContent">—</span><button class="btn btn--sm btn--outline" data-jump="content/reports">查看</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>最近 7 天活跃登录</b><span>后台当前可识别账号中的活跃登录数</span></div><div class="right"><span class="count" id="opsRecentLogin">—</span><button class="btn btn--sm btn--outline" data-jump="users">查看</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>邀请码已兑换</b><span>已被使用或已兑换完成的邀请码</span></div><div class="right"><span class="count" id="opsRedeemedInvites">—</span><button class="btn btn--sm btn--outline" data-jump="invites">查看</button></div></div>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </section>
 
+          <!-- 5) Quick Actions + Top Content -->
+          <section class="section">
+            <div class="section-card" id="hotCard" data-state="ready">
+              <div class="section-head">
+                <div class="section-title">
+                  <h2>快速操作与热门内容</h2>
+                  <p>首页既能快速进模块，也能看到当前最有代表性的内容</p>
+                </div>
+                <div class="section-actions">
+                  <button class="btn btn--sm btn--outline" data-jump="content/articles">进入内容管理</button>
+                </div>
+              </div>
+
+              <div class="section-body">
+                <div class="state state--loading">
+                  <div class="two-col">
+                    <div class="state-box"><div class="skeleton skeleton-row lg"></div><div class="skeleton skeleton-row md"></div><div class="skeleton skeleton-row md"></div></div>
+                    <div class="state-box"><div class="skeleton skeleton-row lg"></div><div class="skeleton skeleton-row md"></div><div class="skeleton skeleton-row md"></div></div>
+                  </div>
+                </div>
+
+                <div class="state state--ready">
                   <div class="split">
-                    <!-- Quick Actions -->
                     <div class="action-card">
-                      <div class="action-head">
-                        <h3>快速操作</h3>
-                      </div>
+                      <div class="action-head"><h3>快速操作</h3></div>
                       <div class="action-body">
                         <div class="quick-grid">
-                          <button class="quick" data-jump="companion/clients/new">
-                            <div class="top">
-                              <div class="icon">
-                                <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
-                              </div>
-                              <b>新建客户</b>
-                            </div>
-                            <span>添加新的战略陪伴客户</span>
-                          </button>
-
-                          <button class="quick" data-jump="companion/meetings/new">
-                            <div class="top">
-                              <div class="icon">
-                                <svg class="icon" viewBox="0 0 24 24"><path d="M8 7h8v10H8z"></path><path d="M6 9h2M16 9h2M6 15h2M16 15h2"></path></svg>
-                              </div>
-                              <b>创建会议</b>
-                            </div>
-                            <span>安排下一次陪伴会议</span>
-                          </button>
-
-                          <button class="quick" data-jump="companion/reco/new">
-                            <div class="top">
-                              <div class="icon">
-                                <svg class="icon" viewBox="0 0 24 24"><path d="M12 3l3 6 6 .8-4.5 4.4 1 6-5.5-3-5.5 3 1-6L3 9.8 9 9z"></path></svg>
-                              </div>
-                              <b>发送推荐</b>
-                            </div>
-                            <span>为客户推荐内容/服务</span>
-                          </button>
-
-                          <button class="quick" data-jump="companion/pages">
-                            <div class="top">
-                              <div class="icon">
-                                <svg class="icon" viewBox="0 0 24 24"><path d="M6 4h12v16H6z"></path><path d="M9 8h6M9 12h6M9 16h4"></path></svg>
-                              </div>
-                              <b>陪伴页管理</b>
-                            </div>
-                            <span>维护客户专属页面</span>
-                          </button>
+                          <button class="quick" data-jump="users"><div class="top"><div class="icon"><svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="10" cy="7" r="4"></circle><path d="M20 8v6M17 11h6"></path></svg></div><b>用户管理</b></div><span>查看账号、状态与访问规则</span></button>
+                          <button class="quick" data-jump="billing"><div class="top"><div class="icon"><svg class="icon" viewBox="0 0 24 24"><path d="M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"></path><path d="M3 12h2m14 0h2M12 3v2m0 14v2M5.64 5.64l1.41 1.41m9.9 9.9 1.41 1.41m0-12.72-1.41 1.41m-9.9 9.9-1.41 1.41"></path></svg></div><b>付费管理</b></div><span>查看付费开通、来源与续期</span></button>
+                          <button class="quick" data-jump="invites"><div class="top"><div class="icon"><svg class="icon" viewBox="0 0 24 24"><path d="M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-7"></path><path d="M2 7h20v5H2z"></path><path d="M12 22V7"></path><path d="M12 7H7.5a2.5 2.5 0 1 1 0-5c3.5 0 4.5 5 4.5 5Z"></path><path d="M12 7h4.5a2.5 2.5 0 1 0 0-5c-3.5 0-4.5 5-4.5 5Z"></path></svg></div><b>邀请码管理</b></div><span>生成、禁用和查看使用情况</span></button>
+                          <button class="quick" data-jump="comments"><div class="top"><div class="icon"><svg class="icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div><b>评论管理</b></div><span>优先审核和回复前台评论</span></button>
+                          <button class="quick" data-jump="content/articles"><div class="top"><div class="icon"><svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg></div><b>洞察文章</b></div><span>维护文章标题、摘要与发布状态</span></button>
+                          <button class="quick" data-jump="content/reports"><div class="top"><div class="icon"><svg class="icon" viewBox="0 0 24 24"><path d="M3 4h18v4H3z"></path><path d="M6 8v12h12V8"></path><path d="M10 12h4"></path></svg></div><b>报告管理</b></div><span>维护报告库与附件状态</span></button>
                         </div>
                       </div>
                     </div>
 
-                    <!-- Recent Activity -->
                     <div class="action-card">
-                      <div class="action-head">
-                        <h3>最近动态</h3>
-                        <button class="btn btn--sm btn--ghost" data-jump="companion/activity">查看全部</button>
-                      </div>
+                      <div class="action-head"><h3>热门内容</h3><button class="btn btn--sm btn--ghost" data-jump="content/articles">查看全部</button></div>
                       <div class="action-body">
-                        <div class="feed">
+                        <div class="feed" id="topContentFeed">
                           <div class="feed-item">
-                            <div class="line1">
-                              <b>暂无动态</b>
-                              <time>—</time>
-                            </div>
-                            <div class="line2">接入数据后将自动显示</div>
+                            <div class="line1"><b>暂无内容数据</b><time>—</time></div>
+                            <div class="line2">接入内容快照后会显示阅读量靠前的内容</div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="state state--empty">
-                  <div class="state-box">
-                    <b>暂无陪伴客户</b>
-                    <p>你还没有创建任何战略陪伴客户。创建后即可在此查看运营数据。</p>
-                    <div class="row">
-                      <button class="btn btn--sm btn--primary" data-jump="companion/clients/new">创建第一个客户</button>
                     </div>
                   </div>
                 </div>
@@ -2294,20 +1998,20 @@
 
     function setAdminView(view) {
       const map = {
-        dashboard: { title: '数据概览', sub: '运营中枢 · 今天是安静、高级、可运营的后台首页' },
+        dashboard: { title: '数据概览', sub: '把后台里最有价值、最可解释的数据拉到首页' },
         'content/articles': { title: '洞察文章', sub: '新后台模块：洞察文章管理（承接旧后台）' },
         'content/reports': { title: '报告管理', sub: '新后台模块：报告管理（承接旧后台）' },
         'content/books': { title: '书籍管理', sub: '新后台模块：书籍管理（承接旧后台）' },
         'content/methods': { title: '益语方法论', sub: '新后台模块：益语方法论管理（承接旧后台）' },
         'users': { title: '用户管理', sub: '原有用户管理页面（承接旧后台）' },
-        'billing': { title: '会员&订单', sub: '原有会员与订单承接页（过渡）' },
-        'invites': { title: '邀请码&机构', sub: '原有邀请码管理页面（承接旧后台）' },
+        'billing': { title: '付费管理', sub: '当前阶段只管理付费资格，订单待支付接入后补充' },
+        'invites': { title: '邀请码管理', sub: '当前邀请码生成、禁用与使用情况管理页' },
         'companion': { title: '战略陪伴', sub: '新后台模块：战略陪伴（承接旧后台）' },
         'comments': { title: '评论管理', sub: '原有评论管理页面（承接旧后台）' },
         'settings': { title: '系统设置', sub: '原有系统设置页面（承接旧后台）' },
         'audit': { title: '权限&审计', sub: '原有权限审计页面（承接旧后台）' },
       };
-      const meta = map[view] || { title: '数据概览', sub: '运营中枢' };
+      const meta = map[view] || { title: '数据概览', sub: '后台概览首页' };
       if (pageTitleEl) pageTitleEl.textContent = meta.title;
 
       const legacyTabMap = {
@@ -2403,8 +2107,8 @@
         'content/methods': '益语方法论',
         'companion': '战略陪伴',
         'users': '用户管理',
-        'billing': '会员&订单',
-        'invites': '邀请码&机构',
+        'billing': '付费管理',
+        'invites': '邀请码管理',
         'comments': '评论管理',
         'settings': '系统设置',
         'audit': '权限&审计'
@@ -2458,35 +2162,208 @@
     setAdminView(initialView);
 
     // =========================
-    // Loading simulation
+    // Dashboard data
     // =========================
-    function simulateLoading(cardId) {
-      const card = $(`#${cardId}`);
-      if (!card) return;
-      
-      card.dataset.state = 'loading';
-      
-      setTimeout(() => {
-        card.dataset.state = 'ready';
-      }, 1500);
+    const DASHBOARD_CARD_IDS = ['kpiCard', 'overviewCard', 'opsCard', 'hotCard'];
+    const DEFAULT_USERS = [
+      { id: 'user_momo_colleague', nickname: '默默的同事', email: '13631445251@phone.local', phone: '13631445251', memberType: 'regular', status: 'active', createdAt: new Date().toISOString() },
+      { id: 'user_doubao_colleague', nickname: '豆包的同事', email: '18027370767@phone.local', phone: '18027370767', memberType: 'gold', status: 'active', paidSource: 'manual', paidExpiresAt: '2026-12-31T23:59:59.000Z', createdAt: new Date().toISOString() },
+      { id: 'user_001', nickname: '测试用户', email: 'test@example.com', phone: '13800138000', memberType: 'gold', status: 'active', paidSource: 'manual', paidExpiresAt: '2026-04-15T10:00:00.000Z', createdAt: '2026-01-15T10:00:00.000Z', lastLoginAt: '2026-02-01T08:30:00.000Z' },
+      { id: 'user_002', nickname: '示例普通用户', email: 'user@example.com', memberType: 'regular', status: 'active', createdAt: '2026-01-20T14:20:00.000Z', lastLoginAt: '2026-01-31T16:45:00.000Z' },
+      { id: 'user_003', nickname: '示例付费用户', email: 'diamond@example.com', memberType: 'gold', status: 'active', invitationCode: 'DIAMOND2026', paidSource: 'invite_code', paidExpiresAt: '2027-01-10T09:00:00.000Z', createdAt: '2026-01-10T09:00:00.000Z', lastLoginAt: '2026-02-01T20:15:00.000Z' },
+    ];
+
+    function safeParse(raw, fallback) {
+      if (!raw) return fallback;
+      try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(fallback) ? (Array.isArray(parsed) ? parsed : fallback) : (parsed ?? fallback);
+      } catch {
+        return fallback;
+      }
     }
 
-    $('#refreshBtn').addEventListener('click', () => {
-      simulateLoading('kpiCard');
-      simulateLoading('funnelCard');
-      simulateLoading('contentCard');
-      simulateLoading('companionCard');
+    function setDashboardState(state) {
+      DASHBOARD_CARD_IDS.forEach((id) => {
+        const card = $(`#${id}`);
+        if (card) card.dataset.state = state;
+      });
+    }
+
+    function setText(id, value) {
+      const el = $(`#${id}`);
+      if (el) el.textContent = String(value);
+    }
+
+    function getUsersSnapshot() {
+      return safeParse(localStorage.getItem('yiyu_users'), DEFAULT_USERS);
+    }
+
+    function getCommentsSnapshot() {
+      return safeParse(localStorage.getItem('yiyu_comments'), []);
+    }
+
+    function isWithinDays(dateInput, days) {
+      if (!dateInput) return false;
+      const date = new Date(dateInput);
+      if (Number.isNaN(date.getTime())) return false;
+      const diff = Date.now() - date.getTime();
+      return diff >= 0 && diff <= days * 24 * 3600 * 1000;
+    }
+
+    function isFutureWithinDays(dateInput, days) {
+      if (!dateInput) return false;
+      const date = new Date(dateInput);
+      if (Number.isNaN(date.getTime())) return false;
+      const diff = date.getTime() - Date.now();
+      return diff > 0 && diff <= days * 24 * 3600 * 1000;
+    }
+
+    async function fetchJson(url, fallback) {
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) return fallback;
+        const json = await res.json();
+        return json;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function withType(items, typeLabel, jump) {
+      return (items || []).map((item) => ({
+        title: item.title || '未命名内容',
+        views: Number(item.views || 0),
+        typeLabel,
+        jump,
+        date: item.publishDate || item.createdAt || '',
+      }));
+    }
+
+    function renderTopContent(items) {
+      const feed = $('#topContentFeed');
+      if (!feed) return;
+      if (!items.length) {
+        feed.innerHTML = `
+          <div class="feed-item">
+            <div class="line1"><b>暂无内容数据</b><time>—</time></div>
+            <div class="line2">接入内容快照后会显示阅读量靠前的内容</div>
+          </div>
+        `;
+        return;
+      }
+      feed.innerHTML = items.slice(0, 5).map((item) => `
+        <div class="feed-item" data-jump="${item.jump}">
+          <div class="line1">
+            <b>${item.title}</b>
+            <time>${item.views} 浏览</time>
+          </div>
+          <div class="line2">${item.typeLabel}</div>
+        </div>
+      `).join('');
+      $$('#topContentFeed [data-jump]').forEach((el) => {
+        el.addEventListener('click', () => handleJump(el.dataset.jump));
+      });
+    }
+
+    async function loadDashboardData() {
+      setDashboardState('loading');
+
+      try {
+        const contentPayload = await fetchJson('/api/content-snapshot', { ok: false });
+        const invitePayload = await fetchJson('/api/auth/invite-codes', { ok: false, data: [] });
+
+        const insights = Array.isArray(contentPayload?.insights) ? contentPayload.insights : [];
+        const reports = Array.isArray(contentPayload?.reports) ? contentPayload.reports : [];
+        const books = Array.isArray(contentPayload?.books) ? contentPayload.books : [];
+        const methodologies = Array.isArray(contentPayload?.methodologies) ? contentPayload.methodologies : [];
+        const allContent = [...insights, ...reports, ...books, ...methodologies];
+
+        const users = getUsersSnapshot();
+        const comments = getCommentsSnapshot();
+        const inviteCodes = Array.isArray(invitePayload?.data) ? invitePayload.data : [];
+
+        const paidUsers = users.filter((user) => user.memberType !== 'regular');
+        const regularUsers = users.filter((user) => user.memberType === 'regular');
+        const disabledUsers = users.filter((user) => user.status === 'disabled');
+        const recentLogins = users.filter((user) => isWithinDays(user.lastLoginAt, 7));
+        const expiringPaid = paidUsers.filter((user) => isFutureWithinDays(user.paidExpiresAt, 30));
+
+        const pendingComments = comments.filter((comment) => comment.status === 'pending');
+        const validInvites = inviteCodes.filter((code) => code.status === 'valid');
+        const redeemedInvites = inviteCodes.filter((code) => code.status === 'redeemed' || Number(code.usedCount || 0) >= Number(code.maxUses || 0));
+        const disabledInvites = inviteCodes.filter((code) => code.status === 'disabled');
+
+        const insightsPublished = insights.filter((item) => item.status === 'published').length;
+        const reportsPublished = reports.filter((item) => item.status === 'published').length;
+        const booksPublished = books.filter((item) => item.status === 'published').length;
+        const methodsPublished = methodologies.filter((item) => item.status === 'published').length;
+        const insightsDraft = insights.filter((item) => item.status !== 'published').length;
+        const reportsDraft = reports.filter((item) => item.status !== 'published').length;
+        const booksDraft = books.filter((item) => item.status !== 'published').length;
+        const methodsDraft = methodologies.filter((item) => item.status !== 'published').length;
+        const totalDraft = insightsDraft + reportsDraft + booksDraft + methodsDraft;
+        const homeFeatured = allContent.filter((item) => item.showOnHome === true).length;
+        const recentContent = allContent.filter((item) => isWithinDays(item.createdAt || item.publishDate, 30)).length;
+
+        setText('metricUsersTotal', users.length);
+        setText('metricUsersHint', `近 7 天活跃 ${recentLogins.length}`);
+        setText('metricPaidMembers', paidUsers.length);
+        setText('metricPaidHint', `普通会员 ${regularUsers.length}`);
+        setText('metricInviteValid', validInvites.length);
+        setText('metricInviteHint', `${redeemedInvites.length} 已兑换 · ${disabledInvites.length} 已禁用`);
+        setText('metricPendingComments', pendingComments.length);
+        setText('metricCommentsHint', `总评论 ${comments.length}`);
+        setText('metricInsightsPublished', insightsPublished);
+        setText('metricInsightsHint', `草稿 ${insightsDraft}`);
+        setText('metricReportsPublished', reportsPublished);
+        setText('metricReportsHint', `草稿 ${reportsDraft}`);
+        setText('metricBooksPublished', booksPublished);
+        setText('metricBooksHint', `草稿 ${booksDraft}`);
+        setText('metricMethodsPublished', methodsPublished);
+        setText('metricMethodsHint', `草稿 ${methodsDraft}`);
+
+        setText('overviewInsights', `${insightsPublished} / 草稿 ${insightsDraft}`);
+        setText('overviewReports', `${reportsPublished} / 草稿 ${reportsDraft}`);
+        setText('overviewBooks', `${booksPublished} / 草稿 ${booksDraft}`);
+        setText('overviewMethods', `${methodsPublished} / 草稿 ${methodsDraft}`);
+        setText('overviewRegularUsers', regularUsers.length);
+        setText('overviewPaidUsers', paidUsers.length);
+        setText('overviewComments', comments.length);
+        setText('overviewInvites', `${validInvites.length} / 已兑 ${redeemedInvites.length}`);
+
+        setText('opsPendingComments', pendingComments.length);
+        setText('opsDraftContent', totalDraft);
+        setText('opsExpiringPaid', expiringPaid.length);
+        setText('opsDisabledUsers', disabledUsers.length);
+        setText('opsHomeFeatured', homeFeatured);
+        setText('opsRecentContent', recentContent);
+        setText('opsRecentLogin', recentLogins.length);
+        setText('opsRedeemedInvites', redeemedInvites.length);
+
+        const topContent = [
+          ...withType(insights, '洞察文章', 'content/articles'),
+          ...withType(reports, '报告管理', 'content/reports'),
+          ...withType(books, '书籍管理', 'content/books'),
+          ...withType(methodologies, '益语方法论', 'content/methods'),
+        ].sort((a, b) => b.views - a.views);
+        renderTopContent(topContent);
+
+        setDashboardState('ready');
+      } catch (error) {
+        console.error('dashboard load failed:', error);
+        setDashboardState('error');
+      }
+    }
+
+    $('#refreshBtn').addEventListener('click', async () => {
+      await loadDashboardData();
       showToast('数据已刷新');
     });
-
-    // Retry buttons
-    $('#retryKpi')?.addEventListener('click', () => simulateLoading('kpiCard'));
-    $('#retryKpi2')?.addEventListener('click', () => simulateLoading('kpiCard'));
-    $('#retryFunnel')?.addEventListener('click', () => simulateLoading('funnelCard'));
-    $('#set30d')?.addEventListener('click', () => {
-      $('#rangeLabel').textContent = '近 30 天';
-      simulateLoading('funnelCard');
-    });
+    $('#retryDashboard')?.addEventListener('click', () => void loadDashboardData());
+    window.addEventListener('storage', () => void loadDashboardData());
+    window.addEventListener('focus', () => void loadDashboardData());
+    void loadDashboardData();
   </script>
 </body>
 </html>
