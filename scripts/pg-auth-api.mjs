@@ -96,7 +96,21 @@ async function ensureSchema() {
     );
   `);
 }
-async function sendSmsCode(phone, scene, code) { const client = smsClient || initSmsClient(); if (!client) throw new Error('短信服务未配置'); const templateId = scene === 'register' ? process.env.TC_SMS_TEMPLATE_ID_REGISTER : process.env.TC_SMS_TEMPLATE_ID_RESET; const signName = process.env.TC_SMS_SIGN; const smsSdkAppId = process.env.TC_SMS_SDK_APP_ID; if (!templateId || !signName || !smsSdkAppId) throw new Error('短信模板未配置'); await client.SendSms({ SmsSdkAppId: smsSdkAppId, SignName: signName, TemplateId: templateId, TemplateParamSet: [code, String(Math.ceil(CODE_TTL_SECONDS / 60))], PhoneNumberSet: [`+86${phone}`] }); }
+async function sendSmsCode(phone, scene, code) {
+  const client = smsClient || initSmsClient();
+  if (!client) throw new Error('短信服务未配置');
+  const templateId = scene === 'register' ? process.env.TC_SMS_TEMPLATE_ID_REGISTER : process.env.TC_SMS_TEMPLATE_ID_RESET;
+  const signName = process.env.TC_SMS_SIGN;
+  const smsSdkAppId = process.env.TC_SMS_SDK_APP_ID;
+  if (!templateId || !signName || !smsSdkAppId) throw new Error('短信模板未配置');
+  await client.SendSms({
+    SmsSdkAppId: smsSdkAppId,
+    SignName: signName,
+    TemplateId: templateId,
+    TemplateParamSet: [code],
+    PhoneNumberSet: [`+86${phone}`],
+  });
+}
 async function sendEmailCode(email, scene, code) { const from = process.env.AUTH_EMAIL_FROM; if (!from) throw new Error('未配置发件人'); const subject = scene === 'register' ? '注册验证码' : '找回密码验证码'; const action = scene === 'register' ? '注册' : '重置密码'; const minutes = Math.ceil(CODE_TTL_SECONDS / 60); const text = `您的${action}验证码是 ${code}，${minutes} 分钟内有效。如非本人操作请忽略。`; const html = `<p>您的${action}验证码是 <b style="font-size:20px">${code}</b>，${minutes} 分钟内有效。</p><p>如非本人操作请忽略。</p>`; if (mailer) { try { await mailer.sendMail({ from, to: email, subject: `【益语智库】${subject}`, text, html }); return; } catch (_) {} } const client = sesClient || initSesClient(); if (!client) throw new Error('邮件服务未配置'); const templateId = Number(scene === 'register' ? (process.env.TC_SES_TEMPLATE_ID_REGISTER || 0) : (process.env.TC_SES_TEMPLATE_ID_RESET || 0)); if (!templateId) throw new Error('未配置邮件模板ID'); await client.SendEmail({ FromEmailAddress: from, Destination: [email], Subject: `【益语智库】${subject}`, Template: { TemplateID: templateId, TemplateData: JSON.stringify({ code, expire_min: String(minutes), minutes: String(minutes) }) } }); }
 async function checkSendLimit(target, scene) { const intervalRes = await pool.query(`SELECT count(*)::int AS c FROM auth_verification_codes WHERE target=$1 AND scene=$2 AND created_at > now() - ($3::text || ' second')::interval`, [target, scene, SEND_INTERVAL_SECONDS]); const dayRes = await pool.query(`SELECT count(*)::int AS c FROM auth_verification_codes WHERE target=$1 AND scene=$2 AND created_at >= date_trunc('day', now())`, [target, scene]); if ((intervalRes.rows[0]?.c || 0) > 0) throw new Error(`发送太频繁，请 ${SEND_INTERVAL_SECONDS} 秒后再试`); if ((dayRes.rows[0]?.c || 0) >= MAX_PER_TARGET_PER_DAY) throw new Error('今日发送次数已达上限'); }
 async function createCode(channel, target, scene, ip) { await checkSendLimit(target, scene); const code = generateCode(); await pool.query(`INSERT INTO auth_verification_codes(id, channel, target, scene, code_hash, expires_at, request_ip) VALUES ($1,$2,$3,$4,$5, now() + ($6::text || ' second')::interval, $7)`, [crypto.randomUUID(), channel, target, scene, hashCode(code), CODE_TTL_SECONDS, ip || null]); return code; }
