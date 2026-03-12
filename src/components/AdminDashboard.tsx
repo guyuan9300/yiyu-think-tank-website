@@ -51,6 +51,7 @@ import { isValidPdfFile, formatFileSize } from '../lib/pdfUtils';
 import { SettingsPage } from './SettingsPage';
 import { generateCoverImage, getHfModel, getHfToken, setHfModel, setHfToken } from '../lib/hfImageGen';
 import { UserManagementPage } from './UserManagementPage';
+import AdminStrategyCompanionConceptPage from './AdminStrategyCompanionConceptPage';
 import {
   getClientProjects as getStrategyClients,
   getCourseRecommendations,
@@ -110,6 +111,14 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
+    const currentParams = new URLSearchParams(window.location.search);
+    const currentPage = currentParams.get('page');
+
+    if (isEmbedded || currentPage === 'admin-legacy') {
+      setIsMobileMenuOpen(false);
+      return;
+    }
+
     const current = window.location.pathname + window.location.search;
     const target = `${window.location.pathname}${buildAdminUrl(activeMenu)}`;
 
@@ -118,7 +127,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     }
 
     setIsMobileMenuOpen(false);
-  }, [activeMenu]);
+  }, [activeMenu, isEmbedded]);
   
   // 邀请码管理状态
   const [inviteCodes, setInviteCodes] = useState<InviteCode[]>([]);
@@ -229,6 +238,12 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       document.removeEventListener('paste', handlePaste);
     };
   }, [showReportForm]);
+
+  useEffect(() => {
+    if (activeMenu === 'invite-codes') {
+      void loadInviteCodes();
+    }
+  }, [activeMenu]);
 
   // 打开内容编辑表单时：自动读取已同步的客户勾选
   useEffect(() => {
@@ -1730,6 +1745,234 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
           {/* 用户管理 */}
           {activeMenu === 'user-management' && (
             <UserManagementPage />
+          )}
+
+          {/* 会员与订单（暂时承接到用户管理） */}
+          {activeMenu === 'membership' && (
+            <UserManagementPage />
+          )}
+
+          {/* 邀请码管理 */}
+          {activeMenu === 'invite-codes' && (
+            <div className="space-y-6">
+              {message && (
+                <div className={`p-4 rounded-xl flex items-center gap-2 ${
+                  message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                }`}>
+                  {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                  {message.text}
+                </div>
+              )}
+              
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">生成邀请码</h3>
+                
+                <div className="flex flex-wrap gap-4 items-end">
+                  <div className="flex-1 min-w-48">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">邀请码类型</label>
+                    <select 
+                      value={selectedType}
+                      onChange={(e) => {
+                        setSelectedType(e.target.value as InviteCodeType);
+                      }}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                    >
+                      {Object.entries(INVITE_CODE_TYPES).map(([key, config]) => (
+                        <option key={key} value={key}>
+                          {config.label} - {config.description}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="w-40">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">最大使用次数</label>
+                    <input
+                      type="number"
+                      value={maxUses}
+                      onChange={(e) => setMaxUses(Math.max(1, parseInt(e.target.value) || 1))}
+                      min={1}
+                      max={100}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <button 
+                    onClick={handleGenerateCode}
+                    disabled={isGenerating}
+                    className="flex items-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        生成中...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-5 h-5" />
+                        生成邀请码
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-gray-100 flex items-center justify-between gap-3">
+                  <h3 className="text-lg font-semibold text-gray-900">邀请码列表</h3>
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    <button
+                      onClick={() => {
+                        const selected = inviteCodes.filter((c) => selectedInviteIds.includes(c.id));
+                        const rows = selected.length > 0 ? selected : inviteCodes;
+                        exportInviteCodesCsv(rows);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600"
+                      title="导出为 CSV（Excel 可直接打开）"
+                    >
+                      导出 Excel
+                    </button>
+                    <button
+                      onClick={() => setSelectedInviteIds(inviteCodes.map((c) => c.id))}
+                      className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600"
+                    >
+                      全选
+                    </button>
+                    <button
+                      onClick={() => setSelectedInviteIds([])}
+                      className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600"
+                    >
+                      清空
+                    </button>
+                    <button 
+                      onClick={() => void loadInviteCodes()}
+                      className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600"
+                    >
+                      <RefreshCw className="w-5 h-5" />
+                      刷新
+                    </button>
+                  </div>
+                </div>
+                
+                {inviteCodes.length === 0 ? (
+                  <div className="p-12 text-center text-gray-500">
+                    <Gift className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p>暂无邀请码</p>
+                    <p className="text-sm mt-2">点击上方按钮生成新的邀请码</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <input
+                              type="checkbox"
+                              checked={selectedInviteIds.length > 0 && selectedInviteIds.length === inviteCodes.length}
+                              onChange={(e) => {
+                                setSelectedInviteIds(e.target.checked ? inviteCodes.map((c) => c.id) : []);
+                              }}
+                            />
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">邀请码</th>
+                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
+                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">使用情况</th>
+                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">奖励时长</th>
+                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
+                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {inviteCodes.map((code) => {
+                          const typeInfo = getTypeInfo(code.type as InviteCodeType);
+                          const statusInfo = getStatusInfo(code.status);
+
+                          return (
+                            <tr key={code.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedInviteIds.includes(code.id)}
+                                  onChange={(e) => {
+                                    const on = e.target.checked;
+                                    setSelectedInviteIds((prev) =>
+                                      on ? Array.from(new Set([...prev, code.id])) : prev.filter((x) => x !== code.id)
+                                    );
+                                  }}
+                                />
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center gap-2">
+                                  <code className="font-mono font-medium text-gray-900">{code.code}</code>
+                                  <button 
+                                    className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                    onClick={() => handleCopyCode(code.code)}
+                                    title="复制"
+                                  >
+                                    <Copy className="w-4 h-4 text-gray-400" />
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${typeInfo.color}`}>
+                                  {typeInfo.label}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                {code.usedCount} / {code.maxUses}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                {typeInfo.days}天
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 w-fit ${statusInfo.color}`}>
+                                  {statusInfo.icon}
+                                  {statusInfo.label}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                {new Date(code.createdAt).toLocaleString('zh-CN')}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center gap-1">
+                                  <button 
+                                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
+                                    onClick={() => handleCopyCode(code.code)}
+                                    title="复制"
+                                  >
+                                    <Copy className="w-4 h-4" />
+                                  </button>
+                                  {code.status === 'valid' && (
+                                    <button 
+                                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-amber-600"
+                                      onClick={() => void handleDisableCode(code.code)}
+                                      title="禁用"
+                                    >
+                                      <XCircle className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                  <button 
+                                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-red-500"
+                                    onClick={() => void handleDeleteCode(code.code)}
+                                    title="删除"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 战略客户管理 */}
+          {activeMenu === 'strategy-companion' && (
+            <AdminStrategyCompanionConceptPage showHeader={false} />
           )}
 
           {/* 系统设置 */}

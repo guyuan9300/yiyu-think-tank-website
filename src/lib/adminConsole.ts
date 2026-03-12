@@ -1,6 +1,9 @@
 export const ADMIN_VISIBLE_TABS = [
   'dashboard',
   'user-management',
+  'membership',
+  'invite-codes',
+  'strategy-companion',
   'insights',
   'reports',
   'books',
@@ -17,6 +20,9 @@ export const LEGACY_ADMIN_TAB_MAP: Record<string, AdminTab> = {
   books: 'books',
   methodologies: 'methodologies',
   'user-management': 'user-management',
+  membership: 'membership',
+  'invite-codes': 'invite-codes',
+  'strategy-companion': 'strategy-companion',
   comments: 'comments',
   settings: 'settings',
 };

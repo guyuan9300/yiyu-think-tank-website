@@ -24,6 +24,7 @@ import { buildAdminUrl, getAdminTabFromSearchParams } from './lib/adminConsole';
 
 import UserCenterPage from './components/UserCenterPage';
 import { StrategyCompanionConceptPage } from './components/StrategyCompanionConceptPage';
+import AdminStrategyCompanionConceptPage from './components/AdminStrategyCompanionConceptPage';
 import { ConsultApplyPage } from './components/ConsultApplyPage';
 import { NotFoundPage } from './components/NotFoundPage';
 import { StrategyModuleIntroPage } from './components/StrategyModuleIntroPage';
@@ -505,6 +506,45 @@ export default function App() {
       );
     }
     
+    const shellParams = new URLSearchParams();
+    const currentParams = new URLSearchParams(window.location.search);
+    const tab = currentParams.get('tab');
+    const legacyTab = currentParams.get('legacyTab');
+    if (tab) shellParams.set('tab', tab);
+    if (legacyTab) shellParams.set('legacyTab', legacyTab);
+    const adminShellSrc = `${import.meta.env.BASE_URL}admin.html${shellParams.toString() ? `?${shellParams.toString()}` : ''}`;
+
+    return (
+      <>
+        <iframe
+          title="益语智库管理后台 · 数据概览"
+          src={adminShellSrc}
+          style={{ width: '100%', height: '100vh', border: '0', display: 'block' }}
+        />
+      </>
+    );
+  }
+
+  // Legacy Admin Dashboard（旧后台真实管理页）
+  if (currentPage === 'admin-legacy') {
+    const isAdmin = (localStorage.getItem('yiyu_is_admin') ?? sessionStorage.getItem('yiyu_is_admin')) === 'true';
+
+    if (!isAdmin) {
+      return (
+        <>
+          <LoginPage
+            onNavigate={(page) => handleNavigate(page === 'login' ? 'home' : page as any)}
+            onLoginSuccess={() => setCurrentPage('home')}
+            onAdminLogin={() => {
+              localStorage.setItem('yiyu_is_admin', 'true');
+              sessionStorage.setItem('yiyu_is_admin', 'true');
+              window.location.reload();
+            }}
+          />
+        </>
+      );
+    }
+
     return (
       <>
         <AdminDashboard
@@ -530,11 +570,6 @@ export default function App() {
         />
       </>
     );
-  }
-
-  // Legacy Admin Dashboard（旧后台真实管理页）
-  if (currentPage === 'admin-legacy') {
-    return <AdminRouteRedirect target={buildAdminUrl(getAdminTabFromSearchParams(new URLSearchParams(window.location.search)))} />;
   }
 
   // User Center Page
@@ -575,7 +610,29 @@ export default function App() {
 
   // Admin Strategy Companion Page - 战略客户后台管理页面
   if (currentPage === 'admin-strategy-companion') {
-    return <AdminRouteRedirect target={buildAdminUrl()} />;
+    const isAdmin = (localStorage.getItem('yiyu_is_admin') ?? sessionStorage.getItem('yiyu_is_admin')) === 'true';
+
+    if (!isAdmin) {
+      return (
+        <>
+          <LoginPage
+            onNavigate={(page) => handleNavigate(page === 'login' ? 'home' : page as any)}
+            onLoginSuccess={() => setCurrentPage('home')}
+            onAdminLogin={() => {
+              localStorage.setItem('yiyu_is_admin', 'true');
+              sessionStorage.setItem('yiyu_is_admin', 'true');
+              window.location.reload();
+            }}
+          />
+        </>
+      );
+    }
+
+    return (
+      <>
+        <AdminStrategyCompanionConceptPage />
+      </>
+    );
   }
 
   return (
