@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, User, Smartphone, CheckCircle } from 'lucide-react';
 import { registerByCode, sendVerifyCode } from '../lib/authApi';
-import { notifyNotOpenYet, preventDefaultAndRun } from '../lib/uxFeedback';
 
 // NOTE: 邮箱验证邮件的跳转地址由 auth.ts 内的 emailRedirectTo 控制（需包含 BASE_URL 子路径）。
 
 type RegisterTab = 'phone' | 'email';
 
 interface RegisterPageProps {
-  onNavigate?: (page: 'login' | 'register' | 'home') => void;
+  onNavigate?: (page: 'login' | 'register' | 'home' | 'terms-of-service' | 'privacy-policy') => void;
   onRegisterSuccess?: () => void;
 }
 
@@ -49,8 +48,6 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
     setError('');
     setSuccess('');
   };
-
-  const handleUnavailableLink = (label: string) => preventDefaultAndRun(() => notifyNotOpenYet(label));
 
   // 发送验证码
   const handleSendCode = async () => {
@@ -483,21 +480,21 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
               </div>
               <label htmlFor="terms" className="text-[13px] text-gray-600 leading-relaxed cursor-pointer">
                 我已阅读并同意
-                <a
-                  href="#"
-                  onClick={handleUnavailableLink('服务条款')}
+                <button
+                  type="button"
+                  onClick={() => onNavigate?.('terms-of-service')}
                   className="text-primary hover:text-primary/80 font-medium transition-colors duration-200 mx-1"
                 >
                   服务条款
-                </a>
+                </button>
                 和
-                <a
-                  href="#"
-                  onClick={handleUnavailableLink('隐私政策')}
+                <button
+                  type="button"
+                  onClick={() => onNavigate?.('privacy-policy')}
                   className="text-primary hover:text-primary/80 font-medium transition-colors duration-200 ml-1"
                 >
                   隐私政策
-                </a>
+                </button>
               </label>
             </div>
 

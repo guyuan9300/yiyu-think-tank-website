@@ -15,6 +15,7 @@ import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
 import { ForgotPasswordPage } from './components/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/ResetPasswordPage';
+import { LegalDocumentPage } from './components/LegalDocumentPage';
 import { ArticleDetailPage } from './components/ArticleDetailPage';
 import { TopicDetailPage } from './components/TopicDetailPage';
 import { CaseDetailPage } from './components/CaseDetailPage';
@@ -58,6 +59,8 @@ export default function App() {
     'register',
     'forgot-password',
     'reset-password',
+    'terms-of-service',
+    'privacy-policy',
     'article',
     'topic',
     'case',
@@ -180,7 +183,7 @@ export default function App() {
     }
   }, [currentPage, selectedDetailId, selectedCaseId, unknownPage]);
 
-  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'case' | 'admin' | 'user-center' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply' | 'book-library' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai' | 'about-premium', bookId?: string, caseId?: string) => {
+  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'terms-of-service' | 'privacy-policy' | 'case' | 'admin' | 'user-center' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply' | 'book-library' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai' | 'about-premium', bookId?: string, caseId?: string) => {
     // Reset scroll on page-level navigation so detail pages always open from the top.
     // (Otherwise the browser may keep the previous scroll position and look like it jumped to the bottom.)
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
@@ -196,7 +199,7 @@ export default function App() {
     } else if (page === 'book-reader') {
       setSelectedBookId(bookId || 'shimeshiquanli');
       setCurrentPage('book-reader');
-    } else if (page === 'login' || page === 'register') {
+    } else if (page === 'login' || page === 'register' || page === 'forgot-password' || page === 'reset-password' || page === 'terms-of-service' || page === 'privacy-policy') {
       setCurrentPage(page);
     } else if (page === 'case') {
       setSelectedCaseId(caseId || 'blue-letter');
@@ -286,6 +289,22 @@ export default function App() {
     return (
       <>
         <ResetPasswordPage onNavigate={(page) => handleNavigate(page as any)} />
+      </>
+    );
+  }
+
+  if (currentPage === 'terms-of-service') {
+    return (
+      <>
+        <LegalDocumentPage documentType="terms" onNavigate={(page) => handleNavigate(page as any)} />
+      </>
+    );
+  }
+
+  if (currentPage === 'privacy-policy') {
+    return (
+      <>
+        <LegalDocumentPage documentType="privacy" onNavigate={(page) => handleNavigate(page as any)} />
       </>
     );
   }

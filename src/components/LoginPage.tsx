@@ -3,7 +3,6 @@ import { ArrowLeft, Mail, Lock, Eye, EyeOff, Smartphone } from 'lucide-react';
 import { type User } from '../lib/dataService';
 import { saveUserRaw, saveAuthToken, setSavedItem, ADMIN_FLAG_KEY, ADMIN_EMAIL_KEY } from '../lib/storage';
 import { loginByPassword, normalizeLoginUser } from '../lib/authApi';
-import { notifyNotOpenYet } from '../lib/uxFeedback';
 import { logger } from '../lib/logger';
 
 // Admin credentials (global constant)
@@ -16,7 +15,7 @@ const ADMIN_CREDENTIALS = {
 type LoginMode = 'email' | 'phone';
 
 interface LoginPageProps {
-  onNavigate?: (page: 'login' | 'register' | 'home' | 'forgot-password' | 'admin') => void;
+  onNavigate?: (page: 'login' | 'register' | 'home' | 'forgot-password' | 'admin' | 'terms-of-service' | 'privacy-policy') => void;
   onLoginSuccess?: () => void;
   onAdminLogin?: () => void;
 }
@@ -90,6 +89,18 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
       
       if ((loginMode === 'email' && !normalizedEmail) || (loginMode === 'phone' && !normalizedPhone) || !password) {
         setError(loginMode === 'phone' ? '请输入手机号和密码' : '请输入邮箱和密码');
+        setIsLoading(false);
+        return;
+      }
+
+      if (loginMode === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+        setError('请输入正确的邮箱地址');
+        setIsLoading(false);
+        return;
+      }
+
+      if (loginMode === 'phone' && !/^1[3-9]\d{9}$/.test(normalizedPhone)) {
+        setError('请输入正确的手机号码');
         setIsLoading(false);
         return;
       }
@@ -307,27 +318,21 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
           {/* Terms */}
           <p className="mt-8 text-center text-[12px] text-muted-foreground/60">
             登录即表示您同意{' '}
-            <a
-              href="#"
+            <button
+              type="button"
               className="text-primary hover:underline"
-              onClick={(e) => {
-                e.preventDefault();
-                notifyNotOpenYet('服务条款');
-              }}
+              onClick={() => onNavigate?.('terms-of-service')}
             >
               服务条款
-            </a>
+            </button>
             {' '}和{' '}
-            <a
-              href="#"
+            <button
+              type="button"
               className="text-primary hover:underline"
-              onClick={(e) => {
-                e.preventDefault();
-                notifyNotOpenYet('隐私政策');
-              }}
+              onClick={() => onNavigate?.('privacy-policy')}
             >
               隐私政策
-            </a>
+            </button>
           </p>
         </div>
       </div>
