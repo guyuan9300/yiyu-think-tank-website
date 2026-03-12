@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { HomePage } from './components/HomePage';
 import { InsightsPage } from './components/InsightsPage';
 import { StrategyPage } from './components/StrategyPage';
@@ -21,6 +21,16 @@ import { TopicDetailPage } from './components/TopicDetailPage';
 import { CaseDetailPage } from './components/CaseDetailPage';
 import { AdminDashboard } from './components/AdminDashboard';
 import { buildAdminUrl, getAdminTabFromSearchParams } from './lib/adminConsole';
+import { fetchCurrentSession, normalizeLoginUser } from './lib/authApi';
+import {
+  ADMIN_EMAIL_KEY,
+  ADMIN_FLAG_KEY,
+  AUTH_TOKEN_KEY,
+  getSavedAuthToken,
+  removeSavedItem,
+  saveUserRaw,
+  setSavedItem,
+} from './lib/storage';
 
 import UserCenterPage from './components/UserCenterPage';
 import { StrategyCompanionConceptPage } from './components/StrategyCompanionConceptPage';
@@ -43,6 +53,92 @@ function AdminRouteRedirect({ target }: { target: string }) {
   }, [target]);
 
   return null;
+}
+
+function clearAdminMarkers() {
+  removeSavedItem(ADMIN_FLAG_KEY);
+  removeSavedItem(ADMIN_EMAIL_KEY);
+}
+
+function AdminAccessGate({
+  onNavigate,
+  onLoginSuccess,
+  children,
+}: {
+  onNavigate: (page: 'home' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'terms-of-service' | 'privacy-policy' | 'admin') => void;
+  onLoginSuccess?: () => void;
+  children: ReactNode;
+}) {
+  const [status, setStatus] = useState<'checking' | 'allowed' | 'denied'>('checking');
+  const [version, setVersion] = useState(0);
+
+  useEffect(() => {
+    let canceled = false;
+
+    const verifyAdminSession = async () => {
+      const token = getSavedAuthToken();
+      if (!token) {
+        clearAdminMarkers();
+        if (!canceled) {
+          setStatus('denied');
+        }
+        return;
+      }
+
+      const result = await fetchCurrentSession();
+      if (canceled) return;
+
+      if (result.ok && result.data?.user) {
+        const remember = localStorage.getItem(AUTH_TOKEN_KEY) != null;
+        saveUserRaw(JSON.stringify(normalizeLoginUser(result.data.user)), remember);
+        window.dispatchEvent(new Event('yiyu_user_updated'));
+
+        if (result.data.user.adminRole === 'admin') {
+          setSavedItem(ADMIN_FLAG_KEY, 'true', remember);
+          setSavedItem(ADMIN_EMAIL_KEY, result.data.user.email || '', remember);
+          setStatus('allowed');
+          return;
+        }
+      }
+
+      clearAdminMarkers();
+      setStatus('denied');
+    };
+
+    setStatus('checking');
+    void verifyAdminSession();
+
+    return () => {
+      canceled = true;
+    };
+  }, [version]);
+
+  if (status === 'checking') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-6">
+        <div className="w-full max-w-md rounded-[28px] bg-white/80 backdrop-blur-xl border border-border/40 shadow-2xl shadow-black/[0.06] p-8 text-center">
+          <div className="text-xl font-semibold text-foreground">正在验证管理员身份</div>
+          <p className="mt-3 text-sm text-muted-foreground/70">请稍候，正在校验当前登录状态。</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'denied') {
+    return (
+      <LoginPage
+        onNavigate={(page) => onNavigate(page === 'login' ? 'home' : page)}
+        onLoginSuccess={() => {
+          onLoginSuccess?.();
+        }}
+        onAdminLogin={() => {
+          setVersion((current) => current + 1);
+        }}
+      />
+    );
+  }
+
+  return <>{children}</>;
 }
 
 export default function App() {
@@ -484,28 +580,6 @@ export default function App() {
 
   // Admin Dashboard - 需要登录验证
   if (currentPage === 'admin') {
-    // 检查是否已登录管理员
-    const isAdmin = (localStorage.getItem('yiyu_is_admin') ?? sessionStorage.getItem('yiyu_is_admin')) === 'true';
-    
-    if (!isAdmin) {
-      // 未登录，重定向到登录页
-      return (
-        <>
-          <LoginPage 
-            onNavigate={(page) => handleNavigate(page === 'login' ? 'home' : page as any)}
-            onLoginSuccess={() => setCurrentPage('home')}
-            onAdminLogin={() => {
-              // Fallback: ensure admin flag is set even if parent only reacts after reload.
-              localStorage.setItem('yiyu_is_admin', 'true');
-              sessionStorage.setItem('yiyu_is_admin', 'true');
-              // 强制刷新页面以确保状态更新
-              window.location.reload();
-            }}
-          />
-        </>
-      );
-    }
-    
     const shellParams = new URLSearchParams();
     const currentParams = new URLSearchParams(window.location.search);
     const tab = currentParams.get('tab');
@@ -515,45 +589,30 @@ export default function App() {
     const adminShellSrc = `${import.meta.env.BASE_URL}admin.html${shellParams.toString() ? `?${shellParams.toString()}` : ''}`;
 
     return (
-      <>
+      <AdminAccessGate
+        onNavigate={(page) => handleNavigate(page as any)}
+        onLoginSuccess={() => setCurrentPage('home')}
+      >
         <iframe
           title="益语智库管理后台 · 数据概览"
           src={adminShellSrc}
           style={{ width: '100%', height: '100vh', border: '0', display: 'block' }}
         />
-      </>
+      </AdminAccessGate>
     );
   }
 
   // Legacy Admin Dashboard（旧后台真实管理页）
   if (currentPage === 'admin-legacy') {
-    const isAdmin = (localStorage.getItem('yiyu_is_admin') ?? sessionStorage.getItem('yiyu_is_admin')) === 'true';
-
-    if (!isAdmin) {
-      return (
-        <>
-          <LoginPage
-            onNavigate={(page) => handleNavigate(page === 'login' ? 'home' : page as any)}
-            onLoginSuccess={() => setCurrentPage('home')}
-            onAdminLogin={() => {
-              localStorage.setItem('yiyu_is_admin', 'true');
-              sessionStorage.setItem('yiyu_is_admin', 'true');
-              window.location.reload();
-            }}
-          />
-        </>
-      );
-    }
-
     return (
-      <>
+      <AdminAccessGate
+        onNavigate={(page) => handleNavigate(page as any)}
+        onLoginSuccess={() => setCurrentPage('home')}
+      >
         <AdminDashboard
           onNavigateHome={() => handleNavigate('home')}
           onLogout={() => {
-            localStorage.removeItem('yiyu_is_admin');
-            sessionStorage.removeItem('yiyu_is_admin');
-            localStorage.removeItem('yiyu_admin_email');
-            sessionStorage.removeItem('yiyu_admin_email');
+            clearAdminMarkers();
             const u = (localStorage.getItem('yiyu_current_user') ?? sessionStorage.getItem('yiyu_current_user'));
             if (u) {
               try {
@@ -568,7 +627,7 @@ export default function App() {
             handleNavigate('login');
           }}
         />
-      </>
+      </AdminAccessGate>
     );
   }
 
@@ -610,28 +669,13 @@ export default function App() {
 
   // Admin Strategy Companion Page - 战略客户后台管理页面
   if (currentPage === 'admin-strategy-companion') {
-    const isAdmin = (localStorage.getItem('yiyu_is_admin') ?? sessionStorage.getItem('yiyu_is_admin')) === 'true';
-
-    if (!isAdmin) {
-      return (
-        <>
-          <LoginPage
-            onNavigate={(page) => handleNavigate(page === 'login' ? 'home' : page as any)}
-            onLoginSuccess={() => setCurrentPage('home')}
-            onAdminLogin={() => {
-              localStorage.setItem('yiyu_is_admin', 'true');
-              sessionStorage.setItem('yiyu_is_admin', 'true');
-              window.location.reload();
-            }}
-          />
-        </>
-      );
-    }
-
     return (
-      <>
+      <AdminAccessGate
+        onNavigate={(page) => handleNavigate(page as any)}
+        onLoginSuccess={() => setCurrentPage('home')}
+      >
         <AdminStrategyCompanionConceptPage />
-      </>
+      </AdminAccessGate>
     );
   }
 
