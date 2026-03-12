@@ -10,9 +10,16 @@ import {
   TrendingUp, Award, Activity, Gift
 } from 'lucide-react';
 import {
-  getUsers, getUserStats, saveUser, updateUserStatus, updateUserMemberType,
+  getUserStats, saveUser, updateUserStatus, updateUserMemberType,
   deleteUser, searchUsers, type User
 } from '../lib/dataService';
+import {
+  getAdminMembershipValue,
+  getAdminRoleMeta,
+  isStoredPaidMember,
+  mapStoredMemberTypeToAdminRole,
+  toStoredMemberType,
+} from '../lib/adminRoles';
 
 // 头像上传处理函数
 const handleAvatarUpload = (file: File): Promise<string> => {
@@ -41,6 +48,7 @@ export function UserManagementPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingUser, setEditingUser] = useState<Partial<User>>({});
+  const [editingMembership, setEditingMembership] = useState<'regular' | 'paid'>('regular');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
@@ -53,21 +61,30 @@ export function UserManagementPage() {
   }, [searchQuery, filterMemberType, filterStatus]);
 
   const loadData = () => {
-    const filteredUsers = searchUsers(searchQuery, filterMemberType, filterStatus);
+    const baseMemberType = filterMemberType === 'paid' ? 'all' : filterMemberType;
+    const filteredUsers = searchUsers(searchQuery, baseMemberType, filterStatus).filter((user) => {
+      if (filterMemberType === 'paid') {
+        return isStoredPaidMember(user.memberType);
+      }
+      return true;
+    });
     setUsers(filteredUsers);
     setStats(getUserStats());
   };
 
-  // 获取会员类型徽章样式
+  // 获取后台统一的用户类型徽章样式
   const getMemberTypeBadge = (memberType: string) => {
-    switch (memberType) {
-      case 'diamond':
-        return { label: '钻石会员', color: 'bg-purple-100 text-purple-700', icon: <Award className="w-3 h-3" /> };
-      case 'gold':
-        return { label: '黄金会员', color: 'bg-amber-100 text-amber-700', icon: <Crown className="w-3 h-3" /> };
-      default:
-        return { label: '普通会员', color: 'bg-gray-100 text-gray-600', icon: <UserIcon className="w-3 h-3" /> };
+    const role = mapStoredMemberTypeToAdminRole(memberType as User['memberType']);
+    const meta = getAdminRoleMeta(role);
+
+    if (role === 'paid_member') {
+      return { label: meta.label, color: meta.badgeClass, icon: <Crown className="w-3 h-3" /> };
     }
+    if (role === 'admin') {
+      return { label: meta.label, color: meta.badgeClass, icon: <Shield className="w-3 h-3" /> };
+    }
+
+    return { label: meta.label, color: meta.badgeClass, icon: <UserIcon className="w-3 h-3" /> };
   };
 
   // 获取状态徽章样式
@@ -86,6 +103,7 @@ export function UserManagementPage() {
   // 编辑用户
   const handleEdit = (user: User) => {
     setEditingUser({ ...user });
+    setEditingMembership(getAdminMembershipValue(user.memberType));
     setAvatarPreview(user.avatar || '');
     setAvatarFile(null);
     setShowEditModal(true);
@@ -136,7 +154,10 @@ export function UserManagementPage() {
   const handleSaveEdit = () => {
     if (!editingUser.id) return;
     
-    saveUser(editingUser);
+    saveUser({
+      ...editingUser,
+      memberType: toStoredMemberType(editingMembership, editingUser.memberType as User['memberType'] | undefined),
+    });
     loadData();
     setShowEditModal(false);
     setMessage({ type: 'success', text: '用户信息已更新' });
@@ -156,18 +177,16 @@ export function UserManagementPage() {
     }
   };
 
-  // 修改会员类型
+  // 切换用户类型（普通会员 / 付费会员）
   const handleChangeMemberType = (userId: string) => {
     const user = users.find(u => u.id === userId);
     if (!user) return;
     
-    const types: ('regular' | 'gold' | 'diamond')[] = ['regular', 'gold', 'diamond'];
-    const currentIndex = types.indexOf(user.memberType);
-    const nextType = types[(currentIndex + 1) % types.length];
+    const nextType = isStoredPaidMember(user.memberType) ? 'regular' : 'gold';
     
     updateUserMemberType(userId, nextType);
     loadData();
-    setMessage({ type: 'success', text: `会员类型已更改为${getMemberTypeBadge(nextType).label}` });
+    setMessage({ type: 'success', text: `用户类型已更改为${getMemberTypeBadge(nextType).label}` });
     setTimeout(() => setMessage(null), 3000);
   };
 
@@ -183,9 +202,8 @@ export function UserManagementPage() {
 
   // 重置密码（模拟）
   const handleResetPassword = (userId: string) => {
-    if (window.confirm('确定要重置该用户的密码吗？新密码将通过邮件发送给用户。')) {
-      // 模拟重置密码逻辑
-      setMessage({ type: 'success', text: '密码重置成功，新密码已发送至用户邮箱' });
+    if (window.confirm('当前后台直改密码功能尚未接入。用户需通过手机或邮箱验证码自行重置密码，是否仅记录此提示？')) {
+      setMessage({ type: 'success', text: '已提示：请用户通过手机或邮箱验证码完成密码重置。' });
       setTimeout(() => setMessage(null), 3000);
     }
   };
@@ -213,7 +231,7 @@ export function UserManagementPage() {
 
   return (
     <div className="space-y-6">
-      {/* 顶层 Tab（会员数据库 / 权限管理） */}
+      {/* 顶层 Tab（用户列表 / 访问规则） */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2 inline-flex gap-2">
         <button
           onClick={() => setTopTab('member-db')}
@@ -221,7 +239,7 @@ export function UserManagementPage() {
             topTab === 'member-db' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
           }`}
         >
-          会员数据库
+          用户列表
         </button>
         <button
           onClick={() => setTopTab('permissions')}
@@ -291,7 +309,7 @@ export function UserManagementPage() {
               </div>
             </div>
             <p className="text-2xl font-bold text-gray-900 mb-1">{stats.membershipRate}%</p>
-            <p className="text-sm text-gray-500">会员转化率</p>
+            <p className="text-sm text-gray-500">付费转化率</p>
           </div>
         </div>
       )}
@@ -316,10 +334,9 @@ export function UserManagementPage() {
               onChange={(e) => setFilterMemberType(e.target.value)}
               className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             >
-              <option value="all">全部会员</option>
+              <option value="all">全部类型</option>
               <option value="regular">普通会员</option>
-              <option value="gold">黄金会员</option>
-              <option value="diamond">钻石会员</option>
+              <option value="paid">付费会员</option>
             </select>
 
             <select
@@ -351,7 +368,7 @@ export function UserManagementPage() {
               <tr>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户信息</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">联系方式</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">会员类型</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户类型</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">活跃度</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">注册时间</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最后登录</th>
@@ -437,7 +454,7 @@ export function UserManagementPage() {
                         <button
                           onClick={() => handleChangeMemberType(user.id)}
                           className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-amber-600"
-                          title="修改会员类型"
+                          title="切换用户类型"
                         >
                           <Crown className="w-4 h-4" />
                         </button>
@@ -511,7 +528,7 @@ export function UserManagementPage() {
                     <p className="text-gray-900">{selectedUser.phone || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 mb-1">会员类型</p>
+                    <p className="text-sm text-gray-500 mb-1">用户类型</p>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1 ${getMemberTypeBadge(selectedUser.memberType).color}`}>
                       {getMemberTypeBadge(selectedUser.memberType).icon}
                       {getMemberTypeBadge(selectedUser.memberType).label}
@@ -698,15 +715,14 @@ export function UserManagementPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">会员类型</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">用户类型</label>
                 <select
-                  value={editingUser.memberType || 'regular'}
-                  onChange={(e) => setEditingUser({ ...editingUser, memberType: e.target.value as any })}
+                  value={editingMembership}
+                  onChange={(e) => setEditingMembership(e.target.value as 'regular' | 'paid')}
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   <option value="regular">普通会员</option>
-                  <option value="gold">黄金会员</option>
-                  <option value="diamond">钻石会员</option>
+                  <option value="paid">付费会员</option>
                 </select>
               </div>
 
@@ -748,24 +764,24 @@ export function UserManagementPage() {
         <div className="space-y-4">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">权限管理</h3>
-            <p className="text-sm text-gray-500 mb-4">这里先完成前端结构调整：后续将接入服务端权限策略与实时判权结果。</p>
+            <p className="text-sm text-gray-500 mb-4">当前先统一为四类后台角色：访客、普通会员、付费会员、管理员。具体细则将在后续接入服务端权限策略后再收紧。</p>
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="text-left text-gray-500 border-b border-gray-100">
                     <th className="py-3 pr-6">资源</th>
-                    <th className="py-3 pr-6">Guest</th>
-                    <th className="py-3 pr-6">User</th>
-                    <th className="py-3 pr-6">Member</th>
-                    <th className="py-3 pr-6">Companion</th>
+                    <th className="py-3 pr-6">访客</th>
+                    <th className="py-3 pr-6">普通会员</th>
+                    <th className="py-3 pr-6">付费会员</th>
+                    <th className="py-3 pr-6">管理员</th>
                   </tr>
                 </thead>
                 <tbody className="text-gray-800">
-                  <tr className="border-b border-gray-50"><td className="py-3 pr-6">article</td><td>预览20%</td><td>预览20%</td><td>全文</td><td>全文</td></tr>
-                  <tr className="border-b border-gray-50"><td className="py-3 pr-6">book</td><td>不可见</td><td>预览20%</td><td>全文</td><td>全文</td></tr>
+                  <tr className="border-b border-gray-50"><td className="py-3 pr-6">article</td><td>预览</td><td>预览</td><td>全文</td><td>全文</td></tr>
+                  <tr className="border-b border-gray-50"><td className="py-3 pr-6">book</td><td>不可见</td><td>部分内容</td><td>全文</td><td>全文</td></tr>
                   <tr className="border-b border-gray-50"><td className="py-3 pr-6">report</td><td>摘要</td><td>摘要</td><td>全文</td><td>全文</td></tr>
                   <tr className="border-b border-gray-50"><td className="py-3 pr-6">download</td><td>不可下载</td><td>不可下载</td><td>允许</td><td>允许</td></tr>
-                  <tr><td className="py-3 pr-6">companion</td><td>不可见</td><td>不可见</td><td>不可见</td><td>仅本机构</td></tr>
+                  <tr><td className="py-3 pr-6">admin-console</td><td>不可见</td><td>不可见</td><td>不可见</td><td>后台访问</td></tr>
                 </tbody>
               </table>
             </div>

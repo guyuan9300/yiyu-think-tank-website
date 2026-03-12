@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { INVITE_CODE_TYPES, type InviteCode, type InviteCodeType } from '../lib/inviteCodeTypes';
 import { createInviteCode, deleteInviteCodeApi, disableInviteCodeApi, fetchInviteCodes } from '../lib/inviteCodeApi';
+import { ADMIN_SURFACE_ROLE_META } from '../lib/adminRoles';
+import { buildAdminUrl, getAdminTabFromSearchParams, normalizeAdminTab, type AdminTab } from '../lib/adminConsole';
 import {
   getReports,
   getInsights,
@@ -49,8 +51,6 @@ import { isValidPdfFile, formatFileSize } from '../lib/pdfUtils';
 import { SettingsPage } from './SettingsPage';
 import { generateCoverImage, getHfModel, getHfToken, setHfModel, setHfToken } from '../lib/hfImageGen';
 import { UserManagementPage } from './UserManagementPage';
-import AdminStrategyCompanionConceptPage from './AdminStrategyCompanionConceptPage';
-import AdminOpsCenterDashboard from './adminOps/AdminOpsCenterDashboard';
 import {
   getClientProjects as getStrategyClients,
   getCourseRecommendations,
@@ -68,44 +68,57 @@ interface AdminDashboardProps {
 
 // 菜单项
 interface MenuItem {
-  id: string;
+  id: AdminTab;
   label: string;
+  description: string;
   icon: React.ReactNode;
   badge?: number;
 }
 
 export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps) {
-  const [activeMenu, setActiveMenu] = useState('dashboard');
+  const [activeMenu, setActiveMenu] = useState<AdminTab>('dashboard');
 
   const isEmbedded = new URLSearchParams(window.location.search).get('embed') === '1';
 
-  // 支持从 URL hash 或临时会话参数直达指定后台模块（用于新 dashboard 跳转旧后台页面）
+  // 支持从正式 query、兼容 legacyTab、hash 或临时会话参数直达指定后台模块
   useEffect(() => {
-    const allowedMenus = new Set([
-      'dashboard', 'insights', 'reports', 'books', 'methodologies',
-      'categories', 'strategy-companion', 'invite-codes', 'comments',
-      'settings', 'user-management', 'membership'
-    ]);
-
     const applyTargetMenu = () => {
-      const fromHash = (window.location.hash || '').replace('#', '').trim();
+      const params = new URLSearchParams(window.location.search);
       const fromSession = (sessionStorage.getItem('yiyu_admin_target_menu') || '').trim();
-      const fromQuery = (new URLSearchParams(window.location.search).get('legacyTab') || '').trim();
-      const target = fromQuery || fromSession || fromHash;
-      if (allowedMenus.has(target)) {
-        setActiveMenu(target);
-      }
+      const fromHash = (window.location.hash || '').replace('#', '').trim();
+      const nextMenu = fromSession
+        ? normalizeAdminTab(fromSession)
+        : fromHash
+          ? normalizeAdminTab(fromHash)
+          : getAdminTabFromSearchParams(params);
+
+      setActiveMenu(nextMenu);
       if (fromSession) {
         sessionStorage.removeItem('yiyu_admin_target_menu');
       }
     };
 
     applyTargetMenu();
+    window.addEventListener('popstate', applyTargetMenu);
     window.addEventListener('hashchange', applyTargetMenu);
-    return () => window.removeEventListener('hashchange', applyTargetMenu);
+    return () => {
+      window.removeEventListener('popstate', applyTargetMenu);
+      window.removeEventListener('hashchange', applyTargetMenu);
+    };
   }, []);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const current = window.location.pathname + window.location.search;
+    const target = `${window.location.pathname}${buildAdminUrl(activeMenu)}`;
+
+    if (current !== target) {
+      window.history.replaceState({}, '', buildAdminUrl(activeMenu));
+    }
+
+    setIsMobileMenuOpen(false);
+  }, [activeMenu]);
   
   // 邀请码管理状态
   const [inviteCodes, setInviteCodes] = useState<InviteCode[]>([]);
@@ -182,7 +195,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       setCategories(getCategories());
       // usedTags removed (topics-only schema)
       setComments(getComments());
-      loadInviteCodes();
     };
     
     loadData();
@@ -217,32 +229,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       document.removeEventListener('paste', handlePaste);
     };
   }, [showReportForm]);
-
-  // 加载战略陪伴客户列表（用于内容同步）
-  useEffect(() => {
-    let canceled = false;
-
-    const load = async () => {
-      try {
-        const clients = await getStrategyClients();
-        if (!canceled) setStrategyClients(clients);
-      } catch (e) {
-        console.warn('加载战略客户失败:', e);
-      }
-    };
-
-    load();
-
-    const onChange = () => load();
-    window.addEventListener('yiyu_data_change', onChange);
-    window.addEventListener('storage', onChange);
-
-    return () => {
-      canceled = true;
-      window.removeEventListener('yiyu_data_change', onChange);
-      window.removeEventListener('storage', onChange);
-    };
-  }, []);
 
   // 打开内容编辑表单时：自动读取已同步的客户勾选
   useEffect(() => {
@@ -337,18 +323,14 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
   // 菜单配置
   const menuItems: MenuItem[] = [
-    { id: 'dashboard', label: '数据概览', icon: <BarChart3 className="w-5 h-5" /> },
-    { id: 'user-management', label: '用户管理', icon: <Users className="w-5 h-5" /> },
-    { id: 'insights', label: '洞察文章', icon: <FileText className="w-5 h-5" /> },
-    { id: 'reports', label: '报告管理', icon: <Folder className="w-5 h-5" /> },
-    { id: 'books', label: '书籍管理', icon: <BookOpen className="w-5 h-5" /> },
-    { id: 'methodologies', label: '益语方法论', icon: <Tag className="w-5 h-5" /> },
-    { id: 'strategy-companion', label: '战略客户', icon: <Target className="w-5 h-5" /> },
-    { id: 'invite-codes', label: '邀请码管理', icon: <Gift className="w-5 h-5" /> },
-    // 会员管理与用户管理为同一页，按需求隐藏入口
-    // { id: 'membership', label: '会员管理', icon: <Crown className="w-5 h-5" /> }, 
-    { id: 'comments', label: '评论管理', icon: <MessageSquare className="w-5 h-5" /> },
-    { id: 'settings', label: '系统设置', icon: <Settings className="w-5 h-5" /> },
+    { id: 'dashboard', label: '后台首页', description: '查看正式后台入口与当前可维护模块。', icon: <BarChart3 className="w-5 h-5" /> },
+    { id: 'user-management', label: '用户管理', description: '查看用户、用户类型与访问规则。', icon: <Users className="w-5 h-5" /> },
+    { id: 'insights', label: '洞察文章', description: '维护前台展示的洞察文章内容。', icon: <FileText className="w-5 h-5" /> },
+    { id: 'reports', label: '报告管理', description: '管理报告上传、状态与前台展示。', icon: <Folder className="w-5 h-5" /> },
+    { id: 'books', label: '书籍管理', description: '维护书籍条目、封面与展示状态。', icon: <BookOpen className="w-5 h-5" /> },
+    { id: 'methodologies', label: '益语方法论', description: '维护方法论内容与推荐展示。', icon: <Tag className="w-5 h-5" /> },
+    { id: 'comments', label: '评论管理', description: '查看评论状态并进行审核与回复。', icon: <MessageSquare className="w-5 h-5" /> },
+    { id: 'settings', label: '系统设置', description: '维护官网基础配置与本机开发辅助项。', icon: <Settings className="w-5 h-5" /> },
   ];
 
   // 统计数据
@@ -909,18 +891,13 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               <RefreshCw className="w-5 h-5 text-gray-600" />
             </button>
             
-            <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <Bell className="w-5 h-5 text-gray-600" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-            </button>
-            
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-medium">
-                管
+                {ADMIN_SURFACE_ROLE_META.admin.shortLabel}
               </div>
               <div className="hidden sm:block">
-                <p className="text-sm font-medium text-gray-900">管理员</p>
-                <p className="text-xs text-gray-500">超级管理员</p>
+                <p className="text-sm font-medium text-gray-900">{ADMIN_SURFACE_ROLE_META.admin.label}</p>
+                <p className="text-xs text-gray-500">当前后台身份</p>
               </div>
             </div>
           </div>
@@ -941,8 +918,50 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 </div>
               )}
 
-              {/* 新静态运营中枢壳（不接数据） */}
-              <AdminOpsCenterDashboard />
+              <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="space-y-3">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-sm font-medium">
+                      <Shield className="w-4 h-4" />
+                      {ADMIN_SURFACE_ROLE_META.admin.label}
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-semibold text-gray-900">正式后台入口已统一</h2>
+                      <p className="text-sm text-gray-600 mt-2 max-w-2xl">
+                        当前后台只保留已经可维护的模块。未完成的会员、邀请码和战略陪伴模块已从正式导航移除，后续将在腾讯云真实架构统一后再开放。
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                    <p className="font-medium text-gray-900">当前地址</p>
+                    <p className="mt-1 font-mono text-xs text-gray-500">{buildAdminUrl(activeMenu)}</p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {menuItems
+                  .filter((item) => item.id !== 'dashboard')
+                  .map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setActiveMenu(item.id)}
+                      className="text-left bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:border-purple-200 hover:shadow-md transition-all"
+                    >
+                      <div className="w-11 h-11 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center">
+                        {item.icon}
+                      </div>
+                      <h3 className="mt-4 text-lg font-semibold text-gray-900">{item.label}</h3>
+                      <p className="mt-2 text-sm text-gray-600 leading-6">{item.description}</p>
+                      <div className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-purple-700">
+                        进入模块
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
+                    </button>
+                  ))}
+              </section>
             </div>
           )}
 
@@ -1708,251 +1727,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
             </div>
           )}
 
-          {/* 分类管理（已停用）：统一标签体系切换中，避免继续产生旧分类 */}
-          {activeMenu === 'categories' && (
-            <div className="space-y-6">
-              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-2xl p-6">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 mt-0.5" />
-                  <div>
-                    <div className="font-semibold">分类管理已停用</div>
-                    <div className="text-sm mt-1">
-                      当前正在切换到统一的四类标签体系（战略 / 业务设计 / 组织 / AI 技术）。
-                      为避免新增旧分类导致数据混乱，分类管理暂时不开放编辑。
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 邀请码管理 */}
-          {activeMenu === 'invite-codes' && (
-            <div className="space-y-6">
-              {message && (
-                <div className={`p-4 rounded-xl flex items-center gap-2 ${
-                  message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-                }`}>
-                  {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
-                  {message.text}
-                </div>
-              )}
-              
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">生成邀请码</h3>
-                
-                <div className="flex flex-wrap gap-4 items-end">
-                  <div className="flex-1 min-w-48">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">邀请码类型</label>
-                    <select 
-                      value={selectedType}
-                      onChange={(e) => {
-                        console.log('选择的类型:', e.target.value);
-                        setSelectedType(e.target.value as InviteCodeType);
-                      }}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
-                    >
-                      {Object.entries(INVITE_CODE_TYPES).map(([key, config]) => (
-                        <option key={key} value={key}>
-                          {config.label} - {config.description}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="w-40">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">最大使用次数</label>
-                    <input
-                      type="number"
-                      value={maxUses}
-                      onChange={(e) => setMaxUses(Math.max(1, parseInt(e.target.value) || 1))}
-                      min={1}
-                      max={100}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                  </div>
-                  <button 
-                    onClick={handleGenerateCode}
-                    disabled={isGenerating}
-                    className="flex items-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        生成中...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-5 h-5" />
-                        生成邀请码
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-gray-100 flex items-center justify-between gap-3">
-                  <h3 className="text-lg font-semibold text-gray-900">邀请码列表</h3>
-                  <div className="flex items-center gap-2 flex-wrap justify-end">
-                    <button
-                      onClick={() => {
-                        const selected = inviteCodes.filter((c) => selectedInviteIds.includes(c.id));
-                        const rows = selected.length > 0 ? selected : inviteCodes;
-                        exportInviteCodesCsv(rows);
-                      }}
-                      className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600"
-                      title="导出为 CSV（Excel 可直接打开）"
-                    >
-                      导出 Excel
-                    </button>
-                    <button
-                      onClick={() => setSelectedInviteIds(inviteCodes.map((c) => c.id))}
-                      className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600"
-                    >
-                      全选
-                    </button>
-                    <button
-                      onClick={() => setSelectedInviteIds([])}
-                      className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600"
-                    >
-                      清空
-                    </button>
-                    <button 
-                      onClick={loadInviteCodes}
-                      className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600"
-                    >
-                      <RefreshCw className="w-5 h-5" />
-                      刷新
-                    </button>
-                  </div>
-                </div>
-                
-                {inviteCodes.length === 0 ? (
-                  <div className="p-12 text-center text-gray-500">
-                    <Gift className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p>暂无邀请码</p>
-                    <p className="text-sm mt-2">点击上方按钮生成新的邀请码</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <input
-                              type="checkbox"
-                              checked={selectedInviteIds.length > 0 && selectedInviteIds.length === inviteCodes.length}
-                              onChange={(e) => {
-                                setSelectedInviteIds(e.target.checked ? inviteCodes.map((c) => c.id) : []);
-                              }}
-                            />
-                          </th>
-                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">邀请码</th>
-                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
-                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">使用情况</th>
-                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">奖励时长</th>
-                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
-                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
-                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {inviteCodes.map((code) => {
-                          const typeInfo = getTypeInfo(code.type as InviteCodeType);
-                          const statusInfo = getStatusInfo(code.status);
-                          
-                          return (
-                            <tr key={code.id} className="hover:bg-gray-50 transition-colors">
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedInviteIds.includes(code.id)}
-                                  onChange={(e) => {
-                                    const on = e.target.checked;
-                                    setSelectedInviteIds((prev) =>
-                                      on ? Array.from(new Set([...prev, code.id])) : prev.filter((x) => x !== code.id)
-                                    );
-                                  }}
-                                />
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center gap-2">
-                                  <code className="font-mono font-medium text-gray-900">{code.code}</code>
-                                  <button 
-                                    className="p-1 hover:bg-gray-100 rounded transition-colors"
-                                    onClick={() => handleCopyCode(code.code)}
-                                    title="复制"
-                                  >
-                                    <Copy className="w-4 h-4 text-gray-400" />
-                                  </button>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${typeInfo.color}`}>
-                                  {typeInfo.label}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                {code.usedCount} / {code.maxUses}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                {typeInfo.days}天
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 w-fit ${statusInfo.color}`}>
-                                  {statusInfo.icon}
-                                  {statusInfo.label}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                {new Date(code.createdAt).toLocaleString('zh-CN')}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center gap-1">
-                                  <button 
-                                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
-                                    onClick={() => handleCopyCode(code.code)}
-                                    title="复制"
-                                  >
-                                    <Copy className="w-4 h-4" />
-                                  </button>
-                                  {code.status === 'valid' && (
-                                    <button 
-                                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-amber-600"
-                                      onClick={() => handleDisableCode(code.code)}
-                                      title="禁用"
-                                    >
-                                      <XCircle className="w-4 h-4" />
-                                    </button>
-                                  )}
-                                  <button 
-                                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-red-500"
-                                    onClick={() => handleDeleteCode(code.code)}
-                                    title="删除"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* 用户管理 */}
           {activeMenu === 'user-management' && (
             <UserManagementPage />
-          )}
-
-          {/* 战略客户管理（已替换为新设计后台页） */}
-          {activeMenu === 'strategy-companion' && (
-            <AdminStrategyCompanionConceptPage showHeader={false} />
           )}
 
           {/* 系统设置 */}
@@ -1961,12 +1738,12 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                 <div className="flex items-start justify-between gap-6">
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900">AI 封面生成设置</h2>
+                    <h2 className="text-lg font-semibold text-gray-900">本机工具 / 开发辅助</h2>
                     <p className="text-sm text-gray-500 mt-1">
-                      使用 Hugging Face Inference API（免费额度）为文章/报告生成封面。Token 仅保存在你的浏览器本地，不会提交到代码仓库。
+                      当前这组设置只作用于你正在使用的浏览器，用于文章/报告封面生成联调，不属于官网正式系统设置。
                     </p>
                     <p className="text-xs text-amber-600 mt-2">
-                      注意：这是演示方案。若需更安全的生产方案，建议后续加服务端代理隐藏 Token。
+                      注意：Token 仅保存在本机浏览器。正式上云方案将在下一阶段统一迁入腾讯云后端。
                     </p>
                   </div>
                 </div>
@@ -2030,14 +1807,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 </div>
               </div>
 
-              <SettingsPage onBack={() => setActiveMenu('dashboard')} />
-            </div>
-          )}
-
-          {/* 会员管理与用户管理同页：保留兼容但隐藏菜单入口 */}
-          {['membership'].includes(activeMenu) && (
-            <div className="h-full">
-              <UserManagementPage />
+              <SettingsPage embedded />
             </div>
           )}
 
@@ -2246,6 +2016,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               coverInputRef={coverInputRef}
               handleCoverButtonClick={handleCoverButtonClick}
               handleCoverImageSelect={handleCoverImageSelect}
+              showProjectSync={false}
               strategyClients={strategyClients}
               syncClientIds={syncClientIds}
               setSyncClientIds={setSyncClientIds}
@@ -2307,6 +2078,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setEditingItem(null);
                 setMessage({ type: 'success', text: '文章已保存，已返回未筛选的文章列表。' });
               }}
+              showProjectSync={false}
               strategyClients={strategyClients}
               syncClientIds={syncClientIds}
               setSyncClientIds={setSyncClientIds}
@@ -2353,6 +2125,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setEditingItem(null);
                 setMessage({ type: 'success', text: '方法论已保存！' });
               }}
+              showProjectSync={false}
               strategyClients={strategyClients}
               syncClientIds={syncClientIds}
               setSyncClientIds={setSyncClientIds}
@@ -2410,6 +2183,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               bookCoverFileInputRef={bookCoverFileInputRef}
               handleBookCoverButtonClick={handleBookCoverButtonClick}
               handleBookCoverImageSelect={handleBookCoverImageSelect}
+              showProjectSync={false}
             />
           )}
 
@@ -2509,6 +2283,7 @@ interface ReportFormModalProps {
   reportFileInputRef: React.RefObject<HTMLInputElement>;
   handleReportFileButtonClick: () => void;
   handleReportFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  showProjectSync: boolean;
   strategyClients: ClientProject[];
   syncClientIds: string[];
   setSyncClientIds: React.Dispatch<React.SetStateAction<string[]>>;
@@ -2536,6 +2311,7 @@ function ReportFormModal({
   reportFileInputRef,
   handleReportFileButtonClick,
   handleReportFileSelect,
+  showProjectSync,
   strategyClients,
   syncClientIds,
   setSyncClientIds,
@@ -2870,7 +2646,7 @@ function ReportFormModal({
             />
           </div>
 
-          {/* 同步到战略陪伴客户 */}
+          {showProjectSync && (
           <div className="bg-green-50 border border-green-200 rounded-xl p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -2897,7 +2673,7 @@ function ReportFormModal({
 
             <div className="mt-3 grid grid-cols-2 gap-2 max-h-40 overflow-auto">
               {strategyClients.length === 0 ? (
-                <div className="text-xs text-gray-500">暂无战略陪伴客户（请先在「战略客户」菜单添加）</div>
+                <div className="text-xs text-gray-500">暂无可同步项目</div>
               ) : (
                 strategyClients.map((c) => {
                   const checked = syncClientIds.includes(c.id);
@@ -2921,6 +2697,7 @@ function ReportFormModal({
               )}
             </div>
           </div>
+          )}
 
           {/* 统一四类标签（多选） */}
           <div>
@@ -3048,6 +2825,7 @@ interface InsightFormModalProps {
   editingItem: InsightArticle | null;
   onClose: () => void;
   onSave: (e: React.FormEvent<HTMLFormElement>) => void;
+  showProjectSync: boolean;
   strategyClients: ClientProject[];
   syncClientIds: string[];
   setSyncClientIds: React.Dispatch<React.SetStateAction<string[]>>;
@@ -3058,6 +2836,7 @@ function InsightFormModal({
   editingItem,
   onClose,
   onSave,
+  showProjectSync,
   strategyClients,
   syncClientIds,
   setSyncClientIds,
@@ -3149,7 +2928,7 @@ function InsightFormModal({
           
 
 
-          {/* 同步到战略陪伴客户 */}
+          {showProjectSync && (
           <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -3176,7 +2955,7 @@ function InsightFormModal({
 
             <div className="mt-3 grid grid-cols-2 gap-2 max-h-40 overflow-auto">
               {strategyClients.length === 0 ? (
-                <div className="text-xs text-gray-500">暂无战略陪伴客户（请先在「战略客户」菜单添加）</div>
+                <div className="text-xs text-gray-500">暂无可同步项目</div>
               ) : (
                 strategyClients.map((c) => {
                   const checked = syncClientIds.includes(c.id);
@@ -3200,6 +2979,7 @@ function InsightFormModal({
               )}
             </div>
           </div>
+          )}
           {/* 阅读时间和修改时间 */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -3379,6 +3159,7 @@ interface BookFormModalProps {
   bookCoverFileInputRef: React.RefObject<HTMLInputElement>;
   handleBookCoverButtonClick: () => void;
   handleBookCoverImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  showProjectSync: boolean;
   strategyClients: ClientProject[];
   syncClientIds: string[];
   setSyncClientIds: React.Dispatch<React.SetStateAction<string[]>>;
@@ -3394,6 +3175,7 @@ function BookFormModal({
   bookCoverFileInputRef,
   handleBookCoverButtonClick,
   handleBookCoverImageSelect,
+  showProjectSync,
   strategyClients,
   syncClientIds,
   setSyncClientIds,
@@ -3608,7 +3390,7 @@ function BookFormModal({
           
 
 
-          {/* 同步到战略陪伴客户 */}
+          {showProjectSync && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -3635,7 +3417,7 @@ function BookFormModal({
 
             <div className="mt-3 grid grid-cols-2 gap-2 max-h-40 overflow-auto">
               {strategyClients.length === 0 ? (
-                <div className="text-xs text-gray-500">暂无战略陪伴客户（请先在「战略客户」菜单添加）</div>
+                <div className="text-xs text-gray-500">暂无可同步项目</div>
               ) : (
                 strategyClients.map((c) => {
                   const checked = syncClientIds.includes(c.id);
@@ -3659,6 +3441,7 @@ function BookFormModal({
               )}
             </div>
           </div>
+          )}
           {/* legacy tags/usedTags removed (topics-only schema) */}
 
           

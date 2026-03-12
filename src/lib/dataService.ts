@@ -1368,7 +1368,7 @@ const initDefaultUsers = (): User[] => [
   {
     id: 'user_002',
     email: 'user@example.com',
-    nickname: '普通会员',
+    nickname: '示例普通用户',
     memberType: 'regular',
     status: 'active',
     createdAt: '2026-01-20T14:20:00.000Z',
@@ -1380,7 +1380,7 @@ const initDefaultUsers = (): User[] => [
   {
     id: 'user_003',
     email: 'diamond@example.com',
-    nickname: '钻石会员',
+    nickname: '示例付费用户',
     memberType: 'diamond',
     status: 'active',
     invitationCode: 'DIAMOND2026',

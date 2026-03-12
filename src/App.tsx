@@ -20,14 +20,29 @@ import { ArticleDetailPage } from './components/ArticleDetailPage';
 import { TopicDetailPage } from './components/TopicDetailPage';
 import { CaseDetailPage } from './components/CaseDetailPage';
 import { AdminDashboard } from './components/AdminDashboard';
+import { buildAdminUrl, getAdminTabFromSearchParams } from './lib/adminConsole';
 
 import UserCenterPage from './components/UserCenterPage';
 import { StrategyCompanionConceptPage } from './components/StrategyCompanionConceptPage';
-import AdminStrategyCompanionConceptPage from './components/AdminStrategyCompanionConceptPage';
 import { ConsultApplyPage } from './components/ConsultApplyPage';
 import { NotFoundPage } from './components/NotFoundPage';
 import { StrategyModuleIntroPage } from './components/StrategyModuleIntroPage';
 import { AboutPremiumPage } from './components/AboutPremiumPage';
+
+function AdminRouteRedirect({ target }: { target: string }) {
+  useEffect(() => {
+    const absoluteTarget = target.startsWith('?') ? `${window.location.pathname}${target}` : target;
+    const current = window.location.pathname + window.location.search;
+
+    if (current !== absoluteTarget) {
+      window.history.replaceState({}, '', target);
+    }
+
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }, [target]);
+
+  return null;
+}
 
 export default function App() {
   // Avoid browser trying to restore scroll position across in-app navigation.
@@ -130,6 +145,10 @@ export default function App() {
       const params = new URLSearchParams(window.location.search);
       const clientId = params.get('clientId');
       return clientId ? `?page=strategy-companion&clientId=${encodeURIComponent(clientId)}` : `?page=strategy-companion`;
+    }
+
+    if (page === 'admin') {
+      return buildAdminUrl(getAdminTabFromSearchParams(new URLSearchParams(window.location.search)));
     }
 
     return `?page=${page}`;
@@ -488,37 +507,6 @@ export default function App() {
     
     return (
       <>
-        <iframe
-          title="益语智库管理后台 · 数据概览"
-          src={`${import.meta.env.BASE_URL}admin.html`}
-          style={{ width: '100%', height: '100vh', border: '0', display: 'block' }}
-        />
-      </>
-    );
-  }
-
-  // Legacy Admin Dashboard（旧后台真实管理页）
-  if (currentPage === 'admin-legacy') {
-    const isAdmin = (localStorage.getItem('yiyu_is_admin') ?? sessionStorage.getItem('yiyu_is_admin')) === 'true';
-
-    if (!isAdmin) {
-      return (
-        <>
-          <LoginPage
-            onNavigate={(page) => handleNavigate(page === 'login' ? 'home' : page as any)}
-            onLoginSuccess={() => setCurrentPage('home')}
-            onAdminLogin={() => {
-              localStorage.setItem('yiyu_is_admin', 'true');
-              sessionStorage.setItem('yiyu_is_admin', 'true');
-              window.location.reload();
-            }}
-          />
-        </>
-      );
-    }
-
-    return (
-      <>
         <AdminDashboard
           onNavigateHome={() => handleNavigate('home')}
           onLogout={() => {
@@ -542,6 +530,11 @@ export default function App() {
         />
       </>
     );
+  }
+
+  // Legacy Admin Dashboard（旧后台真实管理页）
+  if (currentPage === 'admin-legacy') {
+    return <AdminRouteRedirect target={buildAdminUrl(getAdminTabFromSearchParams(new URLSearchParams(window.location.search)))} />;
   }
 
   // User Center Page
@@ -582,31 +575,7 @@ export default function App() {
 
   // Admin Strategy Companion Page - 战略客户后台管理页面
   if (currentPage === 'admin-strategy-companion') {
-    // 检查是否已登录管理员
-    const isAdmin = (localStorage.getItem('yiyu_is_admin') ?? sessionStorage.getItem('yiyu_is_admin')) === 'true';
-    
-    if (!isAdmin) {
-      // 未登录，重定向到登录页
-      return (
-        <>
-          <LoginPage 
-            onNavigate={(page) => handleNavigate(page === 'login' ? 'home' : page as any)}
-            onLoginSuccess={() => setCurrentPage('home')}
-            onAdminLogin={() => {
-              localStorage.setItem('yiyu_is_admin', 'true');
-              sessionStorage.setItem('yiyu_is_admin', 'true');
-              window.location.reload();
-            }}
-          />
-        </>
-      );
-    }
-    
-    return (
-      <>
-        <AdminStrategyCompanionConceptPage />
-      </>
-    );
+    return <AdminRouteRedirect target={buildAdminUrl()} />;
   }
 
   return (

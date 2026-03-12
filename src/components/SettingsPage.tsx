@@ -20,10 +20,10 @@ import {
 } from '../lib/dataService';
 
 interface SettingsPageProps {
-  onBack?: () => void;
+  embedded?: boolean;
 }
 
-export function SettingsPage({ onBack }: SettingsPageProps) {
+export function SettingsPage({ embedded = false }: SettingsPageProps) {
   const [activeTab, setActiveTab] = useState<'basic' | 'seo' | 'features' | 'about' | 'data'>('basic');
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -265,31 +265,25 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
     { id: 'data', label: '数据管理', icon: <Database className="w-5 h-5" /> },
   ] as const;
 
+  const messageWrapperClass = embedded ? '' : 'max-w-7xl mx-auto px-6 pt-6';
+  const mainWrapperClass = embedded ? '' : 'max-w-7xl mx-auto px-6 py-6';
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 头部 */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+    <div className={embedded ? 'space-y-6' : 'min-h-screen bg-gray-50'}>
+      {!embedded && (
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-6 py-4">
             <div className="flex items-center gap-3">
               <Settings className="w-6 h-6 text-purple-600" />
               <h1 className="text-2xl font-bold text-gray-900">系统设置</h1>
             </div>
-            {onBack && (
-              <button
-                onClick={onBack}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
-              >
-                返回后台
-              </button>
-            )}
           </div>
         </div>
-      </div>
+      )}
 
       {/* 消息提示 */}
       {message && (
-        <div className="max-w-7xl mx-auto px-6 pt-6">
+        <div className={messageWrapperClass}>
           <div className={`p-4 rounded-xl flex items-center gap-2 ${
             message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
           }`}>
@@ -306,7 +300,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
       )}
 
       {/* 主内容区 */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className={mainWrapperClass}>
         <div className="grid grid-cols-12 gap-6">
           {/* 左侧导航 */}
           <div className="col-span-12 lg:col-span-3">
