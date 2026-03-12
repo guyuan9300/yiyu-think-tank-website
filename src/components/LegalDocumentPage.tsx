@@ -126,9 +126,6 @@ const privacySections = [
 export function LegalDocumentPage({ documentType, onNavigate }: LegalDocumentPageProps) {
   const isTerms = documentType === 'terms';
   const title = isTerms ? '服务条款' : '隐私政策';
-  const subtitle = isTerms
-    ? '用于说明益语智库官网服务使用规则、账号责任与会员权益边界。'
-    : '用于说明益语智库如何收集、使用、保存和保护你的个人信息。';
   const sections = isTerms ? termsSections : privacySections;
   const Icon = isTerms ? FileText : ShieldCheck;
 
@@ -160,7 +157,6 @@ export function LegalDocumentPage({ documentType, onNavigate }: LegalDocumentPag
             <div>
               <p className="text-sm font-medium text-primary">益语智库官网</p>
               <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">{subtitle}</p>
               <p className="mt-3 text-xs text-muted-foreground/80">最新更新：2026年3月12日</p>
             </div>
           </div>

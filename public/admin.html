@@ -1433,7 +1433,7 @@
       </nav>
 
       <div class="sidebar__bottom">
-        <div class="sidebar__hint">提示：卡片点击会模拟"跳转到筛选视图"。后续接路由即可。</div>
+        <div class="sidebar__hint">点击卡片可进入对应模块</div>
       </div>
     </aside>
 
@@ -1574,10 +1574,10 @@
               <div class="section-head">
                 <div class="section-title">
                   <h2>运营总览</h2>
-                  <p>从后台现有模块里提取可解释、可点击、可追溯的数据卡片</p>
+                  <p>汇总后台关键数据，支持直接进入对应模块</p>
                 </div>
                 <div class="section-actions">
-                  <span class="pill" title="概览口径">优先展示当前后台已经能解释的数据</span>
+                  <span class="pill" title="概览口径">核心指标</span>
                 </div>
               </div>
 
@@ -1610,7 +1610,7 @@
                     <a class="quiet-card" href="#" data-jump="users" aria-label="注册用户总数">
                       <div class="kpi-title"><span>注册用户总数</span><span class="dropdown__meta">Users</span></div>
                       <div class="kpi-value" id="metricUsersTotal">—</div>
-                      <div class="kpi-foot"><span class="delta" id="metricUsersHint">当前后台可识别账号</span></div>
+                      <div class="kpi-foot"><span class="delta" id="metricUsersHint">当前账号总量</span></div>
                     </a>
                     <a class="quiet-card" href="#" data-jump="billing" aria-label="付费会员">
                       <div class="kpi-title"><span>付费会员</span><span class="dropdown__meta">Paid</span></div>
@@ -1659,7 +1659,7 @@
               <div class="section-head">
                 <div class="section-title">
                   <h2>模块速览</h2>
-                  <p>把具体模块里最有价值的数字拉到首页，不再做脱离数据的概念漏斗</p>
+                  <p>汇总内容、用户与运营数据，便于快速进入处理</p>
                 </div>
                 <div class="section-actions">
                   <button class="btn btn--sm btn--outline" data-jump="users">进入用户与付费</button>
@@ -1686,10 +1686,10 @@
                       </div>
                       <div class="subcard-body">
                         <div class="list" role="list" aria-label="内容库速览">
-                          <div class="list-row" role="listitem"><div class="left"><b>洞察文章</b><span>当前前台文章库的真实发布量</span></div><div class="right"><span class="count" id="overviewInsights">—</span><button class="btn btn--sm btn--outline" data-jump="content/articles">查看</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>洞察文章</b><span>前台文章库的发布数量</span></div><div class="right"><span class="count" id="overviewInsights">—</span><button class="btn btn--sm btn--outline" data-jump="content/articles">查看</button></div></div>
                           <div class="list-row" role="listitem"><div class="left"><b>报告管理</b><span>报告库发布量与待整理草稿</span></div><div class="right"><span class="count" id="overviewReports">—</span><button class="btn btn--sm btn--outline" data-jump="content/reports">查看</button></div></div>
                           <div class="list-row" role="listitem"><div class="left"><b>书籍管理</b><span>书籍库上架数量与草稿</span></div><div class="right"><span class="count" id="overviewBooks">—</span><button class="btn btn--sm btn--outline" data-jump="content/books">查看</button></div></div>
-                          <div class="list-row" role="listitem"><div class="left"><b>益语方法论</b><span>当前方法论库的发布状态</span></div><div class="right"><span class="count" id="overviewMethods">—</span><button class="btn btn--sm btn--outline" data-jump="content/methods">查看</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>益语方法论</b><span>方法论库的发布状态</span></div><div class="right"><span class="count" id="overviewMethods">—</span><button class="btn btn--sm btn--outline" data-jump="content/methods">查看</button></div></div>
                         </div>
                       </div>
                     </div>
@@ -1704,8 +1704,8 @@
                       </div>
                       <div class="subcard-body">
                         <div class="list" role="list" aria-label="用户与运营数据">
-                          <div class="list-row" role="listitem"><div class="left"><b>普通会员</b><span>当前已注册但未转为付费的用户</span></div><div class="right"><span class="count" id="overviewRegularUsers">—</span><button class="btn btn--sm btn--outline" data-jump="users">查看</button></div></div>
-                          <div class="list-row" role="listitem"><div class="left"><b>付费会员</b><span>当前已开通付费资格的用户</span></div><div class="right"><span class="count" id="overviewPaidUsers">—</span><button class="btn btn--sm btn--outline" data-jump="billing">查看</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>普通会员</b><span>已注册但未转为付费的用户</span></div><div class="right"><span class="count" id="overviewRegularUsers">—</span><button class="btn btn--sm btn--outline" data-jump="users">查看</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>付费会员</b><span>已开通付费资格的用户</span></div><div class="right"><span class="count" id="overviewPaidUsers">—</span><button class="btn btn--sm btn--outline" data-jump="billing">查看</button></div></div>
                           <div class="list-row" role="listitem"><div class="left"><b>评论总数</b><span>前台评论池中已记录的评论</span></div><div class="right"><span class="count" id="overviewComments">—</span><button class="btn btn--sm btn--outline" data-jump="comments">查看</button></div></div>
                           <div class="list-row" role="listitem"><div class="left"><b>邀请码使用情况</b><span>显示有效、已兑换与已禁用的邀请码数量</span></div><div class="right"><span class="count" id="overviewInvites">—</span><button class="btn btn--sm btn--outline" data-jump="invites">查看</button></div></div>
                         </div>
@@ -1723,7 +1723,7 @@
               <div class="section-head">
                 <div class="section-title">
                   <h2>待处理事项</h2>
-                  <p>优先把评论、草稿、邀请码和付费续期这类真问题拉到首页</p>
+                  <p>优先查看需要尽快处理的运营事项</p>
                 </div>
                 <div class="section-actions">
                   <button class="btn btn--sm btn--outline" data-jump="comments">进入评论管理</button>
@@ -1766,9 +1766,9 @@
                       </div>
                       <div class="subcard-body">
                         <div class="list" role="list" aria-label="内容与分发数据">
-                          <div class="list-row" role="listitem"><div class="left"><b>首页展示内容</b><span>当前被标记为首页展示的总内容量</span></div><div class="right"><span class="count" id="opsHomeFeatured">—</span><button class="btn btn--sm btn--outline" data-jump="content/articles">查看</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>首页展示内容</b><span>被标记为首页展示的总内容量</span></div><div class="right"><span class="count" id="opsHomeFeatured">—</span><button class="btn btn--sm btn--outline" data-jump="content/articles">查看</button></div></div>
                           <div class="list-row" role="listitem"><div class="left"><b>最近 30 天新增内容</b><span>以创建时间统计的新增总量</span></div><div class="right"><span class="count" id="opsRecentContent">—</span><button class="btn btn--sm btn--outline" data-jump="content/reports">查看</button></div></div>
-                          <div class="list-row" role="listitem"><div class="left"><b>最近 7 天活跃登录</b><span>后台当前可识别账号中的活跃登录数</span></div><div class="right"><span class="count" id="opsRecentLogin">—</span><button class="btn btn--sm btn--outline" data-jump="users">查看</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>最近 7 天活跃登录</b><span>最近 7 天内有登录记录的账号数</span></div><div class="right"><span class="count" id="opsRecentLogin">—</span><button class="btn btn--sm btn--outline" data-jump="users">查看</button></div></div>
                           <div class="list-row" role="listitem"><div class="left"><b>邀请码已兑换</b><span>已被使用或已兑换完成的邀请码</span></div><div class="right"><span class="count" id="opsRedeemedInvites">—</span><button class="btn btn--sm btn--outline" data-jump="invites">查看</button></div></div>
                         </div>
                       </div>
@@ -1785,7 +1785,7 @@
               <div class="section-head">
                 <div class="section-title">
                   <h2>快速操作与热门内容</h2>
-                  <p>首页既能快速进模块，也能看到当前最有代表性的内容</p>
+                  <p>常用操作与重点内容集中展示</p>
                 </div>
                 <div class="section-actions">
                   <button class="btn btn--sm btn--outline" data-jump="content/articles">进入内容管理</button>
@@ -1822,7 +1822,7 @@
                         <div class="feed" id="topContentFeed">
                           <div class="feed-item">
                             <div class="line1"><b>暂无内容数据</b><time>—</time></div>
-                            <div class="line2">接入内容快照后会显示阅读量靠前的内容</div>
+                            <div class="line2">暂时没有可展示的热门内容</div>
                           </div>
                         </div>
                       </div>
@@ -1998,20 +1998,20 @@
 
     function setAdminView(view) {
       const map = {
-        dashboard: { title: '数据概览', sub: '把后台里最有价值、最可解释的数据拉到首页' },
-        'content/articles': { title: '洞察文章', sub: '新后台模块：洞察文章管理（承接旧后台）' },
-        'content/reports': { title: '报告管理', sub: '新后台模块：报告管理（承接旧后台）' },
-        'content/books': { title: '书籍管理', sub: '新后台模块：书籍管理（承接旧后台）' },
-        'content/methods': { title: '益语方法论', sub: '新后台模块：益语方法论管理（承接旧后台）' },
-        'users': { title: '用户管理', sub: '原有用户管理页面（承接旧后台）' },
-        'billing': { title: '付费管理', sub: '当前阶段只管理付费资格，订单待支付接入后补充' },
-        'invites': { title: '邀请码管理', sub: '当前邀请码生成、禁用与使用情况管理页' },
-        'companion': { title: '战略陪伴', sub: '新后台模块：战略陪伴（承接旧后台）' },
-        'comments': { title: '评论管理', sub: '原有评论管理页面（承接旧后台）' },
-        'settings': { title: '系统设置', sub: '原有系统设置页面（承接旧后台）' },
-        'audit': { title: '权限&审计', sub: '原有权限审计页面（承接旧后台）' },
+        dashboard: { title: '数据概览', sub: '查看后台关键数据与常用入口' },
+        'content/articles': { title: '洞察文章', sub: '维护洞察文章内容与展示状态' },
+        'content/reports': { title: '报告管理', sub: '维护报告内容、附件与展示状态' },
+        'content/books': { title: '书籍管理', sub: '维护书籍条目、封面与展示状态' },
+        'content/methods': { title: '益语方法论', sub: '维护方法论内容与推荐展示' },
+        'users': { title: '用户管理', sub: '查看用户账号、状态与访问规则' },
+        'billing': { title: '付费管理', sub: '查看付费资格、来源与续期状态' },
+        'invites': { title: '邀请码管理', sub: '查看邀请码生成、状态与使用情况' },
+        'companion': { title: '战略陪伴', sub: '查看战略陪伴客户与项目入口' },
+        'comments': { title: '评论管理', sub: '查看评论状态并进行审核与回复' },
+        'settings': { title: '系统设置', sub: '维护官网配置与后台辅助项' },
+        'audit': { title: '权限&审计', sub: '查看权限说明与管理记录' },
       };
-      const meta = map[view] || { title: '数据概览', sub: '后台概览首页' };
+      const meta = map[view] || { title: '数据概览', sub: '后台首页' };
       if (pageTitleEl) pageTitleEl.textContent = meta.title;
 
       const legacyTabMap = {
@@ -2247,7 +2247,7 @@
         feed.innerHTML = `
           <div class="feed-item">
             <div class="line1"><b>暂无内容数据</b><time>—</time></div>
-            <div class="line2">接入内容快照后会显示阅读量靠前的内容</div>
+            <div class="line2">暂时没有可展示的热门内容</div>
           </div>
         `;
         return;

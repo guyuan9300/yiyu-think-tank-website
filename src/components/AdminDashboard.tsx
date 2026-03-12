@@ -341,9 +341,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const menuItems: MenuItem[] = [
     { id: 'dashboard', label: '后台首页', description: '查看正式后台入口与当前可维护模块。', icon: <BarChart3 className="w-5 h-5" /> },
     { id: 'user-management', label: '用户管理', description: '查看用户、用户类型与访问规则。', icon: <Users className="w-5 h-5" /> },
-    { id: 'membership', label: '付费管理', description: '查看付费资格、续期状态与后续支付接入情况。', icon: <Crown className="w-5 h-5" /> },
+    { id: 'membership', label: '付费管理', description: '查看付费资格、来源与续期状态。', icon: <Crown className="w-5 h-5" /> },
     { id: 'invite-codes', label: '邀请码管理', description: '查看邀请码状态与开通来源。', icon: <Gift className="w-5 h-5" /> },
-    { id: 'strategy-companion', label: '战略陪伴', description: '查看当前战略陪伴概念页与后续实装入口。', icon: <Target className="w-5 h-5" /> },
+    { id: 'strategy-companion', label: '战略陪伴', description: '查看战略陪伴客户与项目入口。', icon: <Target className="w-5 h-5" /> },
     { id: 'insights', label: '洞察文章', description: '维护前台展示的洞察文章内容。', icon: <FileText className="w-5 h-5" /> },
     { id: 'reports', label: '报告管理', description: '管理报告上传、状态与前台展示。', icon: <Folder className="w-5 h-5" /> },
     { id: 'books', label: '书籍管理', description: '维护书籍条目、封面与展示状态。', icon: <BookOpen className="w-5 h-5" /> },
@@ -947,7 +947,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                     <div>
                       <h2 className="text-2xl font-semibold text-gray-900">后台模块继续围绕统一入口推进</h2>
                       <p className="text-sm text-gray-600 mt-2 max-w-2xl">
-                        当前页面用于直达各后台模块。第二阶段会逐步把付费管理、邀请码管理和评论审核从“占位页”推进到真实可运营页。
+                        这里集中展示后台常用入口，方便快速进入各管理模块。
                       </p>
                     </div>
                   </div>
@@ -2023,7 +2023,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                         setMessage({ type: 'success', text: 'HF 模型已保存到本机浏览器' });
                       }}
                     />
-                    <p className="text-xs text-gray-500 mt-2">默认：SDXL base。后续我们可换成更快/更写实的模型。</p>
+                    <p className="text-xs text-gray-500 mt-2">留空时使用默认模型。</p>
                   </div>
                 </div>
 
@@ -2966,7 +2966,7 @@ function ReportFormModal({
                 </label>
               ))}
             </div>
-            <p className="text-xs text-gray-500 mt-2">旧“标签/分类”字段正在停用切换中，后续会移除。</p>
+            <p className="text-xs text-gray-500 mt-2">勾选主题后将用于内容归类与筛选。</p>
           </div>
 
           {/* legacy tags/usedTags removed (topics-only schema) */}

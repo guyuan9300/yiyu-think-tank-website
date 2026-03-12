@@ -194,9 +194,9 @@ export function PaymentManagementPage() {
               <Crown className="w-4 h-4" />
               付费管理
             </div>
-            <h2 className="mt-4 text-2xl font-semibold text-gray-900">当前阶段只管理付费资格，不承载真实订单</h2>
+            <h2 className="mt-4 text-2xl font-semibold text-gray-900">付费会员与资格状态</h2>
             <p className="mt-2 text-sm text-gray-600 max-w-3xl leading-6">
-              这里先聚焦谁已经开通付费、通过什么方式开通、是否即将到期，以及是否需要人工续期。真实支付订单会在支付链路接入腾讯云后的下一步再纳入。
+              查看当前已开通付费的账号、开通来源、到期时间和续期跟进情况。
             </p>
           </div>
           <button
@@ -233,7 +233,7 @@ export function PaymentManagementPage() {
         <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
           <p className="text-sm text-gray-500">邀请码开通</p>
           <p className="mt-3 text-3xl font-semibold text-purple-600">{stats.invite}</p>
-          <p className="mt-2 text-xs text-gray-500">后续会与邀请码管理打通</p>
+          <p className="mt-2 text-xs text-gray-500">通过邀请码开通的付费账号</p>
         </div>
         <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
           <p className="text-sm text-gray-500">已禁用付费账号</p>
