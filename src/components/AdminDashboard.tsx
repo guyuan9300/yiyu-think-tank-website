@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
-  Users, Settings, BarChart3, MessageSquare, LogOut,
+  Users, BarChart3, MessageSquare, LogOut,
   Menu, X, ChevronRight, Database, Shield, Bell, Gift, Crown,
   Search, Filter, MoreVertical, Edit, Trash2, Copy, CheckCircle, 
   XCircle, Plus, Download, RefreshCw, AlertTriangle, Eye, EyeOff,
@@ -51,7 +51,6 @@ import {
 const RESOURCE_TOPICS: ResourceTopic[] = ['战略', '业务设计', '组织', 'AI 技术'];
 
 import { isValidPdfFile, formatFileSize } from '../lib/pdfUtils';
-import { SettingsPage } from './SettingsPage';
 import { generateCoverImage, getHfModel, getHfToken, setHfModel, setHfToken } from '../lib/hfImageGen';
 import { UserManagementPage } from './UserManagementPage';
 import { PaymentManagementPage } from './PaymentManagementPage';
@@ -360,16 +359,15 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   // 菜单配置
   const menuItems: MenuItem[] = [
     { id: 'dashboard', label: '后台首页', description: '查看正式后台入口与当前可维护模块。', icon: <BarChart3 className="w-5 h-5" /> },
+    { id: 'insights', label: '洞察文章', description: '维护前台展示的洞察文章内容。', icon: <FileText className="w-5 h-5" /> },
+    { id: 'reports', label: '前沿报告', description: '管理报告上传、状态与前台展示。', icon: <Folder className="w-5 h-5" /> },
+    { id: 'books', label: '推荐书籍', description: '维护书籍条目、封面与展示状态。', icon: <BookOpen className="w-5 h-5" /> },
+    { id: 'methodologies', label: '益语方法论', description: '维护方法论内容与推荐展示。', icon: <Tag className="w-5 h-5" /> },
+    { id: 'comments', label: '评论管理', description: '查看评论状态并进行审核与回复。', icon: <MessageSquare className="w-5 h-5" /> },
+    { id: 'strategy-companion', label: '战略陪伴', description: '查看战略陪伴客户与项目入口。', icon: <Target className="w-5 h-5" /> },
     { id: 'user-management', label: '用户管理', description: '查看用户、用户类型与访问规则。', icon: <Users className="w-5 h-5" /> },
     { id: 'membership', label: '付费管理', description: '查看付费资格、来源与续期状态。', icon: <Crown className="w-5 h-5" /> },
     { id: 'invite-codes', label: '邀请码管理', description: '查看邀请码状态与开通来源。', icon: <Gift className="w-5 h-5" /> },
-    { id: 'strategy-companion', label: '战略陪伴', description: '查看战略陪伴客户与项目入口。', icon: <Target className="w-5 h-5" /> },
-    { id: 'insights', label: '洞察文章', description: '维护前台展示的洞察文章内容。', icon: <FileText className="w-5 h-5" /> },
-    { id: 'reports', label: '报告管理', description: '管理报告上传、状态与前台展示。', icon: <Folder className="w-5 h-5" /> },
-    { id: 'books', label: '书籍管理', description: '维护书籍条目、封面与展示状态。', icon: <BookOpen className="w-5 h-5" /> },
-    { id: 'methodologies', label: '益语方法论', description: '维护方法论内容与推荐展示。', icon: <Tag className="w-5 h-5" /> },
-    { id: 'comments', label: '评论管理', description: '查看评论状态并进行审核与回复。', icon: <MessageSquare className="w-5 h-5" /> },
-    { id: 'settings', label: '系统设置', description: '维护官网基础配置与本机开发辅助项。', icon: <Settings className="w-5 h-5" /> },
   ];
 
   // 统计数据
@@ -851,9 +849,11 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-700">
           {sidebarOpen && (
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                <span className="text-white font-bold text-lg">益</span>
-              </div>
+              <img
+                src={`${import.meta.env.BASE_URL}yiyu-avatar.png`}
+                alt="益语智库"
+                className="w-10 h-10 rounded-xl object-cover border border-white/10"
+              />
               <span className="font-semibold">益语智库管理后台</span>
             </div>
           )}
@@ -929,16 +929,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
             </h1>
           </div>
           
-          <div className="flex items-center gap-4">
-            <button
-              onClick={onLogout}
-              className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-800 hover:bg-gray-50 transition-colors"
-              title="退出登录"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="text-sm font-medium">退出登录</span>
-            </button>
-
+          <div className="flex items-center gap-3">
             <button
               onClick={onNavigateHome}
               className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white hover:bg-gray-800 transition-colors"
@@ -949,22 +940,13 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
             </button>
 
             <button 
-              onClick={refreshAllData}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              title="刷新数据"
+              onClick={onLogout}
+              className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-800 hover:bg-gray-50 transition-colors"
+              title="退出登录"
             >
-              <RefreshCw className="w-5 h-5 text-gray-600" />
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm font-medium">退出登录</span>
             </button>
-            
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-medium">
-                {ADMIN_SURFACE_ROLE_META.admin.shortLabel}
-              </div>
-              <div className="hidden sm:block">
-                <p className="text-sm font-medium text-gray-900">{ADMIN_SURFACE_ROLE_META.admin.label}</p>
-                <p className="text-xs text-gray-500">当前后台身份</p>
-              </div>
-            </div>
           </div>
         </header>
         )}
@@ -2025,85 +2007,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
             <AdminStrategyCompanionConceptPage showHeader={false} />
           )}
 
-          {/* 系统设置 */}
-          {activeMenu === 'settings' && (
-            <div className="space-y-6">
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <div className="flex items-start justify-between gap-6">
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900">本机工具 / 开发辅助</h2>
-                    <p className="text-sm text-gray-500 mt-1">
-                      当前这组设置只作用于你正在使用的浏览器，用于文章/报告封面生成联调，不属于官网正式系统设置。
-                    </p>
-                    <p className="text-xs text-amber-600 mt-2">
-                      注意：Token 仅保存在本机浏览器。正式上云方案将在下一阶段统一迁入腾讯云后端。
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Hugging Face Token</label>
-                    <input
-                      type="password"
-                      defaultValue={getHfToken()}
-                      placeholder="hf_..."
-                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      onBlur={(e) => {
-                        setHfToken(e.target.value);
-                        setMessage({ type: 'success', text: 'HF Token 已保存到本机浏览器' });
-                      }}
-                    />
-                    <p className="text-xs text-gray-500 mt-2">粘贴后点击页面空白处即可保存（onBlur）。</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">生成模型（可选）</label>
-                    <input
-                      type="text"
-                      defaultValue={getHfModel()}
-                      placeholder="stabilityai/stable-diffusion-xl-base-1.0"
-                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      onBlur={(e) => {
-                        setHfModel(e.target.value);
-                        setMessage({ type: 'success', text: 'HF 模型已保存到本机浏览器' });
-                      }}
-                    />
-                    <p className="text-xs text-gray-500 mt-2">留空时使用默认模型。</p>
-                  </div>
-                </div>
-
-                <div className="mt-6 flex items-center gap-3">
-                  <button
-                    className="px-4 py-2 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors text-sm font-medium"
-                    onClick={async () => {
-                      try {
-                        const dataUrl = await generateCoverImage({
-                          title: '测试封面：战略前哨周报',
-                          excerpt: '用于验证 Hugging Face 生图链路与封面比例适配。',
-                          tags: ['战略', '洞察', '周报'],
-                        });
-                        // quick preview
-                        const w = window.open('about:blank');
-                        if (w) {
-                          w.document.write(`<img src="${dataUrl}" style="max-width:100%" />`);
-                        }
-                        setMessage({ type: 'success', text: '测试生成成功（已打开预览窗口）' });
-                      } catch (e: any) {
-                        setMessage({ type: 'error', text: '测试生成失败：' + (e?.message || String(e)) });
-                      }
-                    }}
-                  >
-                    测试生成
-                  </button>
-                  <span className="text-xs text-gray-500">如果失败，通常是 Token/额度/模型不可用。</span>
-                </div>
-              </div>
-
-              <SettingsPage embedded />
-            </div>
-          )}
-
           {/* 评论管理 */}
           {activeMenu === 'comments' && (
             <div className="space-y-6">
@@ -2706,7 +2609,7 @@ function ReportFormModal({
                     setCoverImage(dataUrl);
                     alert('✅ AI 封面已生成并填充（请记得保存报告）');
                   } catch (e: any) {
-                    alert('❌ AI 生成封面失败：' + (e?.message || String(e)) + '\n\n请先到「系统设置」填写 Hugging Face Token。');
+                    alert('❌ AI 生成封面失败：' + (e?.message || String(e)) + '\n\n请先在当前浏览器补充 Hugging Face Token。');
                   }
                 }}
               >

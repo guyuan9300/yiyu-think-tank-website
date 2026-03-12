@@ -498,7 +498,7 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
                           });
                           persistUserPatch({ avatarUrl: dataUrl });
                         } catch (e: any) {
-                          alert('AI 生成头像失败：' + (e?.message || String(e)) + '\n\n提示：请先在后台「系统设置」里填写 Hugging Face Token。');
+                          alert('AI 生成头像失败：' + (e?.message || String(e)) + '\n\n提示：请先在当前浏览器补充 Hugging Face Token。');
                         } finally {
                           setIsGeneratingAvatar(false);
                         }

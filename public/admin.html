@@ -151,12 +151,15 @@
       width: 36px;
       height: 36px;
       border-radius: 12px;
-      display: grid;
-      place-items: center;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      background: linear-gradient(135deg, var(--accent-soft), var(--accent-soft-2));
+      overflow: hidden;
       border: 1px solid rgba(91,108,255,0.18);
+      background: #fff;
+    }
+    .brand__mark img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
     .brand__text{
       display: grid;
@@ -1333,10 +1336,12 @@
     <aside class="sidebar" aria-label="侧边导航">
       <div class="sidebar__top">
         <div class="brand" title="益语智库管理后台">
-          <div class="brand__mark" aria-hidden="true">益语</div>
+          <div class="brand__mark" aria-hidden="true">
+            <img src="./yiyu-avatar.png" alt="" />
+          </div>
           <div class="brand__text">
             <div class="brand__name">益语智库</div>
-            <div class="brand__sub">Admin Console</div>
+            <div class="brand__sub">管理后台</div>
           </div>
         </div>
 
@@ -1359,24 +1364,24 @@
         </div>
 
         <div class="nav__group">
-          <div class="nav__group-title">内容</div>
+          <div class="nav__group-title">内容展示</div>
           <a class="nav__item" href="#" data-jump="content/articles" title="洞察文章">
             <span class="nav__icon" aria-hidden="true">
               <svg class="icon" viewBox="0 0 24 24"><path d="M7 3h10v18H7z"></path><path d="M9 7h6M9 11h6M9 15h4"></path></svg>
             </span>
             <span class="nav__label">洞察文章</span>
           </a>
-          <a class="nav__item" href="#" data-jump="content/reports" title="报告管理">
+          <a class="nav__item" href="#" data-jump="content/reports" title="前沿报告">
             <span class="nav__icon" aria-hidden="true">
               <svg class="icon" viewBox="0 0 24 24"><path d="M6 4h9l3 3v13H6z"></path><path d="M15 4v3h3"></path></svg>
             </span>
-            <span class="nav__label">报告管理</span>
+            <span class="nav__label">前沿报告</span>
           </a>
-          <a class="nav__item" href="#" data-jump="content/books" title="书籍管理">
+          <a class="nav__item" href="#" data-jump="content/books" title="推荐书籍">
             <span class="nav__icon" aria-hidden="true">
               <svg class="icon" viewBox="0 0 24 24"><path d="M4 6h7v15H4zM13 6h7v15h-7z"></path><path d="M11 21c1.2-1 2.8-1 4 0"></path></svg>
             </span>
-            <span class="nav__label">书籍管理</span>
+            <span class="nav__label">推荐书籍</span>
           </a>
           <a class="nav__item" href="#" data-jump="content/methods" title="益语方法论">
             <span class="nav__icon" aria-hidden="true">
@@ -1384,16 +1389,22 @@
             </span>
             <span class="nav__label">益语方法论</span>
           </a>
+          <a class="nav__item" href="#" data-jump="comments" title="评论管理">
+            <span class="nav__icon" aria-hidden="true">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path></svg>
+            </span>
+            <span class="nav__label">评论管理</span>
+          </a>
+        </div>
+
+        <div class="nav__group">
+          <div class="nav__group-title">会员服务</div>
           <a class="nav__item" href="#" data-jump="companion" title="战略陪伴">
             <span class="nav__icon" aria-hidden="true">
               <svg class="icon" viewBox="0 0 24 24"><path d="M7 7h10v10H7z"></path><path d="M4 12h3M17 12h3M12 4v3M12 17v3"></path></svg>
             </span>
             <span class="nav__label">战略陪伴</span>
           </a>
-        </div>
-
-        <div class="nav__group">
-          <div class="nav__group-title">用户与会员</div>
           <a class="nav__item" href="#" data-jump="users" title="用户管理">
             <span class="nav__icon" aria-hidden="true">
               <svg class="icon" viewBox="0 0 24 24"><path d="M20 21a7 7 0 0 0-14 0"></path><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path></svg>
@@ -1412,23 +1423,6 @@
             </span>
             <span class="nav__label">邀请码管理</span>
           </a>
-          <a class="nav__item" href="#" data-jump="comments" title="评论管理">
-            <span class="nav__icon" aria-hidden="true">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path></svg>
-            </span>
-            <span class="nav__label">评论管理</span>
-          </a>
-        </div>
-
-        <div class="nav__group">
-          <div class="nav__group-title">系统</div>
-          <a class="nav__item" href="#" data-jump="settings" title="系统设置">
-            <span class="nav__icon" aria-hidden="true">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"></path><path d="M19.4 15a7.9 7.9 0 0 0 .1-2l2-1.5-2-3.5-2.4.8a8 8 0 0 0-1.7-1l-.4-2.5H10l-.4 2.5a8 8 0 0 0-1.7 1l-2.4-.8-2 3.5 2 1.5a7.9 7.9 0 0 0 .1 2l-2 1.5 2 3.5 2.4-.8a8 8 0 0 0 1.7 1l.4 2.5h4.1l.4-2.5a8 8 0 0 0 1.7-1l2.4.8 2-3.5z"></path></svg>
-            </span>
-            <span class="nav__label">系统设置</span>
-          </a>
-
         </div>
       </nav>
 
@@ -1453,114 +1447,8 @@
           </div>
 
           <div class="cmd-right">
-            <!-- Date Range -->
-            <div class="control">
-              <button class="btn" id="rangeBtn" aria-haspopup="menu" aria-expanded="false" title="选择日期范围">
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v3M17 3v3"></path><path d="M4 7h16v14H4z"></path><path d="M4 11h16"></path></svg>
-                <span id="rangeLabel">近 7 天</span>
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"></path></svg>
-              </button>
-
-              <div class="dropdown" id="rangeMenu" role="menu" aria-label="日期范围菜单">
-                <button class="dropdown__item" data-range="today" role="menuitem">
-                  <span>今天</span><span class="dropdown__meta">Today</span>
-                </button>
-                <button class="dropdown__item" data-range="7d" role="menuitem">
-                  <span>近 7 天</span><span class="dropdown__meta">Last 7 days</span>
-                </button>
-                <button class="dropdown__item" data-range="30d" role="menuitem">
-                  <span>近 30 天</span><span class="dropdown__meta">Last 30 days</span>
-                </button>
-                <div class="dropdown__divider"></div>
-                <button class="dropdown__item" id="customRangeToggle" role="menuitem">
-                  <span>自定义…</span><span class="dropdown__meta">Custom</span>
-                </button>
-                <div class="dropdown__divider"></div>
-
-                <div id="customRangePanel" style="padding: 8px 8px 10px; display:none;">
-                  <div style="display:grid; gap:8px;">
-                    <label style="display:grid; gap:6px; font-size:12.5px; color: var(--muted);">
-                      开始日期
-                      <input id="customStart" type="date" style="height:36px; border-radius:12px; border:1px solid var(--border); padding:0 10px; outline:none;" />
-                    </label>
-                    <label style="display:grid; gap:6px; font-size:12.5px; color: var(--muted);">
-                      结束日期
-                      <input id="customEnd" type="date" style="height:36px; border-radius:12px; border:1px solid var(--border); padding:0 10px; outline:none;" />
-                    </label>
-                    <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:2px;">
-                      <button class="btn btn--sm btn--ghost" id="customCancel">取消</button>
-                      <button class="btn btn--sm btn--primary" id="customApply">应用</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Search -->
-            <div class="search" id="searchBox" role="search">
-              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 21l-4.3-4.3"></path><path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z"></path></svg>
-              <input id="globalSearch" type="search" placeholder="搜索用户 / 内容 / 付费 / 邀请码…" aria-label="全局搜索" />
-              <button class="search__clear" id="searchClear" title="清空" aria-label="清空搜索">✕</button>
-            </div>
-
-            <!-- + New -->
-            <div class="control">
-              <button class="btn btn--primary" id="newBtn" aria-haspopup="menu" aria-expanded="false">
-                <span style="font-weight:650;">+ 新建</span>
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"></path></svg>
-              </button>
-
-              <div class="dropdown" id="newMenu" role="menu" aria-label="新建菜单">
-                <button class="dropdown__item" role="menuitem" data-jump="content/articles/new">
-                  <span>新建文章</span><span class="dropdown__meta">Article</span>
-                </button>
-                <button class="dropdown__item" role="menuitem" data-jump="content/reports/upload">
-                  <span>上传报告</span><span class="dropdown__meta">Report</span>
-                </button>
-                <button class="dropdown__item" role="menuitem" data-jump="content/books/new">
-                  <span>上架书籍</span><span class="dropdown__meta">Book</span>
-                </button>
-                <button class="dropdown__item" role="menuitem" data-jump="invites/new">
-                  <span>生成邀请码</span><span class="dropdown__meta">Invite</span>
-                </button>
-                <div class="dropdown__divider"></div>
-                <button class="dropdown__item" role="menuitem" data-jump="companion/clients/new">
-                  <span>创建战略客户</span><span class="dropdown__meta">Optional</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Icons + Avatar -->
-            <div class="icon-group">
-              <button class="btn btn--icon" id="refreshBtn" title="刷新数据" aria-label="刷新">
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"></path><path d="M21 3v7h-7"></path></svg>
-              </button>
-
-              <button class="btn btn--icon" id="notifBtn" title="通知" aria-label="通知" style="position:relative;">
-                <span class="badge-dot" aria-hidden="true"></span>
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 7h18s-3 0-3-7"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>
-              </button>
-
-              <div class="control">
-                <button class="avatar-btn" id="userBtn" aria-haspopup="menu" aria-expanded="false" title="管理员菜单">
-                  <span class="avatar" aria-hidden="true"></span>
-                </button>
-                <div class="dropdown" id="userMenu" role="menu" aria-label="管理员菜单">
-                  <button class="dropdown__item" role="menuitem" data-jump="profile">
-                    <span>个人资料</span><span class="dropdown__meta">Profile</span>
-                  </button>
-                  <button class="dropdown__item" role="menuitem" data-jump="settings">
-                    <span>系统设置</span><span class="dropdown__meta">Settings</span>
-                  </button>
-                  <div class="dropdown__divider"></div>
-                  <button class="dropdown__item" role="menuitem" data-jump="logout">
-                    <span>退出登录</span><span class="dropdown__meta">Logout</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
             <button class="btn btn--ghost" id="homeBtn" title="回到前台首页">回到首页</button>
+            <button class="btn btn--primary" id="logoutBtn" title="退出登录">退出登录</button>
           </div>
         </div>
       </header>
@@ -1687,8 +1575,8 @@
                       <div class="subcard-body">
                         <div class="list" role="list" aria-label="内容库速览">
                           <div class="list-row" role="listitem"><div class="left"><b>洞察文章</b><span>前台文章库的发布数量</span></div><div class="right"><span class="count" id="overviewInsights">—</span><button class="btn btn--sm btn--outline" data-jump="content/articles">查看</button></div></div>
-                          <div class="list-row" role="listitem"><div class="left"><b>报告管理</b><span>报告库发布量与待整理草稿</span></div><div class="right"><span class="count" id="overviewReports">—</span><button class="btn btn--sm btn--outline" data-jump="content/reports">查看</button></div></div>
-                          <div class="list-row" role="listitem"><div class="left"><b>书籍管理</b><span>书籍库上架数量与草稿</span></div><div class="right"><span class="count" id="overviewBooks">—</span><button class="btn btn--sm btn--outline" data-jump="content/books">查看</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>前沿报告</b><span>报告库发布量与待整理草稿</span></div><div class="right"><span class="count" id="overviewReports">—</span><button class="btn btn--sm btn--outline" data-jump="content/reports">查看</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>推荐书籍</b><span>书籍库上架数量与草稿</span></div><div class="right"><span class="count" id="overviewBooks">—</span><button class="btn btn--sm btn--outline" data-jump="content/books">查看</button></div></div>
                           <div class="list-row" role="listitem"><div class="left"><b>益语方法论</b><span>方法论库的发布状态</span></div><div class="right"><span class="count" id="overviewMethods">—</span><button class="btn btn--sm btn--outline" data-jump="content/methods">查看</button></div></div>
                         </div>
                       </div>
@@ -1811,7 +1699,7 @@
                           <button class="quick" data-jump="invites"><div class="top"><div class="icon"><svg class="icon" viewBox="0 0 24 24"><path d="M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-7"></path><path d="M2 7h20v5H2z"></path><path d="M12 22V7"></path><path d="M12 7H7.5a2.5 2.5 0 1 1 0-5c3.5 0 4.5 5 4.5 5Z"></path><path d="M12 7h4.5a2.5 2.5 0 1 0 0-5c-3.5 0-4.5 5-4.5 5Z"></path></svg></div><b>邀请码管理</b></div><span>生成、禁用和查看使用情况</span></button>
                           <button class="quick" data-jump="comments"><div class="top"><div class="icon"><svg class="icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div><b>评论管理</b></div><span>优先审核和回复前台评论</span></button>
                           <button class="quick" data-jump="content/articles"><div class="top"><div class="icon"><svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg></div><b>洞察文章</b></div><span>维护文章标题、摘要与发布状态</span></button>
-                          <button class="quick" data-jump="content/reports"><div class="top"><div class="icon"><svg class="icon" viewBox="0 0 24 24"><path d="M3 4h18v4H3z"></path><path d="M6 8v12h12V8"></path><path d="M10 12h4"></path></svg></div><b>报告管理</b></div><span>维护报告库与附件状态</span></button>
+                          <button class="quick" data-jump="content/reports"><div class="top"><div class="icon"><svg class="icon" viewBox="0 0 24 24"><path d="M3 4h18v4H3z"></path><path d="M6 8v12h12V8"></path><path d="M10 12h4"></path></svg></div><b>前沿报告</b></div><span>维护报告库与附件状态</span></button>
                         </div>
                       </div>
                     </div>
@@ -1901,26 +1789,6 @@
       });
     }
 
-    setupDropdown('rangeBtn', 'rangeMenu');
-    setupDropdown('newBtn', 'newMenu');
-    setupDropdown('userBtn', 'userMenu');
-
-    // Custom range toggle
-    $('#customRangeToggle').addEventListener('click', () => {
-      const panel = $('#customRangePanel');
-      panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-    });
-
-    // Range label update
-    $$('[data-range]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const label = btn.querySelector('span').textContent;
-        $('#rangeLabel').textContent = label;
-        $('#rangeMenu').classList.remove('is-open');
-        $('#rangeBtn').setAttribute('aria-expanded', 'false');
-      });
-    });
-
     // =========================
     // Sidebar toggle
     // =========================
@@ -1934,23 +1802,6 @@
     });
     $('#backdrop').addEventListener('click', () => {
       document.body.classList.remove('is-mobile-nav-open');
-    });
-
-    // =========================
-    // Search
-    // =========================
-    const searchInput = $('#globalSearch');
-    const searchBox = $('#searchBox');
-    const searchClear = $('#searchClear');
-
-    searchInput.addEventListener('input', () => {
-      searchBox.classList.toggle('has-value', searchInput.value.length > 0);
-    });
-
-    searchClear.addEventListener('click', () => {
-      searchInput.value = '';
-      searchBox.classList.remove('has-value');
-      searchInput.focus();
     });
 
     // =========================
@@ -2000,16 +1851,14 @@
       const map = {
         dashboard: { title: '数据概览', sub: '查看后台关键数据与常用入口' },
         'content/articles': { title: '洞察文章', sub: '维护洞察文章内容与展示状态' },
-        'content/reports': { title: '报告管理', sub: '维护报告内容、附件与展示状态' },
-        'content/books': { title: '书籍管理', sub: '维护书籍条目、封面与展示状态' },
+        'content/reports': { title: '前沿报告', sub: '维护报告内容、附件与展示状态' },
+        'content/books': { title: '推荐书籍', sub: '维护书籍条目、封面与展示状态' },
         'content/methods': { title: '益语方法论', sub: '维护方法论内容与推荐展示' },
         'users': { title: '用户管理', sub: '查看用户账号、状态与访问规则' },
         'billing': { title: '付费管理', sub: '查看付费资格、来源与续期状态' },
         'invites': { title: '邀请码管理', sub: '查看邀请码生成、状态与使用情况' },
         'companion': { title: '战略陪伴', sub: '查看战略陪伴客户与项目入口' },
         'comments': { title: '评论管理', sub: '查看评论状态并进行审核与回复' },
-        'settings': { title: '系统设置', sub: '维护官网配置与后台辅助项' },
-        'audit': { title: '权限&审计', sub: '查看权限说明与管理记录' },
       };
       const meta = map[view] || { title: '数据概览', sub: '后台首页' };
       if (pageTitleEl) pageTitleEl.textContent = meta.title;
@@ -2023,8 +1872,6 @@
         'invites': 'invite-codes',
         'companion': 'strategy-companion',
         'comments': 'comments',
-        'settings': 'settings',
-        'audit': 'settings',
         'users': 'user-management',
       };
       const basePath = window.location.pathname.replace(/admin\.html$/, '');
@@ -2084,7 +1931,7 @@
         return;
       }
 
-      if (normalizedTarget === 'content/articles' || normalizedTarget === 'content/reports' || normalizedTarget === 'content/books' || normalizedTarget === 'content/methods' || normalizedTarget === 'billing' || normalizedTarget === 'invites' || normalizedTarget === 'companion' || normalizedTarget === 'comments' || normalizedTarget === 'users' || normalizedTarget === 'settings' || normalizedTarget === 'audit') {
+      if (normalizedTarget === 'content/articles' || normalizedTarget === 'content/reports' || normalizedTarget === 'content/books' || normalizedTarget === 'content/methods' || normalizedTarget === 'billing' || normalizedTarget === 'invites' || normalizedTarget === 'companion' || normalizedTarget === 'comments' || normalizedTarget === 'users') {
         setAdminView(normalizedTarget);
         return;
       }
@@ -2094,24 +1941,17 @@
         return;
       }
 
-      if (normalizedTarget === 'profile' || normalizedTarget === 'settings/data') {
-        showToast(`跳转到: ${normalizedTarget}`);
-        return;
-      }
-
       const labels = {
         'dashboard': '数据概览',
         'content/articles': '洞察文章',
-        'content/reports': '报告管理',
-        'content/books': '书籍管理',
+        'content/reports': '前沿报告',
+        'content/books': '推荐书籍',
         'content/methods': '益语方法论',
         'companion': '战略陪伴',
         'users': '用户管理',
         'billing': '付费管理',
         'invites': '邀请码管理',
         'comments': '评论管理',
-        'settings': '系统设置',
-        'audit': '权限&审计'
       };
 
       const label = labels[normalizedTarget] || rawTarget;
@@ -2134,8 +1974,9 @@
       });
     });
 
-    // Home button (no data-jump attr)
+    // Home / logout buttons
     $('#homeBtn')?.addEventListener('click', () => handleJump('homeBtn'));
+    $('#logoutBtn')?.addEventListener('click', () => handleJump('logout'));
 
     const tabToViewMap = {
       insights: 'content/articles',
@@ -2147,7 +1988,6 @@
       'invite-codes': 'invites',
       'strategy-companion': 'companion',
       comments: 'comments',
-      settings: 'settings',
     };
 
     const params = new URLSearchParams(window.location.search);
@@ -2339,8 +2179,8 @@
 
         const topContent = [
           ...withType(insights, '洞察文章', 'content/articles'),
-          ...withType(reports, '报告管理', 'content/reports'),
-          ...withType(books, '书籍管理', 'content/books'),
+          ...withType(reports, '前沿报告', 'content/reports'),
+          ...withType(books, '推荐书籍', 'content/books'),
           ...withType(methodologies, '益语方法论', 'content/methods'),
         ].sort((a, b) => b.views - a.views);
         renderTopContent(topContent);
@@ -2352,10 +2192,6 @@
       }
     }
 
-    $('#refreshBtn').addEventListener('click', async () => {
-      await loadDashboardData();
-      showToast('数据已刷新');
-    });
     $('#retryDashboard')?.addEventListener('click', () => void loadDashboardData());
     window.addEventListener('storage', () => void loadDashboardData());
     window.addEventListener('focus', () => void loadDashboardData());

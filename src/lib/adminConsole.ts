@@ -1,15 +1,14 @@
 export const ADMIN_VISIBLE_TABS = [
   'dashboard',
-  'user-management',
-  'membership',
-  'invite-codes',
-  'strategy-companion',
   'insights',
   'reports',
   'books',
   'methodologies',
   'comments',
-  'settings',
+  'strategy-companion',
+  'user-management',
+  'membership',
+  'invite-codes',
 ] as const;
 
 export type AdminTab = (typeof ADMIN_VISIBLE_TABS)[number];
@@ -24,7 +23,6 @@ export const LEGACY_ADMIN_TAB_MAP: Record<string, AdminTab> = {
   'invite-codes': 'invite-codes',
   'strategy-companion': 'strategy-companion',
   comments: 'comments',
-  settings: 'settings',
 };
 
 const ADMIN_TAB_SET = new Set<string>(ADMIN_VISIBLE_TABS);
