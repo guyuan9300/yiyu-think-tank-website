@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { Header } from './Header';
-import { AUTH_TOKEN_KEY, getSavedUserRaw, saveUserRaw, USER_KEY } from '../lib/storage';
+import { AUTH_TOKEN_KEY, clearUser, getSavedUserRaw, saveUserRaw, USER_KEY } from '../lib/storage';
 import {
   bindCurrentContact,
   fetchCurrentProfile,
   normalizeLoginUser,
   resetPasswordByCode,
   sendVerifyCode,
+  unbindCurrentContact,
   updateCurrentProfile,
 } from '../lib/authApi';
 import {
@@ -47,6 +48,11 @@ type ContactChannel = 'phone' | 'email';
 
 type BindingFormState = {
   target: string;
+  code: string;
+  currentPassword: string;
+};
+
+type UnbindFormState = {
   code: string;
   currentPassword: string;
 };
@@ -94,6 +100,16 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
   });
   const [sendingBindingCode, setSendingBindingCode] = useState<ContactChannel | null>(null);
   const [submittingBinding, setSubmittingBinding] = useState<ContactChannel | null>(null);
+  const [unbindForms, setUnbindForms] = useState<Record<ContactChannel, UnbindFormState>>({
+    email: { code: '', currentPassword: '' },
+    phone: { code: '', currentPassword: '' },
+  });
+  const [unbindMessage, setUnbindMessage] = useState<Record<ContactChannel, { type: 'success' | 'error'; text: string } | null>>({
+    email: null,
+    phone: null,
+  });
+  const [sendingUnbindCode, setSendingUnbindCode] = useState<ContactChannel | null>(null);
+  const [submittingUnbind, setSubmittingUnbind] = useState<ContactChannel | null>(null);
 
   const [showSavedPassword, setShowSavedPassword] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
@@ -203,6 +219,10 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
         currentPassword: '',
       },
     });
+    setUnbindForms({
+      email: { code: '', currentPassword: '' },
+      phone: { code: '', currentPassword: '' },
+    });
   }, [user?.email, user?.phone]);
 
   const handleAvatarChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -273,12 +293,26 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
     return /^1[3-9]\d{9}$/.test(value);
   };
 
+  const getCurrentBoundTarget = (channel: ContactChannel) => {
+    if (!user) return '';
+    if (channel === 'email') {
+      return hasEmailBinding(user.email) ? String(user.email || '') : '';
+    }
+    return user.phone || '';
+  };
+
+  const isLastBinding = (channel: ContactChannel) => {
+    if (!user) return false;
+    const emailBound = hasEmailBinding(user.email);
+    const phoneBound = hasPhoneBinding(user.phone);
+    if (channel === 'email') return emailBound && !phoneBound;
+    return phoneBound && !emailBound;
+  };
+
   const handleSendBindingCode = async (channel: ContactChannel) => {
     if (!user) return;
     const target = normalizeBindingTarget(channel, bindingForms[channel].target);
-    const currentTarget = channel === 'email'
-      ? (hasEmailBinding(user.email) ? String(user.email || '') : '')
-      : (user.phone || '');
+    const currentTarget = getCurrentBoundTarget(channel);
 
     if (!validateBindingTarget(channel, target)) {
       setBindingMessage((prev) => ({
@@ -323,6 +357,147 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
       [channel]: {
         type: 'success',
         text: channel === 'email' ? '验证码已发送到新邮箱。' : '验证码已发送到新手机号。',
+      },
+    }));
+  };
+
+  const updateUnbindForm = (channel: ContactChannel, field: keyof UnbindFormState, value: string) => {
+    setUnbindForms((prev) => ({
+      ...prev,
+      [channel]: {
+        ...prev[channel],
+        [field]: value,
+      },
+    }));
+    setUnbindMessage((prev) => ({ ...prev, [channel]: null }));
+  };
+
+  const handleSendUnbindCode = async (channel: ContactChannel) => {
+    const target = getCurrentBoundTarget(channel);
+    if (!target) {
+      setUnbindMessage((prev) => ({
+        ...prev,
+        [channel]: {
+          type: 'error',
+          text: channel === 'email' ? '当前账号未绑定邮箱。' : '当前账号未绑定手机号。',
+        },
+      }));
+      return;
+    }
+
+    setSendingUnbindCode(channel);
+    setUnbindMessage((prev) => ({ ...prev, [channel]: null }));
+    const result = await sendVerifyCode(channel, target, 'unbind', { withAuth: true });
+    setSendingUnbindCode(null);
+
+    if (!result.ok) {
+      setUnbindMessage((prev) => ({
+        ...prev,
+        [channel]: {
+          type: 'error',
+          text: result.error || '验证码发送失败，请稍后重试。',
+        },
+      }));
+      return;
+    }
+
+    setUnbindMessage((prev) => ({
+      ...prev,
+      [channel]: {
+        type: 'success',
+        text: channel === 'email' ? '验证码已发送到当前绑定邮箱。' : '验证码已发送到当前绑定手机号。',
+      },
+    }));
+  };
+
+  const handleSubmitUnbind = async (channel: ContactChannel) => {
+    const target = getCurrentBoundTarget(channel);
+    if (!target) {
+      setUnbindMessage((prev) => ({
+        ...prev,
+        [channel]: {
+          type: 'error',
+          text: channel === 'email' ? '当前账号未绑定邮箱。' : '当前账号未绑定手机号。',
+        },
+      }));
+      return;
+    }
+
+    const form = unbindForms[channel];
+    if (!form.code.trim()) {
+      setUnbindMessage((prev) => ({
+        ...prev,
+        [channel]: { type: 'error', text: '请输入验证码。' },
+      }));
+      return;
+    }
+    if (!form.currentPassword) {
+      setUnbindMessage((prev) => ({
+        ...prev,
+        [channel]: { type: 'error', text: '请输入当前密码。' },
+      }));
+      return;
+    }
+
+    const lastBinding = isLastBinding(channel);
+    const confirmed = window.confirm(
+      lastBinding
+        ? '当前这是账号最后一种登录方式。解除后，账号将视为注销，系统会立即退出登录，之后无法再通过手机号或邮箱登录，也无法找回密码。确定继续吗？'
+        : '解除绑定后，你仍可通过另一种已绑定方式登录和找回密码。确定继续吗？'
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setSubmittingUnbind(channel);
+    setUnbindMessage((prev) => ({ ...prev, [channel]: null }));
+    const result = await unbindCurrentContact({
+      channel,
+      code: form.code.trim(),
+      currentPassword: form.currentPassword,
+    });
+    setSubmittingUnbind(null);
+
+    if (!result.ok) {
+      setUnbindMessage((prev) => ({
+        ...prev,
+        [channel]: {
+          type: 'error',
+          text: result.error || '解除绑定失败，请稍后重试。',
+        },
+      }));
+      return;
+    }
+
+    if (result.data?.deactivated) {
+      clearUser();
+      window.dispatchEvent(new Event('yiyu_user_updated'));
+      window.alert('最后一种绑定方式已解除，账号已注销。');
+      onNavigate?.('home');
+      return;
+    }
+
+    if (!result.data?.user || !user) {
+      setUnbindMessage((prev) => ({
+        ...prev,
+        [channel]: {
+          type: 'error',
+          text: '解除绑定后未能刷新账号信息，请重新登录后再试。',
+        },
+      }));
+      return;
+    }
+
+    const nextUser = {
+      ...normalizeLoginUser(result.data.user),
+      plainPassword: user.plainPassword,
+    } as LocalUser;
+    persistUser(nextUser);
+    setUnbindMessage((prev) => ({
+      ...prev,
+      [channel]: {
+        type: 'success',
+        text: result.message || (channel === 'email' ? '邮箱已解除绑定。' : '手机号已解除绑定。'),
       },
     }));
   };
@@ -619,7 +794,9 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
                 </div>
                 <div className="rounded-2xl border border-border/40 bg-white/80 p-4">
                   <div className="text-xs text-muted-foreground/70 mb-2">账号状态</div>
-                  <div className="font-medium">{user.status === 'disabled' ? '已停用' : '正常'}</div>
+                  <div className="font-medium">
+                    {user.status === 'disabled' ? '已停用' : user.status === 'deactivated' ? '已注销' : '正常'}
+                  </div>
                 </div>
               </div>
 
@@ -762,6 +939,10 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
               </div>
             </div>
 
+            <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50/80 px-4 py-3 text-sm text-amber-800">
+              账号至少需要保留一种已绑定的手机号或邮箱，才能继续登录或找回密码。若解除最后一种绑定方式，账号将视为注销并立即退出登录。
+            </div>
+
             <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-6">
               {([
                 {
@@ -851,6 +1032,69 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
                           : 'bg-red-50 text-red-700 border border-red-100'
                       }`}>
                         {bindingMessage[item.channel]?.text}
+                      </div>
+                    )}
+
+                    {item.statusLabel === '已绑定' && (
+                      <div className="rounded-2xl border border-red-100 bg-red-50/70 p-4">
+                        <div className="text-sm font-medium text-red-700">
+                          {isLastBinding(item.channel) ? '解除绑定并注销账号' : `解除${item.channel === 'email' ? '邮箱' : '手机号'}绑定`}
+                        </div>
+                        <p className="mt-1 text-xs text-red-600/90">
+                          {isLastBinding(item.channel)
+                            ? '当前这是账号最后一种登录方式。解除后，账号会被注销，系统会立即退出登录。'
+                            : '解除后，你仍可通过另一种已绑定方式登录和找回密码。'}
+                        </p>
+
+                        <div className="mt-3 space-y-3">
+                          <div className="flex gap-3">
+                            <input
+                              value={unbindForms[item.channel].code}
+                              onChange={(e) => updateUnbindForm(item.channel, 'code', e.target.value)}
+                              placeholder="解绑验证码"
+                              className="flex-1 px-3 py-2 rounded-xl border border-red-100 bg-white focus:outline-none focus:ring-2 focus:ring-red-100"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSendUnbindCode(item.channel)}
+                              disabled={sendingUnbindCode === item.channel}
+                              className="px-4 py-2 rounded-xl border border-red-200 hover:bg-red-100 text-sm text-red-700 disabled:opacity-60"
+                            >
+                              {sendingUnbindCode === item.channel ? '发送中…' : '发送验证码'}
+                            </button>
+                          </div>
+
+                          <input
+                            type="password"
+                            value={unbindForms[item.channel].currentPassword}
+                            onChange={(e) => updateUnbindForm(item.channel, 'currentPassword', e.target.value)}
+                            placeholder="请输入当前密码"
+                            className="w-full px-3 py-2 rounded-xl border border-red-100 bg-white focus:outline-none focus:ring-2 focus:ring-red-100"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() => handleSubmitUnbind(item.channel)}
+                            disabled={submittingUnbind === item.channel}
+                            className="w-full px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 text-sm disabled:opacity-60"
+                          >
+                            {submittingUnbind === item.channel
+                              ? '提交中…'
+                              : isLastBinding(item.channel)
+                                ? '解除绑定并注销账号'
+                                : `解除${item.channel === 'email' ? '邮箱' : '手机号'}绑定`}
+                          </button>
+
+                          {unbindMessage[item.channel] && (
+                            <div className={`text-xs px-3 py-2 rounded-xl ${
+                              unbindMessage[item.channel]?.type === 'success'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                                : 'bg-red-100 text-red-700 border border-red-200'
+                            }`}>
+                              {unbindMessage[item.channel]?.text}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

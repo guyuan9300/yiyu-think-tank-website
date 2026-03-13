@@ -1,7 +1,7 @@
 import { authRequest, type ApiResult } from './authHttp';
 
 export type AuthChannel = 'phone' | 'email';
-export type AuthScene = 'register' | 'reset' | 'bind';
+export type AuthScene = 'register' | 'reset' | 'bind' | 'unbind';
 
 export interface AuthApiUser {
   id: string;
@@ -10,7 +10,7 @@ export interface AuthApiUser {
   nickname?: string;
   avatarUrl?: string;
   memberType?: 'regular' | 'gold' | 'diamond';
-  status?: 'active' | 'disabled';
+  status?: 'active' | 'disabled' | 'deactivated';
   adminRole?: 'admin';
   invitationCode?: string;
   invitedBy?: string;
@@ -102,6 +102,17 @@ export async function bindCurrentContact(params: {
   currentPassword: string;
 }) {
   return authRequest<{ user: AuthApiUser }>('/bind-contact', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  }, { withAuth: true });
+}
+
+export async function unbindCurrentContact(params: {
+  channel: AuthChannel;
+  code: string;
+  currentPassword: string;
+}) {
+  return authRequest<{ user?: AuthApiUser; deactivated?: boolean }>('/unbind-contact', {
     method: 'POST',
     body: JSON.stringify(params),
   }, { withAuth: true });

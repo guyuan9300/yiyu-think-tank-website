@@ -119,7 +119,7 @@ function normalizeChannel(input) {
 }
 
 function normalizeScene(input) {
-  return input === 'register' || input === 'reset' || input === 'bind' ? input : null;
+  return input === 'register' || input === 'reset' || input === 'bind' || input === 'unbind' ? input : null;
 }
 
 function normalizeTarget(channel, target) {
@@ -143,7 +143,7 @@ function normalizeCommentStatus(input) {
 }
 
 function normalizeUserStatus(input) {
-  return input === 'active' || input === 'disabled' ? input : null;
+  return input === 'active' || input === 'disabled' || input === 'deactivated' ? input : null;
 }
 
 function normalizePaidSource(input) {
@@ -394,6 +394,7 @@ async function ensureSchema() {
       ADD COLUMN IF NOT EXISTS paid_note TEXT,
       ADD COLUMN IF NOT EXISTS admin_role TEXT,
       ADD COLUMN IF NOT EXISTS avatar TEXT,
+      ADD COLUMN IF NOT EXISTS deactivated_at TIMESTAMPTZ,
       ADD COLUMN IF NOT EXISTS login_count INT NOT NULL DEFAULT 0,
       ADD COLUMN IF NOT EXISTS comments_count INT NOT NULL DEFAULT 0,
       ADD COLUMN IF NOT EXISTS favorites_count INT NOT NULL DEFAULT 0;
@@ -412,7 +413,7 @@ async function sendSmsCode(phone, scene, code) {
   if (!client) throw new Error('短信服务未配置');
   const templateId = scene === 'register'
     ? process.env.TC_SMS_TEMPLATE_ID_REGISTER
-    : scene === 'bind'
+    : (scene === 'bind' || scene === 'unbind')
       ? (process.env.TC_SMS_TEMPLATE_ID_BIND || process.env.TC_SMS_TEMPLATE_ID_RESET)
     : process.env.TC_SMS_TEMPLATE_ID_RESET;
   const signName = process.env.TC_SMS_SIGN;
@@ -430,8 +431,20 @@ async function sendSmsCode(phone, scene, code) {
 async function sendEmailCode(email, scene, code) {
   const from = process.env.AUTH_EMAIL_FROM;
   if (!from) throw new Error('未配置发件人');
-  const subject = scene === 'register' ? '注册验证码' : scene === 'bind' ? '绑定验证验证码' : '找回密码验证码';
-  const action = scene === 'register' ? '注册' : scene === 'bind' ? '绑定账号' : '重置密码';
+  const subject = scene === 'register'
+    ? '注册验证码'
+    : scene === 'bind'
+      ? '绑定验证验证码'
+      : scene === 'unbind'
+        ? '解绑验证验证码'
+        : '找回密码验证码';
+  const action = scene === 'register'
+    ? '注册'
+    : scene === 'bind'
+      ? '绑定账号'
+      : scene === 'unbind'
+        ? '解绑账号'
+        : '重置密码';
   const minutes = Math.ceil(CODE_TTL_SECONDS / 60);
   const text = `您的${action}验证码是 ${code}，${minutes} 分钟内有效。如非本人操作请忽略。`;
   const html = `<p>您的${action}验证码是 <b style="font-size:20px">${code}</b>，${minutes} 分钟内有效。</p><p>如非本人操作请忽略。</p>`;
@@ -450,7 +463,7 @@ async function sendEmailCode(email, scene, code) {
   const templateId = Number(
     scene === 'register'
       ? process.env.TC_SES_TEMPLATE_ID_REGISTER || 0
-      : scene === 'bind'
+      : (scene === 'bind' || scene === 'unbind')
         ? process.env.TC_SES_TEMPLATE_ID_BIND || process.env.TC_SES_TEMPLATE_ID_RESET || 0
       : process.env.TC_SES_TEMPLATE_ID_RESET || 0
   );
@@ -571,6 +584,11 @@ async function requireSession(req) {
 async function revokeSessionByToken(token) {
   if (!token) return;
   await pool.query('UPDATE auth_sessions SET revoked_at = now() WHERE token_hash = $1 AND revoked_at IS NULL', [hashToken(token)]);
+}
+
+async function revokeSessionsByUserId(userId) {
+  if (!userId) return;
+  await pool.query('UPDATE auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL', [userId]);
 }
 
 async function requireAdmin(req) {
@@ -881,6 +899,18 @@ const server = http.createServer(async (req, res) => {
           return json(res, 400, { ok: false, error: '该联系方式已被其他账号使用' });
         }
       }
+      if (scene === 'unbind') {
+        const sessionRow = await requireSession(req);
+        const currentTarget = channel === 'phone'
+          ? (sessionRow.phone || null)
+          : (isPhoneLocalEmail(sessionRow.email) ? null : sessionRow.email || null);
+        if (!currentTarget) {
+          return json(res, 400, { ok: false, error: channel === 'phone' ? '当前账号未绑定手机号' : '当前账号未绑定邮箱' });
+        }
+        if (currentTarget !== target) {
+          return json(res, 400, { ok: false, error: '请对当前已绑定的联系方式进行解绑验证' });
+        }
+      }
       const code = await createCode(pool, channel, target, scene, req.socket.remoteAddress || '');
       if (channel === 'phone') await sendSmsCode(target, scene, code);
       else await sendEmailCode(target, scene, code);
@@ -1103,6 +1133,92 @@ const server = http.createServer(async (req, res) => {
           ok: true,
           message: currentTarget ? '绑定方式已更新' : '绑定成功',
           data: { user: mapUser(updated) },
+        });
+      } catch (error) {
+        await client.query('ROLLBACK');
+        return json(res, 400, { ok: false, error: error instanceof Error ? error.message : String(error) });
+      } finally {
+        client.release();
+      }
+    }
+
+    if (url.pathname === '/api/auth/unbind-contact' && req.method === 'POST') {
+      const sessionRow = await requireSession(req);
+      const channel = normalizeChannel(body.channel);
+      const code = String(body.code || '').trim();
+      const currentPassword = String(body.currentPassword || '');
+
+      if (!channel || !code || !currentPassword) {
+        return json(res, 400, { ok: false, error: '参数不完整' });
+      }
+      if (!verifyPassword(currentPassword, sessionRow.password_hash)) {
+        return json(res, 400, { ok: false, error: '当前密码错误' });
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        const currentUser = await findUserById(client, sessionRow.id);
+        if (!currentUser) {
+          throw new Error('登录状态已失效，请重新登录');
+        }
+
+        const currentTarget = channel === 'phone'
+          ? (currentUser.phone || null)
+          : (isPhoneLocalEmail(currentUser.email) ? null : currentUser.email || null);
+        if (!currentTarget) {
+          throw new Error(channel === 'phone' ? '当前账号未绑定手机号' : '当前账号未绑定邮箱');
+        }
+
+        const remainingEmail = channel === 'email' ? null : (isPhoneLocalEmail(currentUser.email) ? null : currentUser.email || null);
+        const remainingPhone = channel === 'phone' ? null : (currentUser.phone || null);
+        const deactivated = !remainingEmail && !remainingPhone;
+
+        await consumeValidCode(client, channel, currentTarget, 'unbind', code);
+
+        if (deactivated) {
+          await client.query(
+            `UPDATE auth_users
+             SET phone = NULL,
+                 email = NULL,
+                 status = 'deactivated',
+                 deactivated_at = now()
+             WHERE id = $1`,
+            [currentUser.id]
+          );
+        } else if (channel === 'phone') {
+          await client.query(
+            `UPDATE auth_users
+             SET phone = NULL
+             WHERE id = $1`,
+            [currentUser.id]
+          );
+        } else {
+          await client.query(
+            `UPDATE auth_users
+             SET email = NULL
+             WHERE id = $1`,
+            [currentUser.id]
+          );
+        }
+
+        await client.query('COMMIT');
+
+        if (deactivated) {
+          await revokeSessionsByUserId(currentUser.id);
+          return json(res, 200, {
+            ok: true,
+            message: '最后一种绑定方式已解除，账号已注销',
+            data: { deactivated: true },
+          });
+        }
+
+        const updated = await findUserById(pool, currentUser.id);
+        return json(res, 200, {
+          ok: true,
+          message: channel === 'phone' ? '手机号已解除绑定' : '邮箱已解除绑定',
+          data: { user: mapUser(updated), deactivated: false },
         });
       } catch (error) {
         await client.query('ROLLBACK');
