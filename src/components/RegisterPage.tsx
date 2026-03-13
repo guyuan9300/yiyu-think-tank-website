@@ -280,6 +280,10 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
             ))}
           </div>
 
+          <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-3 text-[13px] text-blue-700">
+            可使用手机号或邮箱创建账号。后续若同时绑定手机号和邮箱，它们会作为同一账号的两种入口，并共用一个密码。
+          </div>
+
           {/* Success Message */}
           {success && (
             <div className="mb-6 p-4 rounded-2xl bg-green-50/80  border border-green-200/50 text-green-600 text-sm flex items-center gap-3 animate-fadeIn">
@@ -467,6 +471,9 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    该密码会作为此账号的统一登录密码；后续若同时绑定手机号和邮箱，二者共用这一个密码。
+                  </p>
                 </div>
 
                 <div className="animate-fadeInUp" style={{ animationDelay: '250ms' }}>

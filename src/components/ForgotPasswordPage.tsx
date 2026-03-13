@@ -77,6 +77,9 @@ export function ForgotPasswordPage({ onNavigate }: ForgotPasswordPageProps) {
 
           <h1 className="mt-6 text-2xl font-bold text-gray-900">找回密码</h1>
           <p className="mt-2 text-sm text-muted-foreground">支持邮箱找回和手机找回。输入对应账号后，使用验证码即可重设密码。</p>
+          <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-3 text-[13px] text-blue-700">
+            若手机号和邮箱已绑定到同一账号，通过任一已绑定方式重置后，该账号的密码都会同步更新。
+          </div>
 
           <div className="mt-6 grid grid-cols-2 gap-2 rounded-2xl bg-slate-100 p-1">
             <button

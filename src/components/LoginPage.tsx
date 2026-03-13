@@ -184,6 +184,10 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
             </button>
           </div>
 
+          <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-3 text-[13px] text-blue-700">
+            手机号和邮箱都可以作为同一账号的登录入口；如果后续同时绑定到同一账号，将共用一个密码。
+          </div>
+
           {/* Error Message */}
           {error && (
             <div className="mb-6 p-4 rounded-[12px] bg-red-50 border border-red-100 text-red-600 text-[13px]">
@@ -256,6 +260,9 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              <p className="mt-2 text-[12px] text-muted-foreground/70">
+                若手机号和邮箱绑定到同一账号，则登录时共用这一个密码。
+              </p>
             </div>
 
             {/* Remember Me */}

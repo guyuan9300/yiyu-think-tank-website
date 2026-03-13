@@ -67,6 +67,9 @@ export function ResetPasswordPage({ onNavigate }: ResetPasswordPageProps) {
 
           <h1 className="mt-6 text-2xl font-bold text-gray-900">重置密码</h1>
           <p className="mt-2 text-sm text-muted-foreground">请输入收到的验证码并设置新密码。</p>
+          <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-3 text-[13px] text-blue-700">
+            同一账号只保留一个密码。若手机号和邮箱已同时绑定到该账号，重置后两种登录方式都会使用这一个新密码。
+          </div>
 
           {error && <div className="mt-5 p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm">{error}</div>}
           {success && <div className="mt-5 p-4 rounded-xl bg-green-50 border border-green-100 text-green-700 text-sm">{success}</div>}
@@ -94,6 +97,9 @@ export function ResetPasswordPage({ onNavigate }: ResetPasswordPageProps) {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                设置完成后，该账号下已绑定的手机号和邮箱将共用这个新密码。
+              </p>
             </div>
 
             <div>

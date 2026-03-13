@@ -38,6 +38,25 @@ const handleAvatarUpload = (file: File): Promise<string> => {
   });
 };
 
+const sanitizeDisplayEmail = (email?: string) => {
+  if (!email || email.endsWith('@phone.local')) return '-';
+  return email;
+};
+
+const hasEmailBinding = (email?: string) => Boolean(email && !email.endsWith('@phone.local'));
+
+const hasPhoneBinding = (phone?: string) => Boolean(phone?.trim());
+
+const getLoginMethodLabel = (email?: string, phone?: string) => {
+  const emailBound = hasEmailBinding(email);
+  const phoneBound = hasPhoneBinding(phone);
+
+  if (emailBound && phoneBound) return '手机号 + 邮箱';
+  if (phoneBound) return '手机号';
+  if (emailBound) return '邮箱';
+  return '未绑定';
+};
+
 export function UserManagementPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<any>(null);
@@ -202,8 +221,8 @@ export function UserManagementPage() {
 
   // 重置密码（模拟）
   const handleResetPassword = (userId: string) => {
-    if (window.confirm('当前后台直改密码功能尚未接入。用户需通过手机或邮箱验证码自行重置密码，是否仅记录此提示？')) {
-      setMessage({ type: 'success', text: '已提示：请用户通过手机或邮箱验证码完成密码重置。' });
+    if (window.confirm('当前后台直改密码功能尚未接入。用户需通过已绑定的手机或邮箱验证码自行重置，且同一账号只保留一个密码，是否仅记录此提示？')) {
+      setMessage({ type: 'success', text: '已提示：请用户通过已绑定的手机或邮箱验证码完成密码重置，同一账号共用一个密码。' });
       setTimeout(() => setMessage(null), 3000);
     }
   };
@@ -367,7 +386,7 @@ export function UserManagementPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户信息</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">联系方式</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">绑定信息</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户类型</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">活跃度</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">注册时间</th>
@@ -381,6 +400,9 @@ export function UserManagementPage() {
                 const memberBadge = getMemberTypeBadge(user.memberType);
                 const statusBadge = getStatusBadge(user.status);
                 const activity = getActivityLevel(user);
+                const emailBound = hasEmailBinding(user.email);
+                const phoneBound = hasPhoneBinding(user.phone);
+                const loginMethodLabel = getLoginMethodLabel(user.email, user.phone);
                 
                 return (
                   <tr key={user.id} className="hover:bg-gray-50 transition-colors">
@@ -396,15 +418,22 @@ export function UserManagementPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="space-y-1">
-                        <p className="text-sm text-gray-600 flex items-center gap-1">
-                          <Mail className="w-3 h-3" /> {user.email}
-                        </p>
-                        {user.phone && (
-                          <p className="text-sm text-gray-600 flex items-center gap-1">
-                            <Phone className="w-3 h-3" /> {user.phone}
-                          </p>
-                        )}
+                      <div className="space-y-2">
+                        <div className="text-sm text-gray-600 flex items-start gap-2">
+                          <Mail className="w-3 h-3 mt-1" />
+                          <div>
+                            <div className="break-all">{sanitizeDisplayEmail(user.email)}</div>
+                            <div className="text-xs text-gray-400">{emailBound ? '邮箱已绑定' : '邮箱未绑定'}</div>
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-600 flex items-start gap-2">
+                          <Phone className="w-3 h-3 mt-1" />
+                          <div>
+                            <div>{user.phone || '-'}</div>
+                            <div className="text-xs text-gray-400">{phoneBound ? '手机号已绑定' : '手机号未绑定'}</div>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500">登录方式：{loginMethodLabel}</p>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -521,11 +550,23 @@ export function UserManagementPage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 mb-1">邮箱</p>
-                    <p className="text-gray-900">{selectedUser.email}</p>
+                    <p className="text-gray-900 break-all">{sanitizeDisplayEmail(selectedUser.email)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 mb-1">手机号</p>
                     <p className="text-gray-900">{selectedUser.phone || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">邮箱绑定状态</p>
+                    <p className="text-gray-900">{hasEmailBinding(selectedUser.email) ? '已绑定' : '未绑定'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">手机号绑定状态</p>
+                    <p className="text-gray-900">{hasPhoneBinding(selectedUser.phone) ? '已绑定' : '未绑定'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">登录方式</p>
+                    <p className="text-gray-900">{getLoginMethodLabel(selectedUser.email, selectedUser.phone)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 mb-1">用户类型</p>
@@ -712,6 +753,10 @@ export function UserManagementPage() {
                   onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+              </div>
+
+              <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                同一账号只保留一个密码。若同时填写并绑定手机号和邮箱，它们会作为同一账号的两种登录入口。
               </div>
 
               <div>

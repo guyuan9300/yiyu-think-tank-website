@@ -49,6 +49,24 @@ function sanitizeDisplayEmail(email?: string) {
   return email;
 }
 
+function hasEmailBinding(email?: string) {
+  return Boolean(email && !email.endsWith('@phone.local'));
+}
+
+function hasPhoneBinding(phone?: string) {
+  return Boolean(phone?.trim());
+}
+
+function getLoginMethodLabel(email?: string, phone?: string) {
+  const emailBound = hasEmailBinding(email);
+  const phoneBound = hasPhoneBinding(phone);
+
+  if (emailBound && phoneBound) return '手机号 + 邮箱';
+  if (phoneBound) return '手机号';
+  if (emailBound) return '邮箱';
+  return '未绑定';
+}
+
 export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
   const [user, setUser] = useState<LocalUser | null>(null);
   const [nickname, setNickname] = useState('');
@@ -306,11 +324,21 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
 
   const contactText = user.phone || sanitizeDisplayEmail(user.email);
   const paidActive = user.memberType === 'gold' || user.memberType === 'diamond';
+  const emailBound = hasEmailBinding(user.email);
+  const phoneBound = hasPhoneBinding(user.phone);
+  const loginMethodText = getLoginMethodLabel(user.email, user.phone);
   const expireText = user.paidExpiresAt
     ? new Date(user.paidExpiresAt).toLocaleDateString('zh-CN')
     : paidActive
       ? '长期有效'
       : '未开通';
+  const passwordHint = emailBound && phoneBound
+    ? '当前账号已同时绑定手机号和邮箱，二者共用同一个密码。修改密码时将优先向绑定手机号发送验证码。'
+    : phoneBound
+      ? '当前账号通过绑定手机号接收验证码。若后续再绑定邮箱，手机号和邮箱将共用同一个密码。'
+      : emailBound
+        ? '当前账号通过绑定邮箱接收验证码。若后续再绑定手机号，手机号和邮箱将共用同一个密码。'
+        : '当前账号尚未绑定可用的手机号或邮箱。';
 
   return (
     <div className="min-h-screen bg-background">
@@ -330,6 +358,7 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
               <div>
                 <div className="text-xl font-semibold">{user.nickname || '用户'}</div>
                 <div className="text-sm text-muted-foreground/70 break-all">{contactText}</div>
+                <div className="mt-1 text-xs text-muted-foreground/70">登录入口：{loginMethodText}</div>
                 <div className={`inline-flex items-center gap-2 mt-3 px-3 py-1.5 rounded-full border text-xs font-medium ${memberBadge.cls}`}>
                   {memberBadge.icon}
                   <span>{memberBadge.label}</span>
@@ -343,7 +372,7 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
           <div className="flex items-start justify-between gap-6">
             <div>
               <h2 className="text-lg font-semibold text-foreground">个人资料</h2>
-              <p className="text-sm text-muted-foreground/70 mt-1">支持直接修改头像和昵称，变更后会同步保存到云端。</p>
+              <p className="text-sm text-muted-foreground/70 mt-1">支持直接修改头像和昵称，变更后会同步保存到云端；手机号和邮箱作为同一账号的绑定方式展示。</p>
             </div>
           </div>
 
@@ -394,12 +423,20 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
                   <div className="font-medium break-all">{sanitizeDisplayEmail(user.email)}</div>
                 </div>
                 <div className="rounded-2xl border border-border/40 bg-white/80 p-4">
+                  <div className="text-xs text-muted-foreground/70 mb-2">邮箱绑定状态</div>
+                  <div className="font-medium">{emailBound ? '已绑定' : '未绑定'}</div>
+                </div>
+                <div className="rounded-2xl border border-border/40 bg-white/80 p-4">
                   <div className="text-xs text-muted-foreground/70 mb-2">手机号</div>
                   <div className="font-medium">{user.phone || '-'}</div>
                 </div>
                 <div className="rounded-2xl border border-border/40 bg-white/80 p-4">
-                  <div className="text-xs text-muted-foreground/70 mb-2">当前身份</div>
-                  <div className="font-medium">{memberBadge.label}</div>
+                  <div className="text-xs text-muted-foreground/70 mb-2">手机号绑定状态</div>
+                  <div className="font-medium">{phoneBound ? '已绑定' : '未绑定'}</div>
+                </div>
+                <div className="rounded-2xl border border-border/40 bg-white/80 p-4">
+                  <div className="text-xs text-muted-foreground/70 mb-2">登录方式</div>
+                  <div className="font-medium">{loginMethodText}</div>
                 </div>
                 <div className="rounded-2xl border border-border/40 bg-white/80 p-4">
                   <div className="text-xs text-muted-foreground/70 mb-2">账号状态</div>
@@ -472,6 +509,9 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
                   {showSavedPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              <div className="mt-3 text-xs text-muted-foreground/70">
+                当前账号只保留这一套密码。若手机号和邮箱已同时绑定，它们登录时共用这个密码。
+              </div>
             </div>
 
             <div className="rounded-2xl border border-border/40 p-5 bg-white/80">
@@ -481,7 +521,7 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
               </div>
 
               <div className="text-xs text-muted-foreground/70 mb-4">
-                当前将通过 {user.phone ? '绑定手机号' : '绑定邮箱'} 接收验证码。
+                {passwordHint}
               </div>
 
               <div className="space-y-3">
