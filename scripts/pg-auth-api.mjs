@@ -1056,6 +1056,22 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true, message: '密码重置成功' });
     }
 
+    if (url.pathname === '/api/auth/change-password' && req.method === 'POST') {
+      const sessionRow = await requireSession(req);
+      const newPassword = String(body.newPassword || '');
+      if (newPassword.length < 8) {
+        return json(res, 400, { ok: false, error: '密码至少8位' });
+      }
+
+      await pool.query('UPDATE auth_users SET password_hash=$2 WHERE id=$1', [sessionRow.id, hashPassword(newPassword)]);
+      const updated = await findUserById(pool, sessionRow.id);
+      return json(res, 200, {
+        ok: true,
+        message: '密码修改成功',
+        data: { user: mapUser(updated) },
+      });
+    }
+
     if (url.pathname === '/api/auth/logout' && req.method === 'POST') {
       const token = parseBearerToken(req);
       if (token) {

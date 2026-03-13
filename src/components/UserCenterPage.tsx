@@ -3,10 +3,10 @@ import { Header } from './Header';
 import { AUTH_TOKEN_KEY, clearUser, getSavedUserRaw, saveUserRaw, USER_KEY } from '../lib/storage';
 import {
   bindCurrentContact,
+  changeCurrentPassword,
   deactivateCurrentAccount,
   fetchCurrentProfile,
   normalizeLoginUser,
-  resetPasswordByCode,
   sendVerifyCode,
   updateCurrentProfile,
 } from '../lib/authApi';
@@ -136,9 +136,7 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
   const [sendingBindingCode, setSendingBindingCode] = useState<ContactChannel | null>(null);
   const [submittingBinding, setSubmittingBinding] = useState<ContactChannel | null>(null);
   const [showSavedPassword, setShowSavedPassword] = useState(false);
-  const [isSendingCode, setIsSendingCode] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [verifyCode, setVerifyCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [securityMessage, setSecurityMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -450,47 +448,7 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
     setActivePanel(null);
   };
 
-  const getAuthTarget = () => {
-    if (!user) return null;
-    if (user.phone) return { channel: 'phone' as const, target: user.phone };
-    const email = sanitizeDisplayEmail(user.email);
-    if (email) return { channel: 'email' as const, target: email };
-    return null;
-  };
-
-  const handleSendCode = async () => {
-    const auth = getAuthTarget();
-    if (!auth) {
-      setSecurityMessage({ type: 'error', text: '当前账号缺少可用的邮箱或手机号。' });
-      return;
-    }
-
-    setIsSendingCode(true);
-    setSecurityMessage(null);
-    const result = await sendVerifyCode(auth.channel, auth.target, 'reset');
-    setIsSendingCode(false);
-
-    if (!result.ok) {
-      setSecurityMessage({ type: 'error', text: result.error || '验证码发送失败，请稍后重试。' });
-      return;
-    }
-
-    setSecurityMessage({
-      type: 'success',
-      text: auth.channel === 'phone' ? '验证码已发送到绑定手机号。' : '验证码已发送到绑定邮箱。',
-    });
-  };
-
   const handleChangePassword = async () => {
-    const auth = getAuthTarget();
-    if (!auth) {
-      setSecurityMessage({ type: 'error', text: '当前账号缺少可用的邮箱或手机号。' });
-      return;
-    }
-    if (!verifyCode.trim()) {
-      setSecurityMessage({ type: 'error', text: '请输入验证码。' });
-      return;
-    }
     if (newPassword.length < 8) {
       setSecurityMessage({ type: 'error', text: '新密码至少 8 位。' });
       return;
@@ -502,28 +460,24 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
 
     setIsChangingPassword(true);
     setSecurityMessage(null);
-    const result = await resetPasswordByCode({
-      channel: auth.channel,
-      target: auth.target,
-      code: verifyCode.trim(),
+    const result = await changeCurrentPassword({
       newPassword,
     });
     setIsChangingPassword(false);
 
-    if (!result.ok) {
+    if (!result.ok || !result.data?.user) {
       setSecurityMessage({ type: 'error', text: result.error || '密码修改失败，请稍后重试。' });
       return;
     }
 
     const nextUser = {
-      ...(user || {}),
+      ...normalizeLoginUser(result.data.user),
       plainPassword: newPassword,
     } as LocalUser;
     persistUser(nextUser);
-    setVerifyCode('');
     setNewPassword('');
     setConfirmPassword('');
-    setSecurityMessage({ type: 'success', text: '密码已修改成功。' });
+    setSecurityMessage({ type: 'success', text: result.message || '密码已修改成功。' });
     setActivePanel(null);
   };
 
@@ -754,21 +708,9 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
 
               {activePanel === 'password' && (
                 <div className="mt-5 border-t border-border/40 pt-5 space-y-3">
-                  <button
-                    type="button"
-                    onClick={handleSendCode}
-                    disabled={isSendingCode}
-                    className="px-4 py-2 rounded-xl border border-border/50 hover:bg-muted/30 text-sm disabled:opacity-60"
-                  >
-                    {isSendingCode ? '发送中…' : '发送验证码'}
-                  </button>
-
-                  <input
-                    value={verifyCode}
-                    onChange={(e) => setVerifyCode(e.target.value)}
-                    placeholder="验证码"
-                    className="w-full px-3 py-2 rounded-xl border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
+                  <p className="text-sm text-muted-foreground/80">
+                    当前已处于登录状态，直接提交新密码即可生效；密码修改后会立即同步到云端账号。
+                  </p>
 
                   <input
                     type="password"

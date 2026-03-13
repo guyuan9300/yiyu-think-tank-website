@@ -80,6 +80,15 @@ export async function resetPasswordByCode(params: {
   });
 }
 
+export async function changeCurrentPassword(params: {
+  newPassword: string;
+}) {
+  return authRequest<{ user: AuthApiUser }>('/change-password', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  }, { withAuth: true });
+}
+
 export async function fetchCurrentSession() {
   return authRequest<{ user: AuthApiUser; expiresAt?: string }>('/session', undefined, { withAuth: true });
 }
