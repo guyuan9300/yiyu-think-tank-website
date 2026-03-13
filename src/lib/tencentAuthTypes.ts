@@ -22,7 +22,8 @@ export interface TencentAuthSession {
 export interface InviteCodeRow {
   id: string;
   code: string;
-  type: '30days' | '365days' | '1095days';
+  type: '30days' | '365days' | '1095days' | 'strategy_project';
+  grantKind?: 'member_days' | 'strategy_project';
   bonusDays: number;
   maxUses: number;
   usedCount: number;
@@ -30,4 +31,6 @@ export interface InviteCodeRow {
   createdBy: string;
   createdAt: string;
   usedBy?: string[];
+  projectId?: string;
+  projectNameSnapshot?: string;
 }

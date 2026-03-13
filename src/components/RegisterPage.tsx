@@ -439,7 +439,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                   name="inviteCode"
                   value={formData.inviteCode}
                   onChange={handleChange}
-                  placeholder="如有邀请码，可注册时直接开通付费会员"
+                  placeholder="如有邀请码，可注册时直接开通付费会员或绑定机构战略陪伴"
                   className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60 text-[13px]"
                 />
               </div>

@@ -18,6 +18,10 @@ export interface AuthApiUser {
   paidStartedAt?: string;
   paidExpiresAt?: string;
   paidNote?: string;
+  strategyProjectId?: string;
+  strategyBoundAt?: string;
+  strategyAccessSource?: string;
+  strategyProjectName?: string;
   createdAt?: string;
   lastLoginAt?: string;
   loginCount?: number;
@@ -162,6 +166,10 @@ export function normalizeLoginUser(u: AuthApiUser) {
     paidStartedAt: u.paidStartedAt,
     paidExpiresAt: u.paidExpiresAt,
     paidNote: u.paidNote,
+    strategyProjectId: u.strategyProjectId,
+    strategyBoundAt: u.strategyBoundAt,
+    strategyAccessSource: u.strategyAccessSource,
+    strategyProjectName: u.strategyProjectName,
     loginCount: u.loginCount ?? 1,
     commentsCount: u.commentsCount ?? 0,
     favoritesCount: u.favoritesCount ?? 0,

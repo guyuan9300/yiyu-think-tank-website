@@ -185,15 +185,21 @@ export interface User {
   email: string;
   nickname: string;
   avatar?: string;
+  avatarUrl?: string;
   phone?: string;
   memberType: 'regular' | 'gold' | 'diamond';
-  status: 'active' | 'disabled';
+  status: 'active' | 'disabled' | 'deactivated';
+  adminRole?: 'admin';
   paidSource?: 'manual' | 'invite_code' | 'payment' | 'strategy_client';
   paidStartedAt?: string;
   paidExpiresAt?: string;
   paidNote?: string;
   invitationCode?: string;        // 使用哪个邀请码注册
   invitedBy?: string;             // 邀请人ID
+  strategyProjectId?: string;
+  strategyBoundAt?: string;
+  strategyAccessSource?: string;
+  strategyProjectName?: string;
   createdAt: string;
   lastLoginAt?: string;
   loginCount: number;

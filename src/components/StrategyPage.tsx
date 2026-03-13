@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
-import { getClientProjects, type ClientProject } from '../lib/dataServiceLocal';
 import {
   ArrowRight,
   ChevronRight,
@@ -75,29 +74,6 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Admin: load strategy clients for dropdown
-  const [adminClients, setAdminClients] = useState<ClientProject[]>([]);
-
-  useEffect(() => {
-    const loadClients = async () => {
-      try {
-        const list = await getClientProjects();
-        setAdminClients(list);
-      } catch {
-        setAdminClients([]);
-      }
-    };
-
-    loadClients();
-    const onChange = () => loadClients();
-    window.addEventListener('yiyu_data_change', onChange);
-    window.addEventListener('storage', onChange);
-    return () => {
-      window.removeEventListener('yiyu_data_change', onChange);
-      window.removeEventListener('storage', onChange);
-    };
   }, []);
 
   // Insight filter state
@@ -468,83 +444,21 @@ challenge: '社区居民参与度低',
                   </div>
                 </div>
 
-                {/* Admin: client switcher (replaces "了解合作方式") */}
-                {(() => {
-                  let isAdmin = false;
-                  let currentUser: any = null;
-                  try {
-                    const u = (localStorage.getItem('yiyu_current_user') ?? sessionStorage.getItem('yiyu_current_user'));
-                    if (u) {
-                      currentUser = JSON.parse(u);
-                      const adminEmails = ['guyuan9300@gmail.com'];
-                      isAdmin = adminEmails.includes(String(currentUser?.email || '').toLowerCase());
-                    }
-                  } catch {}
-
-                  const goStrategyCompanion = (clientId?: string) => {
-                    const params = new URLSearchParams(window.location.search);
-                    params.set('page', 'strategy-companion');
-                    if (clientId) params.set('clientId', clientId);
-                    window.history.replaceState({}, '', `?${params.toString()}`);
+                <button
+                  onClick={() => {
                     if (onNavigate) {
                       onNavigate('strategy-companion' as any);
                     } else {
-                      window.location.reload();
+                      const params = new URLSearchParams(window.location.search);
+                      params.set('page', 'strategy-companion');
+                      window.location.assign(`?${params.toString()}`);
                     }
-                  };
-
-                  if (!isAdmin) {
-                    const orgHint = String(
-                      currentUser?.organization || currentUser?.orgName || currentUser?.org_name || currentUser?.company || ''
-                    ).trim();
-                    const clientHint = String(currentUser?.clientName || currentUser?.client || '').trim();
-                    const explicitClientId = String(currentUser?.clientId || currentUser?.orgId || currentUser?.org_id || '').trim();
-
-                    const matched = adminClients.find((c) =>
-                      (explicitClientId && c.id === explicitClientId) ||
-                      (orgHint && c.clientName.includes(orgHint)) ||
-                      (clientHint && c.clientName.includes(clientHint))
-                    );
-
-                    const fallback = adminClients[0];
-                    const targetClientId = matched?.id || fallback?.id;
-
-                    return (
-                      <button
-                        onClick={() => goStrategyCompanion(targetClientId)}
-                        className="group inline-flex items-center gap-1.5 text-[14px] text-[rgba(99,102,241,0.85)] hover:text-[rgba(99,102,241,1)] transition-colors font-medium"
-                      >
-                        <span>进入战略陪伴页面</span>
-                        <ArrowUpRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                      </button>
-                    );
-                  }
-
-                  // Admin dropdown (simple native select)
-                  return (
-                    <div className="flex items-center gap-2">
-                      <span className="text-[12px] text-[rgba(15,23,42,0.55)]">切换客户</span>
-                      <select
-                        className="px-3 py-2 rounded-xl border border-[rgba(15,23,42,0.10)] bg-white/80 text-[13px] text-[rgba(15,23,42,0.85)] focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        defaultValue=""
-                        onChange={(e) => {
-                          const clientId = e.target.value;
-                          if (!clientId) return;
-                          goStrategyCompanion(clientId);
-                        }}
-                      >
-                        <option value="">选择战略陪伴客户…</option>
-                        {adminClients.length === 0 ? (
-                          <option value="" disabled>（暂无客户，请先去后台生成）</option>
-                        ) : (
-                          adminClients.map(c => (
-                            <option key={c.id} value={c.id}>{c.clientName}</option>
-                          ))
-                        )}
-                      </select>
-                    </div>
-                  );
-                })()}
+                  }}
+                  className="group inline-flex items-center gap-1.5 text-[14px] text-[rgba(99,102,241,0.85)] hover:text-[rgba(99,102,241,1)] transition-colors font-medium"
+                >
+                  <span>进入战略陪伴页面</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </button>
               </div>
             </div>
 

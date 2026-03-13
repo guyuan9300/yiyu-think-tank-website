@@ -1,8 +1,15 @@
 import { authRequest } from './authHttp';
-import type { User } from './dataService';
+import type { AuthApiUser } from './authApi';
 
-export type AdminManagedUser = User & {
-  adminRole?: 'admin';
+export type AdminManagedUser = AuthApiUser & {
+  id: string;
+  nickname?: string;
+  email?: string;
+  phone?: string;
+  avatarUrl?: string;
+  memberType?: 'regular' | 'gold' | 'diamond';
+  status?: 'active' | 'disabled' | 'deactivated';
+  createdAt?: string;
 };
 
 export function fetchAdminUsers() {

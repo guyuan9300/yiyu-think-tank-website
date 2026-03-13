@@ -333,7 +333,7 @@ export async function generateInvitationCode(
   type: InviteCodeType,
   maxUses: number = 1
 ): Promise<{ success: boolean; code?: InviteCode; error?: string }> {
-  const result = await createInviteCode(type, maxUses);
+  const result = await createInviteCode({ type, maxUses });
   return { success: result.ok, code: result.data as InviteCode | undefined, error: result.error };
 }
 

@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { Pool } from 'pg';
 import nodemailer from 'nodemailer';
 import tencentcloud from 'tencentcloud-sdk-nodejs';
+import { DEFAULT_STRATEGY_PROJECTS } from './strategy-companion-seeds.mjs';
 
 const PORT = Number(process.env.PG_AUTH_API_PORT || 8791);
 const pool = new Pool({
@@ -140,6 +141,10 @@ function normalizeInviteCode(input) {
   return value || null;
 }
 
+function normalizeInviteGrantKind(input) {
+  return input === 'strategy_project' ? 'strategy_project' : 'member_days';
+}
+
 function normalizeCommentStatus(input) {
   return input === 'pending' || input === 'approved' || input === 'rejected' ? input : null;
 }
@@ -152,6 +157,62 @@ function normalizePaidSource(input) {
   return input === 'manual' || input === 'invite_code' || input === 'payment' || input === 'strategy_client'
     ? input
     : null;
+}
+
+function normalizeStrategyScope(input) {
+  return input === 'admin' ? 'admin' : 'published';
+}
+
+function normalizeBool(input, fallback = false) {
+  if (typeof input === 'boolean') return input;
+  if (typeof input === 'string') {
+    if (input === 'true') return true;
+    if (input === 'false') return false;
+  }
+  return fallback;
+}
+
+function textArray(input) {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((item) => String(item || '').trim())
+    .filter(Boolean);
+}
+
+function safeText(input, fallback = '') {
+  const value = String(input || '').trim();
+  return value || fallback;
+}
+
+function toPositiveInt(input, fallback = 0) {
+  const value = Number(input);
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(0, Math.round(value));
+}
+
+function normalizeStrategyStatus(input) {
+  return input === 'done' || input === 'current' || input === 'pending' ? input : 'pending';
+}
+
+function toProjectSlug(input) {
+  const value = String(input || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-')
+    .replace(/[^a-z0-9-\u4e00-\u9fa5]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return value || `project-${crypto.randomUUID().slice(0, 8)}`;
+}
+
+function normalizePublicLink(input) {
+  const value = String(input || '').trim();
+  if (!value) return '';
+  return /^(https?:)?\/\//i.test(value) || value.startsWith('mailto:') ? value : '';
+}
+
+function nowDateText() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function normalizePlanId(input) {
@@ -213,6 +274,10 @@ function mapUser(row) {
     paidStartedAt: row.paid_started_at || undefined,
     paidExpiresAt: row.paid_expires_at || undefined,
     paidNote: row.paid_note || undefined,
+    strategyProjectId: row.strategy_project_id || undefined,
+    strategyBoundAt: row.strategy_bound_at || undefined,
+    strategyAccessSource: row.strategy_access_source || undefined,
+    strategyProjectName: row.strategy_project_name || undefined,
     createdAt: row.created_at,
     lastLoginAt: row.last_login_at || undefined,
     loginCount: Number(row.login_count || 0),
@@ -226,6 +291,7 @@ function mapInviteCode(row) {
     id: row.id,
     code: row.code,
     type: row.type,
+    grantKind: row.grant_kind || 'member_days',
     bonusDays: Number(row.bonus_days || 0),
     maxUses: Number(row.max_uses || 0),
     usedCount: Number(row.used_count || 0),
@@ -233,6 +299,8 @@ function mapInviteCode(row) {
     createdBy: row.created_by,
     createdAt: row.created_at,
     usedBy: Array.isArray(row.used_by) ? row.used_by : [],
+    projectId: row.project_id || undefined,
+    projectNameSnapshot: row.project_name_snapshot || undefined,
   };
 }
 
@@ -336,7 +404,10 @@ async function ensureSchema() {
       id UUID PRIMARY KEY,
       code TEXT NOT NULL UNIQUE,
       type TEXT NOT NULL,
+      grant_kind TEXT NOT NULL DEFAULT 'member_days',
       bonus_days INT NOT NULL DEFAULT 0,
+      project_id TEXT,
+      project_name_snapshot TEXT,
       max_uses INT NOT NULL DEFAULT 1,
       used_count INT NOT NULL DEFAULT 0,
       status TEXT NOT NULL DEFAULT 'valid',
@@ -384,6 +455,25 @@ async function ensureSchema() {
     CREATE INDEX IF NOT EXISTS idx_comments_content_status_created ON comments(content_id, content_type, status, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_payment_orders_user_created ON payment_orders(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_payment_orders_status_created ON payment_orders(status, created_at DESC);
+    CREATE TABLE IF NOT EXISTS project_learning_resources (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      summary TEXT,
+      relation TEXT,
+      detail TEXT[] NOT NULL DEFAULT '{}'::text[],
+      kind TEXT,
+      link TEXT,
+      source_type TEXT NOT NULL DEFAULT 'manual',
+      internal_type TEXT,
+      internal_id TEXT,
+      sort_order INT NOT NULL DEFAULT 0,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_project_learning_resources_project_sort
+      ON project_learning_resources(project_id, sort_order, created_at DESC);
   `);
 
   await pool.query(`
@@ -397,9 +487,81 @@ async function ensureSchema() {
       ADD COLUMN IF NOT EXISTS admin_role TEXT,
       ADD COLUMN IF NOT EXISTS avatar TEXT,
       ADD COLUMN IF NOT EXISTS deactivated_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS strategy_project_id TEXT,
+      ADD COLUMN IF NOT EXISTS strategy_bound_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS strategy_access_source TEXT,
       ADD COLUMN IF NOT EXISTS login_count INT NOT NULL DEFAULT 0,
       ADD COLUMN IF NOT EXISTS comments_count INT NOT NULL DEFAULT 0,
       ADD COLUMN IF NOT EXISTS favorites_count INT NOT NULL DEFAULT 0;
+  `);
+
+  await pool.query(`
+    ALTER TABLE invite_codes
+      ADD COLUMN IF NOT EXISTS grant_kind TEXT NOT NULL DEFAULT 'member_days',
+      ADD COLUMN IF NOT EXISTS project_id TEXT,
+      ADD COLUMN IF NOT EXISTS project_name_snapshot TEXT;
+  `);
+
+  await pool.query(`
+    ALTER TABLE client_projects
+      ADD COLUMN IF NOT EXISTS slug TEXT,
+      ADD COLUMN IF NOT EXISTS logo_url TEXT,
+      ADD COLUMN IF NOT EXISTS mission TEXT,
+      ADD COLUMN IF NOT EXISTS vision TEXT,
+      ADD COLUMN IF NOT EXISTS values_text TEXT[] NOT NULL DEFAULT '{}'::text[],
+      ADD COLUMN IF NOT EXISTS north_star_metric TEXT,
+      ADD COLUMN IF NOT EXISTS north_star_metrics TEXT[] NOT NULL DEFAULT '{}'::text[],
+      ADD COLUMN IF NOT EXISTS yearly_deliverables TEXT[] NOT NULL DEFAULT '{}'::text[],
+      ADD COLUMN IF NOT EXISTS next_14_days TEXT[] NOT NULL DEFAULT '{}'::text[],
+      ADD COLUMN IF NOT EXISTS is_published BOOLEAN NOT NULL DEFAULT false,
+      ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+  `);
+
+  await pool.query(`
+    ALTER TABLE strategic_milestones
+      ADD COLUMN IF NOT EXISTS project_id TEXT;
+  `);
+
+  await pool.query(`
+    ALTER TABLE strategic_goals
+      ADD COLUMN IF NOT EXISTS project_id TEXT,
+      ADD COLUMN IF NOT EXISTS one_liner TEXT,
+      ADD COLUMN IF NOT EXISTS risks TEXT[] NOT NULL DEFAULT '{}'::text[];
+  `);
+
+  await pool.query(`
+    ALTER TABLE project_events
+      ADD COLUMN IF NOT EXISTS project_id TEXT,
+      ADD COLUMN IF NOT EXISTS duration TEXT,
+      ADD COLUMN IF NOT EXISTS people_text TEXT,
+      ADD COLUMN IF NOT EXISTS done_items TEXT[] NOT NULL DEFAULT '{}'::text[],
+      ADD COLUMN IF NOT EXISTS value_items TEXT[] NOT NULL DEFAULT '{}'::text[];
+  `);
+
+  await pool.query(`
+    ALTER TABLE project_documents
+      ADD COLUMN IF NOT EXISTS project_id TEXT;
+  `);
+
+  await pool.query(`
+    ALTER TABLE project_meetings
+      ADD COLUMN IF NOT EXISTS project_id TEXT,
+      ADD COLUMN IF NOT EXISTS meeting_link TEXT,
+      ADD COLUMN IF NOT EXISTS key_people TEXT,
+      ADD COLUMN IF NOT EXISTS topic TEXT;
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_client_projects_publish_sort
+      ON client_projects(is_published, sort_order, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_client_projects_slug ON client_projects(slug);
+    CREATE INDEX IF NOT EXISTS idx_auth_users_strategy_project ON auth_users(strategy_project_id);
+    CREATE INDEX IF NOT EXISTS idx_invite_codes_grant_kind_status ON invite_codes(grant_kind, status, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_strategic_milestones_project_sort ON strategic_milestones(project_id, sort_order, phase_order, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_strategic_goals_project_sort ON strategic_goals(project_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_project_events_project_sort ON project_events(project_id, sort_order, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_project_documents_project_sort ON project_documents(project_id, sort_order, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_project_meetings_project_sort ON project_meetings(project_id, sort_order, created_at DESC);
   `);
 
   if (DEFAULT_ADMIN_EMAILS.size > 0) {
@@ -567,9 +729,10 @@ async function createSession(userId, req) {
 async function findSessionByToken(token) {
   if (!token) return null;
   const q = await pool.query(
-    `SELECT s.*, u.*
+    `SELECT s.*, u.*, cp.client_name AS strategy_project_name
      FROM auth_sessions s
      JOIN auth_users u ON u.id = s.user_id
+     LEFT JOIN client_projects cp ON cp.id = u.strategy_project_id
      WHERE s.token_hash=$1
        AND s.revoked_at IS NULL
        AND (s.expires_at IS NULL OR s.expires_at > now())
@@ -633,15 +796,64 @@ async function applyInviteCodeToUser(db, code, userRow) {
     throw new Error('当前账号已使用过该邀请码');
   }
 
+  const nextUsedCount = Number(inviteRow.used_count || 0) + 1;
+  const nextStatus = nextUsedCount >= Number(inviteRow.max_uses || 0) ? 'redeemed' : 'valid';
+  const nextUsedBy = [...usedBy, userRow.id];
+
+  if ((inviteRow.grant_kind || 'member_days') === 'strategy_project') {
+    if (userRow.strategy_project_id && userRow.strategy_project_id !== inviteRow.project_id) {
+      throw new Error('当前账号已绑定其他机构，前台不支持更换机构');
+    }
+    if (!inviteRow.project_id) {
+      throw new Error('该邀请码未绑定机构项目');
+    }
+    const projectRow = await findStrategyProjectById(db, inviteRow.project_id);
+    if (!projectRow || !projectRow.is_active) {
+      throw new Error('绑定的机构项目不存在');
+    }
+    if (!projectRow.is_published) {
+      throw new Error('绑定的机构项目尚未发布');
+    }
+
+    await db.query(
+      `UPDATE invite_codes
+       SET used_count=$2, status=$3, used_by=$4
+       WHERE id=$1`,
+      [inviteRow.id, nextUsedCount, nextStatus, JSON.stringify(nextUsedBy)]
+    );
+
+    await db.query(
+      `UPDATE auth_users
+       SET member_type='gold',
+           invitation_code=$2,
+           invited_by=$3,
+           paid_source='strategy_client',
+           paid_started_at=COALESCE(paid_started_at, now()),
+           paid_expires_at=NULL,
+           paid_note=$4,
+           strategy_project_id=$5,
+           strategy_bound_at=COALESCE(strategy_bound_at, now()),
+           strategy_access_source='invite_code'
+       WHERE id=$1`,
+      [
+        userRow.id,
+        normalizedCode,
+        inviteRow.created_by || null,
+        `通过机构邀请码 ${normalizedCode} 绑定 ${projectRow.client_name}`,
+        projectRow.id,
+      ]
+    );
+
+    const updated = await findUserById(db, userRow.id);
+    return { inviteCode: mapInviteCode(inviteRow), user: updated };
+  }
+
   const now = new Date();
   const currentExpire = userRow.paid_expires_at ? new Date(userRow.paid_expires_at) : null;
   const baseDate = currentExpire && currentExpire.getTime() > Date.now() ? currentExpire : now;
   const nextExpire = inviteRow.bonus_days > 0
     ? new Date(baseDate.getTime() + inviteRow.bonus_days * 24 * 3600 * 1000)
     : null;
-  const nextUsedCount = Number(inviteRow.used_count || 0) + 1;
-  const nextStatus = nextUsedCount >= Number(inviteRow.max_uses || 0) ? 'redeemed' : 'valid';
-  const nextUsedBy = [...usedBy, userRow.id];
 
   await db.query(
     `UPDATE invite_codes
@@ -674,7 +886,12 @@ async function applyInviteCodeToUser(db, code, userRow) {
 }
 
 async function listAdminUsers() {
-  const q = await pool.query('SELECT * FROM auth_users ORDER BY created_at DESC');
+  const q = await pool.query(
+    `SELECT u.*, cp.client_name AS strategy_project_name
+     FROM auth_users u
+     LEFT JOIN client_projects cp ON cp.id = u.strategy_project_id
+     ORDER BY u.created_at DESC`
+  );
   return q.rows.map(mapUser);
 }
 
@@ -772,6 +989,619 @@ async function listPaymentOrders({ admin, userId, limit = 20 }) {
   return q.rows.map(mapPaymentOrder);
 }
 
+function mapStrategyProjectSummary(row) {
+  return {
+    id: row.id,
+    clientName: row.client_name,
+    projectName: row.project_name || row.client_name,
+    description: row.description || '',
+    slug: row.slug || toProjectSlug(row.client_name || row.project_name || row.id),
+    logoUrl: row.logo_url || '',
+    isPublished: Boolean(row.is_published),
+    publishedAt: row.published_at || undefined,
+    status: row.status || 'active',
+    isActive: row.is_active !== false,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapStrategyLearningResource(row) {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    title: row.title,
+    summary: row.summary || '',
+    relation: row.relation || '',
+    detail: Array.isArray(row.detail) ? row.detail : [],
+    kind: row.kind || '文章',
+    link: row.link || '',
+    sourceType: row.source_type || 'manual',
+    internalType: row.internal_type || undefined,
+    internalId: row.internal_id || undefined,
+    sortOrder: Number(row.sort_order || 0),
+    isActive: row.is_active !== false,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function normalizeLearningKind(input) {
+  return input === '报告' || input === '课程' ? input : '文章';
+}
+
+function sanitizeProjectSnapshotPayload(payload, fallbackProject = null) {
+  const project = payload?.project || {};
+  const projectId = safeText(project.id, fallbackProject?.id || '');
+  const clientName = safeText(project.clientName, fallbackProject?.client_name || fallbackProject?.clientName || '未命名机构');
+  const projectName = safeText(project.projectName, fallbackProject?.project_name || fallbackProject?.projectName || `${clientName}战略陪伴`);
+  const slug = toProjectSlug(project.slug || fallbackProject?.slug || clientName);
+  const description = safeText(project.description, fallbackProject?.description || '');
+  const logoUrl = safeText(project.logoUrl, fallbackProject?.logo_url || fallbackProject?.logoUrl || '');
+  const hero = payload?.hero || {};
+  const north = payload?.north || {};
+  const timeline = Array.isArray(payload?.timeline) ? payload.timeline : [];
+  const goals = Array.isArray(payload?.goals) ? payload.goals : [];
+  const recent = Array.isArray(payload?.latest) ? payload.latest : [];
+  const docs = Array.isArray(payload?.docs) ? payload.docs : [];
+  const meetings = Array.isArray(payload?.meetings) ? payload.meetings : [];
+  const learning = Array.isArray(payload?.learning) ? payload.learning : [];
+
+  return {
+    project: {
+      id: projectId,
+      clientName,
+      projectName,
+      slug,
+      description,
+      logoUrl,
+      mission: safeText(hero.mission),
+      vision: safeText(hero.vision),
+      values: textArray(hero.values),
+      northStar: safeText(north.northStar),
+      northStarMetrics: textArray(north.northStarMetrics),
+      annualDeliverables: textArray(north.annualDeliverables),
+      next14Days: textArray(north.next14Days),
+      isPublished: normalizeBool(project.isPublished, fallbackProject?.is_published || false),
+    },
+    timeline: timeline
+      .map((item, index) => ({
+        stage: safeText(item?.stage, `阶段 ${index + 1}`),
+        date: safeText(item?.date, '待定'),
+        status: normalizeStrategyStatus(item?.status),
+        detail: safeText(item?.detail, '请补充阶段说明。'),
+      }))
+      .filter((item) => item.stage),
+    goals: goals
+      .map((item, index) => ({
+        title: safeText(item?.title, `目标 ${index + 1}`),
+        oneLiner: safeText(item?.oneLiner || item?.description, '请补充目标说明。'),
+        progress: Math.max(0, Math.min(toPositiveInt(item?.progress, 0), 100)),
+        kpis: textArray(item?.kpis),
+        risks: textArray(item?.risks),
+      }))
+      .filter((item) => item.title),
+    latest: recent
+      .map((item) => ({
+        title: safeText(item?.title, '近期事项'),
+        date: safeText(item?.date, nowDateText()),
+        duration: safeText(item?.duration, '90 分钟'),
+        people: safeText(item?.people, '待补充'),
+        scope: safeText(item?.scope, '请补充近期事项描述。'),
+        doneItems: textArray(item?.doneItems),
+        valueItems: textArray(item?.valueItems),
+      }))
+      .filter((item) => item.title),
+    docs: docs
+      .map((item) => ({
+        title: safeText(item?.title, '未命名文档'),
+        date: safeText(item?.date, nowDateText()),
+        desc: safeText(item?.desc, ''),
+        link: safeText(item?.link, ''),
+      }))
+      .filter((item) => item.title),
+    meetings: meetings
+      .map((item) => ({
+        title: safeText(item?.title, '未命名会议'),
+        date: safeText(item?.date, nowDateText()),
+        duration: safeText(item?.duration, '90 分钟'),
+        attendees: safeText(item?.attendees, '待补充'),
+        keyPeople: safeText(item?.keyPeople, '待补充'),
+        topic: safeText(item?.topic, '待补充'),
+        link: safeText(item?.link, ''),
+      }))
+      .filter((item) => item.title),
+    learning: learning
+      .map((item) => ({
+        title: safeText(item?.title, '未命名资源'),
+        summary: safeText(item?.summary, ''),
+        relation: safeText(item?.relation, ''),
+        detail: textArray(item?.detail),
+        kind: normalizeLearningKind(item?.kind),
+        link: safeText(item?.link, ''),
+        sourceType: item?.sourceType === 'internal' ? 'internal' : 'manual',
+        internalType: safeText(item?.internalType, ''),
+        internalId: safeText(item?.internalId, ''),
+      }))
+      .filter((item) => item.title),
+  };
+}
+
+async function listStrategyProjects(scope = 'published') {
+  const normalizedScope = normalizeStrategyScope(scope);
+  const params = [];
+  const where = [`is_active = true`];
+  if (normalizedScope !== 'admin') {
+    where.push(`is_published = true`);
+  }
+  const sql = `
+    SELECT *
+    FROM client_projects
+    WHERE ${where.join(' AND ')}
+    ORDER BY sort_order ASC NULLS LAST, created_at ASC
+  `;
+  const q = await pool.query(sql, params);
+  return q.rows.map(mapStrategyProjectSummary);
+}
+
+async function findStrategyProjectById(db, projectId) {
+  const q = await db.query('SELECT * FROM client_projects WHERE id=$1 LIMIT 1', [projectId]);
+  return q.rows[0] || null;
+}
+
+async function buildStrategyProjectSnapshot(db, projectId) {
+  const projectRow = await findStrategyProjectById(db, projectId);
+  if (!projectRow) return null;
+
+  const milestonesQ = await db.query(
+    `SELECT * FROM strategic_milestones
+     WHERE project_id=$1 AND is_active = true
+     ORDER BY sort_order ASC NULLS LAST, phase_order ASC NULLS LAST, created_at ASC`,
+    [projectId]
+  );
+  const goalsQ = await db.query(
+    `SELECT * FROM strategic_goals
+     WHERE project_id=$1 AND is_active = true
+     ORDER BY created_at ASC`,
+    [projectId]
+  );
+  const metricsQ = await db.query(
+    `SELECT gm.*
+     FROM goal_metrics gm
+     JOIN strategic_goals g ON g.id = gm.goal_id
+     WHERE g.project_id=$1
+     ORDER BY gm.sort_order ASC NULLS LAST, gm.created_at ASC`,
+    [projectId]
+  );
+  const eventsQ = await db.query(
+    `SELECT * FROM project_events
+     WHERE project_id=$1 AND is_active = true
+     ORDER BY sort_order ASC NULLS LAST, created_at ASC`,
+    [projectId]
+  );
+  const docsQ = await db.query(
+    `SELECT * FROM project_documents
+     WHERE project_id=$1 AND is_active = true
+     ORDER BY sort_order ASC NULLS LAST, created_at ASC`,
+    [projectId]
+  );
+  const meetingsQ = await db.query(
+    `SELECT * FROM project_meetings
+     WHERE project_id=$1 AND is_active = true
+     ORDER BY sort_order ASC NULLS LAST, created_at ASC`,
+    [projectId]
+  );
+  const learningQ = await db.query(
+    `SELECT * FROM project_learning_resources
+     WHERE project_id=$1 AND is_active = true
+     ORDER BY sort_order ASC NULLS LAST, created_at ASC`,
+    [projectId]
+  );
+
+  const metricsByGoalId = new Map();
+  for (const row of metricsQ.rows) {
+    const list = metricsByGoalId.get(row.goal_id) || [];
+    list.push(safeText(row.label));
+    metricsByGoalId.set(row.goal_id, list);
+  }
+
+  return {
+    project: {
+      ...mapStrategyProjectSummary(projectRow),
+      mission: projectRow.mission || '',
+      vision: projectRow.vision || '',
+      values: Array.isArray(projectRow.values_text) ? projectRow.values_text : [],
+      northStar: projectRow.north_star_metric || '',
+      northStarMetrics: Array.isArray(projectRow.north_star_metrics) ? projectRow.north_star_metrics : [],
+      annualDeliverables: Array.isArray(projectRow.yearly_deliverables) ? projectRow.yearly_deliverables : [],
+      next14Days: Array.isArray(projectRow.next_14_days) ? projectRow.next_14_days : [],
+    },
+    hero: {
+      mission: projectRow.mission || '',
+      vision: projectRow.vision || '',
+      values: Array.isArray(projectRow.values_text) ? projectRow.values_text : [],
+    },
+    north: {
+      northStar: projectRow.north_star_metric || '',
+      northStarMetrics: Array.isArray(projectRow.north_star_metrics) ? projectRow.north_star_metrics : [],
+      annualDeliverables: Array.isArray(projectRow.yearly_deliverables) ? projectRow.yearly_deliverables : [],
+      next14Days: Array.isArray(projectRow.next_14_days) ? projectRow.next_14_days : [],
+    },
+    timeline: milestonesQ.rows.map((row) => ({
+      stage: row.title || '',
+      date: row.milestone_date || '待定',
+      status: row.status === 'completed' ? 'done' : row.status === 'in-progress' ? 'current' : normalizeStrategyStatus(row.status),
+      detail: row.description || '',
+    })),
+    goals: goalsQ.rows.map((row) => ({
+      title: row.title || '',
+      oneLiner: row.one_liner || row.description || '',
+      progress: Math.max(0, Math.min(Number(row.progress || 0), 100)),
+      kpis: metricsByGoalId.get(row.id) || [],
+      risks: Array.isArray(row.risks) ? row.risks : [],
+    })),
+    latest: eventsQ.rows.map((row) => ({
+      title: row.title || '',
+      date: row.event_date || nowDateText(),
+      duration: row.duration || '90 分钟',
+      people: row.people_text || (row.participants ? `${row.participants} 人` : '待补充'),
+      scope: row.description || '',
+      doneItems: Array.isArray(row.done_items) ? row.done_items : [],
+      valueItems: Array.isArray(row.value_items) ? row.value_items : [],
+    })),
+    docs: docsQ.rows.map((row) => ({
+      title: row.title || '',
+      date: row.doc_date || nowDateText(),
+      desc: row.description || '',
+      link: row.file_url || '',
+    })),
+    meetings: meetingsQ.rows.map((row) => ({
+      title: row.title || '',
+      date: row.meeting_date || nowDateText(),
+      duration: row.duration || '90 分钟',
+      attendees: row.participants_count ? `${row.participants_count} 人` : '待补充',
+      keyPeople: row.key_people || '',
+      topic: row.topic || (Array.isArray(row.key_points) ? row.key_points.join('；') : ''),
+      link: row.meeting_link || '',
+    })),
+    learning: learningQ.rows.map(mapStrategyLearningResource).map((row) => ({
+      title: row.title,
+      summary: row.summary,
+      relation: row.relation,
+      detail: row.detail,
+      kind: normalizeLearningKind(row.kind),
+      link: row.link,
+      sourceType: row.sourceType,
+      internalType: row.internalType,
+      internalId: row.internalId,
+    })),
+  };
+}
+
+async function replaceStrategyProjectSnapshot(db, projectId, payload, options = {}) {
+  const existing = await findStrategyProjectById(db, projectId);
+  const normalized = sanitizeProjectSnapshotPayload(payload, existing);
+  const now = new Date().toISOString();
+  const publishFlag = Object.prototype.hasOwnProperty.call(options, 'publish')
+    ? Boolean(options.publish)
+    : normalized.project.isPublished;
+  const publishAt = publishFlag ? now : null;
+
+  await db.query(
+    `INSERT INTO client_projects(
+       id, client_name, project_name, status, description, sort_order, is_active, created_at, updated_at,
+       slug, logo_url, mission, vision, values_text, north_star_metric, north_star_metrics,
+       yearly_deliverables, next_14_days, is_published, published_at
+     )
+     VALUES ($1,$2,$3,'active',$4,COALESCE((SELECT sort_order FROM client_projects WHERE id=$1), 0), true, COALESCE((SELECT created_at FROM client_projects WHERE id=$1), now()), now(),$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+     ON CONFLICT (id) DO UPDATE SET
+       client_name = EXCLUDED.client_name,
+       project_name = EXCLUDED.project_name,
+       description = EXCLUDED.description,
+       slug = EXCLUDED.slug,
+       logo_url = EXCLUDED.logo_url,
+       mission = EXCLUDED.mission,
+       vision = EXCLUDED.vision,
+       values_text = EXCLUDED.values_text,
+       north_star_metric = EXCLUDED.north_star_metric,
+       north_star_metrics = EXCLUDED.north_star_metrics,
+       yearly_deliverables = EXCLUDED.yearly_deliverables,
+       next_14_days = EXCLUDED.next_14_days,
+       is_published = EXCLUDED.is_published,
+       published_at = EXCLUDED.published_at,
+       updated_at = now()`,
+    [
+      projectId,
+      normalized.project.clientName,
+      normalized.project.projectName,
+      normalized.project.description,
+      normalized.project.slug,
+      normalized.project.logoUrl || null,
+      normalized.project.mission || null,
+      normalized.project.vision || null,
+      normalized.project.values,
+      normalized.project.northStar || null,
+      normalized.project.northStarMetrics,
+      normalized.project.annualDeliverables,
+      normalized.project.next14Days,
+      publishFlag,
+      publishAt,
+    ]
+  );
+
+  await db.query('DELETE FROM goal_metrics WHERE goal_id IN (SELECT id FROM strategic_goals WHERE project_id=$1)', [projectId]);
+  await db.query('DELETE FROM strategic_milestones WHERE project_id=$1', [projectId]);
+  await db.query('DELETE FROM strategic_goals WHERE project_id=$1', [projectId]);
+  await db.query('DELETE FROM project_events WHERE project_id=$1', [projectId]);
+  await db.query('DELETE FROM project_documents WHERE project_id=$1', [projectId]);
+  await db.query('DELETE FROM project_meetings WHERE project_id=$1', [projectId]);
+  await db.query('DELETE FROM project_learning_resources WHERE project_id=$1 AND source_type <> $2', [projectId, 'internal']);
+
+  for (const [index, item] of normalized.timeline.entries()) {
+    await db.query(
+      `INSERT INTO strategic_milestones(
+         id, project_id, title, description, status, phase_order, milestone_date, sort_order, is_active, created_at, updated_at
+       )
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true,now(),now())`,
+      [
+        `ms_${crypto.randomUUID()}`,
+        projectId,
+        item.stage,
+        item.detail || null,
+        item.status === 'done' ? 'completed' : item.status === 'current' ? 'in-progress' : 'pending',
+        index + 1,
+        item.date,
+        index + 1,
+      ]
+    );
+  }
+
+  for (const item of normalized.goals) {
+    const goalId = `goal_${crypto.randomUUID()}`;
+    await db.query(
+      `INSERT INTO strategic_goals(
+         id, project_id, title, description, one_liner, progress, quarter, risks, is_active, created_at, updated_at
+       )
+       VALUES ($1,$2,$3,$4,$5,$6,'当前', $7, true, now(), now())`,
+      [goalId, projectId, item.title, item.oneLiner || null, item.oneLiner || null, item.progress, item.risks]
+    );
+    for (const [metricIndex, label] of item.kpis.entries()) {
+      await db.query(
+        `INSERT INTO goal_metrics(id, goal_id, label, sort_order, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,now(),now())`,
+        [`metric_${crypto.randomUUID()}`, goalId, label, metricIndex + 1]
+      );
+    }
+  }
+
+  for (const [index, item] of normalized.latest.entries()) {
+    await db.query(
+      `INSERT INTO project_events(
+         id, project_id, type, title, description, event_date, duration, people_text, done_items, value_items,
+         participants, sort_order, is_active, created_at, updated_at
+       )
+       VALUES ($1,$2,'meeting',$3,$4,$5,$6,$7,$8,$9,$10,$11,true,now(),now())`,
+      [
+        `evt_${crypto.randomUUID()}`,
+        projectId,
+        item.title,
+        item.scope || null,
+        item.date || nowDateText(),
+        item.duration || null,
+        item.people || null,
+        item.doneItems,
+        item.valueItems,
+        Number(String(item.people || '').replace(/\D/g, '')) || null,
+        index + 1,
+      ]
+    );
+  }
+
+  for (const [index, item] of normalized.docs.entries()) {
+    await db.query(
+      `INSERT INTO project_documents(
+         id, project_id, category, title, description, doc_date, file_url, sort_order, is_active, created_at, updated_at
+       )
+       VALUES ($1,$2,'strategy',$3,$4,$5,$6,$7,true,now(),now())`,
+      [`doc_${crypto.randomUUID()}`, projectId, item.title, item.desc || null, item.date || nowDateText(), item.link || null, index + 1]
+    );
+  }
+
+  for (const [index, item] of normalized.meetings.entries()) {
+    await db.query(
+      `INSERT INTO project_meetings(
+         id, project_id, title, meeting_date, duration, participants_count, key_points, attendees,
+         key_people, topic, meeting_link, sort_order, is_active, created_at, updated_at
+       )
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,true,now(),now())`,
+      [
+        `meeting_${crypto.randomUUID()}`,
+        projectId,
+        item.title,
+        item.date || nowDateText(),
+        item.duration || null,
+        Number(String(item.attendees || '').replace(/\D/g, '')) || null,
+        item.topic ? [item.topic] : [],
+        item.attendees ? [item.attendees] : [],
+        item.keyPeople || null,
+        item.topic || null,
+        item.link || null,
+        index + 1,
+      ]
+    );
+  }
+
+  for (const [index, item] of normalized.learning.entries()) {
+    await db.query(
+      `INSERT INTO project_learning_resources(
+         id, project_id, title, summary, relation, detail, kind, link, source_type, internal_type, internal_id,
+         sort_order, is_active, created_at, updated_at
+       )
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,true,now(),now())`,
+      [
+        `learn_${crypto.randomUUID()}`,
+        projectId,
+        item.title,
+        item.summary || null,
+        item.relation || null,
+        item.detail,
+        item.kind,
+        item.link || null,
+        item.sourceType || 'manual',
+        item.internalType || null,
+        item.internalId || null,
+        index + 1,
+      ]
+    );
+  }
+
+  return buildStrategyProjectSnapshot(db, projectId);
+}
+
+async function setStrategyProjectPublished(db, projectId, published) {
+  await db.query(
+    `UPDATE client_projects
+     SET is_published = $2,
+         published_at = CASE WHEN $2 THEN COALESCE(published_at, now()) ELSE NULL END,
+         updated_at = now()
+     WHERE id = $1`,
+    [projectId, published]
+  );
+  return findStrategyProjectById(db, projectId);
+}
+
+async function resolveStrategyAccess(req) {
+  const sessionRow = await getOptionalSession(req);
+  if (!sessionRow) {
+    return { mode: 'public' };
+  }
+
+  if (isAdminRow(sessionRow)) {
+    return { mode: 'admin', projects: await listStrategyProjects('published') };
+  }
+
+  if (sessionRow.member_type !== 'regular' && sessionRow.strategy_project_id) {
+    const project = await findStrategyProjectById(pool, sessionRow.strategy_project_id);
+    if (project && project.is_active && project.is_published) {
+      return {
+        mode: 'project',
+        project: mapStrategyProjectSummary(project),
+      };
+    }
+  }
+
+  return { mode: 'public' };
+}
+
+async function seedDefaultStrategyProjects() {
+  const q = await pool.query('SELECT count(*)::int AS c FROM client_projects');
+  if (Number(q.rows[0]?.c || 0) > 0) return;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (const seed of DEFAULT_STRATEGY_PROJECTS) {
+      await replaceStrategyProjectSnapshot(
+        client,
+        seed.id,
+        {
+          project: {
+            id: seed.id,
+            clientName: seed.clientName,
+            projectName: seed.projectName,
+            slug: seed.slug,
+            description: seed.description,
+            logoUrl: seed.logoUrl,
+            isPublished: true,
+          },
+          hero: {
+            mission: seed.mission,
+            vision: seed.vision,
+            values: seed.values,
+          },
+          north: {
+            northStar: seed.northStar,
+            northStarMetrics: seed.northStarMetrics,
+            annualDeliverables: seed.annualDeliverables,
+            next14Days: seed.next14Days,
+          },
+          timeline: seed.timeline,
+          goals: seed.goals,
+          latest: seed.latest,
+          docs: seed.docs,
+          meetings: seed.meetings,
+          learning: seed.learning.map((item) => ({ ...item, sourceType: 'manual' })),
+        },
+        { publish: true }
+      );
+    }
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function listStrategyLearningResources() {
+  const q = await pool.query(
+    `SELECT plr.*, cp.client_name
+     FROM project_learning_resources plr
+     LEFT JOIN client_projects cp ON cp.id = plr.project_id
+     WHERE plr.is_active = true
+     ORDER BY cp.sort_order ASC NULLS LAST, plr.sort_order ASC NULLS LAST, plr.created_at ASC`
+  );
+  return q.rows.map((row) => ({ ...mapStrategyLearningResource(row), projectName: row.client_name || '' }));
+}
+
+async function upsertStrategyLearningResource(db, payload) {
+  const projectId = safeText(payload.projectId);
+  const title = safeText(payload.title);
+  if (!projectId || !title) {
+    throw new Error('学习资源参数不完整');
+  }
+  const id = safeText(payload.id, `learn_${crypto.randomUUID()}`);
+  await db.query(
+    `INSERT INTO project_learning_resources(
+       id, project_id, title, summary, relation, detail, kind, link, source_type, internal_type, internal_id,
+       sort_order, is_active, created_at, updated_at
+     )
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13, now(), now())
+     ON CONFLICT (id) DO UPDATE SET
+       project_id = EXCLUDED.project_id,
+       title = EXCLUDED.title,
+       summary = EXCLUDED.summary,
+       relation = EXCLUDED.relation,
+       detail = EXCLUDED.detail,
+       kind = EXCLUDED.kind,
+       link = EXCLUDED.link,
+       source_type = EXCLUDED.source_type,
+       internal_type = EXCLUDED.internal_type,
+       internal_id = EXCLUDED.internal_id,
+       sort_order = EXCLUDED.sort_order,
+       is_active = EXCLUDED.is_active,
+       updated_at = now()`,
+    [
+      id,
+      projectId,
+      title,
+      safeText(payload.summary) || null,
+      safeText(payload.relation) || null,
+      textArray(payload.detail),
+      normalizeLearningKind(payload.kind),
+      safeText(payload.link) || null,
+      payload.sourceType === 'internal' ? 'internal' : 'manual',
+      safeText(payload.internalType) || null,
+      safeText(payload.internalId) || null,
+      toPositiveInt(payload.sortOrder, 0),
+      normalizeBool(payload.isActive, true),
+    ]
+  );
+  const q = await db.query('SELECT * FROM project_learning_resources WHERE id=$1 LIMIT 1', [id]);
+  return mapStrategyLearningResource(q.rows[0]);
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') return json(res, 204, {});
   const url = new URL(req.url || '/', `http://127.0.0.1:${PORT}`);
@@ -813,10 +1643,32 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true, data: { user: mapUser(row) } });
     }
 
+    if (url.pathname === '/api/auth/strategy-access' && req.method === 'GET') {
+      const data = await resolveStrategyAccess(req);
+      return json(res, 200, { ok: true, data });
+    }
+
+    if (url.pathname === '/api/auth/strategy/projects' && req.method === 'GET') {
+      const scope = normalizeStrategyScope(url.searchParams.get('scope'));
+      if (scope === 'admin') {
+        await requireAdmin(req);
+      }
+      const data = await listStrategyProjects(scope);
+      return json(res, 200, { ok: true, data });
+    }
+
+    if (url.pathname === '/api/auth/strategy/learning-resources' && req.method === 'GET') {
+      await requireAdmin(req);
+      return json(res, 200, { ok: true, data: await listStrategyLearningResources() });
+    }
+
     if (url.pathname === '/api/auth/invite-codes' && req.method === 'GET') {
       await requireAdmin(req);
       const q = await pool.query(
-        'SELECT id, code, type, bonus_days, max_uses, used_count, status, created_by, created_at, used_by FROM invite_codes ORDER BY created_at DESC'
+        `SELECT id, code, type, grant_kind, bonus_days, project_id, project_name_snapshot,
+                max_uses, used_count, status, created_by, created_at, used_by
+         FROM invite_codes
+         ORDER BY created_at DESC`
       );
       return json(res, 200, { ok: true, data: q.rows.map(mapInviteCode) });
     }
@@ -868,6 +1720,27 @@ const server = http.createServer(async (req, res) => {
       }
       const row = await requireSession(req);
       return json(res, 200, { ok: true, data: await listPaymentOrders({ admin: false, userId: row.id, limit }) });
+    }
+
+    const strategySnapshotMatch = url.pathname.match(/^\/api\/auth\/strategy\/projects\/([^/]+)\/snapshot$/);
+    if (strategySnapshotMatch && req.method === 'GET') {
+      const projectId = decodeURIComponent(strategySnapshotMatch[1]);
+      const access = await resolveStrategyAccess(req);
+
+      if (access.mode === 'public') {
+        return json(res, 403, { ok: false, error: '当前用户无机构战略陪伴权限' });
+      }
+      if (access.mode === 'project' && access.project?.id !== projectId) {
+        return json(res, 403, { ok: false, error: '当前用户无权查看该机构页面' });
+      }
+      const snapshot = await buildStrategyProjectSnapshot(pool, projectId);
+      if (!snapshot) {
+        return json(res, 404, { ok: false, error: '机构项目不存在' });
+      }
+      if (access.mode !== 'admin' && !snapshot.project?.isPublished) {
+        return json(res, 404, { ok: false, error: '机构项目不存在或未发布' });
+      }
+      return json(res, 200, { ok: true, data: snapshot });
     }
 
     if (req.method !== 'POST' && req.method !== 'DELETE') {
@@ -1118,6 +1991,63 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
+    if (url.pathname === '/api/auth/strategy/learning-resources/upsert' && req.method === 'POST') {
+      await requireAdmin(req);
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const saved = await upsertStrategyLearningResource(client, body);
+        await client.query('COMMIT');
+        return json(res, 200, { ok: true, data: saved, message: '学习资源已保存' });
+      } catch (error) {
+        await client.query('ROLLBACK');
+        return json(res, 400, { ok: false, error: error instanceof Error ? error.message : String(error) });
+      } finally {
+        client.release();
+      }
+    }
+
+    const strategySnapshotWriteMatch = url.pathname.match(/^\/api\/auth\/strategy\/projects\/([^/]+)\/snapshot$/);
+    if (strategySnapshotWriteMatch && req.method === 'POST') {
+      await requireAdmin(req);
+      const projectId = decodeURIComponent(strategySnapshotWriteMatch[1]);
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const snapshot = await replaceStrategyProjectSnapshot(client, projectId, body, {});
+        await client.query('COMMIT');
+        return json(res, 200, { ok: true, data: snapshot, message: '战略陪伴内容已保存到云端' });
+      } catch (error) {
+        await client.query('ROLLBACK');
+        return json(res, 400, { ok: false, error: error instanceof Error ? error.message : String(error) });
+      } finally {
+        client.release();
+      }
+    }
+
+    const strategyPublishMatch = url.pathname.match(/^\/api\/auth\/strategy\/projects\/([^/]+)\/publish$/);
+    if (strategyPublishMatch && req.method === 'POST') {
+      await requireAdmin(req);
+      const projectId = decodeURIComponent(strategyPublishMatch[1]);
+      const publish = normalizeBool(body.publish, true);
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const row = await setStrategyProjectPublished(client, projectId, publish);
+        await client.query('COMMIT');
+        return json(res, 200, {
+          ok: true,
+          data: mapStrategyProjectSummary(row),
+          message: publish ? '机构战略陪伴页已发布' : '机构战略陪伴页已取消发布',
+        });
+      } catch (error) {
+        await client.query('ROLLBACK');
+        return json(res, 400, { ok: false, error: error instanceof Error ? error.message : String(error) });
+      } finally {
+        client.release();
+      }
+    }
+
     if (url.pathname === '/api/auth/bind-contact' && req.method === 'POST') {
       const sessionRow = await requireSession(req);
       const channel = normalizeChannel(body.channel);
@@ -1319,23 +2249,55 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (url.pathname === '/api/auth/invite-codes' && req.method === 'POST') {
-      await requireAdmin(req);
+      const admin = await requireAdmin(req);
+      const grantKind = normalizeInviteGrantKind(body.grantKind);
       const type = String(body.type || '');
       const maxUses = Math.max(1, Number(body.maxUses || 1));
+      const projectId = grantKind === 'strategy_project' ? safeText(body.projectId) : '';
       const bonusDays = type === '30days' ? 30 : type === '365days' ? 365 : type === '1095days' ? 1095 : 0;
-      if (!bonusDays) {
+      let projectNameSnapshot = null;
+
+      if (grantKind === 'strategy_project') {
+        if (!projectId) {
+          return json(res, 400, { ok: false, error: '请选择已发布机构项目' });
+        }
+        const projectRow = await findStrategyProjectById(pool, projectId);
+        if (!projectRow || !projectRow.is_active) {
+          return json(res, 400, { ok: false, error: '机构项目不存在' });
+        }
+        if (!projectRow.is_published) {
+          return json(res, 400, { ok: false, error: '仅已发布机构可生成战略邀请码' });
+        }
+        projectNameSnapshot = projectRow.client_name;
+      } else if (!bonusDays) {
         return json(res, 400, { ok: false, error: '无效的邀请码类型' });
       }
+
       const code = crypto.randomBytes(6).toString('base64url').toUpperCase().slice(0, 12);
       const id = crypto.randomUUID();
-      const admin = await requireAdmin(req);
       await pool.query(
-        `INSERT INTO invite_codes(id, code, type, bonus_days, max_uses, used_count, status, created_by, used_by)
-         VALUES ($1,$2,$3,$4,$5,0,'valid',$6,'[]'::jsonb)`,
-        [id, code, type, bonusDays, maxUses, admin.email || admin.nickname || 'admin']
+        `INSERT INTO invite_codes(
+           id, code, type, grant_kind, bonus_days, project_id, project_name_snapshot, max_uses,
+           used_count, status, created_by, used_by
+         )
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,0,'valid',$9,'[]'::jsonb)`,
+        [
+          id,
+          code,
+          grantKind === 'strategy_project' ? 'strategy_project' : type,
+          grantKind,
+          grantKind === 'strategy_project' ? 0 : bonusDays,
+          projectId || null,
+          projectNameSnapshot,
+          maxUses,
+          admin.email || admin.nickname || 'admin',
+        ]
       );
       const q = await pool.query(
-        'SELECT id, code, type, bonus_days, max_uses, used_count, status, created_by, created_at, used_by FROM invite_codes WHERE id=$1',
+        `SELECT id, code, type, grant_kind, bonus_days, project_id, project_name_snapshot,
+                max_uses, used_count, status, created_by, created_at, used_by
+         FROM invite_codes
+         WHERE id=$1`,
         [id]
       );
       return json(res, 200, { ok: true, data: mapInviteCode(q.rows[0]) });
@@ -1353,9 +2315,12 @@ const server = http.createServer(async (req, res) => {
         const currentUser = await findUserById(client, userRow.id);
         const result = await applyInviteCodeToUser(client, code, currentUser);
         await client.query('COMMIT');
+        const message = result.user?.strategy_project_id
+          ? '邀请码兑换成功，已绑定机构战略陪伴并开通付费资格'
+          : '邀请码兑换成功，付费资格已更新';
         return json(res, 200, {
           ok: true,
-          message: '邀请码兑换成功，付费资格已更新',
+          message,
           data: { user: mapUser(result.user) },
         });
       } catch (error) {
@@ -1493,7 +2458,10 @@ const server = http.createServer(async (req, res) => {
                paid_source=NULL,
                paid_started_at=NULL,
                paid_expires_at=NULL,
-               paid_note=NULL
+               paid_note=NULL,
+               strategy_project_id=NULL,
+               strategy_bound_at=NULL,
+               strategy_access_source=NULL
            WHERE id=$1`,
           [userId]
         );
@@ -1544,6 +2512,14 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true, message: '邀请码已删除' });
     }
 
+    const learningDeleteMatch = url.pathname.match(/^\/api\/auth\/strategy\/learning-resources\/([^/]+)$/);
+    if (learningDeleteMatch && req.method === 'DELETE') {
+      await requireAdmin(req);
+      const resourceId = decodeURIComponent(learningDeleteMatch[1]);
+      await pool.query('DELETE FROM project_learning_resources WHERE id=$1', [resourceId]);
+      return json(res, 200, { ok: true, message: '学习资源已删除' });
+    }
+
     const commentDeleteMatch = url.pathname.match(/^\/api\/auth\/comments\/([^/]+)$/);
     if (commentDeleteMatch && req.method === 'DELETE') {
       await requireAdmin(req);
@@ -1567,4 +2543,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 await ensureSchema();
+await seedDefaultStrategyProjects();
 server.listen(PORT, () => console.log(`[pg-auth-api] listening on http://127.0.0.1:${PORT}`));

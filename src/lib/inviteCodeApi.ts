@@ -1,4 +1,4 @@
-import type { InviteCode, InviteCodeType } from './inviteCodeTypes';
+import type { InviteCode, InviteCodeType, InviteGrantKind } from './inviteCodeTypes';
 import { authRequest } from './authHttp';
 import type { AuthApiUser } from './authApi';
 
@@ -6,10 +6,23 @@ export type InviteCodeDto = InviteCode;
 
 export const fetchInviteCodes = () => authRequest<InviteCodeDto[]>('/invite-codes', undefined, { withAuth: true });
 
-export const createInviteCode = (type: InviteCodeType, maxUses = 1) =>
+export const createInviteCode = (params: {
+  type: InviteCodeType;
+  maxUses?: number;
+  grantKind?: InviteGrantKind;
+  projectId?: string;
+}) =>
   authRequest<InviteCodeDto>(
     '/invite-codes',
-    { method: 'POST', body: JSON.stringify({ type, maxUses }) },
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        type: params.type,
+        maxUses: params.maxUses ?? 1,
+        grantKind: params.grantKind,
+        projectId: params.projectId,
+      }),
+    },
     { withAuth: true }
   );
 

@@ -10,6 +10,7 @@ import {
   sendVerifyCode,
   updateCurrentProfile,
 } from '../lib/authApi';
+import { redeemInviteCodeApi } from '../lib/inviteCodeApi';
 import {
   User as UserIcon,
   Crown,
@@ -38,6 +39,10 @@ type LocalUser = {
   paidStartedAt?: string;
   paidExpiresAt?: string;
   paidNote?: string;
+  strategyProjectId?: string;
+  strategyBoundAt?: string;
+  strategyAccessSource?: string;
+  strategyProjectName?: string;
 };
 
 type UserCenterPageProps = {
@@ -125,6 +130,9 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
   const [avatarPreview, setAvatarPreview] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [inviteCodeInput, setInviteCodeInput] = useState('');
+  const [isRedeemingInvite, setIsRedeemingInvite] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [bindingForms, setBindingForms] = useState<Record<ContactChannel, BindingFormState>>({
     email: { target: '', code: '', currentPassword: '' },
     phone: { target: '', code: '', currentPassword: '' },
@@ -481,6 +489,33 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
     setActivePanel(null);
   };
 
+  const handleRedeemInviteCode = async () => {
+    if (!user) return;
+    const code = inviteCodeInput.trim().toUpperCase();
+    if (!code) {
+      setInviteMessage({ type: 'error', text: '请输入邀请码。' });
+      return;
+    }
+
+    setIsRedeemingInvite(true);
+    setInviteMessage(null);
+    const result = await redeemInviteCodeApi(code);
+    setIsRedeemingInvite(false);
+
+    if (!result.ok || !result.data?.user) {
+      setInviteMessage({ type: 'error', text: result.error || '邀请码兑换失败，请稍后重试。' });
+      return;
+    }
+
+    const nextUser = {
+      ...normalizeLoginUser(result.data.user),
+      plainPassword: user.plainPassword,
+    } as LocalUser;
+    persistUser(nextUser);
+    setInviteCodeInput('');
+    setInviteMessage({ type: 'success', text: result.message || '邀请码兑换成功。' });
+  };
+
   const handleSendDeactivateCode = async () => {
     const target = getBoundTarget(user, deactivateForm.channel);
     if (!target) {
@@ -631,7 +666,7 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div className="rounded-2xl border border-border/40 bg-white/80 p-4">
                   <div className="text-xs text-muted-foreground/70 mb-2">当前身份</div>
                   <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium ${memberBadge.cls}`}>
@@ -643,6 +678,10 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
                   <div className="text-xs text-muted-foreground/70 mb-2">付费到期时间</div>
                   <div className="font-medium">{expireText}</div>
                 </div>
+                <div className="rounded-2xl border border-border/40 bg-white/80 p-4">
+                  <div className="text-xs text-muted-foreground/70 mb-2">战略陪伴</div>
+                  <div className="font-medium">{user.strategyProjectName || '未绑定机构'}</div>
+                </div>
               </div>
 
               {profileMessage && (
@@ -650,6 +689,40 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
                   {profileMessage.text}
                 </div>
               )}
+
+              <div className="rounded-2xl border border-border/40 bg-white/80 p-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-foreground">兑换邀请码</div>
+                    <p className="text-xs text-muted-foreground/70 mt-1">可用于开通付费会员或绑定机构战略陪伴。</p>
+                  </div>
+                  <div className="flex w-full max-w-xl gap-3">
+                    <input
+                      value={inviteCodeInput}
+                      onChange={(e) => {
+                        setInviteCodeInput(e.target.value.toUpperCase());
+                        setInviteMessage(null);
+                      }}
+                      placeholder="输入邀请码"
+                      className="flex-1 px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRedeemInviteCode}
+                      disabled={isRedeemingInvite}
+                      className="px-5 py-3 rounded-2xl border border-border/50 hover:bg-muted/30 text-sm disabled:opacity-60"
+                    >
+                      {isRedeemingInvite ? '兑换中…' : '确认兑换'}
+                    </button>
+                  </div>
+                </div>
+
+                {inviteMessage && (
+                  <div className={`mt-3 text-sm px-4 py-3 rounded-2xl ${inviteMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                    {inviteMessage.text}
+                  </div>
+                )}
+              </div>
 
               <div className="flex justify-end">
                 <button

@@ -11,7 +11,7 @@ import {
   BookOpen, Tag, Folder, Upload, Image, File, Send, Check, Calendar,
   User, Globe, TrendingUp, MoreHorizontal, Clock, FileText, Target, RotateCcw
 } from 'lucide-react';
-import { INVITE_CODE_TYPES, type InviteCode, type InviteCodeType } from '../lib/inviteCodeTypes';
+import { INVITE_CODE_TYPES, type InviteCode, type InviteCodeType, type InviteGrantKind } from '../lib/inviteCodeTypes';
 import { createInviteCode, deleteInviteCodeApi, disableInviteCodeApi, fetchInviteCodes } from '../lib/inviteCodeApi';
 import { ADMIN_SURFACE_ROLE_META } from '../lib/adminRoles';
 import { buildAdminUrl, getAdminTabFromSearchParams, normalizeAdminTab, type AdminTab } from '../lib/adminConsole';
@@ -62,7 +62,7 @@ import {
   deleteCourseRecommendation,
   type ClientProject,
   type CourseRecommendation,
-} from '../lib/dataServiceLocal';
+} from '../lib/strategySyncCloud';
 
 // Props
 interface AdminDashboardProps {
@@ -136,6 +136,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const [inviteCodes, setInviteCodes] = useState<InviteCode[]>([]);
   const [selectedInviteIds, setSelectedInviteIds] = useState<string[]>([]);
   const [selectedType, setSelectedType] = useState<InviteCodeType>('30days');
+  const [selectedGrantKind, setSelectedGrantKind] = useState<InviteGrantKind>('member_days');
+  const [selectedStrategyProjectId, setSelectedStrategyProjectId] = useState('');
   const [maxUses, setMaxUses] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -266,6 +268,26 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     }
   }, [activeMenu, loadAdminComments]);
 
+  useEffect(() => {
+    let canceled = false;
+    (async () => {
+      try {
+        const list = await getStrategyClients();
+        if (canceled) return;
+        setStrategyClients(list);
+        setSelectedStrategyProjectId((prev) => prev || list[0]?.id || '');
+      } catch (error) {
+        if (canceled) return;
+        console.warn('读取战略陪伴项目失败:', error);
+        setStrategyClients([]);
+      }
+    })();
+
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
   // 打开内容编辑表单时：自动读取已同步的客户勾选
   useEffect(() => {
     const internalType = showReportForm ? 'report' : showInsightForm ? 'article' : showBookForm ? 'book' : null;
@@ -318,12 +340,14 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   };
 
   const exportInviteCodesCsv = (rows: InviteCode[]) => {
-    const header = ['邀请码', '类型', '最大使用次数', '已使用次数', '奖励时长(天)', '状态', '创建时间'];
+    const header = ['邀请码', '用途', '类型', '绑定机构', '最大使用次数', '已使用次数', '奖励时长(天)', '状态', '创建时间'];
     const lines = rows.map((c) => {
       const typeInfo = getTypeInfo(c.type as InviteCodeType);
       return [
         c.code,
+        c.grantKind === 'strategy_project' ? '机构战略陪伴' : '付费会员时长',
         typeInfo.label,
+        c.projectNameSnapshot || '',
         String(c.maxUses ?? ''),
         String(c.usedCount ?? ''),
         String(typeInfo.days ?? ''),
@@ -380,20 +404,29 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
   // 生成邀请码
   const handleGenerateCode = async () => {
-    console.log('开始生成邀请码...');
     setIsGenerating(true);
     setMessage(null);
     
     try {
-      console.log('调用generateInvitationCode，类型:', selectedType, '最大使用次数:', maxUses);
-      const result = await createInviteCode(selectedType, maxUses);
-      console.log('生成结果:', result);
+      if (selectedGrantKind === 'strategy_project' && !selectedStrategyProjectId) {
+        setMessage({ type: 'error', text: '请先选择已发布机构，再生成战略邀请码' });
+        return;
+      }
+      const result = await createInviteCode({
+        type: selectedGrantKind === 'strategy_project' ? 'strategy_project' : selectedType,
+        maxUses,
+        grantKind: selectedGrantKind,
+        projectId: selectedGrantKind === 'strategy_project' ? selectedStrategyProjectId : undefined,
+      });
       
       if (result.ok && result.data) {
         const created = result.data as any;
-        setMessage({ 
-          type: 'success', 
-          text: `成功生成邀请码: ${created.code} (${INVITE_CODE_TYPES[selectedType].label})` 
+        const label = created.grantKind === 'strategy_project'
+          ? `${created.projectNameSnapshot || '机构项目'} · ${INVITE_CODE_TYPES.strategy_project.label}`
+          : INVITE_CODE_TYPES[selectedType].label;
+        setMessage({
+          type: 'success',
+          text: `成功生成邀请码: ${created.code} (${label})`
         });
         await loadInviteCodes();
       } else {
@@ -403,7 +436,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         });
       }
     } catch (error) {
-      console.error('生成邀请码错误:', error);
       setMessage({ 
         type: 'error', 
         text: '生成邀请码时发生错误: ' + (error instanceof Error ? error.message : String(error))
@@ -453,7 +485,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       days: config.bonusDays,
       color: type === '30days' ? 'bg-blue-100 text-blue-700' :
              type === '365days' ? 'bg-amber-100 text-amber-700' :
-             'bg-purple-100 text-purple-700'
+             type === '1095days' ? 'bg-purple-100 text-purple-700' :
+             'bg-emerald-100 text-emerald-700'
     };
   };
 
@@ -1800,21 +1833,59 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">生成邀请码</h3>
                 
                 <div className="flex flex-wrap gap-4 items-end">
-                  <div className="flex-1 min-w-48">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">邀请码类型</label>
-                    <select 
-                      value={selectedType}
+                  <div className="min-w-48">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">用途</label>
+                    <select
+                      value={selectedGrantKind}
                       onChange={(e) => {
-                        setSelectedType(e.target.value as InviteCodeType);
+                        const nextKind = e.target.value as InviteGrantKind;
+                        setSelectedGrantKind(nextKind);
+                        if (nextKind === 'strategy_project') {
+                          setSelectedType('strategy_project');
+                        } else {
+                          setSelectedType('30days');
+                        }
                       }}
                       className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
                     >
-                      {Object.entries(INVITE_CODE_TYPES).map(([key, config]) => (
-                        <option key={key} value={key}>
-                          {config.label} - {config.description}
-                        </option>
-                      ))}
+                      <option value="member_days">普通付费邀请码</option>
+                      <option value="strategy_project">机构战略邀请码</option>
                     </select>
+                  </div>
+                  <div className="flex-1 min-w-48">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {selectedGrantKind === 'strategy_project' ? '绑定机构' : '邀请码类型'}
+                    </label>
+                    {selectedGrantKind === 'strategy_project' ? (
+                      <select
+                        value={selectedStrategyProjectId}
+                        onChange={(e) => setSelectedStrategyProjectId(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                      >
+                        <option value="">请选择已发布机构</option>
+                        {strategyClients.map((client) => (
+                          <option key={client.id} value={client.id}>
+                            {client.clientName}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <select
+                        value={selectedType}
+                        onChange={(e) => {
+                          setSelectedType(e.target.value as InviteCodeType);
+                        }}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                      >
+                        {Object.entries(INVITE_CODE_TYPES)
+                          .filter(([key]) => key !== 'strategy_project')
+                          .map(([key, config]) => (
+                            <option key={key} value={key}>
+                              {config.label} - {config.description}
+                            </option>
+                          ))}
+                      </select>
+                    )}
                   </div>
                   <div className="w-40">
                     <label className="block text-sm font-medium text-gray-700 mb-2">最大使用次数</label>
@@ -1905,7 +1976,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                             />
                           </th>
                           <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">邀请码</th>
+                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用途</th>
                           <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
+                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">绑定机构</th>
                           <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">使用情况</th>
                           <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">奖励时长</th>
                           <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
@@ -1945,15 +2018,23 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                 </div>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${code.grantKind === 'strategy_project' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-50 text-blue-700'}`}>
+                                  {code.grantKind === 'strategy_project' ? '机构战略陪伴' : '付费会员时长'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
                                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${typeInfo.color}`}>
                                   {typeInfo.label}
                                 </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                {code.projectNameSnapshot || '-'}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                 {code.usedCount} / {code.maxUses}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                {typeInfo.days}天
+                                {typeInfo.days > 0 ? `${typeInfo.days}天` : '机构绑定'}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 w-fit ${statusInfo.color}`}>

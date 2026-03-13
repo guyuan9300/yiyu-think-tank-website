@@ -177,8 +177,9 @@ export function PaymentManagementPage() {
         const query = searchQuery.trim().toLowerCase();
         const source = normalizePaidSource(user);
         const lifecycle = getLifecycle(user);
+        const nickname = user.nickname || '';
         const matchesQuery = !query
-          || user.nickname.toLowerCase().includes(query)
+          || nickname.toLowerCase().includes(query)
           || (user.email || '').toLowerCase().includes(query)
           || user.phone?.includes(query)
           || (user.invitationCode || '').toLowerCase().includes(query)
@@ -205,7 +206,7 @@ export function PaymentManagementPage() {
       flash('error', result.error || '续期失败，请稍后重试');
       return;
     }
-    flash('success', `已为 ${user.nickname} 顺延 30 天付费资格`);
+    flash('success', `已为 ${user.nickname || '该用户'} 顺延 30 天付费资格`);
     await loadData(true);
   };
 
@@ -466,10 +467,10 @@ export function PaymentManagementPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white font-medium flex-shrink-0">
-                          {user.nickname.charAt(0)}
+                          {(user.nickname || '会').charAt(0)}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{user.nickname}</p>
+                          <p className="font-medium text-gray-900">{user.nickname || '未命名用户'}</p>
                           <p className="text-sm text-gray-500">ID: {user.id}</p>
                         </div>
                       </div>

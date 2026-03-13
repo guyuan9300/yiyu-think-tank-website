@@ -1,34 +1,73 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AdminStrategyCompanionConceptPage from './AdminStrategyCompanionConceptPage';
+import { fetchStrategyAccess, type StrategyAccessMode } from '../lib/strategyCompanionApi';
 
-type ClientName = '蓝信封' | '日慈基金会';
-
-function resolveClientNameFromUrl(): ClientName {
+function resolveProjectIdFromUrl() {
   try {
     const params = new URLSearchParams(window.location.search);
-    const clientId = params.get('clientId');
-    if (!clientId) return '蓝信封';
-
-    const raw = localStorage.getItem('yiyu_client_projects');
-    const list = raw ? JSON.parse(raw) : [];
-    const matched = list.find((x: any) => x?.id === clientId);
-    const name = (matched?.clientName || '').trim();
-    if (name === '日慈基金会') return '日慈基金会';
-    return '蓝信封';
+    return params.get('projectId') || '';
   } catch {
-    return '蓝信封';
+    return '';
   }
 }
 
 export function StrategyCompanionConceptPage({ onNavigate }: { onNavigate?: (page: string) => void }) {
-  const initialClient = useMemo(() => resolveClientNameFromUrl(), []);
+  const [accessMode, setAccessMode] = useState<StrategyAccessMode>('public');
+  const [initialProjectId, setInitialProjectId] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  const requestedProjectId = useMemo(() => resolveProjectIdFromUrl(), []);
+
+  useEffect(() => {
+    let canceled = false;
+
+    const load = async () => {
+      setLoading(true);
+      const result = await fetchStrategyAccess();
+      if (canceled) return;
+
+      if (!result.ok || !result.data) {
+        setAccessMode('public');
+        setInitialProjectId('');
+        setLoading(false);
+        return;
+      }
+
+      const data = result.data;
+      setAccessMode(data.mode);
+      if (data.mode === 'project') {
+        setInitialProjectId(data.project?.id || '');
+      } else if (data.mode === 'admin') {
+        const publishedProjects = data.projects || [];
+        const matched = publishedProjects.find((item) => item.id === requestedProjectId);
+        setInitialProjectId(matched?.id || publishedProjects[0]?.id || '');
+      } else {
+        setInitialProjectId('');
+      }
+      setLoading(false);
+    };
+
+    void load();
+    return () => {
+      canceled = true;
+    };
+  }, [requestedProjectId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F7F7F5] flex items-center justify-center text-sm text-slate-500">
+        正在加载战略陪伴页面…
+      </div>
+    );
+  }
 
   return (
     <AdminStrategyCompanionConceptPage
       onNavigate={onNavigate}
       showHeader={true}
       viewMode="frontend"
-      initialClient={initialClient}
+      accessMode={accessMode}
+      initialProjectId={initialProjectId}
     />
   );
 }
