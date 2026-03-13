@@ -1921,7 +1921,7 @@
             sessionStorage.removeItem('yiyu_is_admin');
             localStorage.removeItem('yiyu_admin_email');
             sessionStorage.removeItem('yiyu_admin_email');
-            window.top.location.href = `${window.location.origin}${window.location.pathname.replace(/admin\.html$/, '')}?page=home`;
+            window.top.location.href = `${window.location.origin}${window.location.pathname.replace(/admin\.html$/, '')}`;
           });
         } catch (e) {
           showToast('退出登录失败，请重试');
