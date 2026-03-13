@@ -1,7 +1,7 @@
 import { authRequest, type ApiResult } from './authHttp';
 
 export type AuthChannel = 'phone' | 'email';
-export type AuthScene = 'register' | 'reset';
+export type AuthScene = 'register' | 'reset' | 'bind';
 
 export interface AuthApiUser {
   id: string;
@@ -31,11 +31,16 @@ export interface LoginResponseData {
   expiresAt?: string;
 }
 
-export async function sendVerifyCode(channel: AuthChannel, target: string, scene: AuthScene) {
+export async function sendVerifyCode(
+  channel: AuthChannel,
+  target: string,
+  scene: AuthScene,
+  options?: { withAuth?: boolean }
+) {
   return authRequest('/send-code', {
     method: 'POST',
     body: JSON.stringify({ channel, target, scene }),
-  });
+  }, options);
 }
 
 export async function registerByCode(params: {
@@ -85,6 +90,18 @@ export async function fetchCurrentProfile() {
 
 export async function updateCurrentProfile(params: { nickname: string; avatarUrl?: string | null }) {
   return authRequest<{ user: AuthApiUser }>('/profile', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  }, { withAuth: true });
+}
+
+export async function bindCurrentContact(params: {
+  channel: AuthChannel;
+  target: string;
+  code: string;
+  currentPassword: string;
+}) {
+  return authRequest<{ user: AuthApiUser }>('/bind-contact', {
     method: 'POST',
     body: JSON.stringify(params),
   }, { withAuth: true });

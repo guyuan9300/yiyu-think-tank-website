@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { Header } from './Header';
 import { AUTH_TOKEN_KEY, getSavedUserRaw, saveUserRaw, USER_KEY } from '../lib/storage';
 import {
+  bindCurrentContact,
   fetchCurrentProfile,
   normalizeLoginUser,
   resetPasswordByCode,
@@ -15,6 +16,8 @@ import {
   EyeOff,
   KeyRound,
   Lock,
+  Mail,
+  Smartphone,
 } from 'lucide-react';
 
 type MemberType = 'regular' | 'gold' | 'diamond';
@@ -38,6 +41,14 @@ type LocalUser = {
 
 type UserCenterPageProps = {
   onNavigate?: (page: string) => void;
+};
+
+type ContactChannel = 'phone' | 'email';
+
+type BindingFormState = {
+  target: string;
+  code: string;
+  currentPassword: string;
 };
 
 function rememberMode() {
@@ -73,6 +84,16 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
   const [avatarPreview, setAvatarPreview] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [bindingForms, setBindingForms] = useState<Record<ContactChannel, BindingFormState>>({
+    email: { target: '', code: '', currentPassword: '' },
+    phone: { target: '', code: '', currentPassword: '' },
+  });
+  const [bindingMessage, setBindingMessage] = useState<Record<ContactChannel, { type: 'success' | 'error'; text: string } | null>>({
+    email: null,
+    phone: null,
+  });
+  const [sendingBindingCode, setSendingBindingCode] = useState<ContactChannel | null>(null);
+  const [submittingBinding, setSubmittingBinding] = useState<ContactChannel | null>(null);
 
   const [showSavedPassword, setShowSavedPassword] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
@@ -168,6 +189,22 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
     }
   }, [isAdmin, onNavigate, user]);
 
+  useEffect(() => {
+    if (!user) return;
+    setBindingForms({
+      email: {
+        target: hasEmailBinding(user.email) ? String(user.email || '') : '',
+        code: '',
+        currentPassword: '',
+      },
+      phone: {
+        target: user.phone || '',
+        code: '',
+        currentPassword: '',
+      },
+    });
+  }, [user?.email, user?.phone]);
+
   const handleAvatarChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
@@ -211,6 +248,148 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
     } as LocalUser;
     persistUser(nextUser);
     setProfileMessage({ type: 'success', text: result.message || '个人资料已保存。' });
+  };
+
+  const updateBindingForm = (channel: ContactChannel, field: keyof BindingFormState, value: string) => {
+    setBindingForms((prev) => ({
+      ...prev,
+      [channel]: {
+        ...prev[channel],
+        [field]: value,
+      },
+    }));
+    setBindingMessage((prev) => ({ ...prev, [channel]: null }));
+  };
+
+  const normalizeBindingTarget = (channel: ContactChannel, value: string) => {
+    const trimmed = value.trim();
+    return channel === 'email' ? trimmed.toLowerCase() : trimmed;
+  };
+
+  const validateBindingTarget = (channel: ContactChannel, value: string) => {
+    if (channel === 'email') {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    }
+    return /^1[3-9]\d{9}$/.test(value);
+  };
+
+  const handleSendBindingCode = async (channel: ContactChannel) => {
+    if (!user) return;
+    const target = normalizeBindingTarget(channel, bindingForms[channel].target);
+    const currentTarget = channel === 'email'
+      ? (hasEmailBinding(user.email) ? String(user.email || '') : '')
+      : (user.phone || '');
+
+    if (!validateBindingTarget(channel, target)) {
+      setBindingMessage((prev) => ({
+        ...prev,
+        [channel]: {
+          type: 'error',
+          text: channel === 'email' ? '请输入正确的邮箱地址。' : '请输入正确的手机号码。',
+        },
+      }));
+      return;
+    }
+
+    if (target === currentTarget) {
+      setBindingMessage((prev) => ({
+        ...prev,
+        [channel]: {
+          type: 'error',
+          text: channel === 'email' ? '该邮箱已绑定当前账号。' : '该手机号已绑定当前账号。',
+        },
+      }));
+      return;
+    }
+
+    setSendingBindingCode(channel);
+    setBindingMessage((prev) => ({ ...prev, [channel]: null }));
+    const result = await sendVerifyCode(channel, target, 'bind', { withAuth: true });
+    setSendingBindingCode(null);
+
+    if (!result.ok) {
+      setBindingMessage((prev) => ({
+        ...prev,
+        [channel]: {
+          type: 'error',
+          text: result.error || '验证码发送失败，请稍后重试。',
+        },
+      }));
+      return;
+    }
+
+    setBindingMessage((prev) => ({
+      ...prev,
+      [channel]: {
+        type: 'success',
+        text: channel === 'email' ? '验证码已发送到新邮箱。' : '验证码已发送到新手机号。',
+      },
+    }));
+  };
+
+  const handleSubmitBinding = async (channel: ContactChannel) => {
+    if (!user) return;
+    const form = bindingForms[channel];
+    const target = normalizeBindingTarget(channel, form.target);
+
+    if (!validateBindingTarget(channel, target)) {
+      setBindingMessage((prev) => ({
+        ...prev,
+        [channel]: {
+          type: 'error',
+          text: channel === 'email' ? '请输入正确的邮箱地址。' : '请输入正确的手机号码。',
+        },
+      }));
+      return;
+    }
+    if (!form.code.trim()) {
+      setBindingMessage((prev) => ({
+        ...prev,
+        [channel]: { type: 'error', text: '请输入验证码。' },
+      }));
+      return;
+    }
+    if (!form.currentPassword) {
+      setBindingMessage((prev) => ({
+        ...prev,
+        [channel]: { type: 'error', text: '请输入当前密码。' },
+      }));
+      return;
+    }
+
+    setSubmittingBinding(channel);
+    setBindingMessage((prev) => ({ ...prev, [channel]: null }));
+    const result = await bindCurrentContact({
+      channel,
+      target,
+      code: form.code.trim(),
+      currentPassword: form.currentPassword,
+    });
+    setSubmittingBinding(null);
+
+    if (!result.ok || !result.data?.user) {
+      setBindingMessage((prev) => ({
+        ...prev,
+        [channel]: {
+          type: 'error',
+          text: result.error || '绑定失败，请稍后重试。',
+        },
+      }));
+      return;
+    }
+
+    const nextUser = {
+      ...normalizeLoginUser(result.data.user),
+      plainPassword: user.plainPassword,
+    } as LocalUser;
+    persistUser(nextUser);
+    setBindingMessage((prev) => ({
+      ...prev,
+      [channel]: {
+        type: 'success',
+        text: result.message || (channel === 'email' ? '邮箱已绑定成功。' : '手机号已绑定成功。'),
+      },
+    }));
   };
 
   const getAuthTarget = () => {
@@ -572,6 +751,111 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
                   {securityMessage.text}
                 </div>
               )}
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">绑定方式管理</h3>
+                <p className="mt-1 text-sm text-muted-foreground/70">可绑定或更换邮箱、手机号。完成后可用新绑定方式登录和找回密码，且仍共用同一个密码。</p>
+              </div>
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {([
+                {
+                  channel: 'email' as ContactChannel,
+                  title: emailBound ? '更换邮箱' : '绑定邮箱',
+                  icon: Mail,
+                  currentLabel: sanitizeDisplayEmail(user.email),
+                  statusLabel: emailBound ? '已绑定' : '未绑定',
+                  targetPlaceholder: emailBound ? '请输入新的邮箱地址' : '请输入要绑定的邮箱地址',
+                  note: '绑定成功后，可用邮箱登录、找回密码，并与手机号共用同一密码。',
+                },
+                {
+                  channel: 'phone' as ContactChannel,
+                  title: phoneBound ? '更换手机号' : '绑定手机号',
+                  icon: Smartphone,
+                  currentLabel: user.phone || '-',
+                  statusLabel: phoneBound ? '已绑定' : '未绑定',
+                  targetPlaceholder: phoneBound ? '请输入新的手机号码' : '请输入要绑定的手机号码',
+                  note: '绑定成功后，可用手机号登录、找回密码，并与邮箱共用同一密码。',
+                },
+              ]).map((item) => (
+                <div key={item.channel} className="rounded-2xl border border-border/40 p-5 bg-white/80">
+                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <item.icon className="w-4 h-4" />
+                    <span>{item.title}</span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-xl border border-border/40 bg-muted/20 px-3 py-2">
+                      <div className="text-xs text-muted-foreground/70">当前绑定</div>
+                      <div className="mt-1 break-all font-medium">{item.currentLabel}</div>
+                    </div>
+                    <div className="rounded-xl border border-border/40 bg-muted/20 px-3 py-2">
+                      <div className="text-xs text-muted-foreground/70">状态</div>
+                      <div className="mt-1 font-medium">{item.statusLabel}</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    <input
+                      type={item.channel === 'email' ? 'email' : 'tel'}
+                      value={bindingForms[item.channel].target}
+                      onChange={(e) => updateBindingForm(item.channel, 'target', e.target.value)}
+                      placeholder={item.targetPlaceholder}
+                      className="w-full px-3 py-2 rounded-xl border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+
+                    <div className="flex gap-3">
+                      <input
+                        value={bindingForms[item.channel].code}
+                        onChange={(e) => updateBindingForm(item.channel, 'code', e.target.value)}
+                        placeholder="验证码"
+                        className="flex-1 px-3 py-2 rounded-xl border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSendBindingCode(item.channel)}
+                        disabled={sendingBindingCode === item.channel}
+                        className="px-4 py-2 rounded-xl border border-border/50 hover:bg-muted/30 text-sm disabled:opacity-60"
+                      >
+                        {sendingBindingCode === item.channel ? '发送中…' : '发送验证码'}
+                      </button>
+                    </div>
+
+                    <input
+                      type="password"
+                      value={bindingForms[item.channel].currentPassword}
+                      onChange={(e) => updateBindingForm(item.channel, 'currentPassword', e.target.value)}
+                      placeholder="请输入当前密码"
+                      className="w-full px-3 py-2 rounded-xl border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => handleSubmitBinding(item.channel)}
+                      disabled={submittingBinding === item.channel}
+                      className="w-full px-4 py-2 rounded-xl bg-foreground text-white hover:bg-foreground/90 text-sm disabled:opacity-60"
+                    >
+                      {submittingBinding === item.channel ? '提交中…' : item.title}
+                    </button>
+
+                    <p className="text-xs text-muted-foreground/70">{item.note}</p>
+
+                    {bindingMessage[item.channel] && (
+                      <div className={`text-xs px-3 py-2 rounded-xl ${
+                        bindingMessage[item.channel]?.type === 'success'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                          : 'bg-red-50 text-red-700 border border-red-100'
+                      }`}>
+                        {bindingMessage[item.channel]?.text}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>

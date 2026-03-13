@@ -119,7 +119,7 @@ function normalizeChannel(input) {
 }
 
 function normalizeScene(input) {
-  return input === 'register' ? 'register' : input === 'reset' ? 'reset' : null;
+  return input === 'register' || input === 'reset' || input === 'bind' ? input : null;
 }
 
 function normalizeTarget(channel, target) {
@@ -412,6 +412,8 @@ async function sendSmsCode(phone, scene, code) {
   if (!client) throw new Error('短信服务未配置');
   const templateId = scene === 'register'
     ? process.env.TC_SMS_TEMPLATE_ID_REGISTER
+    : scene === 'bind'
+      ? (process.env.TC_SMS_TEMPLATE_ID_BIND || process.env.TC_SMS_TEMPLATE_ID_RESET)
     : process.env.TC_SMS_TEMPLATE_ID_RESET;
   const signName = process.env.TC_SMS_SIGN;
   const smsSdkAppId = process.env.TC_SMS_SDK_APP_ID;
@@ -428,8 +430,8 @@ async function sendSmsCode(phone, scene, code) {
 async function sendEmailCode(email, scene, code) {
   const from = process.env.AUTH_EMAIL_FROM;
   if (!from) throw new Error('未配置发件人');
-  const subject = scene === 'register' ? '注册验证码' : '找回密码验证码';
-  const action = scene === 'register' ? '注册' : '重置密码';
+  const subject = scene === 'register' ? '注册验证码' : scene === 'bind' ? '绑定验证验证码' : '找回密码验证码';
+  const action = scene === 'register' ? '注册' : scene === 'bind' ? '绑定账号' : '重置密码';
   const minutes = Math.ceil(CODE_TTL_SECONDS / 60);
   const text = `您的${action}验证码是 ${code}，${minutes} 分钟内有效。如非本人操作请忽略。`;
   const html = `<p>您的${action}验证码是 <b style="font-size:20px">${code}</b>，${minutes} 分钟内有效。</p><p>如非本人操作请忽略。</p>`;
@@ -448,6 +450,8 @@ async function sendEmailCode(email, scene, code) {
   const templateId = Number(
     scene === 'register'
       ? process.env.TC_SES_TEMPLATE_ID_REGISTER || 0
+      : scene === 'bind'
+        ? process.env.TC_SES_TEMPLATE_ID_BIND || process.env.TC_SES_TEMPLATE_ID_RESET || 0
       : process.env.TC_SES_TEMPLATE_ID_RESET || 0
   );
   if (!templateId) throw new Error('未配置邮件模板ID');
@@ -865,6 +869,18 @@ const server = http.createServer(async (req, res) => {
       if (scene === 'reset' && !exists) {
         return json(res, 400, { ok: false, error: '账号不存在，请先注册' });
       }
+      if (scene === 'bind') {
+        const sessionRow = await requireSession(req);
+        const currentTarget = channel === 'phone'
+          ? (sessionRow.phone || null)
+          : (isPhoneLocalEmail(sessionRow.email) ? null : sessionRow.email || null);
+        if (currentTarget === target) {
+          return json(res, 400, { ok: false, error: '该联系方式已绑定当前账号' });
+        }
+        if (exists && exists.id !== sessionRow.id) {
+          return json(res, 400, { ok: false, error: '该联系方式已被其他账号使用' });
+        }
+      }
       const code = await createCode(pool, channel, target, scene, req.socket.remoteAddress || '');
       if (channel === 'phone') await sendSmsCode(target, scene, code);
       else await sendEmailCode(target, scene, code);
@@ -1036,6 +1052,64 @@ const server = http.createServer(async (req, res) => {
         message: '个人资料已保存',
         data: { user: mapUser(updated) },
       });
+    }
+
+    if (url.pathname === '/api/auth/bind-contact' && req.method === 'POST') {
+      const sessionRow = await requireSession(req);
+      const channel = normalizeChannel(body.channel);
+      const target = normalizeTarget(channel, body.target);
+      const code = String(body.code || '').trim();
+      const currentPassword = String(body.currentPassword || '');
+
+      if (!channel || !target || !code || !currentPassword) {
+        return json(res, 400, { ok: false, error: '参数不完整' });
+      }
+      if (!verifyPassword(currentPassword, sessionRow.password_hash)) {
+        return json(res, 400, { ok: false, error: '当前密码错误' });
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        const currentUser = await findUserById(client, sessionRow.id);
+        if (!currentUser) {
+          throw new Error('登录状态已失效，请重新登录');
+        }
+
+        const currentTarget = channel === 'phone'
+          ? (currentUser.phone || null)
+          : (isPhoneLocalEmail(currentUser.email) ? null : currentUser.email || null);
+        if (currentTarget === target) {
+          throw new Error('该联系方式已绑定当前账号');
+        }
+
+        const existed = await findUserByChannel(client, channel, target);
+        if (existed && existed.id !== currentUser.id) {
+          throw new Error('该联系方式已被其他账号使用');
+        }
+
+        await consumeValidCode(client, channel, target, 'bind', code);
+
+        if (channel === 'phone') {
+          await client.query('UPDATE auth_users SET phone=$2 WHERE id=$1', [currentUser.id, target]);
+        } else {
+          await client.query('UPDATE auth_users SET email=$2 WHERE id=$1', [currentUser.id, target]);
+        }
+
+        await client.query('COMMIT');
+        const updated = await findUserById(pool, currentUser.id);
+        return json(res, 200, {
+          ok: true,
+          message: currentTarget ? '绑定方式已更新' : '绑定成功',
+          data: { user: mapUser(updated) },
+        });
+      } catch (error) {
+        await client.query('ROLLBACK');
+        return json(res, 400, { ok: false, error: error instanceof Error ? error.message : String(error) });
+      } finally {
+        client.release();
+      }
     }
 
     if (url.pathname === '/api/auth/invite-codes' && req.method === 'POST') {
