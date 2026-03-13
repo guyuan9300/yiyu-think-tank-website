@@ -41,6 +41,8 @@ import { NotFoundPage } from './components/NotFoundPage';
 import { StrategyModuleIntroPage } from './components/StrategyModuleIntroPage';
 import { AboutPremiumPage } from './components/AboutPremiumPage';
 
+const ADMIN_SHELL_VERSION = '20260313-logout-home';
+
 function AdminRouteRedirect({ target }: { target: string }) {
   useEffect(() => {
     const absoluteTarget = target.startsWith('?') ? `${window.location.pathname}${target}` : target;
@@ -586,6 +588,7 @@ export default function App() {
     const legacyTab = currentParams.get('legacyTab');
     if (tab) shellParams.set('tab', tab);
     if (legacyTab) shellParams.set('legacyTab', legacyTab);
+    shellParams.set('v', ADMIN_SHELL_VERSION);
     const adminShellSrc = `${import.meta.env.BASE_URL}admin.html${shellParams.toString() ? `?${shellParams.toString()}` : ''}`;
 
     return (
