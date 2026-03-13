@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Menu, X, ChevronDown, Crown, Award, User as UserIcon, LogOut, Settings as SettingsIcon } from 'lucide-react';
+import { Menu, X, Crown, Award, User as UserIcon, LogOut } from 'lucide-react';
 import type { User } from '../lib/dataService';
+import { clearUser } from '../lib/storage';
+import { logoutCurrentSession } from '../lib/authApi';
 
 // React props 里的回调在 TS 下容易触发“参数逆变”导致不好传（尤其 page 是 union 的时候）。
 // 这里用 bivariant hack，让调用方可以传更窄的 union 函数，也可以传 (page: string) => void。
@@ -17,7 +19,6 @@ interface HeaderProps {
 
 export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor', onNavigate }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(propIsLoggedIn);
 
@@ -120,16 +121,29 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
 
   // 退出登录
   const handleLogout = () => {
-    localStorage.removeItem('yiyu_current_user');
-    sessionStorage.removeItem('yiyu_current_user');
+    void logoutCurrentSession();
+    clearUser();
     setCurrentUser(null);
     setIsLoggedIn(false);
-    setIsUserMenuOpen(false);
     // 触发自定义事件通知其他组件
     window.dispatchEvent(new Event('yiyu_user_updated'));
     if (onNavigate) {
       onNavigate('home');
     }
+  };
+
+  const handleAccountClick = () => {
+    if (!currentUser) return;
+    const isAdmin = (currentUser as any)?.adminRole === 'admin'
+      || localStorage.getItem('yiyu_is_admin') === 'true'
+      || sessionStorage.getItem('yiyu_is_admin') === 'true';
+    if (onNavigate) {
+      onNavigate(isAdmin ? 'admin' : 'user-center');
+    } else {
+      const targetPage = isAdmin ? 'admin' : 'user-center';
+      window.location.assign(`${window.location.pathname}?page=${targetPage}`);
+    }
+    setIsMenuOpen(false);
   };
 
   // 获取会员类型显示信息
@@ -169,11 +183,12 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
 
   // 获取用户头像或默认头像
   const getUserAvatar = () => {
-    if (currentUser?.avatar) {
+    const avatarSrc = (currentUser as any)?.avatarUrl || currentUser?.avatar;
+    if (avatarSrc) {
       return (
         <img 
-          src={currentUser.avatar} 
-          alt={currentUser.nickname} 
+          src={avatarSrc} 
+          alt={currentUser?.nickname || '用户头像'} 
           className="w-full h-full object-cover"
         />
       );
@@ -235,110 +250,34 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
 
             {/* User Menu (if logged in) */}
             {isLoggedIn && currentUser && (
-              <div className="relative">
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  onClick={handleAccountClick}
                   className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-muted/30 transition-all"
+                  title={(currentUser as any)?.adminRole === 'admin' ? '进入后台管理' : '进入个人中心'}
                 >
-                  {/* 用户头像 */}
                   <div className={`w-8 h-8 rounded-full ${memberInfo?.color || 'bg-gradient-to-br from-primary to-accent'} flex items-center justify-center overflow-hidden border-2 border-white shadow-sm`}>
                     {getUserAvatar()}
                   </div>
-                  
-                  {/* 会员标识（桌面端显示） */}
+
                   <div className="hidden lg:flex items-center gap-2">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{currentUser.nickname}</p>
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-gray-900">{currentUser.nickname || '用户'}</p>
                       <div className="flex items-center gap-1">
                         <span className={`text-xs ${memberInfo?.textColor}`}>{memberInfo?.label}</span>
                       </div>
                     </div>
                   </div>
-                  
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 </button>
 
-                {/* 下拉菜单 */}
-                {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-64 glass rounded-2xl p-3 shadow-xl animate-scale-in">
-                    {/* 用户信息卡片 */}
-                    <div className="px-3 py-3 border-b border-border/30 mb-2">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className={`w-12 h-12 rounded-full ${memberInfo?.color} flex items-center justify-center overflow-hidden border-2 border-white shadow-sm`}>
-                          {getUserAvatar()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 truncate">{currentUser.nickname}</p>
-                          <p className="text-xs text-gray-500 truncate">{currentUser.email}</p>
-                        </div>
-                      </div>
-                      
-                      {/* 会员徽章 */}
-                      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${memberInfo?.bgColor}`}>
-                        {memberInfo?.icon}
-                        <span className={`text-xs font-medium ${memberInfo?.textColor}`}>
-                          {memberInfo?.label}
-                        </span>
-                        {currentUser.memberType !== 'regular' && (
-                          <span className="ml-auto text-xs text-gray-500">
-                            ✨ 特权会员
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* 菜单项 */}
-                    <button 
-                      className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-muted/30 hover:shadow-md hover:shadow-slate-900/10 transition-all flex items-center gap-2"
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        if (onNavigate) onNavigate('user-center');
-                      }}
-                    >
-                      <UserIcon className="w-4 h-4 text-gray-500" />
-                      个人中心
-                    </button>
-                    
-                    <button 
-                      className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-muted/30 hover:shadow-md hover:shadow-slate-900/10 transition-all flex items-center gap-2"
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        if (onNavigate) onNavigate('user-center');
-                      }}
-                    >
-                      <SettingsIcon className="w-4 h-4 text-gray-500" />
-                      账号设置
-                    </button>
-
-                    {(() => {
-                      const isAdmin = (localStorage.getItem('yiyu_is_admin') ?? sessionStorage.getItem('yiyu_is_admin')) === 'true';
-                      if (!isAdmin) return null;
-                      return (
-                        <button
-                          className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-muted/30 hover:shadow-md hover:shadow-slate-900/10 transition-all flex items-center gap-2"
-                          onClick={() => {
-                            setIsUserMenuOpen(false);
-                            if (onNavigate) onNavigate('admin');
-                            else window.location.assign(`${window.location.pathname}?page=admin`);
-                          }}
-                        >
-                          <Crown className="w-4 h-4 text-amber-500" />
-                          后台管理
-                        </button>
-                      );
-                    })()}
-                    
-                    <div className="border-t border-border/30 my-2"></div>
-                    
-                    <button 
-                      className="w-full text-left px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-all flex items-center gap-2"
-                      onClick={handleLogout}
-                    >
-                      <LogOut className="w-4 h-4" />
-                      退出登录
-                    </button>
-                  </div>
-                )}
+                <button
+                  onClick={handleLogout}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-all text-sm"
+                  title="退出登录"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden lg:inline">退出登录</span>
+                </button>
               </div>
             )}
 
@@ -384,58 +323,6 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
               </div>
             )}
             
-            {isLoggedIn && currentUser && (
-              <div className="pt-4 border-t border-border/30 space-y-2">
-                {/* 移动端用户信息卡片 */}
-                <div className={`p-4 rounded-xl ${memberInfo?.bgColor}`}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-12 h-12 rounded-full ${memberInfo?.color} flex items-center justify-center overflow-hidden border-2 border-white`}>
-                      {getUserAvatar()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 truncate">{currentUser.nickname}</p>
-                      <p className="text-xs text-gray-500 truncate">{currentUser.email}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {memberInfo?.icon}
-                    <span className={`text-sm font-medium ${memberInfo?.textColor}`}>
-                      {memberInfo?.label}
-                    </span>
-                  </div>
-                </div>
-                
-                <button 
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    if (onNavigate) onNavigate('user-center');
-                  }}
-                  className="w-full px-4 py-3 rounded-xl hover:bg-muted/30 transition-all text-left"
-                >
-                  个人中心 / 账号设置
-                </button>
-
-                {((localStorage.getItem('yiyu_is_admin') ?? sessionStorage.getItem('yiyu_is_admin')) === 'true') && (
-                  <button
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      if (onNavigate) onNavigate('admin');
-                      else window.location.assign(`${window.location.pathname}?page=admin`);
-                    }}
-                    className="w-full px-4 py-3 rounded-xl hover:bg-amber-50 text-amber-700 transition-all text-left"
-                  >
-                    后台管理
-                  </button>
-                )}
-                
-                <button 
-                  onClick={handleLogout}
-                  className="w-full px-4 py-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-all text-left"
-                >
-                  退出登录
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}

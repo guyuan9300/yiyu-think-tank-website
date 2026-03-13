@@ -1910,11 +1910,19 @@
 
       if (normalizedTarget === 'logout') {
         try {
-          localStorage.removeItem('yiyu_is_admin');
-          sessionStorage.removeItem('yiyu_is_admin');
-          localStorage.removeItem('yiyu_admin_email');
-          sessionStorage.removeItem('yiyu_admin_email');
-          window.top.location.href = `${window.location.origin}${window.location.pathname.replace(/admin\.html$/, '')}?page=login`;
+          const token = localStorage.getItem('yiyu_auth_token') || sessionStorage.getItem('yiyu_auth_token');
+          const headers = token ? { Authorization: `Bearer ${token}` } : {};
+          fetch(`${window.location.origin}/api/auth/logout`, { method: 'POST', headers }).catch(() => null).finally(() => {
+            localStorage.removeItem('yiyu_current_user');
+            sessionStorage.removeItem('yiyu_current_user');
+            localStorage.removeItem('yiyu_auth_token');
+            sessionStorage.removeItem('yiyu_auth_token');
+            localStorage.removeItem('yiyu_is_admin');
+            sessionStorage.removeItem('yiyu_is_admin');
+            localStorage.removeItem('yiyu_admin_email');
+            sessionStorage.removeItem('yiyu_admin_email');
+            window.top.location.href = `${window.location.origin}${window.location.pathname.replace(/admin\.html$/, '')}?page=home`;
+          });
         } catch (e) {
           showToast('退出登录失败，请重试');
         }

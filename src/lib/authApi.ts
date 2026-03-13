@@ -8,6 +8,7 @@ export interface AuthApiUser {
   email?: string;
   phone?: string;
   nickname?: string;
+  avatarUrl?: string;
   memberType?: 'regular' | 'gold' | 'diamond';
   status?: 'active' | 'disabled';
   adminRole?: 'admin';
@@ -78,15 +79,32 @@ export async function fetchCurrentSession() {
   return authRequest<{ user: AuthApiUser; expiresAt?: string }>('/session', undefined, { withAuth: true });
 }
 
+export async function fetchCurrentProfile() {
+  return authRequest<{ user: AuthApiUser }>('/profile', undefined, { withAuth: true });
+}
+
+export async function updateCurrentProfile(params: { nickname: string; avatarUrl?: string | null }) {
+  return authRequest<{ user: AuthApiUser }>('/profile', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  }, { withAuth: true });
+}
+
+export async function logoutCurrentSession() {
+  return authRequest('/logout', { method: 'POST' }, { withAuth: true });
+}
+
 export function normalizeLoginUser(u: AuthApiUser) {
   const now = new Date().toISOString();
-  const email = u.email || (u.phone ? `${u.phone}@phone.local` : '');
+  const email = u.email || '';
 
   return {
     id: u.id,
-    email,
+    email: email || undefined,
     phone: u.phone,
     nickname: u.nickname || (u.phone ? `用户${u.phone.slice(-4)}` : (email?.split('@')[0] || '用户')),
+    avatarUrl: u.avatarUrl,
+    avatar: u.avatarUrl,
     memberType: u.memberType || 'regular',
     status: u.status || 'active',
     adminRole: u.adminRole,

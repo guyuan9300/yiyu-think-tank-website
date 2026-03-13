@@ -26,6 +26,7 @@ import {
   ADMIN_EMAIL_KEY,
   ADMIN_FLAG_KEY,
   AUTH_TOKEN_KEY,
+  clearUser,
   getSavedAuthToken,
   removeSavedItem,
   saveUserRaw,
@@ -373,7 +374,6 @@ export default function App() {
         <LoginPage 
           onNavigate={(page) => handleNavigate(page === 'login' ? 'home' : page as any)}
           onLoginSuccess={() => setCurrentPage('home')}
-          onAdminLogin={() => setCurrentPage('admin')}
         />
       </>
     );
@@ -612,19 +612,9 @@ export default function App() {
         <AdminDashboard
           onNavigateHome={() => handleNavigate('home')}
           onLogout={() => {
-            clearAdminMarkers();
-            const u = (localStorage.getItem('yiyu_current_user') ?? sessionStorage.getItem('yiyu_current_user'));
-            if (u) {
-              try {
-                const parsed = JSON.parse(u);
-                if (parsed?.id === 'admin') {
-                  localStorage.removeItem('yiyu_current_user');
-                  sessionStorage.removeItem('yiyu_current_user');
-                }
-              } catch {}
-            }
+            clearUser();
             window.dispatchEvent(new Event('yiyu_user_updated'));
-            handleNavigate('login');
+            handleNavigate('home');
           }}
         />
       </AdminAccessGate>

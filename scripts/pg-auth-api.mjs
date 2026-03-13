@@ -201,6 +201,7 @@ function mapUser(row) {
     phone: row.phone || undefined,
     email,
     nickname: row.nickname || undefined,
+    avatarUrl: row.avatar || undefined,
     memberType: row.member_type || 'regular',
     status: row.status || 'active',
     adminRole: isAdminRow(row) ? 'admin' : undefined,
@@ -299,6 +300,7 @@ async function ensureSchema() {
       phone TEXT UNIQUE,
       email TEXT UNIQUE,
       nickname TEXT,
+      avatar TEXT,
       password_hash TEXT NOT NULL,
       member_type TEXT NOT NULL DEFAULT 'regular',
       status TEXT NOT NULL DEFAULT 'active',
@@ -391,6 +393,7 @@ async function ensureSchema() {
       ADD COLUMN IF NOT EXISTS paid_expires_at TIMESTAMPTZ,
       ADD COLUMN IF NOT EXISTS paid_note TEXT,
       ADD COLUMN IF NOT EXISTS admin_role TEXT,
+      ADD COLUMN IF NOT EXISTS avatar TEXT,
       ADD COLUMN IF NOT EXISTS login_count INT NOT NULL DEFAULT 0,
       ADD COLUMN IF NOT EXISTS comments_count INT NOT NULL DEFAULT 0,
       ADD COLUMN IF NOT EXISTS favorites_count INT NOT NULL DEFAULT 0;
@@ -559,6 +562,11 @@ async function requireSession(req) {
   const row = await findSessionByToken(token);
   if (!row) throw new Error('登录状态已失效，请重新登录');
   return row;
+}
+
+async function revokeSessionByToken(token) {
+  if (!token) return;
+  await pool.query('UPDATE auth_sessions SET revoked_at = now() WHERE token_hash = $1 AND revoked_at IS NULL', [hashToken(token)]);
 }
 
 async function requireAdmin(req) {
@@ -772,6 +780,11 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true, data: { user: mapUser(row), expiresAt: row.expires_at } });
     }
 
+    if (url.pathname === '/api/auth/profile' && req.method === 'GET') {
+      const row = await requireSession(req);
+      return json(res, 200, { ok: true, data: { user: mapUser(row) } });
+    }
+
     if (url.pathname === '/api/auth/invite-codes' && req.method === 'GET') {
       await requireAdmin(req);
       const q = await pool.query(
@@ -979,6 +992,52 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true, message: '密码重置成功' });
     }
 
+    if (url.pathname === '/api/auth/logout' && req.method === 'POST') {
+      const token = parseBearerToken(req);
+      if (token) {
+        await revokeSessionByToken(token);
+      }
+      return json(res, 200, { ok: true, message: '已退出登录' });
+    }
+
+    if (url.pathname === '/api/auth/profile' && req.method === 'POST') {
+      const sessionRow = await requireSession(req);
+      const nickname = String(body.nickname || '').trim();
+      const avatarUrlRaw = typeof body.avatarUrl === 'string' ? body.avatarUrl.trim() : '';
+      const avatarUrl = avatarUrlRaw || null;
+
+      if (!nickname) {
+        return json(res, 400, { ok: false, error: '昵称不能为空' });
+      }
+      if (nickname.length > 24) {
+        return json(res, 400, { ok: false, error: '昵称不能超过24个字' });
+      }
+      if (
+        avatarUrl
+        && !avatarUrl.startsWith('data:image/')
+        && !/^https?:\/\//i.test(avatarUrl)
+      ) {
+        return json(res, 400, { ok: false, error: '头像格式不支持' });
+      }
+      if (avatarUrl && avatarUrl.length > 2_500_000) {
+        return json(res, 400, { ok: false, error: '头像图片过大，请压缩后重试' });
+      }
+
+      await pool.query(
+        `UPDATE auth_users
+         SET nickname = $2,
+             avatar = $3
+         WHERE id = $1`,
+        [sessionRow.id, nickname, avatarUrl]
+      );
+      const updated = await findUserById(pool, sessionRow.id);
+      return json(res, 200, {
+        ok: true,
+        message: '个人资料已保存',
+        data: { user: mapUser(updated) },
+      });
+    }
+
     if (url.pathname === '/api/auth/invite-codes' && req.method === 'POST') {
       await requireAdmin(req);
       const type = String(body.type || '');
@@ -1039,7 +1098,7 @@ const server = http.createServer(async (req, res) => {
       const sessionRow = await getOptionalSession(req);
       const userId = sessionRow?.id || String(body.userId || 'guest');
       const userName = sessionRow?.nickname || sessionRow?.email || String(body.userName || '访客');
-      const userAvatar = String(body.userAvatar || '').trim() || null;
+      const userAvatar = sessionRow?.avatar || String(body.userAvatar || '').trim() || null;
       const id = `comment_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
 
       await pool.query(

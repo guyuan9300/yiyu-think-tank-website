@@ -97,14 +97,6 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
           onAdminLogin();
           return;
         }
-        if (onNavigate) {
-          onNavigate('admin');
-          return;
-        }
-
-        const baseUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
-        window.location.href = `${baseUrl}?page=admin`;
-        return;
       }
 
       try {
