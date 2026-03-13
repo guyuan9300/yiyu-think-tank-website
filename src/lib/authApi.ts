@@ -1,7 +1,7 @@
 import { authRequest, type ApiResult } from './authHttp';
 
 export type AuthChannel = 'phone' | 'email';
-export type AuthScene = 'register' | 'reset' | 'bind' | 'unbind';
+export type AuthScene = 'register' | 'reset' | 'bind' | 'unbind' | 'deactivate';
 
 export interface AuthApiUser {
   id: string;
@@ -113,6 +113,17 @@ export async function unbindCurrentContact(params: {
   currentPassword: string;
 }) {
   return authRequest<{ user?: AuthApiUser; deactivated?: boolean }>('/unbind-contact', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  }, { withAuth: true });
+}
+
+export async function deactivateCurrentAccount(params: {
+  channel: AuthChannel;
+  code: string;
+  currentPassword: string;
+}) {
+  return authRequest<{ deactivated?: boolean }>('/deactivate-account', {
     method: 'POST',
     body: JSON.stringify(params),
   }, { withAuth: true });
