@@ -20,17 +20,6 @@ const normalizeTopics = (topics: unknown): ResourceTopic[] => {
   return cleaned.length > 0 ? Array.from(new Set(cleaned)) : ['战略'];
 };
 
-const dispatchChange = () => {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new Event('yiyu_data_change'));
-  }
-};
-
-const replaceCache = (key: string, data: unknown) => {
-  localStorage.setItem(key, JSON.stringify(data));
-  dispatchChange();
-};
-
 const syncKey = async (key: string, data: unknown) => {
   const res = await fetch('/api/content-sync', {
     method: 'POST',
@@ -47,6 +36,7 @@ export const refreshContentCacheFromApi = async () => {
 };
 
 export const saveReportDirect = async (report: Partial<Report> | Report): Promise<Report> => {
+  await refreshContentCacheFromApi();
   const reports = getReports();
   const now = new Date().toISOString();
   let saved: Report;
@@ -104,18 +94,20 @@ export const saveReportDirect = async (report: Partial<Report> | Report): Promis
   }
 
   await syncKey(STORAGE_KEYS.reports, reports);
-  replaceCache(STORAGE_KEYS.reports, reports);
-  return saved;
+  await refreshContentCacheFromApi();
+  return getReports().find((item) => item.id === saved.id) || saved;
 };
 
 export const deleteReportDirect = async (id: string): Promise<boolean> => {
+  await refreshContentCacheFromApi();
   const reports = getReports().filter(r => r.id !== id);
   await syncKey(STORAGE_KEYS.reports, reports);
-  replaceCache(STORAGE_KEYS.reports, reports);
+  await refreshContentCacheFromApi();
   return true;
 };
 
 export const saveInsightDirect = async (article: Partial<InsightArticle> | InsightArticle): Promise<InsightArticle> => {
+  await refreshContentCacheFromApi();
   const articles = getInsights();
   const now = new Date().toISOString();
   let saved: InsightArticle;
@@ -178,18 +170,20 @@ export const saveInsightDirect = async (article: Partial<InsightArticle> | Insig
   }
 
   await syncKey(STORAGE_KEYS.insights, articles);
-  replaceCache(STORAGE_KEYS.insights, articles);
-  return saved;
+  await refreshContentCacheFromApi();
+  return getInsights().find((item) => item.id === saved.id) || saved;
 };
 
 export const deleteInsightDirect = async (id: string): Promise<boolean> => {
+  await refreshContentCacheFromApi();
   const articles = getInsights().filter(a => a.id !== id);
   await syncKey(STORAGE_KEYS.insights, articles);
-  replaceCache(STORAGE_KEYS.insights, articles);
+  await refreshContentCacheFromApi();
   return true;
 };
 
 export const saveMethodologyDirect = async (item: Partial<Methodology> | Methodology): Promise<Methodology> => {
+  await refreshContentCacheFromApi();
   const list = getMethodologies();
   const now = new Date().toISOString();
   let saved: Methodology;
@@ -242,18 +236,20 @@ export const saveMethodologyDirect = async (item: Partial<Methodology> | Methodo
   }
 
   await syncKey(STORAGE_KEYS.methodologies, list);
-  replaceCache(STORAGE_KEYS.methodologies, list);
-  return saved;
+  await refreshContentCacheFromApi();
+  return getMethodologies().find((entry) => entry.id === saved.id) || saved;
 };
 
 export const deleteMethodologyDirect = async (id: string): Promise<boolean> => {
+  await refreshContentCacheFromApi();
   const list = getMethodologies().filter(r => r.id !== id);
   await syncKey(STORAGE_KEYS.methodologies, list);
-  replaceCache(STORAGE_KEYS.methodologies, list);
+  await refreshContentCacheFromApi();
   return true;
 };
 
 export const saveBookDirect = async (book: Partial<Book> | Book): Promise<Book> => {
+  await refreshContentCacheFromApi();
   const books = getBooks();
   const now = new Date().toISOString();
   let saved: Book;
@@ -320,13 +316,14 @@ export const saveBookDirect = async (book: Partial<Book> | Book): Promise<Book> 
   }
 
   await syncKey(STORAGE_KEYS.books, books);
-  replaceCache(STORAGE_KEYS.books, books);
-  return saved;
+  await refreshContentCacheFromApi();
+  return getBooks().find((item) => item.id === saved.id) || saved;
 };
 
 export const deleteBookDirect = async (id: string): Promise<boolean> => {
+  await refreshContentCacheFromApi();
   const books = getBooks().filter(b => b.id !== id);
   await syncKey(STORAGE_KEYS.books, books);
-  replaceCache(STORAGE_KEYS.books, books);
+  await refreshContentCacheFromApi();
   return true;
 };

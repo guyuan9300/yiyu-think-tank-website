@@ -51,7 +51,6 @@ import {
 const RESOURCE_TOPICS: ResourceTopic[] = ['战略', '业务设计', '组织', 'AI 技术'];
 
 import { isValidPdfFile, formatFileSize } from '../lib/pdfUtils';
-import { generateCoverImage, getHfModel, getHfToken, setHfModel, setHfToken } from '../lib/hfImageGen';
 import { UserManagementPage } from './UserManagementPage';
 import { PaymentManagementPage } from './PaymentManagementPage';
 import AdminStrategyCompanionConceptPage from './AdminStrategyCompanionConceptPage';
@@ -345,7 +344,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       const typeInfo = getTypeInfo(c.type as InviteCodeType);
       return [
         c.code,
-        c.grantKind === 'strategy_project' ? '机构战略陪伴' : '付费会员时长',
+        c.grantKind === 'strategy_project' ? '机构战略邀请码' : '普通付费邀请码',
         typeInfo.label,
         c.projectNameSnapshot || '',
         String(c.maxUses ?? ''),
@@ -505,6 +504,14 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       color: 'bg-red-100 text-red-700',
       icon: <XCircle className="w-3 h-3" />
     };
+  };
+
+  const formatModifiedDate = (value?: string, fallback?: string) => {
+    const source = value || fallback;
+    if (!source) return '-';
+    const date = new Date(source);
+    if (Number.isNaN(date.getTime())) return '-';
+    return date.toLocaleDateString('zh-CN');
   };
 
   // 格式化文件大小
@@ -715,15 +722,15 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       // 统一四类标签（必填）
       topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
       summary: (formData.get('summary') as string) || current?.summary || '待补充',
-      version: (formData.get('version') as string) || current?.version || 'v1.0',
+      version: current?.version || '',
       format: ['PDF'],
       // 必填项：封面缺失时用占位
       coverImage: coverImage || current?.coverImage || 'images/placeholders/document.svg',
-      pages: reportPages || current?.pages,
+      pages: current?.pages,
       // 用 publishDate 作为“修改时间/展示时间”的可编辑入口
       publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
       status: reportStatus,
-      showOnHome: formData.get('showOnHome') === 'on',
+      showOnHome: false,
       // 报告文件信息
       fileUrl: reportFile ? reportFile.name : current?.fileUrl,
       fileSize: reportFile ? reportFile.size : current?.fileSize,
@@ -1137,11 +1144,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标题</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分类</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">发布时间</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标签</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">修改时间</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">数据</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                       </tr>
                     </thead>
@@ -1153,7 +1158,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                               {/* featured removed (topics-only schema) */}
                               <div>
                                 <p className="font-medium text-gray-900">{article.title}</p>
-                                <p className="text-sm text-gray-500 truncate max-w-xs">{article.excerpt}</p>
                               </div>
                             </div>
                           </td>
@@ -1163,10 +1167,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                            —
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                            {article.publishDate}
+                            {formatModifiedDate(article.updatedAt, article.publishDate)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -1176,16 +1177,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                             }`}>
                               {article.status === 'published' ? '已发布' : article.status === 'draft' ? '草稿' : '已归档'}
                             </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-3 text-sm text-gray-500">
-                              <span className="flex items-center gap-1">
-                                <Eye className="w-4 h-4" /> {article.views}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <User className="w-4 h-4" /> {article.likes}
-                              </span>
-                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-1">
@@ -1208,12 +1199,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                 title="编辑"
                               >
                                 <Edit className="w-4 h-4" />
-                              </button>
-                              <button 
-                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
-                                title="预览"
-                              >
-                                <Eye className="w-4 h-4" />
                               </button>
                               <button 
                                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-red-500"
@@ -1350,12 +1335,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       {filteredMethodologies.map((item) => (
                         <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4">
-                            <div>
-                              <p className="font-medium text-gray-900">{item.title}</p>
-                              <p className="text-sm text-gray-500 truncate max-w-xs">{item.excerpt}</p>
-                            </div>
+                            <p className="font-medium text-gray-900">{item.title}</p>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.publishDate}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatModifiedDate(item.updatedAt, item.publishDate)}</td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                               item.status === 'published' ? 'bg-green-100 text-green-700' :
@@ -1506,11 +1488,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       <tr>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">报告信息</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">发布机构</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分类</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">版本</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">页数</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">阅读时间</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">数据</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标签</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">修改时间</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                       </tr>
                     </thead>
@@ -1522,7 +1502,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                               {/* isHot removed (topics-only schema) */}
                               <div>
                                 <p className="font-medium text-gray-900">{report.title}</p>
-                                <p className="text-sm text-gray-500 truncate max-w-xs">{report.summary}</p>
                               </div>
                             </div>
                           </td>
@@ -1535,23 +1514,16 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                            {report.version}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                            {report.pages || '-'} 页
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                            {report.pages ? calculateReadTime(report.pages) : '-'}
+                            {formatModifiedDate(report.updatedAt, report.publishDate)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-3 text-sm text-gray-500">
-                              <span className="flex items-center gap-1">
-                                <Eye className="w-4 h-4" /> {report.views}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Download className="w-4 h-4" /> {report.downloads}
-                              </span>
-                            </div>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              report.status === 'published' ? 'bg-green-100 text-green-700' :
+                              report.status === 'draft' ? 'bg-amber-100 text-amber-700' :
+                              'bg-gray-100 text-gray-600'
+                            }`}>
+                              {report.status === 'published' ? '已发布' : report.status === 'draft' ? '草稿' : '已归档'}
+                            </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-1">
@@ -1577,12 +1549,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                 title="编辑"
                               >
                                 <Edit className="w-4 h-4" />
-                              </button>
-                              <button 
-                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
-                                title="下载文件"
-                              >
-                                <Download className="w-4 h-4" />
                               </button>
                               <button 
                                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-red-500"
@@ -1704,10 +1670,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       <tr>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">书籍信息</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分类</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">页数/时长</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">评分</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">数据</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标签</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">修改时间</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                       </tr>
                     </thead>
@@ -1721,7 +1686,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                               </div>
                               <div>
                                 <p className="font-medium text-gray-900">{book.title}</p>
-                                <p className="text-sm text-gray-500 truncate max-w-xs">{book.description}</p>
                               </div>
                             </div>
                           </td>
@@ -1734,23 +1698,16 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                            {book.pages}页 / {book.duration}
+                            {formatModifiedDate(book.updatedAt, book.publishDate)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-1">
-                              <span className="text-amber-500">★</span>
-                              <span className="font-medium">{book.rating}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-3 text-sm text-gray-500">
-                              <span className="flex items-center gap-1">
-                                <Eye className="w-4 h-4" /> {book.views}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <User className="w-4 h-4" /> {book.reviews}
-                              </span>
-                            </div>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              book.status === 'published' ? 'bg-green-100 text-green-700' :
+                              book.status === 'draft' ? 'bg-amber-100 text-amber-700' :
+                              'bg-gray-100 text-gray-600'
+                            }`}>
+                              {book.status === 'published' ? '已发布' : book.status === 'draft' ? '草稿' : '已归档'}
+                            </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-1">
@@ -1774,12 +1731,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                 title="编辑"
                               >
                                 <Edit className="w-4 h-4" />
-                              </button>
-                              <button 
-                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
-                                title="上传文件"
-                              >
-                                <Upload className="w-4 h-4" />
                               </button>
                               <button 
                                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-red-500"
@@ -1878,7 +1829,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                         className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
                       >
                         {Object.entries(INVITE_CODE_TYPES)
-                          .filter(([key]) => key !== 'strategy_project')
+                          .filter(([key]) => key !== 'strategy_project' && key !== '1095days')
                           .map(([key, config]) => (
                             <option key={key} value={key}>
                               {config.label} - {config.description}
@@ -2019,7 +1970,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${code.grantKind === 'strategy_project' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-50 text-blue-700'}`}>
-                                  {code.grantKind === 'strategy_project' ? '机构战略陪伴' : '付费会员时长'}
+                                  {code.grantKind === 'strategy_project' ? '机构战略邀请码' : '普通付费邀请码'}
                                 </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
@@ -2344,15 +2295,13 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
                   publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
                   status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
-                  showOnHome: formData.get('showOnHome') === 'on',
+                  showOnHome: false,
                   coverImage: (current as any)?.coverImage || 'images/placeholders/document.svg',
-
-                  // Share settings (WeChat Moments etc.)
-                  shareEnabled: formData.get('shareEnabled') === 'on',
-                  shareSlug: (formData.get('shareSlug') as string) || undefined,
-                  shareTitle: (formData.get('shareTitle') as string) || undefined,
-                  shareDescription: (formData.get('shareDescription') as string) || undefined,
-                  shareImage: (formData.get('shareImage') as string) || undefined,
+                  shareEnabled: false,
+                  shareSlug: undefined,
+                  shareTitle: undefined,
+                  shareDescription: undefined,
+                  shareImage: undefined,
                 };
 
                 const saved = await saveInsightDirect(articleData);
@@ -2398,7 +2347,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
                   publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
                   status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
-                  showOnHome: formData.get('showOnHome') === 'on',
+                  showOnHome: false,
                   coverImage: (current as any)?.coverImage || 'images/placeholders/document.svg',
                 };
 
@@ -2443,13 +2392,13 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   title: (formData.get('title') as string) || current?.title || '待补充',
                   author: (formData.get('author') as string) || current?.author || '待补充',
                   description: (formData.get('description') as string) || current?.description || '待补充',
-                  abstract: (formData.get('abstract') as string) || current?.abstract || '待补充',
+                  abstract: current?.abstract || '',
                   topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
-                  rating: parseFloat(formData.get('rating') as string) || current?.rating || 4.5,
+                  rating: current?.rating || 0,
                   coverImage: bookCoverImage || current?.coverImage || 'images/placeholders/document.svg',
                   publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
                   status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
-                  showOnHome: formData.get('showOnHome') === 'on',
+                  showOnHome: false,
                 };
                 
                 const saved = await saveBookDirect(bookData);
@@ -2608,7 +2557,6 @@ function ReportFormModal({
 }: ReportFormModalProps) {
   // tags/usedTags 已废弃（统一改为 topics）。
   const [isDraggingFile, setIsDraggingFile] = useState(false);
-  const [isExtractingCover, setIsExtractingCover] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
   // 处理报告文件拖放 - 简化版本，不自动提取
@@ -2662,45 +2610,10 @@ function ReportFormModal({
         </div>
         
         <form onSubmit={onSave} className="p-6 space-y-6">
-          {/* 16:9 封面图上传 - 需求1：分离上传按钮和粘贴区域 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               封面图 <span className="text-gray-400 text-xs">(建议尺寸 1920x1080，16:9比例)</span>
             </label>
-
-            {/* AI 生成封面（使用 Hugging Face 免费额度；token 存在浏览器本地） */}
-            <div className="flex flex-wrap items-center gap-3 mb-3">
-              <button
-                type="button"
-                className="px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors text-sm font-medium"
-                onClick={async () => {
-                  try {
-                    const formEl = document.activeElement?.closest('form') as HTMLFormElement | null;
-                    // Best-effort: read title/excerpt/tags from current form fields
-                    const titleInput = document.querySelector('input[name="title"]') as HTMLInputElement | null;
-                    const summaryInput = document.querySelector('textarea[name="summary"]') as HTMLTextAreaElement | null;
-                    // 旧 tags 字段已废弃：用 topics 作为 prompt 关键词
-                    const topicChecks = Array.from(document.querySelectorAll('input[name="topics"]')) as HTMLInputElement[];
-
-                    const title = titleInput?.value || editingItem?.title || '报告封面';
-                    const excerpt = summaryInput?.value || editingItem?.summary || '';
-                    const tags = topicChecks.filter(c => c.checked).map(c => c.value).filter(Boolean);
-
-                    const dataUrl = await generateCoverImage({ title, excerpt, tags });
-                    setCoverImage(dataUrl);
-                    alert('✅ AI 封面已生成并填充（请记得保存报告）');
-                  } catch (e: any) {
-                    alert('❌ AI 生成封面失败：' + (e?.message || String(e)) + '\n\n请先在当前浏览器补充 Hugging Face Token。');
-                  }
-                }}
-              >
-                AI 生成封面
-              </button>
-
-              <div className="text-xs text-gray-500">
-                当前模型：<code className="px-1 py-0.5 bg-gray-100 rounded">{getHfModel()}</code>
-              </div>
-            </div>
 
             {coverImage ? (
               <div className="relative border-2 border-green-500 rounded-xl overflow-hidden group">
@@ -2836,7 +2749,7 @@ function ReportFormModal({
                     选择PDF文件
                   </button>
                   
-                  <p className="text-xs mt-4 text-gray-500">💡 提示：请先上传封面图，再输入页数</p>
+                  <p className="text-xs mt-4 text-gray-500">上传后会随报告一起保存到后台记录中。</p>
                 </div>
               </div>
             )}
@@ -2876,20 +2789,7 @@ function ReportFormModal({
             {/* 旧分类字段已废弃（已迁移到 topics），按需求从表单移除 */}
           </div>
           
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                版本号
-              </label>
-              <input
-                type="text"
-                name="version"
-                placeholder="如: v1.0"
-                defaultValue={editingItem?.version || 'v1.0'}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            
+          <div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 修改时间 <span className="text-red-500">*</span>
@@ -2899,25 +2799,6 @@ function ReportFormModal({
                 name="publishDate"
                 required
                 defaultValue={editingItem?.publishDate || new Date().toISOString().split('T')[0]}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-
-            {/* 需求3：总页数自动计算阅读时间 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                总页数
-              </label>
-              <input
-                type="number"
-                name="pages"
-                placeholder="如: 31"
-                min={1}
-                value={reportPages || editingItem?.pages || ''}
-                onChange={(e) => {
-                  const pages = parseInt(e.target.value) || 0;
-                  setReportPages(pages);
-                }}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
@@ -3014,77 +2895,33 @@ function ReportFormModal({
 
           {/* legacy tags/usedTags removed (topics-only schema) */}
           
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                状态
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              状态
+            </label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="status"
+                  value="draft"
+                  checked={reportStatus === 'draft'}
+                  onChange={() => setReportStatus('draft')}
+                  className="text-green-600 focus:ring-green-500"
+                />
+                <span className="text-sm text-gray-700">草稿</span>
               </label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="status"
-                    value="draft"
-                    checked={reportStatus === 'draft'}
-                    onChange={() => setReportStatus('draft')}
-                    className="text-green-600 focus:ring-green-500"
-                  />
-                  <span className="text-sm text-gray-700">草稿</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="status"
-                    value="published"
-                    checked={reportStatus === 'published'}
-                    onChange={() => setReportStatus('published')}
-                    className="text-green-600 focus:ring-green-500"
-                  />
-                  <span className="text-sm text-gray-700">已发布</span>
-                </label>
-              </div>
-            </div>
-
-            {/* isHot removed (topics-only schema) */}
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                name="showOnHome"
-                id="showOnHome"
-                defaultChecked={editingItem ? editingItem.showOnHome : false}
-                className="rounded text-green-600 focus:ring-green-500"
-              />
-              <label htmlFor="showOnHome" className="text-sm text-gray-700 cursor-pointer">
-                添加到首页
-                <span className="text-xs text-gray-400 ml-1">(手动推荐，显示在首页精选位置)</span>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="status"
+                  value="published"
+                  checked={reportStatus === 'published'}
+                  onChange={() => setReportStatus('published')}
+                  className="text-green-600 focus:ring-green-500"
+                />
+                <span className="text-sm text-gray-700">已发布</span>
               </label>
-            </div>
-          </div>
-
-          {/* 报告预览信息 - 需求3：显示自动计算的阅读时间 */}
-          <div className="bg-gray-50 rounded-xl p-4">
-            <h4 className="text-sm font-medium text-gray-700 mb-3">报告预览信息</h4>
-            <div className="grid grid-cols-4 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{reportPages || editingItem?.pages || '-'}</p>
-                <p className="text-xs text-gray-500">总页数</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">-</p>
-                <p className="text-xs text-gray-500">章节数</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">-</p>
-                <p className="text-xs text-gray-500">数据图表</p>
-              </div>
-              {/* 需求3：显示自动计算的阅读时间 */}
-              <div>
-                <p className="text-2xl font-bold text-green-600">
-                  {calculatedReadTime || (editingItem?.pages ? calculateReadTime(editingItem.pages) : '-')}
-                </p>
-                <p className="text-xs text-gray-500">预计阅读</p>
-              </div>
             </div>
           </div>
 
@@ -3270,35 +3107,17 @@ function InsightFormModal({
             </div>
           </div>
           )}
-          {/* 阅读时间和修改时间 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                阅读时间（分钟）
-              </label>
-              <input
-                type="number"
-                name="readTime"
-                placeholder="如: 15"
-                min={1}
-                disabled
-                defaultValue={0}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                修改时间 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                name="publishDate"
-                required
-                defaultValue={editingItem?.publishDate || new Date().toISOString().split('T')[0]}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              修改时间 <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              name="publishDate"
+              required
+              defaultValue={editingItem?.publishDate || new Date().toISOString().split('T')[0]}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
           </div>
           
           {/* 旧标签（已停用）：只读展示 */}
@@ -3306,112 +3125,30 @@ function InsightFormModal({
 
           {/* legacy tags/usedTags removed (topics-only schema) */}
 
-          {/* 分享设置（用于微信朋友圈卡片） */}
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-medium text-gray-900">分享设置（朋友圈/微信卡片）</div>
-                <div className="text-xs text-gray-600 mt-1">用于生成静态分享页：/share/article/&lt;slug&gt;</div>
-                <div className="text-[11px] text-gray-500 mt-1">注意：当前站点部署在 GitHub Pages（纯静态）。分享卡片读取的是“构建时生成的分享页”。在后台修改文章后，如需更新朋友圈卡片信息，需要触发一次重新构建/发布。</div>
-              </div>
-              <label className="flex items-center gap-2 text-sm text-gray-800">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              状态
+            </label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
-                  type="checkbox"
-                  name="shareEnabled"
-                  defaultChecked={editingItem?.shareEnabled !== false}
-                  className="rounded text-green-600 focus:ring-green-500"
+                  type="radio"
+                  name="status"
+                  value="draft"
+                  defaultChecked={editingItem?.status === 'draft'}
+                  className="text-purple-600 focus:ring-purple-500"
                 />
-                启用分享
+                <span className="text-sm text-gray-700">草稿</span>
               </label>
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">分享链接 Slug（必填，建议英文/数字/短横线）</label>
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
-                  type="text"
-                  name="shareSlug"
-                  placeholder="例如：ai-enterprise-practice"
-                  defaultValue={editingItem?.shareSlug || editingItem?.id || ''}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+                  type="radio"
+                  name="status"
+                  value="published"
+                  defaultChecked={!editingItem || editingItem?.status === 'published'}
+                  className="text-purple-600 focus:ring-purple-500"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">分享封面图 URL（可选）</label>
-                <input
-                  type="text"
-                  name="shareImage"
-                  placeholder="留空则使用文章封面"
-                  defaultValue={editingItem?.shareImage || ''}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">分享标题（可选）</label>
-                <input
-                  type="text"
-                  name="shareTitle"
-                  placeholder="留空则使用文章标题"
-                  defaultValue={editingItem?.shareTitle || ''}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">分享摘要（可选）</label>
-                <textarea
-                  name="shareDescription"
-                  rows={2}
-                  placeholder="留空则使用文章摘要"
-                  defaultValue={editingItem?.shareDescription || ''}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 状态和推荐 */}
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                状态
-              </label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="status"
-                    value="draft"
-                    defaultChecked={editingItem?.status === 'draft'}
-                    className="text-purple-600 focus:ring-purple-500"
-                  />
-                  <span className="text-sm text-gray-700">草稿</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="status"
-                    value="published"
-                    defaultChecked={!editingItem || editingItem?.status === 'published'}
-                    className="text-purple-600 focus:ring-purple-500"
-                  />
-                  <span className="text-sm text-gray-700">已发布</span>
-                </label>
-              </div>
-            </div>
-
-            {/* featured removed (topics-only schema) */}
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                name="showOnHome"
-                id="showOnHome"
-                defaultChecked={editingItem?.showOnHome || false}
-                className="rounded text-purple-600 focus:ring-purple-500"
-              />
-              <label htmlFor="showOnHome" className="text-sm text-gray-700 cursor-pointer">
-                添加到首页
-                <span className="text-xs text-gray-400 ml-1">(手动推荐，显示在首页精选位置)</span>
+                <span className="text-sm text-gray-700">已发布</span>
               </label>
             </div>
           </div>
@@ -3627,39 +3364,6 @@ function BookFormModal({
               defaultValue={editingItem?.description || ''}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
             />
-          </div>
-          
-          {/* 摘要 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              详细摘要
-            </label>
-            <textarea
-              name="abstract"
-              rows={5}
-              placeholder="请输入详细摘要（可选）..."
-              defaultValue={editingItem?.abstract || ''}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
-            />
-          </div>
-          
-          {/* 页数/阅读时长已按需求移除；保留评分 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                评分（1-5）
-              </label>
-              <input
-                type="number"
-                name="rating"
-                placeholder="如: 4.8"
-                min={1}
-                max={5}
-                step={0.1}
-                defaultValue={editingItem?.rating || 4.5}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
           </div>
           
           {/* 封面颜色已按需求移除；保留修改时间 */}

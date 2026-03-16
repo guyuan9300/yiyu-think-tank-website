@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   AlertCircle,
   CalendarClock,
@@ -9,7 +9,9 @@ import {
   GraduationCap,
   LayoutGrid,
   MessageSquare,
+  Plus,
   Sparkles,
+  Upload,
 } from 'lucide-react';
 import { Header } from './Header';
 import {
@@ -107,6 +109,37 @@ function emptyLearningResource(): StrategyLearningResource {
   };
 }
 
+function buildEmptyStrategySnapshot(projectId: string, clientName: string): StrategyProjectSnapshot {
+  return {
+    project: {
+      id: projectId,
+      clientName,
+      projectName: `${clientName}战略陪伴`,
+      description: '',
+      slug: projectId,
+      logoUrl: '',
+      isPublished: false,
+    },
+    hero: {
+      mission: `${clientName}的战略重点与陪伴节奏`,
+      vision: '请补充该机构的愿景与长期方向。',
+      values: ['请补充价值观'],
+    },
+    north: {
+      northStar: '请补充年度北极星',
+      northStarMetrics: ['请补充北极星指标'],
+      annualDeliverables: ['请补充年度交付'],
+      next14Days: ['请补充 14 天内动作'],
+    },
+    timeline: [emptyTimelineItem()],
+    goals: [emptyGoalItem()],
+    latest: [emptyRecentEvent()],
+    docs: [emptyDocument()],
+    meetings: [emptyMeeting()],
+    learning: [emptyLearningResource()],
+  };
+}
+
 function renderActionLink(item: { link?: string }, children: ReactNode) {
   if (!isValidLink(item.link)) {
     return (
@@ -170,6 +203,7 @@ export default function AdminStrategyCompanionConceptPage({
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isFrontend) {
@@ -278,6 +312,38 @@ export default function AdminStrategyCompanionConceptPage({
     setMessage({ type: 'success', text: result.message || '发布状态已更新。' });
   };
 
+  const handleCreateProject = async () => {
+    const clientName = window.prompt('请输入新机构名称');
+    if (!clientName || !clientName.trim()) return;
+
+    const projectId = `project_${Date.now()}`;
+    const draft = buildEmptyStrategySnapshot(projectId, clientName.trim());
+    setSaving(true);
+    setMessage(null);
+    const result = await saveStrategyProjectSnapshot(projectId, draft);
+    setSaving(false);
+    if (!result.ok || !result.data) {
+      setMessage({ type: 'error', text: result.error || '新机构页面创建失败。' });
+      return;
+    }
+
+    setSnapshot(cloneSnapshot(result.data));
+    setSelectedProjectId(projectId);
+    setProjectOptions((prev) => [...prev, result.data!.project]);
+    setMode('work');
+    setMessage({ type: 'success', text: `已创建机构页面：${clientName.trim()}` });
+  };
+
+  const handleLogoUpload = (file?: File | null) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+      setSnapshot((prev) => prev ? { ...prev, project: { ...prev.project, logoUrl: dataUrl } } : prev);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const setHero = (patch: Partial<StrategyProjectSnapshot['hero']>) => {
     setSnapshot((prev) => {
       if (!prev) return prev;
@@ -348,13 +414,59 @@ export default function AdminStrategyCompanionConceptPage({
           </div>
         )}
 
+        {(canEdit || canSelectPublishedOnly) && (
+          <section className={`${card} p-5 sm:p-6`}>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-wrap items-center gap-3">
+                {projectOptions.length > 0 && (
+                  <select
+                    className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-[14px]"
+                    value={selectedProjectId}
+                    onChange={(e) => setSelectedProjectId(e.target.value)}
+                  >
+                    {projectOptions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.clientName}{item.isPublished ? '' : '（未发布）'}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {canEdit && (
+                  <>
+                    <button
+                      onClick={handleCreateProject}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-[13px] font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      <Plus className="w-4 h-4" />
+                      新建机构页面
+                    </button>
+                    <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
+                      <button onClick={() => setMode('immersive')} className={`px-3 py-1.5 rounded-lg text-[13px] ${mode === 'immersive' ? 'bg-slate-900 text-white' : 'text-slate-600'}`}>沉浸模式</button>
+                      <button onClick={() => setMode('work')} className={`px-3 py-1.5 rounded-lg text-[13px] ${mode === 'work' ? 'bg-slate-900 text-white' : 'text-slate-600'}`}>编辑模式</button>
+                    </div>
+                    <button onClick={saveSnapshot} disabled={saving} className="px-4 py-2 rounded-xl bg-blue-600 text-white text-[13px] font-medium hover:bg-blue-700 disabled:opacity-60">
+                      {saving ? '保存中…' : '保存到云端'}
+                    </button>
+                    <button onClick={togglePublish} disabled={publishing} className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-[13px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60">
+                      {publishing ? '处理中…' : snapshot.project.isPublished ? '取消发布' : '发布前台'}
+                    </button>
+                  </>
+                )}
+              </div>
+              {canSelectPublishedOnly && (
+                <div className="text-sm text-slate-500">管理员前台视角仅展示已发布机构。</div>
+              )}
+            </div>
+          </section>
+        )}
+
         <section className={`${card} p-10 sm:p-12 bg-gradient-to-b from-white to-slate-50/70 border-slate-200/80`}>
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between mb-10">
-            <div className="flex items-center gap-3">
+            <div className="flex items-start gap-4">
               {currentProject?.logoUrl ? (
-                <img src={currentProject.logoUrl} alt={currentProject.clientName} className="w-10 h-10 rounded-xl object-cover border border-slate-100" />
+                <img src={currentProject.logoUrl} alt={currentProject.clientName} className="w-14 h-14 rounded-2xl object-cover border border-slate-100" />
               ) : (
-                <div className="w-10 h-10 rounded-xl bg-slate-100" />
+                <div className="w-14 h-14 rounded-2xl bg-slate-100" />
               )}
               <div className="space-y-2">
                 {mode === 'work' && canEdit ? (
@@ -364,48 +476,46 @@ export default function AdminStrategyCompanionConceptPage({
                       onChange={(e) => setSnapshot((prev) => prev ? { ...prev, project: { ...prev.project, clientName: e.target.value, projectName: e.target.value || prev.project.projectName } } : prev)}
                       className="px-4 py-2 rounded-2xl border border-slate-200 text-[28px] sm:text-[32px] font-semibold tracking-[-0.02em] text-slate-900 bg-white"
                     />
-                    <input
-                      value={snapshot.project.logoUrl || ''}
-                      onChange={(e) => setSnapshot((prev) => prev ? { ...prev, project: { ...prev.project, logoUrl: e.target.value } } : prev)}
-                      placeholder="客户 Logo URL"
-                      className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-600 bg-white"
-                    />
+                    <div className="flex flex-wrap items-center gap-3">
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleLogoUpload(e.target.files?.[0] || null)}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => logoInputRef.current?.click()}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-700 hover:bg-slate-50"
+                      >
+                        <Upload className="w-4 h-4" />
+                        {snapshot.project.logoUrl ? '更换 Logo' : '上传 Logo'}
+                      </button>
+                      {snapshot.project.logoUrl ? (
+                        <button
+                          type="button"
+                          onClick={() => setSnapshot((prev) => prev ? { ...prev, project: { ...prev.project, logoUrl: '' } } : prev)}
+                          className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-700 hover:bg-slate-50"
+                        >
+                          移除 Logo
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={handleCreateProject}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-700 hover:bg-slate-50"
+                      >
+                        <Plus className="w-4 h-4" />
+                        新建机构页面
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <h2 className="text-[40px] sm:text-[44px] leading-none font-semibold tracking-[-0.02em] text-slate-900">{currentProject?.clientName}</h2>
                 )}
                 {currentProject?.description ? <p className="text-sm text-slate-500">{currentProject.description}</p> : null}
               </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              {(canEdit || canSelectPublishedOnly) && projectOptions.length > 0 && (
-                <select
-                  className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-[14px]"
-                  value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
-                >
-                  {projectOptions.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.clientName}{item.isPublished ? '' : '（未发布）'}
-                    </option>
-                  ))}
-                </select>
-              )}
-              {canEdit && (
-                <>
-                  <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
-                    <button onClick={() => setMode('immersive')} className={`px-3 py-1.5 rounded-lg text-[13px] ${mode === 'immersive' ? 'bg-slate-900 text-white' : 'text-slate-600'}`}>沉浸模式</button>
-                    <button onClick={() => setMode('work')} className={`px-3 py-1.5 rounded-lg text-[13px] ${mode === 'work' ? 'bg-slate-900 text-white' : 'text-slate-600'}`}>编辑模式</button>
-                  </div>
-                  <button onClick={saveSnapshot} disabled={saving} className="px-4 py-2 rounded-xl bg-blue-600 text-white text-[13px] font-medium hover:bg-blue-700 disabled:opacity-60">
-                    {saving ? '保存中…' : '保存到云端'}
-                  </button>
-                  <button onClick={togglePublish} disabled={publishing} className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-[13px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60">
-                    {publishing ? '处理中…' : snapshot.project.isPublished ? '取消发布' : '发布前台'}
-                  </button>
-                </>
-              )}
             </div>
           </div>
 
