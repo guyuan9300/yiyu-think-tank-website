@@ -111,36 +111,39 @@ export const saveInsightDirect = async (article: Partial<InsightArticle> | Insig
   const articles = getInsights();
   const now = new Date().toISOString();
   let saved: InsightArticle;
+  const sanitizedArticle = {
+    ...article,
+    shareEnabled: undefined,
+    shareSlug: undefined,
+    shareTitle: undefined,
+    shareDescription: undefined,
+    shareImage: undefined,
+  };
 
-  if ('id' in article && article.id) {
-    const index = articles.findIndex(a => a.id === article.id);
+  if ('id' in sanitizedArticle && sanitizedArticle.id) {
+    const index = articles.findIndex(a => a.id === sanitizedArticle.id);
     if (index !== -1) {
       articles[index] = {
         ...articles[index],
-        ...article,
-        topics: normalizeTopics((article as any).topics ?? articles[index].topics),
+        ...sanitizedArticle,
+        topics: normalizeTopics((sanitizedArticle as any).topics ?? articles[index].topics),
         updatedAt: now,
       };
       saved = articles[index];
     } else {
       saved = {
-        id: article.id,
-        title: article.title || '无标题文章',
-        excerpt: article.excerpt || '',
-        content: article.content || '',
-        topics: normalizeTopics((article as any).topics),
-        coverImage: article.coverImage,
-        publishDate: article.publishDate || new Date().toISOString().split('T')[0],
-        status: article.status || 'draft',
-        showOnHome: article.showOnHome || false,
-        views: article.views || 0,
-        likes: article.likes || 0,
-        shareEnabled: article.shareEnabled,
-        shareSlug: article.shareSlug,
-        shareTitle: article.shareTitle,
-        shareDescription: article.shareDescription,
-        shareImage: article.shareImage,
-        createdAt: article.createdAt || now,
+        id: sanitizedArticle.id,
+        title: sanitizedArticle.title || '无标题文章',
+        excerpt: sanitizedArticle.excerpt || '',
+        content: sanitizedArticle.content || '',
+        topics: normalizeTopics((sanitizedArticle as any).topics),
+        coverImage: sanitizedArticle.coverImage,
+        publishDate: sanitizedArticle.publishDate || new Date().toISOString().split('T')[0],
+        status: sanitizedArticle.status || 'draft',
+        showOnHome: sanitizedArticle.showOnHome || false,
+        views: sanitizedArticle.views || 0,
+        likes: sanitizedArticle.likes || 0,
+        createdAt: sanitizedArticle.createdAt || now,
         updatedAt: now,
       };
       articles.unshift(saved);
@@ -148,22 +151,17 @@ export const saveInsightDirect = async (article: Partial<InsightArticle> | Insig
   } else {
     saved = {
       id: `insight_${Date.now()}`,
-      title: article.title || '无标题文章',
-      excerpt: article.excerpt || '',
-      content: article.content || '',
-      topics: normalizeTopics((article as any).topics),
-      coverImage: article.coverImage,
-      publishDate: article.publishDate || new Date().toISOString().split('T')[0],
-      status: article.status || 'draft',
-      showOnHome: article.showOnHome || false,
-      views: article.views || 0,
-      likes: article.likes || 0,
-      shareEnabled: article.shareEnabled,
-      shareSlug: article.shareSlug,
-      shareTitle: article.shareTitle,
-      shareDescription: article.shareDescription,
-      shareImage: article.shareImage,
-      createdAt: article.createdAt || now,
+      title: sanitizedArticle.title || '无标题文章',
+      excerpt: sanitizedArticle.excerpt || '',
+      content: sanitizedArticle.content || '',
+      topics: normalizeTopics((sanitizedArticle as any).topics),
+      coverImage: sanitizedArticle.coverImage,
+      publishDate: sanitizedArticle.publishDate || new Date().toISOString().split('T')[0],
+      status: sanitizedArticle.status || 'draft',
+      showOnHome: sanitizedArticle.showOnHome || false,
+      views: sanitizedArticle.views || 0,
+      likes: sanitizedArticle.likes || 0,
+      createdAt: sanitizedArticle.createdAt || now,
       updatedAt: now,
     };
     articles.unshift(saved);

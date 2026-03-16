@@ -1547,10 +1547,10 @@
               <div class="section-head">
                 <div class="section-title">
                   <h2>模块速览</h2>
-                  <p>汇总内容、用户与运营数据，便于快速进入处理</p>
+                  <p>按当前后台的真实模块整理概况，便于直接进入对应页面</p>
                 </div>
                 <div class="section-actions">
-                  <button class="btn btn--sm btn--outline" data-jump="users">进入用户与付费</button>
+                  <button class="btn btn--sm btn--outline" data-jump="users">进入会员服务</button>
                 </div>
               </div>
 
@@ -1585,17 +1585,17 @@
                     <div class="subcard">
                       <div class="subcard-head">
                         <div>
-                          <h3>用户与运营</h3>
-                          <p>把用户、付费、评论、邀请码放到同一层看清楚</p>
+                          <h3>会员服务速览</h3>
+                          <p>只保留当前后台真正可处理的用户、付费与邀请码概况</p>
                         </div>
-                        <button class="btn btn--sm btn--outline" data-jump="billing">进入付费管理</button>
+                        <button class="btn btn--sm btn--outline" data-jump="users">进入会员服务</button>
                       </div>
                       <div class="subcard-body">
-                        <div class="list" role="list" aria-label="用户与运营数据">
-                          <div class="list-row" role="listitem"><div class="left"><b>普通会员</b><span>已注册但未转为付费的用户</span></div><div class="right"><span class="count" id="overviewRegularUsers">—</span><button class="btn btn--sm btn--outline" data-jump="users">查看</button></div></div>
+                        <div class="list" role="list" aria-label="会员服务数据">
+                          <div class="list-row" role="listitem"><div class="left"><b>用户总数</b><span>后台当前可管理的全部账号</span></div><div class="right"><span class="count" id="overviewUsers">—</span><button class="btn btn--sm btn--outline" data-jump="users">查看</button></div></div>
                           <div class="list-row" role="listitem"><div class="left"><b>付费会员</b><span>已开通付费资格的用户</span></div><div class="right"><span class="count" id="overviewPaidUsers">—</span><button class="btn btn--sm btn--outline" data-jump="billing">查看</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>有效邀请码</b><span>当前仍可发放和兑换的邀请码</span></div><div class="right"><span class="count" id="overviewInvites">—</span><button class="btn btn--sm btn--outline" data-jump="invites">查看</button></div></div>
                           <div class="list-row" role="listitem"><div class="left"><b>评论总数</b><span>前台评论池中已记录的评论</span></div><div class="right"><span class="count" id="overviewComments">—</span><button class="btn btn--sm btn--outline" data-jump="comments">查看</button></div></div>
-                          <div class="list-row" role="listitem"><div class="left"><b>邀请码使用情况</b><span>显示有效、已兑换与已禁用的邀请码数量</span></div><div class="right"><span class="count" id="overviewInvites">—</span><button class="btn btn--sm btn--outline" data-jump="invites">查看</button></div></div>
                         </div>
                       </div>
                     </div>
@@ -1611,7 +1611,7 @@
               <div class="section-head">
                 <div class="section-title">
                   <h2>待处理事项</h2>
-                  <p>优先查看需要尽快处理的运营事项</p>
+                  <p>只保留当前后台最常需要跟进的真实事项</p>
                 </div>
                 <div class="section-actions">
                   <button class="btn btn--sm btn--outline" data-jump="comments">进入评论管理</button>
@@ -1632,15 +1632,15 @@
                       <div class="subcard-head">
                         <div>
                           <h3>运营提醒</h3>
-                          <p>优先级最高的几类待处理问题</p>
+                          <p>优先处理需要审核、补充或继续跟进的事项</p>
                         </div>
                       </div>
                       <div class="subcard-body">
                         <div class="list" role="list" aria-label="运营提醒">
                           <div class="list-row" role="listitem"><div class="left"><b>待审核评论</b><span>前台评论默认待审，优先避免积压</span></div><div class="right"><span class="count" id="opsPendingComments">—</span><button class="btn btn--sm btn--outline" data-jump="comments">去处理</button></div></div>
                           <div class="list-row" role="listitem"><div class="left"><b>内容草稿</b><span>四类内容合计的草稿数量</span></div><div class="right"><span class="count" id="opsDraftContent">—</span><button class="btn btn--sm btn--outline" data-jump="content/articles">去整理</button></div></div>
-                          <div class="list-row" role="listitem"><div class="left"><b>30 天内到期的付费会员</b><span>需要人工确认续期或转化跟进</span></div><div class="right"><span class="count" id="opsExpiringPaid">—</span><button class="btn btn--sm btn--outline" data-jump="billing">去处理</button></div></div>
-                          <div class="list-row" role="listitem"><div class="left"><b>已禁用账号</b><span>需要确认是否误封或仍需保留禁用</span></div><div class="right"><span class="count" id="opsDisabledUsers">—</span><button class="btn btn--sm btn--outline" data-jump="users">去检查</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>最近 30 天新增内容</b><span>便于检查是否需要继续补齐封面、标签或状态</span></div><div class="right"><span class="count" id="opsRecentContent">—</span><button class="btn btn--sm btn--outline" data-jump="content/reports">查看</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>最近 7 天活跃登录</b><span>便于了解近期真实登录活跃情况</span></div><div class="right"><span class="count" id="opsRecentLogin">—</span><button class="btn btn--sm btn--outline" data-jump="users">查看</button></div></div>
                         </div>
                       </div>
                     </div>
@@ -1648,16 +1648,16 @@
                     <div class="subcard">
                       <div class="subcard-head">
                         <div>
-                          <h3>内容与分发</h3>
-                          <p>适合放在概览首页的内容侧指标</p>
+                          <h3>模块入口</h3>
+                          <p>从概览直接进入当前最常用的几个后台模块</p>
                         </div>
                       </div>
                       <div class="subcard-body">
-                        <div class="list" role="list" aria-label="内容与分发数据">
-                          <div class="list-row" role="listitem"><div class="left"><b>首页展示内容</b><span>被标记为首页展示的总内容量</span></div><div class="right"><span class="count" id="opsHomeFeatured">—</span><button class="btn btn--sm btn--outline" data-jump="content/articles">查看</button></div></div>
-                          <div class="list-row" role="listitem"><div class="left"><b>最近 30 天新增内容</b><span>以创建时间统计的新增总量</span></div><div class="right"><span class="count" id="opsRecentContent">—</span><button class="btn btn--sm btn--outline" data-jump="content/reports">查看</button></div></div>
-                          <div class="list-row" role="listitem"><div class="left"><b>最近 7 天活跃登录</b><span>最近 7 天内有登录记录的账号数</span></div><div class="right"><span class="count" id="opsRecentLogin">—</span><button class="btn btn--sm btn--outline" data-jump="users">查看</button></div></div>
-                          <div class="list-row" role="listitem"><div class="left"><b>邀请码已兑换</b><span>已被使用或已兑换完成的邀请码</span></div><div class="right"><span class="count" id="opsRedeemedInvites">—</span><button class="btn btn--sm btn--outline" data-jump="invites">查看</button></div></div>
+                        <div class="list" role="list" aria-label="模块入口">
+                          <div class="list-row" role="listitem"><div class="left"><b>用户管理</b><span>查看账号、机构和活跃状态</span></div><div class="right"><button class="btn btn--sm btn--outline" data-jump="users">进入</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>付费管理</b><span>查看会员周期、应收款与对账信息</span></div><div class="right"><button class="btn btn--sm btn--outline" data-jump="billing">进入</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>邀请码管理</b><span>生成和查看普通付费或机构邀请码</span></div><div class="right"><button class="btn btn--sm btn--outline" data-jump="invites">进入</button></div></div>
+                          <div class="list-row" role="listitem"><div class="left"><b>战略陪伴</b><span>维护机构展示页并发布到前台</span></div><div class="right"><button class="btn btn--sm btn--outline" data-jump="strategy-companion">进入</button></div></div>
                         </div>
                       </div>
                     </div>
@@ -2128,15 +2128,10 @@
 
         const adminUsers = users.filter((user) => user.adminRole === 'admin');
         const paidUsers = users.filter((user) => user.adminRole !== 'admin' && user.memberType !== 'regular');
-        const regularUsers = users.filter((user) => user.adminRole !== 'admin' && user.memberType === 'regular');
-        const disabledUsers = users.filter((user) => user.status === 'disabled');
         const recentLogins = users.filter((user) => isWithinDays(user.lastLoginAt, 7));
-        const expiringPaid = paidUsers.filter((user) => isFutureWithinDays(user.paidExpiresAt, 30));
 
         const pendingComments = comments.filter((comment) => comment.status === 'pending');
         const validInvites = inviteCodes.filter((code) => code.status === 'valid');
-        const redeemedInvites = inviteCodes.filter((code) => code.status === 'redeemed' || Number(code.usedCount || 0) >= Number(code.maxUses || 0));
-        const disabledInvites = inviteCodes.filter((code) => code.status === 'disabled');
 
         const insightsPublished = insights.filter((item) => item.status === 'published').length;
         const reportsPublished = reports.filter((item) => item.status === 'published').length;
@@ -2147,15 +2142,14 @@
         const booksDraft = books.filter((item) => item.status !== 'published').length;
         const methodsDraft = methodologies.filter((item) => item.status !== 'published').length;
         const totalDraft = insightsDraft + reportsDraft + booksDraft + methodsDraft;
-        const homeFeatured = allContent.filter((item) => item.showOnHome === true).length;
         const recentContent = allContent.filter((item) => isWithinDays(item.createdAt || item.publishDate, 30)).length;
 
         setText('metricUsersTotal', users.length);
         setText('metricUsersHint', `近 7 天活跃 ${recentLogins.length} · 管理员 ${adminUsers.length}`);
         setText('metricPaidMembers', paidUsers.length);
-        setText('metricPaidHint', `普通会员 ${regularUsers.length}`);
+        setText('metricPaidHint', '当前已开通付费资格的用户');
         setText('metricInviteValid', validInvites.length);
-        setText('metricInviteHint', `${redeemedInvites.length} 已兑换 · ${disabledInvites.length} 已禁用`);
+        setText('metricInviteHint', '当前可继续发放的邀请码');
         setText('metricPendingComments', pendingComments.length);
         setText('metricCommentsHint', `总评论 ${comments.length}`);
         setText('metricInsightsPublished', insightsPublished);
@@ -2171,19 +2165,15 @@
         setText('overviewReports', `${reportsPublished} / 草稿 ${reportsDraft}`);
         setText('overviewBooks', `${booksPublished} / 草稿 ${booksDraft}`);
         setText('overviewMethods', `${methodsPublished} / 草稿 ${methodsDraft}`);
-        setText('overviewRegularUsers', regularUsers.length);
+        setText('overviewUsers', users.length);
         setText('overviewPaidUsers', paidUsers.length);
         setText('overviewComments', comments.length);
-        setText('overviewInvites', `${validInvites.length} / 已兑 ${redeemedInvites.length}`);
+        setText('overviewInvites', validInvites.length);
 
         setText('opsPendingComments', pendingComments.length);
         setText('opsDraftContent', totalDraft);
-        setText('opsExpiringPaid', expiringPaid.length);
-        setText('opsDisabledUsers', disabledUsers.length);
-        setText('opsHomeFeatured', homeFeatured);
         setText('opsRecentContent', recentContent);
         setText('opsRecentLogin', recentLogins.length);
-        setText('opsRedeemedInvites', redeemedInvites.length);
 
         const topContent = [
           ...withType(insights, '洞察文章', 'content/articles'),
