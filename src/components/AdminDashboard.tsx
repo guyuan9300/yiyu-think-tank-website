@@ -727,7 +727,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       // 必填项：封面缺失时用占位
       coverImage: coverImage || current?.coverImage || 'images/placeholders/document.svg',
       pages: current?.pages,
-      // 用 publishDate 作为“修改时间/展示时间”的可编辑入口
+      // publishDate 作为前台展示用的发布日期；后台列表统一显示真实 updatedAt
       publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
       status: reportStatus,
       showOnHome: false,
@@ -1145,7 +1145,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       <tr>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标题</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标签</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">修改时间</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最近修改</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                       </tr>
@@ -1326,7 +1326,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标题</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">修改时间</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最近修改</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                       </tr>
@@ -1489,7 +1489,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">报告信息</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">发布机构</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标签</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">修改时间</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最近修改</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                       </tr>
@@ -1671,7 +1671,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">书籍信息</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标签</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">修改时间</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最近修改</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
                         <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                       </tr>
@@ -2792,7 +2792,7 @@ function ReportFormModal({
           <div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                修改时间 <span className="text-red-500">*</span>
+                发布日期 <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
@@ -3109,7 +3109,7 @@ function InsightFormModal({
           )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              修改时间 <span className="text-red-500">*</span>
+              发布日期 <span className="text-red-500">*</span>
             </label>
             <input
               type="date"
@@ -3366,11 +3366,11 @@ function BookFormModal({
             />
           </div>
           
-          {/* 封面颜色已按需求移除；保留修改时间 */}
+          {/* 封面颜色已按需求移除；这里保留发布日期 */}
           <div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                修改时间 <span className="text-red-500">*</span>
+                发布日期 <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
