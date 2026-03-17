@@ -48,6 +48,13 @@ import {
   updateCommentStatusApi,
 } from '../lib/commentApi';
 import { uploadAdminAsset } from '../lib/authApi';
+import {
+  createCoverPreset,
+  deleteCoverPreset,
+  fetchCoverPresets,
+  type CoverPreset,
+  type CoverPresetContentType,
+} from '../lib/coverPresetApi';
 import { ArticleEditor, type ArticleEditorValue } from './ArticleEditor';
 
 const RESOURCE_TOPICS: ResourceTopic[] = ['战略', '业务设计', '组织', 'AI 技术'];
@@ -2345,6 +2352,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
                 const selectedTopics = (formData.getAll('topics') as string[]).map(s => s.trim()).filter(Boolean) as any;
                 const current = editingItem as InsightArticle | null;
+                const coverPresetId = (formData.get('coverPresetId') as string) || current?.coverPresetId || '';
+                const coverPresetImage = (formData.get('coverPresetImage') as string) || current?.coverImage || '';
 
                 const articleData: Partial<InsightArticle> = {
                   id: current ? current.id : undefined,
@@ -2358,7 +2367,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
                   status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
                   showOnHome: false,
-                  coverImage: (current as any)?.coverImage || 'images/placeholders/document.svg',
+                  coverImage: coverPresetImage || (current as any)?.coverImage || '',
+                  coverPresetId: coverPresetId || undefined,
                   shareEnabled: false,
                   shareSlug: undefined,
                   shareTitle: undefined,
@@ -2384,6 +2394,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               syncClientIds={syncClientIds}
               setSyncClientIds={setSyncClientIds}
               entityLabel="文章"
+              contentType="insight"
+              sequenceSeed={insights.length}
             />
           )}
 
@@ -2404,6 +2416,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
                 const selectedTopics = (formData.getAll('topics') as string[]).map(s => s.trim()).filter(Boolean) as any;
                 const current = editingItem as Methodology | null;
+                const coverPresetId = (formData.get('coverPresetId') as string) || current?.coverPresetId || '';
+                const coverPresetImage = (formData.get('coverPresetImage') as string) || current?.coverImage || '';
 
                 const data: Partial<Methodology> = {
                   id: current ? current.id : undefined,
@@ -2417,7 +2431,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
                   status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
                   showOnHome: false,
-                  coverImage: (current as any)?.coverImage || 'images/placeholders/document.svg',
+                  coverImage: coverPresetImage || (current as any)?.coverImage || '',
+                  coverPresetId: coverPresetId || undefined,
                 };
 
                 const saved = await saveMethodologyDirect(data);
@@ -2438,6 +2453,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               syncClientIds={syncClientIds}
               setSyncClientIds={setSyncClientIds}
               entityLabel="方法论"
+              contentType="methodology"
+              sequenceSeed={methodologies.length}
             />
           )}
 
@@ -3069,6 +3086,8 @@ interface InsightFormModalProps {
   syncClientIds: string[];
   setSyncClientIds: React.Dispatch<React.SetStateAction<string[]>>;
   entityLabel: '文章' | '方法论';
+  contentType: CoverPresetContentType;
+  sequenceSeed: number;
 }
 
 function InsightFormModal({
@@ -3080,12 +3099,85 @@ function InsightFormModal({
   syncClientIds,
   setSyncClientIds,
   entityLabel,
+  contentType,
+  sequenceSeed,
 }: InsightFormModalProps) {
   const [editorValue, setEditorValue] = useState<ArticleEditorValue | null>(null);
+  const [coverPresets, setCoverPresets] = useState<CoverPreset[]>([]);
+  const [selectedPresetId, setSelectedPresetId] = useState('');
+  const [isPresetLoading, setIsPresetLoading] = useState(false);
+  const presetUploadInputRef = useRef<HTMLInputElement>(null);
+
+  const loadPresets = useCallback(async () => {
+    setIsPresetLoading(true);
+    const result = await fetchCoverPresets(contentType);
+    if (result.ok && result.data) {
+      const presetList = result.data;
+      setCoverPresets(presetList);
+      setSelectedPresetId((prev) => {
+        if (editingItem?.coverPresetId) return editingItem.coverPresetId;
+        if (editingItem?.id) return prev;
+        if (prev) return prev;
+        if (!presetList.length) return '';
+        const nextPreset = presetList[sequenceSeed % presetList.length];
+        return nextPreset?.id || presetList[0].id;
+      });
+    }
+    setIsPresetLoading(false);
+  }, [contentType, editingItem?.coverPresetId, editingItem?.id, sequenceSeed]);
 
   useEffect(() => {
     setEditorValue(null);
   }, [editingItem?.id]);
+
+  useEffect(() => {
+    setSelectedPresetId(editingItem?.coverPresetId || '');
+    void loadPresets();
+  }, [editingItem?.coverPresetId, loadPresets]);
+
+  const selectedPreset = coverPresets.find((item) => item.id === selectedPresetId);
+
+  const handleUploadPreset = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+
+    const uploaded = await uploadAdminAsset(file, 'cover-preset', { contentType });
+    if (!uploaded.ok || !uploaded.data) {
+      alert(uploaded.error || '封面上传失败');
+      e.target.value = '';
+      return;
+    }
+
+    const created = await createCoverPreset({
+      contentType,
+      imageUrl: uploaded.data.url,
+      title: file.name.replace(/\.[^.]+$/, ''),
+      sourceType: 'upload',
+    });
+
+    if (!created.ok || !created.data) {
+      alert(created.error || '封面新增失败');
+      e.target.value = '';
+      return;
+    }
+
+    await loadPresets();
+    setSelectedPresetId(created.data.id);
+    e.target.value = '';
+  };
+
+  const handleDeletePreset = async (presetId: string) => {
+    const preset = coverPresets.find((item) => item.id === presetId);
+    if (!preset) return;
+    if (!window.confirm(`确定删除封面“${preset.title}”吗？`)) return;
+    const result = await deleteCoverPreset(presetId);
+    if (!result.ok) {
+      alert(result.error || '删除封面失败');
+      return;
+    }
+    await loadPresets();
+    setSelectedPresetId((prev) => (prev === presetId ? '' : prev));
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-auto">
@@ -3103,6 +3195,77 @@ function InsightFormModal({
         </div>
         
         <form onSubmit={onSave} className="p-6 space-y-6">
+          <div className="border border-gray-200 rounded-2xl p-4 bg-gray-50/80">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">可用封面</p>
+                <p className="text-xs text-gray-500">发布时默认使用这里的通用封面，可删除和新增。</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  ref={presetUploadInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleUploadPreset}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => presetUploadInputRef.current?.click()}
+                  className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  新增封面
+                </button>
+              </div>
+            </div>
+
+            {isPresetLoading ? (
+              <div className="text-sm text-gray-500">封面加载中…</div>
+            ) : coverPresets.length === 0 ? (
+              <div className="text-sm text-gray-500">当前还没有可用封面。</div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {coverPresets.map((preset) => {
+                  const active = preset.id === selectedPresetId;
+                  return (
+                    <div
+                      key={preset.id}
+                      className={`relative rounded-2xl overflow-hidden border-2 transition-all ${
+                        active ? 'border-purple-500 shadow-lg shadow-purple-100' : 'border-gray-200'
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPresetId(preset.id)}
+                        className="block w-full text-left"
+                      >
+                        <img src={preset.imageUrl} alt={preset.title} className="w-full aspect-[16/9] object-cover" />
+                        <div className="px-3 py-2 bg-white">
+                          <p className="text-sm font-medium text-gray-900 truncate">{preset.title}</p>
+                        </div>
+                      </button>
+                      <div className="absolute top-2 right-2 flex items-center gap-2">
+                        {active ? (
+                          <span className="px-2 py-1 rounded-full bg-purple-600 text-white text-xs">已选中</span>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => void handleDeletePreset(preset.id)}
+                          className="p-1.5 rounded-full bg-white/90 text-rose-600 hover:bg-white"
+                          title="删除封面"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <input type="hidden" name="coverPresetId" value={selectedPresetId} />
+            <input type="hidden" name="coverPresetImage" value={selectedPreset?.imageUrl || editingItem?.coverImage || ''} />
+          </div>
+
           {/* 标题 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">

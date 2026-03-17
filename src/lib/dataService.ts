@@ -22,6 +22,8 @@ export interface Report {
   coverImage?: string;
   fileUrl?: string;
   fileSize?: number;
+  likes?: number;
+  favoritesCount?: number;
   pages?: number;
   publishDate: string;
   status: 'draft' | 'published' | 'archived';
@@ -48,6 +50,7 @@ export interface InsightArticle {
   topics: ResourceTopic[];
 
   coverImage?: string;
+  coverPresetId?: string;
   publishDate: string;
   status: 'draft' | 'published' | 'archived';
 
@@ -56,6 +59,7 @@ export interface InsightArticle {
 
   views: number;
   likes: number;
+  favoritesCount?: number;
 
   // Share (WeChat Moments, etc.)
   shareEnabled?: boolean;
@@ -86,6 +90,8 @@ export interface Book {
   // optional: allow books to attach a PDF/asset like reports
   fileUrl?: string;
   fileSize?: number;
+  likes?: number;
+  favoritesCount?: number;
   publishDate: string;
   status: 'draft' | 'published' | 'archived';
   showOnHome: boolean; // 是否显示在首页（手动选择）
@@ -123,11 +129,13 @@ export interface Methodology {
   topics: ResourceTopic[];
 
   coverImage?: string;
+  coverPresetId?: string;
   publishDate: string;
   status: 'draft' | 'published' | 'archived';
   showOnHome: boolean;
   views: number;
   likes: number;
+  favoritesCount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -723,6 +731,8 @@ export const saveReport = (report: Partial<Report> | Report): Report => {
     version: report.version || 'v1.0',
     format: report.format || ['PDF'],
     coverImage: report.coverImage,
+    likes: (report as any).likes || 0,
+    favoritesCount: (report as any).favoritesCount || 0,
     fileUrl: report.fileUrl,
     fileSize: report.fileSize,
     pages: report.pages,
@@ -798,11 +808,13 @@ export const saveMethodology = (item: Partial<Methodology> | Methodology): Metho
     content: (item as any).content || '',
     topics: normalizeTopics((item as any).topics).length > 0 ? normalizeTopics((item as any).topics) : ['战略'],
     coverImage: (item as any).coverImage,
+    coverPresetId: (item as any).coverPresetId,
     publishDate: (item as any).publishDate || new Date().toISOString().split('T')[0],
     status: (item as any).status || 'draft',
     showOnHome: (item as any).showOnHome || false,
     views: (item as any).views || 0,
     likes: (item as any).likes || 0,
+    favoritesCount: (item as any).favoritesCount || 0,
     createdAt: (item as any).createdAt || now,
     updatedAt: pickUpdatedAt((item as any).updatedAt),
   };
@@ -849,11 +861,13 @@ export const saveInsight = (article: Partial<InsightArticle> | InsightArticle): 
     content: article.content || '',
     topics: normalizeTopics((article as any).topics).length > 0 ? normalizeTopics((article as any).topics) : ['战略'],
     coverImage: article.coverImage,
+    coverPresetId: (article as any).coverPresetId,
     publishDate: article.publishDate || new Date().toISOString().split('T')[0],
     status: article.status || 'draft',
     showOnHome: article.showOnHome || false,
     views: (article as any).views || 0,
     likes: (article as any).likes || 0,
+    favoritesCount: (article as any).favoritesCount || 0,
     createdAt: (article as any).createdAt || now,
     updatedAt: now,
   };
@@ -913,6 +927,8 @@ export const saveBook = (book: Partial<Book> | Book): Book => {
     rating: (book as any).rating || 4.5,
     coverImage: (book as any).coverImage,
     coverColor: (book as any).coverColor || 'from-blue-600 to-indigo-800',
+    likes: (book as any).likes || 0,
+    favoritesCount: (book as any).favoritesCount || 0,
     publishDate: (book as any).publishDate || new Date().toISOString().split('T')[0],
     status: book.status || 'published',
     showOnHome: (book as any).showOnHome || false,

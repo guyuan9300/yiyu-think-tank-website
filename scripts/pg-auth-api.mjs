@@ -241,7 +241,7 @@ function normalizePlanId(input) {
 }
 
 function normalizeUploadKind(input) {
-  return input === 'report' || input === 'book' ? input : null;
+  return input === 'report' || input === 'book' || input === 'cover-preset' ? input : null;
 }
 
 function sanitizeUploadFilename(input, fallbackExt = '.pdf') {
@@ -254,6 +254,218 @@ function sanitizeUploadFilename(input, fallbackExt = '.pdf') {
   if (!safe) return `upload${fallbackExt}`;
   if (path.extname(safe)) return safe;
   return `${safe}${fallbackExt}`;
+}
+
+function normalizeCoverPresetContentType(input) {
+  return input === 'methodology' ? 'methodology' : input === 'insight' ? 'insight' : null;
+}
+
+function normalizeContentType(input) {
+  return input === 'insight' || input === 'methodology' || input === 'report' || input === 'book'
+    ? input
+    : null;
+}
+
+function getContentTableName(contentType) {
+  if (contentType === 'insight') return 'insights';
+  if (contentType === 'methodology') return 'methodologies';
+  if (contentType === 'report') return 'reports';
+  if (contentType === 'book') return 'books';
+  return null;
+}
+
+function mapCoverPreset(row) {
+  return {
+    id: row.id,
+    contentType: row.content_type,
+    title: row.title || '',
+    imageUrl: row.image_url,
+    sourceType: row.source_type || 'seed',
+    sortOrder: Number(row.sort_order || 0),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+const COVER_PRESET_PALETTES = [
+  ['#0F172A', '#1D4ED8', '#E2E8F0'],
+  ['#111827', '#0F766E', '#E6FFFB'],
+  ['#1F2937', '#7C3AED', '#F3E8FF'],
+  ['#172554', '#2563EB', '#DBEAFE'],
+  ['#292524', '#C2410C', '#FFEDD5'],
+  ['#0B3B2E', '#0F766E', '#D1FAE5'],
+  ['#3B0764', '#A21CAF', '#F5D0FE'],
+  ['#1E293B', '#EA580C', '#FFEDD5'],
+  ['#164E63', '#0891B2', '#CFFAFE'],
+  ['#111827', '#BE123C', '#FFE4E6'],
+];
+
+function buildCoverPresetSvg(contentType, index) {
+  const palette = COVER_PRESET_PALETTES[index % COVER_PRESET_PALETTES.length];
+  const [dark, accent, soft] = palette;
+  const heading = contentType === 'insight' ? '益语前沿洞察' : '益语方法论';
+  const sub = contentType === 'insight' ? 'YIYU INSIGHT' : 'YIYU METHOD';
+  const number = String(index + 1).padStart(2, '0');
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+      <defs>
+        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${dark}" />
+          <stop offset="100%" stop-color="${accent}" />
+        </linearGradient>
+        <linearGradient id="glass" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="rgba(255,255,255,0.18)" />
+          <stop offset="100%" stop-color="rgba(255,255,255,0.03)" />
+        </linearGradient>
+      </defs>
+      <rect width="1600" height="900" fill="url(#bg)" />
+      <circle cx="1320" cy="170" r="240" fill="${soft}" opacity="0.22" />
+      <circle cx="290" cy="770" r="280" fill="${soft}" opacity="0.10" />
+      <rect x="92" y="92" width="1416" height="716" rx="36" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.18)" />
+      <rect x="148" y="146" width="640" height="14" rx="7" fill="rgba(255,255,255,0.45)" />
+      <rect x="148" y="192" width="270" height="18" rx="9" fill="rgba(255,255,255,0.22)" />
+      <text x="148" y="378" fill="#FFFFFF" font-size="88" font-weight="700" font-family="PingFang SC, Microsoft YaHei, sans-serif">${heading}</text>
+      <text x="148" y="472" fill="rgba(255,255,255,0.82)" font-size="38" font-weight="500" font-family="Avenir Next, PingFang SC, sans-serif">${sub}</text>
+      <text x="148" y="712" fill="rgba(255,255,255,0.95)" font-size="160" font-weight="800" font-family="Avenir Next, PingFang SC, sans-serif">${number}</text>
+      <path d="M1060 252 C1160 220, 1280 220, 1380 262" stroke="rgba(255,255,255,0.28)" stroke-width="10" fill="none" stroke-linecap="round" />
+      <path d="M1040 318 C1170 286, 1290 286, 1400 334" stroke="rgba(255,255,255,0.18)" stroke-width="8" fill="none" stroke-linecap="round" />
+      <path d="M1020 384 C1140 352, 1300 358, 1420 406" stroke="rgba(255,255,255,0.12)" stroke-width="6" fill="none" stroke-linecap="round" />
+    </svg>
+  `.trim();
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+async function seedDefaultCoverPresets(db) {
+  for (const contentType of ['insight', 'methodology']) {
+    const q = await db.query('SELECT count(*)::int AS c FROM content_cover_presets WHERE content_type=$1', [contentType]);
+    if (Number(q.rows[0]?.c || 0) > 0) continue;
+    for (let i = 0; i < 10; i += 1) {
+      const id = `${contentType}-preset-${String(i + 1).padStart(2, '0')}`;
+      const title = `${contentType === 'insight' ? '文章封面' : '方法论封面'} ${String(i + 1).padStart(2, '0')}`;
+      const imageUrl = buildCoverPresetSvg(contentType, i);
+      await db.query(
+        `INSERT INTO content_cover_presets(id, content_type, title, image_url, source_type, sort_order, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,'seed',$5,now(),now())
+         ON CONFLICT (id) DO NOTHING`,
+        [id, contentType, title, imageUrl, i]
+      );
+    }
+  }
+}
+
+async function listCoverPresets(db, contentType) {
+  const q = await db.query(
+    `SELECT id, content_type, title, image_url, source_type, sort_order, created_at, updated_at
+     FROM content_cover_presets
+     WHERE content_type=$1
+     ORDER BY sort_order ASC, created_at ASC`,
+    [contentType]
+  );
+  return q.rows.map(mapCoverPreset);
+}
+
+async function deleteCoverPresetById(db, id) {
+  const q = await db.query('DELETE FROM content_cover_presets WHERE id=$1', [id]);
+  return q.rowCount > 0;
+}
+
+async function getContentEngagementState(db, req, contentType, contentId) {
+  const table = getContentTableName(contentType);
+  if (!table) throw new Error('内容类型不支持');
+  const q = await db.query(
+    `SELECT id, coalesce(likes, 0) AS likes_count, coalesce(favorites_count, 0) AS favorites_count
+     FROM ${table}
+     WHERE id=$1
+     LIMIT 1`,
+    [contentId]
+  );
+  if (!q.rows[0]) throw new Error('内容不存在');
+
+  const session = await getOptionalSession(req);
+  let liked = false;
+  let favorited = false;
+
+  if (session?.id) {
+    const [likedRes, favoritedRes] = await Promise.all([
+      db.query(
+        'SELECT 1 FROM content_likes WHERE user_id=$1 AND content_type=$2 AND content_id=$3 LIMIT 1',
+        [session.id, contentType, contentId]
+      ),
+      db.query(
+        'SELECT 1 FROM content_favorites WHERE user_id=$1 AND content_type=$2 AND content_id=$3 LIMIT 1',
+        [session.id, contentType, contentId]
+      ),
+    ]);
+    liked = Boolean(likedRes.rows[0]);
+    favorited = Boolean(favoritedRes.rows[0]);
+  }
+
+  return {
+    contentType,
+    contentId,
+    likesCount: Number(q.rows[0].likes_count || 0),
+    favoritesCount: Number(q.rows[0].favorites_count || 0),
+    liked,
+    favorited,
+  };
+}
+
+async function toggleContentReaction(db, userId, contentType, contentId, kind) {
+  const table = getContentTableName(contentType);
+  if (!table) throw new Error('内容类型不支持');
+  const reactionTable = kind === 'like' ? 'content_likes' : 'content_favorites';
+  const countColumn = kind === 'like' ? 'likes' : 'favorites_count';
+
+  const contentQ = await db.query(`SELECT id FROM ${table} WHERE id=$1 LIMIT 1`, [contentId]);
+  if (!contentQ.rows[0]) throw new Error('内容不存在');
+
+  const existingQ = await db.query(
+    `SELECT id FROM ${reactionTable} WHERE user_id=$1 AND content_type=$2 AND content_id=$3 LIMIT 1`,
+    [userId, contentType, contentId]
+  );
+
+  if (existingQ.rows[0]) {
+    await db.query(`DELETE FROM ${reactionTable} WHERE id=$1`, [existingQ.rows[0].id]);
+  } else {
+    await db.query(
+      `INSERT INTO ${reactionTable}(id, user_id, content_type, content_id, created_at)
+       VALUES ($1,$2,$3,$4,now())`,
+      [crypto.randomUUID(), userId, contentType, contentId]
+    );
+  }
+
+  const countQ = await db.query(
+    `SELECT count(*)::int AS c FROM ${reactionTable} WHERE content_type=$1 AND content_id=$2`,
+    [contentType, contentId]
+  );
+  const nextCount = Number(countQ.rows[0]?.c || 0);
+  await db.query(`UPDATE ${table} SET ${countColumn}=$2 WHERE id=$1`, [contentId, nextCount]);
+
+  if (kind === 'favorite') {
+    const totalFavoritesQ = await db.query(
+      'SELECT count(*)::int AS c FROM content_favorites WHERE user_id=$1',
+      [userId]
+    );
+    await db.query(
+      'UPDATE auth_users SET favorites_count=$2 WHERE id=$1',
+      [userId, Number(totalFavoritesQ.rows[0]?.c || 0)]
+    );
+  }
+}
+
+async function listUserFavorites(db, userId) {
+  const q = await db.query(
+    `SELECT content_type, content_id, created_at
+     FROM content_favorites
+     WHERE user_id=$1
+     ORDER BY created_at DESC`,
+    [userId]
+  );
+  return q.rows.map((row) => ({
+    contentType: row.content_type,
+    contentId: row.content_id,
+    createdAt: row.created_at,
+  }));
 }
 
 function hashCode(code) {
@@ -466,6 +678,32 @@ async function ensureSchema() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS content_cover_presets (
+      id TEXT PRIMARY KEY,
+      content_type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      image_url TEXT NOT NULL,
+      source_type TEXT NOT NULL DEFAULT 'seed',
+      sort_order INT NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS content_likes (
+      id UUID PRIMARY KEY,
+      user_id UUID NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
+      content_type TEXT NOT NULL,
+      content_id TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE(user_id, content_type, content_id)
+    );
+    CREATE TABLE IF NOT EXISTS content_favorites (
+      id UUID PRIMARY KEY,
+      user_id UUID NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
+      content_type TEXT NOT NULL,
+      content_id TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE(user_id, content_type, content_id)
+    );
     CREATE TABLE IF NOT EXISTS payment_orders (
       id UUID PRIMARY KEY,
       order_no TEXT NOT NULL UNIQUE,
@@ -529,6 +767,27 @@ async function ensureSchema() {
       ADD COLUMN IF NOT EXISTS strategy_access_source TEXT,
       ADD COLUMN IF NOT EXISTS login_count INT NOT NULL DEFAULT 0,
       ADD COLUMN IF NOT EXISTS comments_count INT NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS favorites_count INT NOT NULL DEFAULT 0;
+  `);
+
+  await pool.query(`
+    ALTER TABLE insights
+      ADD COLUMN IF NOT EXISTS content_json JSONB,
+      ADD COLUMN IF NOT EXISTS content_html TEXT,
+      ADD COLUMN IF NOT EXISTS content_text TEXT,
+      ADD COLUMN IF NOT EXISTS cover_preset_id TEXT,
+      ADD COLUMN IF NOT EXISTS favorites_count INT NOT NULL DEFAULT 0;
+    ALTER TABLE methodologies
+      ADD COLUMN IF NOT EXISTS content_json JSONB,
+      ADD COLUMN IF NOT EXISTS content_html TEXT,
+      ADD COLUMN IF NOT EXISTS content_text TEXT,
+      ADD COLUMN IF NOT EXISTS cover_preset_id TEXT,
+      ADD COLUMN IF NOT EXISTS favorites_count INT NOT NULL DEFAULT 0;
+    ALTER TABLE reports
+      ADD COLUMN IF NOT EXISTS likes INT NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS favorites_count INT NOT NULL DEFAULT 0;
+    ALTER TABLE books
+      ADD COLUMN IF NOT EXISTS likes INT NOT NULL DEFAULT 0,
       ADD COLUMN IF NOT EXISTS favorites_count INT NOT NULL DEFAULT 0;
   `);
 
@@ -599,7 +858,13 @@ async function ensureSchema() {
     CREATE INDEX IF NOT EXISTS idx_project_events_project_sort ON project_events(project_id, sort_order, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_project_documents_project_sort ON project_documents(project_id, sort_order, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_project_meetings_project_sort ON project_meetings(project_id, sort_order, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_cover_presets_type_sort ON content_cover_presets(content_type, sort_order, created_at ASC);
+    CREATE INDEX IF NOT EXISTS idx_content_likes_content ON content_likes(content_type, content_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_content_favorites_content ON content_favorites(content_type, content_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_content_favorites_user ON content_favorites(user_id, created_at DESC);
   `);
+
+  await seedDefaultCoverPresets(pool);
 
   if (DEFAULT_ADMIN_EMAILS.size > 0) {
     await pool.query(
@@ -1680,6 +1945,14 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true, data: { user: mapUser(row) } });
     }
 
+    if (url.pathname === '/api/auth/cover-presets' && req.method === 'GET') {
+      const contentType = normalizeCoverPresetContentType(url.searchParams.get('contentType'));
+      if (!contentType) {
+        return json(res, 400, { ok: false, error: '封面类型无效' });
+      }
+      return json(res, 200, { ok: true, data: await listCoverPresets(pool, contentType) });
+    }
+
     if (url.pathname === '/api/auth/strategy-access' && req.method === 'GET') {
       const data = await resolveStrategyAccess(req);
       return json(res, 200, { ok: true, data });
@@ -1727,6 +2000,20 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true, data: comments });
     }
 
+    if (url.pathname === '/api/auth/content-engagement' && req.method === 'GET') {
+      const contentType = normalizeContentType(url.searchParams.get('contentType'));
+      const contentId = safeText(url.searchParams.get('contentId'));
+      if (!contentType || !contentId) {
+        return json(res, 400, { ok: false, error: '内容参数不完整' });
+      }
+      return json(res, 200, { ok: true, data: await getContentEngagementState(pool, req, contentType, contentId) });
+    }
+
+    if (url.pathname === '/api/auth/me/favorites' && req.method === 'GET') {
+      const row = await requireSession(req);
+      return json(res, 200, { ok: true, data: await listUserFavorites(pool, row.id) });
+    }
+
     if (url.pathname === '/api/auth/admin/assets' && req.method === 'POST') {
       await requireAdmin(req);
       const kind = normalizeUploadKind(url.searchParams.get('kind'));
@@ -1734,11 +2021,22 @@ const server = http.createServer(async (req, res) => {
         return json(res, 400, { ok: false, error: '上传类型无效' });
       }
 
+      const isCoverPreset = kind === 'cover-preset';
+      const contentType = isCoverPreset ? normalizeCoverPresetContentType(url.searchParams.get('contentType')) : null;
+      const defaultExt = isCoverPreset ? '.png' : '.pdf';
       const filename = sanitizeUploadFilename(
         url.searchParams.get('filename') || req.headers['x-file-name'] || '',
-        '.pdf'
+        defaultExt
       );
-      if (path.extname(filename).toLowerCase() !== '.pdf') {
+      const ext = path.extname(filename).toLowerCase();
+      if (isCoverPreset) {
+        if (!contentType) {
+          return json(res, 400, { ok: false, error: '封面类型无效' });
+        }
+        if (!['.png', '.jpg', '.jpeg', '.webp', '.svg'].includes(ext)) {
+          return json(res, 400, { ok: false, error: '封面仅支持 png/jpg/webp/svg' });
+        }
+      } else if (ext !== '.pdf') {
         return json(res, 400, { ok: false, error: '目前仅支持上传 PDF 文件' });
       }
 
@@ -1747,12 +2045,17 @@ const server = http.createServer(async (req, res) => {
         return json(res, 400, { ok: false, error: '上传内容为空' });
       }
 
-      const targetDir = path.join(ADMIN_UPLOAD_ROOT, kind === 'report' ? 'reports' : 'books');
+      const targetDir = path.join(
+        ADMIN_UPLOAD_ROOT,
+        kind === 'report' ? 'reports' : kind === 'book' ? 'books' : path.join('cover-presets', contentType)
+      );
       await fs.mkdir(targetDir, { recursive: true });
       const savedName = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${filename}`;
       const targetPath = path.join(targetDir, savedName);
       await fs.writeFile(targetPath, bodyBuffer);
-      const publicUrl = `/uploads/${kind === 'report' ? 'reports' : 'books'}/${savedName}`;
+      const publicUrl = isCoverPreset
+        ? `/uploads/cover-presets/${contentType}/${savedName}`
+        : `/uploads/${kind === 'report' ? 'reports' : 'books'}/${savedName}`;
 
       return json(res, 200, {
         ok: true,
@@ -2377,6 +2680,40 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true, data: mapInviteCode(q.rows[0]) });
     }
 
+    if (url.pathname === '/api/auth/cover-presets' && req.method === 'POST') {
+      await requireAdmin(req);
+      const contentType = normalizeCoverPresetContentType(body.contentType);
+      const imageUrl = normalizePublicLink(body.imageUrl) || safeText(body.imageUrl);
+      if (!contentType || !imageUrl) {
+        return json(res, 400, { ok: false, error: '封面参数不完整' });
+      }
+      const q = await pool.query(
+        `SELECT coalesce(max(sort_order), -1) + 1 AS next_sort
+         FROM content_cover_presets
+         WHERE content_type=$1`,
+        [contentType]
+      );
+      const nextSort = Number(q.rows[0]?.next_sort || 0);
+      const id = `preset_${crypto.randomUUID()}`;
+      await pool.query(
+        `INSERT INTO content_cover_presets(id, content_type, title, image_url, source_type, sort_order, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,now(),now())`,
+        [
+          id,
+          contentType,
+          safeText(body.title, `${contentType === 'insight' ? '文章封面' : '方法论封面'} ${String(nextSort + 1).padStart(2, '0')}`),
+          imageUrl,
+          body.sourceType === 'upload' ? 'upload' : 'seed',
+          nextSort,
+        ]
+      );
+      const created = await pool.query(
+        'SELECT id, content_type, title, image_url, source_type, sort_order, created_at, updated_at FROM content_cover_presets WHERE id=$1 LIMIT 1',
+        [id]
+      );
+      return json(res, 200, { ok: true, data: mapCoverPreset(created.rows[0]) });
+    }
+
     if (url.pathname === '/api/auth/invite-codes/redeem' && req.method === 'POST') {
       const userRow = await requireSession(req);
       const code = normalizeInviteCode(body.code);
@@ -2403,6 +2740,35 @@ const server = http.createServer(async (req, res) => {
       } finally {
         client.release();
       }
+    }
+
+    const coverPresetDeleteMatch = url.pathname.match(/^\/api\/auth\/cover-presets\/([^/]+)$/);
+    if (coverPresetDeleteMatch && req.method === 'DELETE') {
+      await requireAdmin(req);
+      const id = decodeURIComponent(coverPresetDeleteMatch[1]);
+      return json(res, 200, { ok: true, data: { deleted: await deleteCoverPresetById(pool, id) } });
+    }
+
+    if (url.pathname === '/api/auth/content-engagement/like' && req.method === 'POST') {
+      const row = await requireSession(req);
+      const contentType = normalizeContentType(body.contentType);
+      const contentId = safeText(body.contentId);
+      if (!contentType || !contentId) {
+        return json(res, 400, { ok: false, error: '内容参数不完整' });
+      }
+      await toggleContentReaction(pool, row.id, contentType, contentId, 'like');
+      return json(res, 200, { ok: true, data: await getContentEngagementState(pool, req, contentType, contentId) });
+    }
+
+    if (url.pathname === '/api/auth/content-engagement/favorite' && req.method === 'POST') {
+      const row = await requireSession(req);
+      const contentType = normalizeContentType(body.contentType);
+      const contentId = safeText(body.contentId);
+      if (!contentType || !contentId) {
+        return json(res, 400, { ok: false, error: '内容参数不完整' });
+      }
+      await toggleContentReaction(pool, row.id, contentType, contentId, 'favorite');
+      return json(res, 200, { ok: true, data: await getContentEngagementState(pool, req, contentType, contentId) });
     }
 
     if (url.pathname === '/api/auth/comments' && req.method === 'POST') {

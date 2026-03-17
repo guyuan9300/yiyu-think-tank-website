@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { getBooks, type Book } from '../lib/dataService';
 import type { User } from '../lib/dataService';
+import { useContentEngagement } from '../hooks/useContentEngagement';
 
 // AI对话消息接口
 interface ChatMessage {
@@ -65,8 +66,6 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [isBookmarked, setIsBookmarked] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const bookInfoRef = useRef<HTMLDivElement>(null);
   const [contentHeightPx, setContentHeightPx] = useState<number>(() => {
@@ -75,6 +74,7 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
     return Math.max(1040, h - 280);
   });
   const [isMobile, setIsMobile] = useState(false);
+  const { engagement, toggleLike, toggleFavorite } = useContentEngagement('book', bookId);
 
   // 监听用户登录状态
   useEffect(() => {
@@ -452,23 +452,33 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
             <div className="mt-6 pt-6 border-t border-gray-200">
               <div className="flex flex-wrap items-center gap-3">
                 <button
-                  onClick={() => setIsLiked(!isLiked)}
+                  onClick={async () => {
+                    const result = await toggleLike();
+                    if (!result.ok) {
+                      alert(result.error || '请先登录后再点赞');
+                    }
+                  }}
                   className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl transition-all duration-200 ${
-                    isLiked ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'
+                    engagement.liked ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'
                   }`}
                 >
                   <ThumbsUp className="w-5 h-5" />
-                  <span className="font-medium">点赞</span>
+                  <span className="font-medium">点赞 {engagement.likesCount || book.likes || 0}</span>
                 </button>
 
                 <button
-                  onClick={() => setIsBookmarked(!isBookmarked)}
+                  onClick={async () => {
+                    const result = await toggleFavorite();
+                    if (!result.ok) {
+                      alert(result.error || '请先登录后再收藏');
+                    }
+                  }}
                   className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl transition-all duration-200 ${
-                    isBookmarked ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'
+                    engagement.favorited ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'
                   }`}
                 >
-                  <Bookmark className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`} />
-                  <span className="font-medium">{isBookmarked ? '已收藏' : '收藏'}</span>
+                  <Bookmark className={`w-5 h-5 ${engagement.favorited ? 'fill-current' : ''}`} />
+                  <span className="font-medium">{engagement.favorited ? `已收藏 ${engagement.favoritesCount}` : `收藏 ${engagement.favoritesCount}`}</span>
                 </button>
 
                 <button

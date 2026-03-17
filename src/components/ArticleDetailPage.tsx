@@ -17,6 +17,7 @@ import { getInsights, type InsightArticle } from '../lib/dataService';
 import { generateHTML } from '@tiptap/html';
 import DOMPurify from 'dompurify';
 import { getArticleTiptapExtensions } from '../lib/tiptapSchema';
+import { useContentEngagement } from '../hooks/useContentEngagement';
 
 interface ArticleDetailPageProps {
   articleId: string;
@@ -25,9 +26,9 @@ interface ArticleDetailPageProps {
 
 export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPageProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isBookmarked, setIsBookmarked] = useState(false);
   const [article, setArticle] = useState<InsightArticle | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { engagement, toggleLike, toggleFavorite } = useContentEngagement('insight', articleId);
 
   useEffect(() => {
     // Load article data
@@ -308,22 +309,34 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setIsBookmarked(!isBookmarked)}
+                  onClick={async () => {
+                    const result = await toggleLike();
+                    if (!result.ok) {
+                      alert(result.error || '请先登录后再点赞');
+                    }
+                  }}
                   className="flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-all duration-300 hover:scale-[1.02] group"
                 >
                   <ThumbsUp className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
-                  <span className="font-medium">{displayArticle.likes}</span>
+                  <span className="font-medium">{engagement.likesCount || displayArticle.likes || 0}</span>
                 </button>
                 <button
-                  onClick={() => setIsBookmarked(!isBookmarked)}
+                  onClick={async () => {
+                    const result = await toggleFavorite();
+                    if (!result.ok) {
+                      alert(result.error || '请先登录后再收藏');
+                    }
+                  }}
                   className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl transition-all duration-300 hover:scale-[1.02] ${
-                    isBookmarked
+                    engagement.favorited
                       ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
                       : 'bg-muted/30 hover:bg-muted/50'
                   }`}
                 >
-                  <Bookmark className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`} />
-                  <span className="font-medium">{isBookmarked ? '已收藏' : '收藏'}</span>
+                  <Bookmark className={`w-5 h-5 ${engagement.favorited ? 'fill-current' : ''}`} />
+                  <span className="font-medium">
+                    {engagement.favorited ? `已收藏 ${engagement.favoritesCount}` : `收藏 ${engagement.favoritesCount}`}
+                  </span>
                 </button>
                 <button
                   onClick={async () => {

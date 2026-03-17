@@ -149,7 +149,8 @@ export async function logoutCurrentSession() {
 
 export async function uploadAdminAsset(
   file: File,
-  kind: 'report' | 'book'
+  kind: 'report' | 'book' | 'cover-preset',
+  options?: { contentType?: 'insight' | 'methodology' }
 ): Promise<ApiResult<{ url: string; size: number; filename: string }>> {
   try {
     const token = getSavedAuthToken();
@@ -161,6 +162,9 @@ export async function uploadAdminAsset(
       kind,
       filename: file.name,
     });
+    if (options?.contentType) {
+      params.set('contentType', options.contentType);
+    }
 
     const res = await fetch(`${AUTH_BASE}/admin/assets?${params.toString()}`, {
       method: 'POST',
