@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
-import { SubscriptionSheet } from './SubscriptionSheet';
 import {
   TrendingUp,
   FileText,
@@ -197,7 +196,6 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
   const [reports, setReports] = useState<Report[]>([]);
   const [articles, setArticles] = useState<InsightArticle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [subscriptionOpen, setSubscriptionOpen] = useState(false);
 
   // 加载数据
   useEffect(() => {
@@ -285,12 +283,6 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
       {/* 头部 */}
       <Header onNavigate={onNavigate} />
 
-      <SubscriptionSheet
-        open={subscriptionOpen}
-        onClose={() => setSubscriptionOpen(false)}
-        onGoUpgrade={() => onNavigate?.('register')}
-      />
-
       {/* Hero 区域 - Apple 风格设计 */}
       <section className="relative pt-28 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* 微妙背景渐变 */}
@@ -299,8 +291,8 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
         <div className="relative max-w-[1200px] mx-auto">
           {/* 面包屑已移除：首页与前沿洞察同级 */}
 
-          {/* 主标题 + 订阅按钮 */}
-          <div className="mb-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          {/* 主标题 */}
+          <div className="mb-4">
             <div>
               <h1 className="text-[48px] sm:text-[56px] lg:text-[64px] font-semibold leading-[1.05] tracking-[-0.025em] mb-3">
                 前沿洞察
@@ -309,14 +301,6 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
                 Insights & Research
               </p>
             </div>
-
-            <button
-              onClick={() => setSubscriptionOpen(true)}
-              className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-all duration-300 text-[14px] w-fit"
-            >
-              <span>订阅前沿</span>
-              <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5" />
-            </button>
           </div>
 
           {/* 副标题 */}

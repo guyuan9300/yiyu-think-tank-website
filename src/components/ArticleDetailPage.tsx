@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Calendar,
-  Clock,
-  Eye,
   ThumbsUp,
   Share2,
   Bookmark,
@@ -56,24 +54,6 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
     };
   }, []);
 
-  // Fallback mock data for preview
-  const mockArticle: InsightArticle = {
-    id: articleId,
-    title: '2026年公益行业数字化转型白皮书',
-    excerpt: '基于200+公益组织调研，深度解析数字化转型的挑战与机遇',
-    content: '',
-    topics: ['战略'],
-    publishDate: '2026-01-25',
-    status: 'published',
-    showOnHome: true,
-    views: 1234,
-    likes: 89,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
-  const displayArticle = article || mockArticle;
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -81,6 +61,37 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
       </div>
     );
   }
+
+  if (!article) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Header
+          isLoggedIn={isLoggedIn}
+          userType={isLoggedIn ? 'member' : 'visitor'}
+          onNavigate={(page) => onNavigate(page as any)}
+        />
+        <main className="flex-1 flex items-center justify-center px-6 py-24">
+          <div className="max-w-md text-center">
+            <BookOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+            <h1 className="text-[24px] font-semibold text-foreground mb-3">内容不存在</h1>
+            <p className="text-[14px] text-muted-foreground/70 leading-relaxed mb-6">
+              这篇文章可能已下线、被删除，或链接地址已经失效。
+            </p>
+            <button
+              onClick={() => onNavigate('article-center')}
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>返回文章中心</span>
+            </button>
+          </div>
+        </main>
+        <Footer onNavigate={(page) => onNavigate(page as any)} />
+      </div>
+    );
+  }
+
+  const displayArticle = article;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -169,11 +180,6 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
                     <span>{displayArticle.publishDate}</span>
-                  </div>
-                  {/* readTime removed (topics-only schema) */}
-                  <div className="flex items-center gap-2">
-                    <Eye className="w-4 h-4" />
-                    <span>{displayArticle.views.toLocaleString()}</span>
                   </div>
                 </div>
 

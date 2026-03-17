@@ -47,8 +47,34 @@ import {
   replyCommentApi,
   updateCommentStatusApi,
 } from '../lib/commentApi';
+import { ArticleEditor, type ArticleEditorValue } from './ArticleEditor';
 
 const RESOURCE_TOPICS: ResourceTopic[] = ['战略', '业务设计', '组织', 'AI 技术'];
+
+const buildEditorDocument = (contentJson: any, legacyContent?: string | null) => {
+  if (contentJson && typeof contentJson === 'object') {
+    return contentJson;
+  }
+
+  const normalized = String(legacyContent || '').trim();
+  if (!normalized) {
+    return undefined;
+  }
+
+  const paragraphs = normalized
+    .split(/\n\s*\n+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((text) => ({
+      type: 'paragraph',
+      content: [{ type: 'text', text }],
+    }));
+
+  return {
+    type: 'doc',
+    content: paragraphs.length > 0 ? paragraphs : [{ type: 'paragraph' }],
+  };
+};
 
 import { isValidPdfFile, formatFileSize } from '../lib/pdfUtils';
 import { UserManagementPage } from './UserManagementPage';
@@ -2283,6 +2309,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               onSave={async (e: React.FormEvent<HTMLFormElement>) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
+                const contentJsonRaw = (formData.get('contentJson') as string) || '';
+                const contentHtml = (formData.get('contentHtml') as string) || '';
+                const contentText = (formData.get('contentText') as string) || '';
 
                 const selectedTopics = (formData.getAll('topics') as string[]).map(s => s.trim()).filter(Boolean) as any;
                 const current = editingItem as InsightArticle | null;
@@ -2292,6 +2321,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   title: (formData.get('title') as string) || current?.title || '待补充',
                   excerpt: (formData.get('excerpt') as string) || current?.excerpt || '待补充',
                   content: (formData.get('content') as string) || current?.content || '',
+                  contentJson: contentJsonRaw ? JSON.parse(contentJsonRaw) : current?.contentJson,
+                  contentHtml: contentHtml || current?.contentHtml || '',
+                  contentText: contentText || current?.contentText || '',
                   topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
                   publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
                   status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
@@ -2321,6 +2353,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               strategyClients={strategyClients}
               syncClientIds={syncClientIds}
               setSyncClientIds={setSyncClientIds}
+              entityLabel="文章"
             />
           )}
 
@@ -2335,6 +2368,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               onSave={async (e: React.FormEvent<HTMLFormElement>) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
+                const contentJsonRaw = (formData.get('contentJson') as string) || '';
+                const contentHtml = (formData.get('contentHtml') as string) || '';
+                const contentText = (formData.get('contentText') as string) || '';
 
                 const selectedTopics = (formData.getAll('topics') as string[]).map(s => s.trim()).filter(Boolean) as any;
                 const current = editingItem as Methodology | null;
@@ -2344,6 +2380,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   title: (formData.get('title') as string) || current?.title || '待补充',
                   excerpt: (formData.get('excerpt') as string) || current?.excerpt || '待补充',
                   content: (formData.get('content') as string) || current?.content || '',
+                  contentJson: contentJsonRaw ? JSON.parse(contentJsonRaw) : current?.contentJson,
+                  contentHtml: contentHtml || current?.contentHtml || '',
+                  contentText: contentText || current?.contentText || '',
                   topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
                   publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
                   status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
@@ -2368,6 +2407,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               strategyClients={strategyClients}
               syncClientIds={syncClientIds}
               setSyncClientIds={setSyncClientIds}
+              entityLabel="方法论"
             />
           )}
 
@@ -2949,14 +2989,14 @@ function ReportFormModal({
 
 // 洞察文章表单模态框组件
 interface InsightFormModalProps {
-  editingItem: InsightArticle | null;
+  editingItem: InsightArticle | Methodology | null;
   onClose: () => void;
   onSave: (e: React.FormEvent<HTMLFormElement>) => void;
   showProjectSync: boolean;
   strategyClients: ClientProject[];
   syncClientIds: string[];
   setSyncClientIds: React.Dispatch<React.SetStateAction<string[]>>;
-
+  entityLabel: '文章' | '方法论';
 }
 
 function InsightFormModal({
@@ -2967,14 +3007,20 @@ function InsightFormModal({
   strategyClients,
   syncClientIds,
   setSyncClientIds,
+  entityLabel,
 }: InsightFormModalProps) {
+  const [editorValue, setEditorValue] = useState<ArticleEditorValue | null>(null);
+
+  useEffect(() => {
+    setEditorValue(null);
+  }, [editingItem?.id]);
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-auto">
       <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto my-8">
         <div className="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
           <h3 className="text-lg font-semibold text-gray-900">
-            {editingItem ? '编辑文章' : '添加文章'}
+            {editingItem ? `编辑${entityLabel}` : `添加${entityLabel}`}
           </h3>
           <button
             onClick={onClose}
@@ -2988,7 +3034,7 @@ function InsightFormModal({
           {/* 标题 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              文章标题 <span className="text-red-500">*</span>
+              {entityLabel}标题 <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -3027,7 +3073,7 @@ function InsightFormModal({
           {/* 摘要 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              文章摘要 <span className="text-red-500">*</span>
+              {entityLabel}摘要 <span className="text-red-500">*</span>
             </label>
             <textarea
               name="excerpt"
@@ -3042,15 +3088,21 @@ function InsightFormModal({
           {/* 正文内容 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              文章正文
+              {entityLabel}正文
             </label>
-            <textarea
-              name="content"
-              rows={8}
-              placeholder="请输入文章正文内容..."
-              defaultValue={editingItem?.content || ''}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none font-mono text-sm"
+            <ArticleEditor
+              value={buildEditorDocument((editingItem as any)?.contentJson, editingItem?.content)}
+              onChange={setEditorValue}
+              placeholder={`请输入${entityLabel}正文内容…`}
             />
+            <input type="hidden" name="content" value={editorValue?.text || editingItem?.content || ''} />
+            <input
+              type="hidden"
+              name="contentJson"
+              value={editorValue ? JSON.stringify(editorValue.json) : ((editingItem as any)?.contentJson ? JSON.stringify((editingItem as any).contentJson) : '')}
+            />
+            <input type="hidden" name="contentHtml" value={editorValue?.html || (editingItem as any)?.contentHtml || ''} />
+            <input type="hidden" name="contentText" value={editorValue?.text || (editingItem as any)?.contentText || editingItem?.content || ''} />
           </div>
           
 
@@ -3167,7 +3219,7 @@ function InsightFormModal({
               className="px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors flex items-center gap-2"
             >
               <Check className="w-5 h-5" />
-              保存文章
+              保存{entityLabel}
             </button>
           </div>
         </form>

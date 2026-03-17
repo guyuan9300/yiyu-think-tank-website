@@ -3,7 +3,7 @@ import { Header } from './Header';
 import { Footer } from './Footer';
 import { ArrowRight, Brain, Target, Users, TrendingUp, BookOpen, FileText, Lightbulb, ChevronRight, Star, Zap, ChevronDown, Wrench, Layers } from 'lucide-react';
 import { getInsights, getReports, getBooks, getMethodologies, type InsightArticle, type Report, type Book, type Methodology } from '../lib/dataService';
-import { SubscriptionSheet } from './SubscriptionSheet';
+import { DIAGNOSIS_FORM_URL } from '../lib/siteMeta';
 
 // Quick Entry Card - Apple Style
 function QuickEntryCard({ 
@@ -159,7 +159,7 @@ function ModuleCard({ icon, title, subtitle, description, gradient, onMouseEnter
 
 interface HomePageProps {
   onNavigate?: (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'login' | 'register' | 'book-reader' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai', id?: string) => void;
-  onNavigateToDetail?: (type: 'article' | 'report' | 'topic', id: string) => void;
+  onNavigateToDetail?: (type: 'article' | 'report', id: string) => void;
 }
 
 export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
@@ -169,7 +169,6 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
 
   const [homeInsights, setHomeInsights] = useState<InsightArticle[]>([]);
   const [homeReports, setHomeReports] = useState<Report[]>([]);
-  const [subscriptionOpen, setSubscriptionOpen] = useState(false);
 
   const [latestTopic, setLatestTopic] = useState<'战略' | '业务设计' | '组织' | 'AI 技术'>('战略');
 
@@ -364,7 +363,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
     }
   };
 
-  const handleNavigateToDetail = (type: 'article' | 'report' | 'topic', id: string) => {
+  const handleNavigateToDetail = (type: 'article' | 'report', id: string) => {
     if (onNavigateToDetail) {
       onNavigateToDetail(type, id);
     }
@@ -374,12 +373,6 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <Header isLoggedIn={false} userType="visitor" onNavigate={handleNavigate} />
-
-      <SubscriptionSheet
-        open={subscriptionOpen}
-        onClose={() => setSubscriptionOpen(false)}
-        onGoUpgrade={() => handleNavigate('register')}
-      />
 
       {/* Hero Section - Apple Style with Depth */}
       <section 
@@ -417,7 +410,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
             {/* CTA Button */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
-                onClick={() => window.open('https://hw7oabz548h.feishu.cn/share/base/form/shrcnOlk5n3pQdidooIVje76xUc', '_blank')}
+                onClick={() => window.open(DIAGNOSIS_FORM_URL, '_blank')}
                 className="group inline-flex items-center gap-2 px-8 py-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/25"
               >
                 <span className="font-medium text-[15px]">免费预约组织诊断</span>
@@ -493,7 +486,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
                             }`}
                             style={active ? { boxShadow: `0 6px 22px -14px ${c.accent}` } : undefined}
                           >
-                            {latestCounts[c.id] ?? 0}
+                            总数：{latestCounts[c.id] ?? 0}
                           </span>
                         </div>
                         {/* underline removed (keep clean) */}

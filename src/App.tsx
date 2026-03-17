@@ -17,7 +17,6 @@ import { ForgotPasswordPage } from './components/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/ResetPasswordPage';
 import { LegalDocumentPage } from './components/LegalDocumentPage';
 import { ArticleDetailPage } from './components/ArticleDetailPage';
-import { TopicDetailPage } from './components/TopicDetailPage';
 import { CaseDetailPage } from './components/CaseDetailPage';
 import { AdminDashboard } from './components/AdminDashboard';
 import { buildAdminUrl, getAdminTabFromSearchParams } from './lib/adminConsole';
@@ -39,7 +38,6 @@ import AdminStrategyCompanionConceptPage from './components/AdminStrategyCompani
 import { ConsultApplyPage } from './components/ConsultApplyPage';
 import { NotFoundPage } from './components/NotFoundPage';
 import { StrategyModuleIntroPage } from './components/StrategyModuleIntroPage';
-import { AboutPremiumPage } from './components/AboutPremiumPage';
 
 const ADMIN_SHELL_VERSION = '20260313-logout-home';
 
@@ -177,7 +175,6 @@ export default function App() {
     'terms-of-service',
     'privacy-policy',
     'article',
-    'topic',
     'case',
     'admin',
     'admin-legacy',
@@ -194,9 +191,6 @@ export default function App() {
     'business-design',
     'org-effectiveness',
     'digital-ai',
-
-    // standalone landing pages
-    'about-premium',
 
     '404',
   ]);
@@ -227,7 +221,7 @@ export default function App() {
       return from ? `?page=404&from=${encodeURIComponent(from)}` : `?page=404`;
     }
 
-    if (page === 'article' || page === 'report' || page === 'topic') {
+    if (page === 'article' || page === 'report') {
       return `?page=${page}&id=${encodeURIComponent(detailId || '')}`;
     }
 
@@ -272,7 +266,7 @@ export default function App() {
       const { page, unknown, id } = parseUrl();
       setUnknownPage(unknown);
       setCurrentPage(page);
-      if (page === 'article' || page === 'report' || page === 'topic' || page === 'methodology-library') {
+      if (page === 'article' || page === 'report' || page === 'methodology-library') {
         setSelectedDetailId(id);
       }
       if (page === 'case') {
@@ -302,7 +296,7 @@ export default function App() {
     }
   }, [currentPage, selectedDetailId, selectedCaseId, unknownPage]);
 
-  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'terms-of-service' | 'privacy-policy' | 'case' | 'admin' | 'user-center' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply' | 'book-library' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai' | 'about-premium', bookId?: string, caseId?: string) => {
+  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'terms-of-service' | 'privacy-policy' | 'case' | 'admin' | 'user-center' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply' | 'book-library' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai', bookId?: string, caseId?: string) => {
     // Reset scroll on page-level navigation so detail pages always open from the top.
     // (Otherwise the browser may keep the previous scroll position and look like it jumped to the bottom.)
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
@@ -347,7 +341,7 @@ export default function App() {
     }
   };
 
-  const handleNavigateToDetail = (type: 'article' | 'report' | 'topic', id: string) => {
+  const handleNavigateToDetail = (type: 'article' | 'report', id: string) => {
     // Ensure detail pages start at the top.
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
     setSelectedDetailId(id);
@@ -448,18 +442,6 @@ export default function App() {
     );
   }
 
-  // Topic Detail Page
-  if (currentPage === 'topic') {
-    return (
-      <>
-        <TopicDetailPage 
-          topicId={selectedDetailId}
-          onNavigate={(page, id) => handleNavigateToDetail(page as any, id || '')}
-        />
-      </>
-    );
-  }
-
   // Case Detail Page
   if (currentPage === 'case') {
     return (
@@ -483,7 +465,7 @@ export default function App() {
       <>
         <InsightsPage
           onNavigate={(page, id) => {
-            if ((page === 'article' || page === 'report' || page === 'topic') && id) {
+            if ((page === 'article' || page === 'report') && id) {
               handleNavigateToDetail(page as any, id);
               return;
             }
@@ -506,14 +488,6 @@ export default function App() {
     return (
       <>
         <AboutPage onNavigate={handleNavigate} />
-      </>
-    );
-  }
-
-  if (currentPage === 'about-premium') {
-    return (
-      <>
-        <AboutPremiumPage onNavigate={(p) => handleNavigate(p as any)} />
       </>
     );
   }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Mail, Phone } from 'lucide-react';
 import { getSystemSettings, type SystemSettings } from '../lib/dataService';
+import { SITE_CONTACT_EMAIL, SITE_CONTACT_PHONE, SITE_ICP_NUMBER, SITE_ICP_URL } from '../lib/siteMeta';
 
 interface FooterProps {
   onNavigate?: (page: 'about' | 'home' | 'insights' | 'learning' | 'strategy' | 'report-library' | 'article-center' | 'book-library' | 'methodology-library') => void;
@@ -111,26 +112,18 @@ export function Footer({ onNavigate }: FooterProps) {
           <div>
             <h4 className="font-medium text-[15px] mb-4 text-white">联系我们</h4>
             <ul className="space-y-2.5 text-[13px] text-white/70">
-              {settings?.contactEmail ? (
-                <li className="flex items-start gap-2">
-                  <Mail className="w-4 h-4 mt-0.5 flex-shrink-0 text-white/60" />
-                  <a href={`mailto:${settings.contactEmail}`} className="hover:text-white transition-colors break-all">
-                    {settings.contactEmail}
-                  </a>
-                </li>
-              ) : (
-                <li className="text-white/60">邮箱：待补充</li>
-              )}
-              {settings?.contactPhone ? (
-                <li className="flex items-start gap-2">
-                  <Phone className="w-4 h-4 mt-0.5 flex-shrink-0 text-white/60" />
-                  <a href={`tel:${settings.contactPhone}`} className="hover:text-white transition-colors">
-                    {settings.contactPhone}
-                  </a>
-                </li>
-              ) : (
-                <li className="text-white/60">电话：待补充</li>
-              )}
+              <li className="flex items-start gap-2">
+                <Mail className="w-4 h-4 mt-0.5 flex-shrink-0 text-white/60" />
+                <a href={`mailto:${SITE_CONTACT_EMAIL}`} className="hover:text-white transition-colors break-all">
+                  {SITE_CONTACT_EMAIL}
+                </a>
+              </li>
+              <li className="flex items-start gap-2">
+                <Phone className="w-4 h-4 mt-0.5 flex-shrink-0 text-white/60" />
+                <a href={`tel:${SITE_CONTACT_PHONE}`} className="hover:text-white transition-colors">
+                  {SITE_CONTACT_PHONE}
+                </a>
+              </li>
             </ul>
           </div>
         </div>
@@ -140,9 +133,14 @@ export function Footer({ onNavigate }: FooterProps) {
           <p className="text-[11px] text-white/55 text-center sm:text-left">
             © {currentYear} 益语智库 Yiyu Think Tank. All rights reserved.
           </p>
-          <p className="text-[11px] text-white/55 text-center sm:text-right">
-            ICP备案号：待提交
-          </p>
+          <a
+            href={SITE_ICP_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="text-[11px] text-white/55 text-center sm:text-right hover:text-white/80 transition-colors"
+          >
+            {SITE_ICP_NUMBER}
+          </a>
         </div>
       </div>
     </footer>

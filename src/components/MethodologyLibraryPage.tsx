@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Calendar,
-  Eye,
   ThumbsUp,
   Share2,
   Bookmark,
@@ -17,6 +16,8 @@ import { Footer } from './Footer';
 import { CommentSection } from './CommentSection';
 import { getMethodologies, type Methodology } from '../lib/dataService';
 import DOMPurify from 'dompurify';
+import { generateHTML } from '@tiptap/html';
+import { getArticleTiptapExtensions } from '../lib/tiptapSchema';
 
 type Topic = '战略' | '业务设计' | '组织' | 'AI 技术';
 
@@ -115,7 +116,21 @@ export function MethodologyLibraryPage({
 
   // Methodology reader view (match ArticleDetailPage grain)
   if (selected) {
-    const html = DOMPurify.sanitize(String(selected.content || selected.excerpt || ''));
+    const anySelected = selected as any;
+    let html = '';
+
+    if (String(anySelected.contentHtml || '').trim()) {
+      html = DOMPurify.sanitize(String(anySelected.contentHtml), { USE_PROFILES: { html: true } });
+    } else if (anySelected.contentJson) {
+      try {
+        const generated = generateHTML(anySelected.contentJson, getArticleTiptapExtensions() as any);
+        html = DOMPurify.sanitize(generated, { USE_PROFILES: { html: true } });
+      } catch {
+        html = '';
+      }
+    } else if (String(selected.content || '').trim()) {
+      html = DOMPurify.sanitize(String(selected.content), { USE_PROFILES: { html: true } });
+    }
 
     return (
       <div className="min-h-screen bg-background flex flex-col">
@@ -174,10 +189,6 @@ export function MethodologyLibraryPage({
                       <Calendar className="w-4 h-4" />
                       <span>{selected.publishDate}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Eye className="w-4 h-4" />
-                      <span>{selected.views.toLocaleString?.() ? selected.views.toLocaleString() : selected.views}</span>
-                    </div>
                   </div>
 
                   {selected.topics?.length ? (
@@ -202,7 +213,7 @@ export function MethodologyLibraryPage({
         <section className="px-6 pb-8">
           <div className="max-w-4xl mx-auto">
             <article className="prose prose-lg max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-muted-foreground/80 prose-p:leading-relaxed prose-a:text-primary hover:prose-a:text-primary/80">
-              {html.includes('<') ? (
+              {html ? (
                 <div dangerouslySetInnerHTML={{ __html: html }} />
               ) : (
                 <div className="text-[17px] leading-[1.8] font-light">
@@ -479,12 +490,6 @@ export function MethodologyLibraryPage({
                     {/* 元数据 */}
                     <div className="flex flex-col items-end gap-1.5 text-[12px] text-muted-foreground/50 w-32">
                       <span>{m.publishDate}</span>
-                      <div className="flex items-center gap-3">
-                        <span className="flex items-center gap-1">
-                          <Eye className="w-3 h-3" />
-                          {m.views?.toLocaleString?.() ? m.views.toLocaleString() : m.views}
-                        </span>
-                      </div>
                     </div>
                   </div>
                 ))}

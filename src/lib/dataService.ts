@@ -40,6 +40,9 @@ export interface InsightArticle {
   title: string;
   excerpt: string;
   content: string;
+  contentJson?: any;
+  contentHtml?: string;
+  contentText?: string;
 
   /** 统一标签（四类，多选）。旧 category/tags/readTime/featured/author 已彻底废弃。 */
   topics: ResourceTopic[];
@@ -112,6 +115,9 @@ export interface Methodology {
   title: string;
   excerpt: string;
   content: string;
+  contentJson?: any;
+  contentHtml?: string;
+  contentText?: string;
 
   /** 统一标签（四类，多选）。旧 category/tags/readTime/featured/author 已彻底废弃。 */
   topics: ResourceTopic[];

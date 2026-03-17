@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { PdfCoverImage } from './PdfCoverImage';
-import { BookOpen, Star, Eye, User, ChevronRight, Wrench, ArrowRight } from 'lucide-react';
+import { BookOpen, Star, Eye, Wrench, ArrowRight } from 'lucide-react';
 import { getBooks, getMethodologies, type Book as StoredBook, type Methodology as StoredMethodology } from '../lib/dataService';
 
 interface Book {
@@ -164,21 +164,6 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
               </p>
             </div>
 
-            {/* 右上角：保留“我的学习”，移除“书库”图标按钮 */}
-            <div className="hidden sm:flex items-center">
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white border border-border/60 hover:border-primary/40 transition-all shadow-sm text-[14px]"
-                onClick={() => {
-                  if (onNavigate) onNavigate('my-learning');
-                  else window.location.assign(`${window.location.pathname}?page=my-learning`);
-                }}
-              >
-                <User className="w-4 h-4 text-muted-foreground/70" />
-                <span className="font-medium text-muted-foreground/70">我的学习</span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground/60" />
-              </button>
-            </div>
           </div>
         </div>
       </section>
