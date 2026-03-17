@@ -1847,6 +1847,8 @@
     `;
     document.querySelector('.container')?.appendChild(moduleView);
 
+    const LEGACY_FRAME_VERSION = '20260317-admin-legacy-cache-bust';
+
     function setAdminView(view) {
       const map = {
         dashboard: { title: '数据概览', sub: '查看后台关键数据与常用入口' },
@@ -1895,7 +1897,7 @@
         allSections.forEach((s) => (s.style.display = 'none'));
         moduleView.style.display = 'block';
 
-        const legacyUrl = `${window.location.origin}${basePath}?page=admin-legacy&legacyTab=${encodeURIComponent(tab)}&embed=1`;
+        const legacyUrl = `${window.location.origin}${basePath}?page=admin-legacy&legacyTab=${encodeURIComponent(tab)}&embed=1&v=${encodeURIComponent(LEGACY_FRAME_VERSION)}`;
         if (frame) {
           frame.src = 'about:blank';
           setTimeout(() => { frame.src = legacyUrl; }, 0);
