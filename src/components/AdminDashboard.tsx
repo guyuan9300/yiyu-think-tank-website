@@ -47,6 +47,7 @@ import {
   replyCommentApi,
   updateCommentStatusApi,
 } from '../lib/commentApi';
+import { uploadAdminAsset } from '../lib/authApi';
 import { ArticleEditor, type ArticleEditorValue } from './ArticleEditor';
 
 const RESOURCE_TOPICS: ResourceTopic[] = ['战略', '业务设计', '组织', 'AI 技术'];
@@ -217,11 +218,13 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const [reportPages, setReportPages] = useState<number>(0);
   const [calculatedReadTime, setCalculatedReadTime] = useState<string>('');
   const [reportFile, setReportFile] = useState<File | null>(null);
+  const [bookFile, setBookFile] = useState<File | null>(null);
   const [reportStatus, setReportStatus] = useState<'draft' | 'published'>('published');
   const coverInputRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const reportFileInputRef = useRef<HTMLInputElement>(null);
   const bookCoverFileInputRef = useRef<HTMLInputElement>(null);
+  const bookFileInputRef = useRef<HTMLInputElement>(null);
   // tagInputRef removed (topics-only schema)
 
   const loadAdminComments = useCallback(async () => {
@@ -636,6 +639,21 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     }
   };
 
+  const handleBookFileButtonClick = () => {
+    bookFileInputRef.current?.click();
+  };
+
+  const handleBookFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!isValidPdfFile(file)) {
+        alert('请选择 PDF 格式的文件');
+        return;
+      }
+      setBookFile(file);
+    }
+  };
+
   // 处理封面图片选择
   const handleCoverImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -739,6 +757,18 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       .filter(Boolean) as any;
 
     const current = editingItem as Report | null;
+    let nextFileUrl = current?.fileUrl;
+    let nextFileSize = current?.fileSize;
+
+    if (reportFile) {
+      const uploaded = await uploadAdminAsset(reportFile, 'report');
+      if (!uploaded.ok || !uploaded.data) {
+        setMessage({ type: 'error', text: uploaded.error || '报告文件上传失败' });
+        return;
+      }
+      nextFileUrl = uploaded.data.url;
+      nextFileSize = uploaded.data.size;
+    }
 
     const reportData: Partial<Report> = {
       id: current ? current.id : undefined,
@@ -758,8 +788,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       status: reportStatus,
       showOnHome: false,
       // 报告文件信息
-      fileUrl: reportFile ? reportFile.name : current?.fileUrl,
-      fileSize: reportFile ? reportFile.size : current?.fileSize,
+      fileUrl: nextFileUrl,
+      fileSize: nextFileSize,
     };
 
     const saved = await saveReportDirect(reportData);
@@ -776,9 +806,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     setCoverImage(null);
     setReportPages(0);
     setCalculatedReadTime('');
-    setReportFile(null);
-    setReportStatus('published');
-    setMessage({ type: 'success', text: '报告已发布，前台报告库可见！' });
+                setReportFile(null);
+                setReportStatus('published');
+                setMessage({ type: 'success', text: '报告已发布，前台报告库可见！' });
   };
 
   // 删除报告
@@ -2419,6 +2449,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setShowBookForm(false);
                 setEditingItem(null);
                 setBookCoverImage(null);
+                setBookFile(null);
               }}
               onSave={async (e: React.FormEvent<HTMLFormElement>) => {
                 e.preventDefault();
@@ -2426,6 +2457,18 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 const selectedTopics = (formData.getAll('topics') as string[]).map(s => s.trim()).filter(Boolean) as any;
 
                 const current = editingItem as Book | null;
+                let nextFileUrl = current?.fileUrl;
+                let nextFileSize = current?.fileSize;
+
+                if (bookFile) {
+                  const uploaded = await uploadAdminAsset(bookFile, 'book');
+                  if (!uploaded.ok || !uploaded.data) {
+                    setMessage({ type: 'error', text: uploaded.error || '书籍文件上传失败' });
+                    return;
+                  }
+                  nextFileUrl = uploaded.data.url;
+                  nextFileSize = uploaded.data.size;
+                }
 
                 const bookData: Partial<Book> = {
                   id: current ? current.id : undefined,
@@ -2436,6 +2479,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
                   rating: current?.rating || 0,
                   coverImage: bookCoverImage || current?.coverImage || 'images/placeholders/document.svg',
+                  fileUrl: nextFileUrl,
+                  fileSize: nextFileSize,
                   publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
                   status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
                   showOnHome: false,
@@ -2452,6 +2497,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setShowBookForm(false);
                 setEditingItem(null);
                 setBookCoverImage(null);
+                setBookFile(null);
                 setMessage({ type: 'success', text: '书籍已保存，前台书库可见！' });
               }}
               strategyClients={strategyClients}
@@ -2460,8 +2506,13 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               bookCoverImage={bookCoverImage}
               setBookCoverImage={setBookCoverImage}
               bookCoverFileInputRef={bookCoverFileInputRef}
+              bookFile={bookFile}
+              setBookFile={setBookFile}
+              bookFileInputRef={bookFileInputRef}
               handleBookCoverButtonClick={handleBookCoverButtonClick}
               handleBookCoverImageSelect={handleBookCoverImageSelect}
+              handleBookFileButtonClick={handleBookFileButtonClick}
+              handleBookFileSelect={handleBookFileSelect}
               showProjectSync={false}
             />
           )}
@@ -2650,15 +2701,31 @@ function ReportFormModal({
         </div>
         
         <form onSubmit={onSave} className="p-6 space-y-6">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleCoverImageSelect}
+            className="hidden"
+          />
+
+          <input
+            ref={reportFileInputRef}
+            type="file"
+            accept="application/pdf"
+            onChange={handleReportFileSelect}
+            className="hidden"
+          />
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               封面图 <span className="text-gray-400 text-xs">(建议尺寸 1920x1080，16:9比例)</span>
             </label>
 
-            {coverImage ? (
+            {(coverImage || editingItem?.coverImage) ? (
               <div className="relative border-2 border-green-500 rounded-xl overflow-hidden group">
                 <img 
-                  src={coverImage} 
+                  src={coverImage || editingItem?.coverImage} 
                   alt="封面图" 
                   className="w-full aspect-video object-cover"
                 />
@@ -2688,15 +2755,6 @@ function ReportFormModal({
                 ref={coverInputRef}
                 className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-green-500 transition-colors"
               >
-                {/* 隐藏的文件输入 */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleCoverImageSelect}
-                  className="hidden"
-                />
-                
                 <div className="w-full aspect-video bg-gray-100 rounded-lg flex flex-col items-center justify-center text-gray-400">
                   <Image className="w-16 h-16 mb-3" />
                   <p className="text-base mb-3">点击下方按钮上传封面图</p>
@@ -2753,6 +2811,29 @@ function ReportFormModal({
                   </div>
                 </div>
               </div>
+            ) : editingItem?.fileUrl ? (
+              <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileText className="w-10 h-10 text-green-600 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 truncate">
+                        {decodeURIComponent(editingItem.fileUrl.split('/').pop() || editingItem.fileUrl)}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {editingItem.fileSize ? formatFileSize(editingItem.fileSize) : '已保存到腾讯云当前配置'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleReportFileButtonClick}
+                    className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium"
+                  >
+                    重新上传
+                  </button>
+                </div>
+              </div>
             ) : (
               <div
                 onDragOver={handleFileDragOver}
@@ -2764,15 +2845,6 @@ function ReportFormModal({
                     : 'border-gray-300 hover:border-green-500'
                 }`}
               >
-                {/* 隐藏的报告文件输入 */}
-                <input
-                  ref={reportFileInputRef}
-                  type="file"
-                  accept="application/pdf"
-                  onChange={handleReportFileSelect}
-                  className="hidden"
-                />
-                
                 <div className="flex flex-col items-center justify-center text-gray-400">
                   <Upload className="w-12 h-12 mb-2" />
                   <p className="text-sm mb-4">
@@ -3236,8 +3308,13 @@ interface BookFormModalProps {
   bookCoverImage: string | null;
   setBookCoverImage: React.Dispatch<React.SetStateAction<string | null>>;
   bookCoverFileInputRef: React.RefObject<HTMLInputElement>;
+  bookFile: File | null;
+  setBookFile: React.Dispatch<React.SetStateAction<File | null>>;
+  bookFileInputRef: React.RefObject<HTMLInputElement>;
   handleBookCoverButtonClick: () => void;
   handleBookCoverImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleBookFileButtonClick: () => void;
+  handleBookFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   showProjectSync: boolean;
   strategyClients: ClientProject[];
   syncClientIds: string[];
@@ -3252,22 +3329,20 @@ function BookFormModal({
   bookCoverImage,
   setBookCoverImage,
   bookCoverFileInputRef,
+  bookFile,
+  setBookFile,
+  bookFileInputRef,
   handleBookCoverButtonClick,
   handleBookCoverImageSelect,
+  handleBookFileButtonClick,
+  handleBookFileSelect,
   showProjectSync,
   strategyClients,
   syncClientIds,
   setSyncClientIds,
 }: BookFormModalProps) {
-
-  const colorOptions = [
-    { value: 'from-blue-600 to-indigo-800', label: '蓝色' },
-    { value: 'from-purple-600 to-pink-600', label: '紫色' },
-    { value: 'from-green-600 to-teal-600', label: '绿色' },
-    { value: 'from-amber-600 to-orange-600', label: '橙色' },
-    { value: 'from-red-600 to-rose-600', label: '红色' },
-    { value: 'from-gray-700 to-gray-900', label: '灰色' },
-  ];
+  const currentFileUrl = editingItem?.fileUrl || '';
+  const currentFileName = currentFileUrl ? decodeURIComponent(currentFileUrl.split('/').pop() || currentFileUrl) : '';
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-auto">
@@ -3285,6 +3360,22 @@ function BookFormModal({
         </div>
         
         <form onSubmit={onSave} className="p-6 space-y-6">
+          <input
+            ref={bookCoverFileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleBookCoverImageSelect}
+            className="hidden"
+          />
+
+          <input
+            ref={bookFileInputRef}
+            type="file"
+            accept="application/pdf"
+            onChange={handleBookFileSelect}
+            className="hidden"
+          />
+
           {/* 书籍封面图上传 - 16:9 比例 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -3321,15 +3412,6 @@ function BookFormModal({
               <div 
                 className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-purple-500 transition-colors"
               >
-                {/* 隐藏的文件输入 */}
-                <input
-                  ref={bookCoverFileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleBookCoverImageSelect}
-                  className="hidden"
-                />
-                
                 <div className="w-full aspect-video bg-gray-100 rounded-lg flex flex-col items-center justify-center text-gray-400">
                   <Image className="w-16 h-16 mb-3" />
                   <p className="text-base mb-3">点击下方按钮上传封面图</p>
@@ -3346,6 +3428,75 @@ function BookFormModal({
                   <p className="text-xs text-purple-600 mt-4 font-medium">
                     💡 或者直接 Ctrl+V 粘贴图片到这里
                   </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              书籍文件 <span className="text-gray-400 text-xs">(支持 PDF 格式)</span>
+            </label>
+
+            {bookFile ? (
+              <div className="border-2 border-purple-500 bg-purple-50 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-10 h-10 text-purple-600" />
+                    <div>
+                      <p className="font-medium text-gray-900">{bookFile.name}</p>
+                      <p className="text-sm text-gray-500">{formatFileSize(bookFile.size)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-1 bg-purple-600 text-white text-xs rounded-full">
+                      已选择
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setBookFile(null)}
+                      className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-500"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : currentFileUrl ? (
+              <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileText className="w-10 h-10 text-purple-600 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 truncate">{currentFileName || '已上传文件'}</p>
+                      <p className="text-sm text-gray-500">
+                        {editingItem?.fileSize ? formatFileSize(editingItem.fileSize) : '已保存到腾讯云当前配置'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleBookFileButtonClick}
+                    className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium"
+                  >
+                    重新上传
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-purple-500 transition-colors">
+                <div className="flex flex-col items-center justify-center text-gray-400">
+                  <Upload className="w-12 h-12 mb-2" />
+                  <p className="text-sm mb-4">点击上传书籍 PDF 文件</p>
+                  <button
+                    type="button"
+                    onClick={handleBookFileButtonClick}
+                    className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors font-medium"
+                  >
+                    <Upload className="w-5 h-5" />
+                    选择 PDF 文件
+                  </button>
+                  <p className="text-xs mt-4 text-gray-500">保存后会把文件地址写入腾讯云内容配置。</p>
                 </div>
               </div>
             )}

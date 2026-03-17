@@ -1,4 +1,5 @@
-import { authRequest, type ApiResult } from './authHttp';
+import { authRequest, type ApiResult, AUTH_BASE } from './authHttp';
+import { getSavedAuthToken } from './storage';
 
 export type AuthChannel = 'phone' | 'email';
 export type AuthScene = 'register' | 'reset' | 'bind' | 'unbind' | 'deactivate';
@@ -144,6 +145,41 @@ export async function deactivateCurrentAccount(params: {
 
 export async function logoutCurrentSession() {
   return authRequest('/logout', { method: 'POST' }, { withAuth: true });
+}
+
+export async function uploadAdminAsset(
+  file: File,
+  kind: 'report' | 'book'
+): Promise<ApiResult<{ url: string; size: number; filename: string }>> {
+  try {
+    const token = getSavedAuthToken();
+    if (!token) {
+      return { ok: false, error: '请先登录管理员账号' };
+    }
+
+    const params = new URLSearchParams({
+      kind,
+      filename: file.name,
+    });
+
+    const res = await fetch(`${AUTH_BASE}/admin/assets?${params.toString()}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': file.type || 'application/octet-stream',
+        'X-File-Name': encodeURIComponent(file.name),
+      },
+      body: file,
+    });
+
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json?.ok === false) {
+      return { ok: false, error: json?.error || `上传失败(${res.status})` };
+    }
+    return { ok: true, data: json?.data, message: json?.message };
+  } catch (error: any) {
+    return { ok: false, error: error?.message || '上传失败，请稍后重试' };
+  }
 }
 
 export function normalizeLoginUser(u: AuthApiUser) {

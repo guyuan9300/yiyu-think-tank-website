@@ -1,5 +1,7 @@
 import http from 'node:http';
 import crypto from 'node:crypto';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { Pool } from 'pg';
 import nodemailer from 'nodemailer';
 import tencentcloud from 'tencentcloud-sdk-nodejs';
@@ -92,6 +94,7 @@ function initSesClient() {
 }
 
 const mailer = buildMailer();
+const ADMIN_UPLOAD_ROOT = process.env.YIYU_UPLOAD_ROOT || '/var/www/yiyu-site/uploads';
 
 function json(res, status, payload) {
   res.writeHead(status, { 'Content-Type': 'application/json', ...corsHeaders });
@@ -111,6 +114,24 @@ function readJsonBody(req) {
         reject(error);
       }
     });
+    req.on('error', reject);
+  });
+}
+
+function readRawBody(req, maxBytes = 60 * 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let total = 0;
+    req.on('data', (chunk) => {
+      total += chunk.length;
+      if (total > maxBytes) {
+        reject(new Error('上传文件过大'));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
     req.on('error', reject);
   });
 }
@@ -217,6 +238,22 @@ function nowDateText() {
 
 function normalizePlanId(input) {
   return Object.prototype.hasOwnProperty.call(PAYMENT_PLANS, input) ? input : null;
+}
+
+function normalizeUploadKind(input) {
+  return input === 'report' || input === 'book' ? input : null;
+}
+
+function sanitizeUploadFilename(input, fallbackExt = '.pdf') {
+  const raw = decodeURIComponent(String(input || '').trim());
+  const base = path.basename(raw || `upload${fallbackExt}`);
+  const safe = base
+    .replace(/[^\w.\-\u4e00-\u9fa5]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  if (!safe) return `upload${fallbackExt}`;
+  if (path.extname(safe)) return safe;
+  return `${safe}${fallbackExt}`;
 }
 
 function hashCode(code) {
@@ -1688,6 +1725,43 @@ const server = http.createServer(async (req, res) => {
       const status = url.searchParams.get('status');
       const comments = await listComments({ contentId, contentType, status, scope });
       return json(res, 200, { ok: true, data: comments });
+    }
+
+    if (url.pathname === '/api/auth/admin/assets' && req.method === 'POST') {
+      await requireAdmin(req);
+      const kind = normalizeUploadKind(url.searchParams.get('kind'));
+      if (!kind) {
+        return json(res, 400, { ok: false, error: '上传类型无效' });
+      }
+
+      const filename = sanitizeUploadFilename(
+        url.searchParams.get('filename') || req.headers['x-file-name'] || '',
+        '.pdf'
+      );
+      if (path.extname(filename).toLowerCase() !== '.pdf') {
+        return json(res, 400, { ok: false, error: '目前仅支持上传 PDF 文件' });
+      }
+
+      const bodyBuffer = await readRawBody(req);
+      if (!bodyBuffer.length) {
+        return json(res, 400, { ok: false, error: '上传内容为空' });
+      }
+
+      const targetDir = path.join(ADMIN_UPLOAD_ROOT, kind === 'report' ? 'reports' : 'books');
+      await fs.mkdir(targetDir, { recursive: true });
+      const savedName = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${filename}`;
+      const targetPath = path.join(targetDir, savedName);
+      await fs.writeFile(targetPath, bodyBuffer);
+      const publicUrl = `/uploads/${kind === 'report' ? 'reports' : 'books'}/${savedName}`;
+
+      return json(res, 200, {
+        ok: true,
+        data: {
+          url: publicUrl,
+          size: bodyBuffer.length,
+          filename: savedName,
+        },
+      });
     }
 
     if (url.pathname === '/api/auth/payment/readiness' && req.method === 'GET') {
