@@ -19,6 +19,7 @@ import DOMPurify from 'dompurify';
 import { generateHTML } from '@tiptap/html';
 import { getArticleTiptapExtensions } from '../lib/tiptapSchema';
 import { useContentEngagement } from '../hooks/useContentEngagement';
+import { buildShareLandingUrl } from '../lib/shareLinks';
 
 type Topic = '战略' | '业务设计' | '组织' | 'AI 技术';
 
@@ -259,8 +260,7 @@ export function MethodologyLibraryPage({
                     </button>
                     <button
                       onClick={async () => {
-                        const base = window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, '');
-                        const shareUrl = `${base}/?page=methodology-library`;
+                        const shareUrl = buildShareLandingUrl('methodology', selected.id);
                         try {
                           await navigator.clipboard.writeText(shareUrl);
                           alert('已复制分享链接，可直接粘贴到微信/朋友圈');

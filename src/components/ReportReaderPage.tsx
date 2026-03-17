@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import type { User } from '../lib/dataService';
 import { useContentEngagement } from '../hooks/useContentEngagement';
+import { buildShareLandingUrl } from '../lib/shareLinks';
 
 interface ReportReaderPageProps {
   reportId: string;
@@ -494,7 +495,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
 
                 <button
                   onClick={async () => {
-                    const shareUrl = window.location.href;
+                    const shareUrl = buildShareLandingUrl('report', report.id);
                     try {
                       await navigator.clipboard.writeText(shareUrl);
                       alert('已复制链接，可粘贴到微信/朋友圈');

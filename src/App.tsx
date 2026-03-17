@@ -205,7 +205,7 @@ export default function App() {
 
   const [currentPage, setCurrentPage] = useState<string>(initialPage);
   const [unknownPage, setUnknownPage] = useState<string | null>(initialUnknown);
-  const [selectedBookId, setSelectedBookId] = useState<string>('shimeshiquanli');
+  const [selectedBookId, setSelectedBookId] = useState<string>(initialParams.get('id') || 'shimeshiquanli');
   const [selectedDetailId, setSelectedDetailId] = useState<string>(initialParams.get('id') || '');
   const [selectedCaseId, setSelectedCaseId] = useState<string>(initialParams.get('id') || 'blue-letter');
 
@@ -232,6 +232,10 @@ export default function App() {
 
     if (page === 'case') {
       return `?page=case&id=${encodeURIComponent(caseId || '')}`;
+    }
+
+    if (page === 'book-reader') {
+      return `?page=book-reader&id=${encodeURIComponent(detailId || '')}`;
     }
 
     if (page === 'strategy-companion') {
@@ -269,6 +273,9 @@ export default function App() {
       if (page === 'article' || page === 'report' || page === 'methodology-library') {
         setSelectedDetailId(id);
       }
+      if (page === 'book-reader') {
+        setSelectedBookId(id || 'shimeshiquanli');
+      }
       if (page === 'case') {
         setSelectedCaseId(id || 'blue-letter');
       }
@@ -287,14 +294,18 @@ export default function App() {
       return;
     }
 
-    const next = buildUrlForState(currentPage, selectedDetailId, selectedCaseId);
+    const next = buildUrlForState(
+      currentPage,
+      currentPage === 'book-reader' ? selectedBookId : selectedDetailId,
+      selectedCaseId
+    );
     const current = window.location.pathname + window.location.search;
     const target = next.startsWith('?') ? (window.location.pathname + next) : next;
 
     if (current !== target) {
       window.history.pushState({}, '', next);
     }
-  }, [currentPage, selectedDetailId, selectedCaseId, unknownPage]);
+  }, [currentPage, selectedBookId, selectedDetailId, selectedCaseId, unknownPage]);
 
   const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'terms-of-service' | 'privacy-policy' | 'case' | 'admin' | 'user-center' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply' | 'book-library' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai', bookId?: string, caseId?: string) => {
     // Reset scroll on page-level navigation so detail pages always open from the top.

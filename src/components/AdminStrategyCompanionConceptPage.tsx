@@ -14,6 +14,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { Header } from './Header';
+import AdminCaseShowcaseManager from './AdminCaseShowcaseManager';
 import {
   PUBLIC_STRATEGY_SHOWCASE,
   fetchStrategyProjectSnapshot,
@@ -32,6 +33,7 @@ import {
 } from '../lib/strategyCompanionApi';
 
 type Mode = 'immersive' | 'work';
+type AdminSurface = 'companion' | 'cases';
 
 const card = 'bg-white/92 backdrop-blur-sm rounded-[22px] border border-slate-200/70 shadow-[0_8px_28px_rgba(15,23,42,0.045)]';
 
@@ -195,6 +197,7 @@ export default function AdminStrategyCompanionConceptPage({
   const isFrontend = viewMode === 'frontend';
   const canEdit = !isFrontend;
   const canSelectPublishedOnly = isFrontend && accessMode === 'admin';
+  const [adminSurface, setAdminSurface] = useState<AdminSurface>('companion');
   const [mode, setMode] = useState<Mode>('immersive');
   const [projectOptions, setProjectOptions] = useState<StrategyProjectSummary[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState(initialProjectId);
@@ -408,6 +411,31 @@ export default function AdminStrategyCompanionConceptPage({
       {showHeader ? <Header isLoggedIn userType="client" onNavigate={onNavigate} /> : null}
 
       <main className={`max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 ${showHeader ? 'pt-24' : 'pt-6'} pb-20 ${spacing}`}>
+        {canEdit && (
+          <section className={`${card} p-3 sm:p-4`}>
+            <div className="inline-flex rounded-2xl border border-slate-200 bg-white p-1">
+              <button
+                type="button"
+                onClick={() => setAdminSurface('companion')}
+                className={`px-4 py-2 rounded-xl text-[13px] font-medium ${adminSurface === 'companion' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+              >
+                战略陪伴
+              </button>
+              <button
+                type="button"
+                onClick={() => setAdminSurface('cases')}
+                className={`px-4 py-2 rounded-xl text-[13px] font-medium ${adminSurface === 'cases' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+              >
+                案例展示
+              </button>
+            </div>
+          </section>
+        )}
+
+        {canEdit && adminSurface === 'cases' ? (
+          <AdminCaseShowcaseManager />
+        ) : (
+          <>
         {message && (
           <div className={`rounded-2xl border px-4 py-3 text-sm ${message.type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-red-50 border-red-100 text-red-700'}`}>
             {message.text}
@@ -874,6 +902,8 @@ export default function AdminStrategyCompanionConceptPage({
               当前为战略陪伴展示页。绑定机构后，你将直接看到对应机构的战略陪伴页面；管理员则可查看所有已发布机构页并切换筛选。
             </div>
           </section>
+        )}
+          </>
         )}
       </main>
     </div>

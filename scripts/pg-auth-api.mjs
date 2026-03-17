@@ -1,7 +1,10 @@
 import http from 'node:http';
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { Pool } from 'pg';
 import nodemailer from 'nodemailer';
 import tencentcloud from 'tencentcloud-sdk-nodejs';
@@ -95,6 +98,109 @@ function initSesClient() {
 
 const mailer = buildMailer();
 const ADMIN_UPLOAD_ROOT = process.env.YIYU_UPLOAD_ROOT || '/var/www/yiyu-site/uploads';
+const execFileAsync = promisify(execFile);
+
+const DEFAULT_CASE_SHOWCASES = [
+  {
+    id: 'case-blue-letter',
+    slug: 'blue-letter',
+    clientName: '蓝信封',
+    industry: '公益/教育',
+    title: '专注于乡村儿童心理健康服务的公益机构',
+    subtitle: '通过书信交流建立长期陪伴关系',
+    tags: ['公益', '教育'],
+    logoUrl: '/images/cases/blue-letter.png',
+    sortOrder: 1,
+  },
+  {
+    id: 'case-vision-capital',
+    slug: 'vision-capital',
+    clientName: '愿景资本',
+    industry: '金融/投资',
+    title: '国家新兴产业创投基金管理公司',
+    subtitle: '聚焦早中期投资，陪伴创业者成长',
+    tags: ['投资', '创投'],
+    logoUrl: '/images/cases/vision-capital.png',
+    sortOrder: 2,
+  },
+  {
+    id: 'case-beike-foundation',
+    slug: 'beike-foundation',
+    clientName: '贝壳公益基金会',
+    industry: '公益/房地产',
+    title: '城市社区公益平台',
+    subtitle: '打造互助互利的社区公益平台',
+    tags: ['社区', '公益'],
+    logoUrl: '/images/cases/beike-foundation.png',
+    sortOrder: 3,
+  },
+  {
+    id: 'case-rici-foundation',
+    slug: 'rici-foundation',
+    clientName: '日慈基金会',
+    industry: '公益/教育',
+    title: '青少年心智素养教育',
+    subtitle: '专注心智素养教育项目设计与推广',
+    tags: ['教育', '心理'],
+    logoUrl: '/images/cases/rici-foundation.png',
+    sortOrder: 4,
+  },
+  {
+    id: 'case-tianzige',
+    slug: 'tianzige',
+    clientName: '田字格',
+    industry: '公益/教育',
+    title: '乡土人本教育探索',
+    subtitle: '开展乡土人本教育模式探索',
+    tags: ['乡村', '教育'],
+    logoUrl: '/images/cases/tianzige.png',
+    sortOrder: 5,
+  },
+  {
+    id: 'case-abc-consulting',
+    slug: 'abc-consulting',
+    clientName: 'ABC美好社会咨询社',
+    industry: '公益/咨询',
+    title: '专业公益咨询服务',
+    subtitle: '为 NGO 提供战略、运营等专业咨询',
+    tags: ['咨询', 'NGO'],
+    logoUrl: '/images/cases/abc-consulting.png',
+    sortOrder: 6,
+  },
+  {
+    id: 'case-lithium-sodium-krypton-strontium',
+    slug: 'lithium-sodium-krypton-strontium',
+    clientName: '锂钠氪锶',
+    industry: '教育/科技',
+    title: '教育科技解决方案',
+    subtitle: '通过 AI 和大数据提供个性化方案',
+    tags: ['AI', '教育'],
+    logoUrl: '/images/cases/lithium-sodium-krypton-strontium.png',
+    sortOrder: 7,
+  },
+  {
+    id: 'case-china-rural-foundation',
+    slug: 'china-rural-foundation',
+    clientName: '中国乡村发展基金会',
+    industry: '公益/乡村振兴',
+    title: '乡村发展与扶贫事业',
+    subtitle: '实施扶贫开发、乡村振兴项目',
+    tags: ['乡村', '扶贫'],
+    logoUrl: '/images/cases/china-rural-foundation.png',
+    sortOrder: 8,
+  },
+  {
+    id: 'case-nio',
+    slug: 'nio',
+    clientName: '蔚来汽车',
+    industry: '汽车/新能源',
+    title: '智能电动汽车与用户体验',
+    subtitle: '创造愉悦的用户生活方式',
+    tags: ['汽车', '新能源'],
+    logoUrl: '/images/cases/nio.png',
+    sortOrder: 9,
+  },
+];
 
 function json(res, status, payload) {
   res.writeHead(status, { 'Content-Type': 'application/json', ...corsHeaders });
@@ -241,7 +347,13 @@ function normalizePlanId(input) {
 }
 
 function normalizeUploadKind(input) {
-  return input === 'report' || input === 'book' || input === 'cover-preset' ? input : null;
+  return input === 'report'
+    || input === 'book'
+    || input === 'cover-preset'
+    || input === 'case-logo'
+    || input === 'case-ppt'
+    ? input
+    : null;
 }
 
 function sanitizeUploadFilename(input, fallbackExt = '.pdf') {
@@ -258,6 +370,14 @@ function sanitizeUploadFilename(input, fallbackExt = '.pdf') {
 
 function normalizeCoverPresetContentType(input) {
   return input === 'methodology' ? 'methodology' : input === 'insight' ? 'insight' : null;
+}
+
+function normalizeCaseShowcaseScope(input) {
+  return input === 'admin' ? 'admin' : 'published';
+}
+
+function toCaseShowcaseSlug(input) {
+  return toProjectSlug(input).replace(/^project-/, 'case-');
 }
 
 function normalizeContentType(input) {
@@ -704,6 +824,24 @@ async function ensureSchema() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       UNIQUE(user_id, content_type, content_id)
     );
+    CREATE TABLE IF NOT EXISTS case_showcases (
+      id TEXT PRIMARY KEY,
+      slug TEXT NOT NULL UNIQUE,
+      client_name TEXT NOT NULL,
+      industry TEXT,
+      title TEXT NOT NULL,
+      subtitle TEXT,
+      tags TEXT[] NOT NULL DEFAULT '{}'::text[],
+      logo_url TEXT,
+      ppt_file_url TEXT,
+      ppt_file_name TEXT,
+      slide_images JSONB NOT NULL DEFAULT '[]'::jsonb,
+      is_published BOOLEAN NOT NULL DEFAULT false,
+      sort_order INT NOT NULL DEFAULT 0,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
     CREATE TABLE IF NOT EXISTS payment_orders (
       id UUID PRIMARY KEY,
       order_no TEXT NOT NULL UNIQUE,
@@ -730,6 +868,8 @@ async function ensureSchema() {
     CREATE INDEX IF NOT EXISTS idx_comments_content_status_created ON comments(content_id, content_type, status, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_payment_orders_user_created ON payment_orders(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_payment_orders_status_created ON payment_orders(status, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_case_showcases_publish_sort ON case_showcases(is_published, sort_order, created_at ASC);
+    CREATE INDEX IF NOT EXISTS idx_case_showcases_slug ON case_showcases(slug);
     CREATE TABLE IF NOT EXISTS project_learning_resources (
       id TEXT PRIMARY KEY,
       project_id TEXT NOT NULL,
@@ -865,6 +1005,7 @@ async function ensureSchema() {
   `);
 
   await seedDefaultCoverPresets(pool);
+  await seedDefaultCaseShowcases();
 
   if (DEFAULT_ADMIN_EMAILS.size > 0) {
     await pool.query(
@@ -1326,6 +1467,228 @@ function mapStrategyLearningResource(row) {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function mapCaseShowcase(row) {
+  return {
+    id: row.id,
+    slug: row.slug || toCaseShowcaseSlug(row.client_name || row.title || row.id),
+    clientName: row.client_name || '',
+    industry: row.industry || '',
+    title: row.title || '',
+    subtitle: row.subtitle || '',
+    tags: Array.isArray(row.tags) ? row.tags : [],
+    logoUrl: row.logo_url || '',
+    pptFileUrl: row.ppt_file_url || '',
+    pptFileName: row.ppt_file_name || '',
+    slideImages: Array.isArray(row.slide_images) ? row.slide_images : [],
+    isPublished: Boolean(row.is_published),
+    sortOrder: Number(row.sort_order || 0),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function sanitizeCaseShowcasePayload(payload, fallbackRow = null) {
+  const clientName = safeText(payload?.clientName, fallbackRow?.client_name || '未命名机构');
+  const title = safeText(payload?.title, fallbackRow?.title || clientName);
+  return {
+    id: safeText(payload?.id, fallbackRow?.id || `case_${crypto.randomUUID()}`),
+    slug: toCaseShowcaseSlug(payload?.slug || fallbackRow?.slug || clientName),
+    clientName,
+    industry: safeText(payload?.industry, fallbackRow?.industry || ''),
+    title,
+    subtitle: safeText(payload?.subtitle, fallbackRow?.subtitle || ''),
+    tags: textArray(payload?.tags || fallbackRow?.tags || []),
+    logoUrl: safeText(payload?.logoUrl, fallbackRow?.logo_url || ''),
+    pptFileUrl: safeText(payload?.pptFileUrl, fallbackRow?.ppt_file_url || ''),
+    pptFileName: safeText(payload?.pptFileName, fallbackRow?.ppt_file_name || ''),
+    slideImages: Array.isArray(payload?.slideImages)
+      ? payload.slideImages.map((item) => safeText(item)).filter(Boolean)
+      : Array.isArray(fallbackRow?.slide_images)
+        ? fallbackRow.slide_images.map((item) => safeText(item)).filter(Boolean)
+        : [],
+    isPublished: normalizeBool(payload?.isPublished, fallbackRow?.is_published || false),
+    sortOrder: toPositiveInt(payload?.sortOrder, Number(fallbackRow?.sort_order || 0)),
+  };
+}
+
+async function listCaseShowcases(scope = 'published') {
+  const normalizedScope = normalizeCaseShowcaseScope(scope);
+  const where = ['is_active = true'];
+  if (normalizedScope !== 'admin') {
+    where.push('is_published = true');
+  }
+  const q = await pool.query(
+    `SELECT *
+     FROM case_showcases
+     WHERE ${where.join(' AND ')}
+     ORDER BY sort_order ASC NULLS LAST, created_at ASC`
+  );
+  return q.rows.map(mapCaseShowcase);
+}
+
+async function findCaseShowcaseByIdOrSlug(db, value) {
+  const q = await db.query(
+    `SELECT *
+     FROM case_showcases
+     WHERE id=$1 OR slug=$1
+     LIMIT 1`,
+    [value]
+  );
+  return q.rows[0] || null;
+}
+
+async function upsertCaseShowcase(db, payload) {
+  const existing = payload?.id ? await findCaseShowcaseByIdOrSlug(db, payload.id) : null;
+  const normalized = sanitizeCaseShowcasePayload(payload, existing);
+  await db.query(
+    `INSERT INTO case_showcases(
+       id, slug, client_name, industry, title, subtitle, tags, logo_url, ppt_file_url, ppt_file_name,
+       slide_images, is_published, sort_order, is_active, created_at, updated_at
+     )
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,true,COALESCE((SELECT created_at FROM case_showcases WHERE id=$1), now()),now())
+     ON CONFLICT (id) DO UPDATE SET
+       slug = EXCLUDED.slug,
+       client_name = EXCLUDED.client_name,
+       industry = EXCLUDED.industry,
+       title = EXCLUDED.title,
+       subtitle = EXCLUDED.subtitle,
+       tags = EXCLUDED.tags,
+       logo_url = EXCLUDED.logo_url,
+       ppt_file_url = EXCLUDED.ppt_file_url,
+       ppt_file_name = EXCLUDED.ppt_file_name,
+       slide_images = EXCLUDED.slide_images,
+       is_published = EXCLUDED.is_published,
+       sort_order = EXCLUDED.sort_order,
+       is_active = true,
+       updated_at = now()`,
+    [
+      normalized.id,
+      normalized.slug,
+      normalized.clientName,
+      normalized.industry,
+      normalized.title,
+      normalized.subtitle,
+      normalized.tags,
+      normalized.logoUrl || null,
+      normalized.pptFileUrl || null,
+      normalized.pptFileName || null,
+      JSON.stringify(normalized.slideImages),
+      normalized.isPublished,
+      normalized.sortOrder,
+    ]
+  );
+  return findCaseShowcaseByIdOrSlug(db, normalized.id);
+}
+
+async function deleteCaseShowcaseById(db, id) {
+  const existing = await findCaseShowcaseByIdOrSlug(db, id);
+  if (!existing) return false;
+  await db.query(
+    `UPDATE case_showcases
+     SET is_active = false,
+         updated_at = now()
+     WHERE id = $1`,
+    [existing.id]
+  );
+  return true;
+}
+
+async function seedDefaultCaseShowcases() {
+  const q = await pool.query('SELECT count(*)::int AS c FROM case_showcases');
+  if (Number(q.rows[0]?.c || 0) > 0) return;
+  for (const item of DEFAULT_CASE_SHOWCASES) {
+    await upsertCaseShowcase(pool, { ...item, isPublished: true });
+  }
+}
+
+async function execWithFallback(binaries, args, options = {}) {
+  let lastError = null;
+  for (const binary of binaries) {
+    try {
+      return await execFileAsync(binary, args, options);
+    } catch (error) {
+      lastError = error;
+      if (error?.code !== 'ENOENT') {
+        break;
+      }
+    }
+  }
+  throw lastError || new Error('命令执行失败');
+}
+
+async function convertPresentationToSlides(presentationPath, presentationFilename) {
+  const convertRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'yiyu-case-ppt-'));
+  const pdfOutputDir = path.join(convertRoot, 'pdf');
+  const slideOutputDir = path.join(convertRoot, 'slides');
+  const libreofficeProfileDir = path.join(convertRoot, 'libreoffice-profile');
+  await fs.mkdir(pdfOutputDir, { recursive: true });
+  await fs.mkdir(slideOutputDir, { recursive: true });
+  await fs.mkdir(libreofficeProfileDir, { recursive: true });
+
+  try {
+    await execWithFallback(
+      ['soffice', 'libreoffice'],
+      [
+        `-env:UserInstallation=file://${libreofficeProfileDir}`,
+        '--headless',
+        '--convert-to',
+        'pdf',
+        '--outdir',
+        pdfOutputDir,
+        presentationPath,
+      ],
+      {
+        timeout: 180000,
+        maxBuffer: 20 * 1024 * 1024,
+        env: {
+          ...process.env,
+          HOME: convertRoot,
+          XDG_CACHE_HOME: path.join(convertRoot, '.cache'),
+          XDG_CONFIG_HOME: path.join(convertRoot, '.config'),
+          XDG_RUNTIME_DIR: convertRoot,
+        },
+      }
+    );
+
+    const sourceBase = path.basename(presentationFilename, path.extname(presentationFilename));
+    const pdfPath = path.join(pdfOutputDir, `${sourceBase}.pdf`);
+    const pdfStat = await fs.stat(pdfPath).catch(() => null);
+    if (!pdfStat) {
+      throw new Error('PPT 转 PDF 失败');
+    }
+
+    await execWithFallback(
+      ['pdftoppm'],
+      ['-png', '-r', '150', pdfPath, path.join(slideOutputDir, 'slide')],
+      { timeout: 180000, maxBuffer: 20 * 1024 * 1024 }
+    );
+
+    const generatedFiles = (await fs.readdir(slideOutputDir))
+      .filter((item) => item.startsWith('slide-') && item.endsWith('.png'))
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+    if (generatedFiles.length === 0) {
+      throw new Error('未生成 PPT 图片');
+    }
+
+    const publicDirName = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${sourceBase}`;
+    const finalSlideDir = path.join(ADMIN_UPLOAD_ROOT, 'case-showcases', 'slides', publicDirName);
+    await fs.mkdir(finalSlideDir, { recursive: true });
+
+    const slideUrls = [];
+    for (const file of generatedFiles) {
+      const from = path.join(slideOutputDir, file);
+      const to = path.join(finalSlideDir, file);
+      await fs.copyFile(from, to);
+      slideUrls.push(`/uploads/case-showcases/slides/${publicDirName}/${file}`);
+    }
+
+    return slideUrls;
+  } finally {
+    await fs.rm(convertRoot, { recursive: true, force: true }).catch(() => {});
+  }
 }
 
 function normalizeLearningKind(input) {
@@ -1967,6 +2330,14 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true, data });
     }
 
+    if (url.pathname === '/api/auth/case-showcases' && req.method === 'GET') {
+      const scope = normalizeCaseShowcaseScope(url.searchParams.get('scope'));
+      if (scope === 'admin') {
+        await requireAdmin(req);
+      }
+      return json(res, 200, { ok: true, data: await listCaseShowcases(scope) });
+    }
+
     if (url.pathname === '/api/auth/strategy/learning-resources' && req.method === 'GET') {
       await requireAdmin(req);
       return json(res, 200, { ok: true, data: await listStrategyLearningResources() });
@@ -2022,8 +2393,10 @@ const server = http.createServer(async (req, res) => {
       }
 
       const isCoverPreset = kind === 'cover-preset';
+      const isCaseLogo = kind === 'case-logo';
+      const isCasePpt = kind === 'case-ppt';
       const contentType = isCoverPreset ? normalizeCoverPresetContentType(url.searchParams.get('contentType')) : null;
-      const defaultExt = isCoverPreset ? '.png' : '.pdf';
+      const defaultExt = isCoverPreset || isCaseLogo ? '.png' : isCasePpt ? '.pptx' : '.pdf';
       const filename = sanitizeUploadFilename(
         url.searchParams.get('filename') || req.headers['x-file-name'] || '',
         defaultExt
@@ -2036,6 +2409,14 @@ const server = http.createServer(async (req, res) => {
         if (!['.png', '.jpg', '.jpeg', '.webp', '.svg'].includes(ext)) {
           return json(res, 400, { ok: false, error: '封面仅支持 png/jpg/webp/svg' });
         }
+      } else if (isCaseLogo) {
+        if (!['.png', '.jpg', '.jpeg', '.webp', '.svg'].includes(ext)) {
+          return json(res, 400, { ok: false, error: '案例 Logo 仅支持 png/jpg/webp/svg' });
+        }
+      } else if (isCasePpt) {
+        if (!['.ppt', '.pptx'].includes(ext)) {
+          return json(res, 400, { ok: false, error: '案例展示仅支持上传 PPT/PPTX 文件' });
+        }
       } else if (ext !== '.pdf') {
         return json(res, 400, { ok: false, error: '目前仅支持上传 PDF 文件' });
       }
@@ -2047,15 +2428,38 @@ const server = http.createServer(async (req, res) => {
 
       const targetDir = path.join(
         ADMIN_UPLOAD_ROOT,
-        kind === 'report' ? 'reports' : kind === 'book' ? 'books' : path.join('cover-presets', contentType)
+        kind === 'report'
+          ? 'reports'
+          : kind === 'book'
+            ? 'books'
+            : kind === 'case-logo'
+              ? path.join('case-showcases', 'logos')
+              : kind === 'case-ppt'
+                ? path.join('case-showcases', 'presentations')
+                : path.join('cover-presets', contentType)
       );
       await fs.mkdir(targetDir, { recursive: true });
       const savedName = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${filename}`;
       const targetPath = path.join(targetDir, savedName);
       await fs.writeFile(targetPath, bodyBuffer);
-      const publicUrl = isCoverPreset
-        ? `/uploads/cover-presets/${contentType}/${savedName}`
-        : `/uploads/${kind === 'report' ? 'reports' : 'books'}/${savedName}`;
+
+      let publicUrl = '';
+      let slides = [];
+      try {
+        if (isCoverPreset) {
+          publicUrl = `/uploads/cover-presets/${contentType}/${savedName}`;
+        } else if (isCaseLogo) {
+          publicUrl = `/uploads/case-showcases/logos/${savedName}`;
+        } else if (isCasePpt) {
+          publicUrl = `/uploads/case-showcases/presentations/${savedName}`;
+          slides = await convertPresentationToSlides(targetPath, savedName);
+        } else {
+          publicUrl = `/uploads/${kind === 'report' ? 'reports' : 'books'}/${savedName}`;
+        }
+      } catch (error) {
+        await fs.rm(targetPath, { force: true }).catch(() => {});
+        throw error;
+      }
 
       return json(res, 200, {
         ok: true,
@@ -2063,6 +2467,7 @@ const server = http.createServer(async (req, res) => {
           url: publicUrl,
           size: bodyBuffer.length,
           filename: savedName,
+          slides,
         },
       });
     }
@@ -2097,6 +2502,40 @@ const server = http.createServer(async (req, res) => {
       }
       const row = await requireSession(req);
       return json(res, 200, { ok: true, data: await listPaymentOrders({ admin: false, userId: row.id, limit }) });
+    }
+
+    const caseShowcaseMatch = url.pathname.match(/^\/api\/auth\/case-showcases\/([^/]+)$/);
+    if (caseShowcaseMatch && req.method === 'GET') {
+      const value = decodeURIComponent(caseShowcaseMatch[1]);
+      const scope = normalizeCaseShowcaseScope(url.searchParams.get('scope'));
+      if (scope === 'admin') {
+        await requireAdmin(req);
+      }
+      const row = await findCaseShowcaseByIdOrSlug(pool, value);
+      if (!row || row.is_active === false) {
+        return json(res, 404, { ok: false, error: '案例不存在' });
+      }
+      if (scope !== 'admin' && !row.is_published) {
+        return json(res, 404, { ok: false, error: '案例不存在或未发布' });
+      }
+      return json(res, 200, { ok: true, data: mapCaseShowcase(row) });
+    }
+
+    if (url.pathname === '/api/auth/case-showcases/upsert' && req.method === 'POST') {
+      await requireAdmin(req);
+      const body = await readJsonBody(req);
+      const saved = await upsertCaseShowcase(pool, body);
+      return json(res, 200, { ok: true, data: saved ? mapCaseShowcase(saved) : null, message: '案例展示已保存到腾讯云。' });
+    }
+
+    if (caseShowcaseMatch && req.method === 'DELETE') {
+      await requireAdmin(req);
+      const value = decodeURIComponent(caseShowcaseMatch[1]);
+      const removed = await deleteCaseShowcaseById(pool, value);
+      if (!removed) {
+        return json(res, 404, { ok: false, error: '案例不存在' });
+      }
+      return json(res, 200, { ok: true, message: '案例展示已删除' });
     }
 
     const strategySnapshotMatch = url.pathname.match(/^\/api\/auth\/strategy\/projects\/([^/]+)\/snapshot$/);

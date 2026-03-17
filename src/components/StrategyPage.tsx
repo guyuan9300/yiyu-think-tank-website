@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
+import { fetchCaseShowcases, type CaseShowcase } from '../lib/caseShowcaseApi';
 import {
   ArrowRight,
   ChevronRight,
@@ -40,9 +41,6 @@ interface StrategyPageProps {
     latestDeliverables: number;
   };
 }
-
-// Case ID mapping
-const caseIds = ['blue-letter', 'tianzi', 'dream'];
 
 export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: StrategyPageProps) {
   // Scroll to anchor functionality
@@ -85,14 +83,12 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
   // FAQ expand state
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   
-  // Case images state
-  const [caseImages, setCaseImages] = useState<(string | null)[]>(Array(9).fill(null));
+  const [caseShowcases, setCaseShowcases] = useState<CaseShowcase[]>([]);
 
   // Navigate to case detail
-  const handleNavigateToCase = (caseIndex: number) => {
+  const handleNavigateToCase = (caseSlug: string) => {
     if (onNavigate) {
-      const caseId = caseIds[caseIndex] || caseIds[0];
-      onNavigate('case', caseId);
+      onNavigate('case', caseSlug);
     }
   };
 
@@ -113,99 +109,107 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
 
   const withBase = (p: string) => `${import.meta.env.BASE_URL}${String(p || '').replace(/^\//, '')}`;
 
-  // Cases data - 9 grid
-  const cases = [
+  // Cases data fallback
+  const fallbackCases = [
     {
       industry: '公益/教育',
-      project: '蓝信封',
+      clientName: '蓝信封',
       title: '专注于乡村儿童心理健康服务的公益机构',
-      challenge: '留守儿童心理支持需求大',
-      action: '通过书信交流建立长期陪伴关系',
-      results: ['服务10万+留守儿童', '中国社会组织5A评级'],
+      subtitle: '通过书信交流建立长期陪伴关系',
       tags: ['公益', '教育'],
-      coverImage: withBase('/images/cases/blue-letter.png')
+      logoUrl: withBase('/images/cases/blue-letter.png'),
+      slug: 'blue-letter',
     },
     {
       industry: '金融/投资',
-      project: '愿景资本',
+      clientName: '愿景资本',
       title: '国家新兴产业创投基金管理公司',
-      challenge: '移动互联网及文化创意产业投资机会识别',
-      action: '聚焦早中期投资，陪伴创业者成长',
-      results: ['管理规模数十亿元', '投资多个明星项目'],
+      subtitle: '聚焦早中期投资，陪伴创业者成长',
       tags: ['投资', '创投'],
-      coverImage: withBase('/images/cases/vision-capital.png')
+      logoUrl: withBase('/images/cases/vision-capital.png'),
+      slug: 'vision-capital',
     },
     {
       industry: '公益/房地产',
-      project: '贝壳公益基金会',
+      clientName: '贝壳公益基金会',
       title: '城市社区公益平台',
-challenge: '社区居民参与度低',
-      action: '打造互助互利的社区公益平台',
-      results: ['覆盖全国主要城市', '百万志愿者参与'],
+      subtitle: '打造互助互利的社区公益平台',
       tags: ['社区', '公益'],
-      coverImage: withBase('/images/cases/beike-foundation.png')
+      logoUrl: withBase('/images/cases/beike-foundation.png'),
+      slug: 'beike-foundation',
     },
     {
       industry: '公益/教育',
-      project: '日慈基金会',
+      clientName: '日慈基金会',
       title: '青少年心智素养教育',
-      challenge: '青少年心理健康问题日益突出',
-      action: '专注心智素养教育项目设计与推广',
-      results: ['覆盖20+省市', '受益学生50万+'],
+      subtitle: '专注心智素养教育项目设计与推广',
       tags: ['教育', '心理'],
-      coverImage: withBase('/images/cases/rici-foundation.png')
+      logoUrl: withBase('/images/cases/rici-foundation.png'),
+      slug: 'rici-foundation',
     },
     {
       industry: '公益/教育',
-      project: '田字格',
+      clientName: '田字格',
       title: '乡土人本教育探索',
-      challenge: '贫困地区教育资源匮乏',
-      action: '开展乡土人本教育模式探索',
-      results: ['创办兴隆实验小学', '惠及上千名学生'],
+      subtitle: '开展乡土人本教育模式探索',
       tags: ['乡村', '教育'],
-      coverImage: withBase('/images/cases/tianzige.png')
+      logoUrl: withBase('/images/cases/tianzige.png'),
+      slug: 'tianzige',
     },
     {
       industry: '公益/咨询',
-      project: 'ABC美好社会咨询社',
+      clientName: 'ABC美好社会咨询社',
       title: '专业公益咨询服务',
-      challenge: '中小NGO缺乏专业管理能力',
-      action: '为NGO提供战略、运营等专业咨询',
-      results: ['服务110+公益组织', '志愿者17万+小时'],
+      subtitle: '为 NGO 提供战略、运营等专业咨询',
       tags: ['咨询', 'NGO'],
-      coverImage: withBase('/images/cases/abc-consulting.png')
+      logoUrl: withBase('/images/cases/abc-consulting.png'),
+      slug: 'abc-consulting',
     },
     {
       industry: '教育/科技',
-      project: '锂钠氪锶',
+      clientName: '锂钠氪锶',
       title: '教育科技解决方案',
-      challenge: '个性化学习需求难以满足',
-      action: '通过AI和大数据提供个性化方案',
-      results: ['服务百所院校', '提效显著'],
+      subtitle: '通过 AI 和大数据提供个性化方案',
       tags: ['AI', '教育'],
-      coverImage: withBase('/images/cases/lithium-sodium-krypton-strontium.png')
+      logoUrl: withBase('/images/cases/lithium-sodium-krypton-strontium.png'),
+      slug: 'lithium-sodium-krypton-strontium',
     },
     {
       industry: '公益/乡村振兴',
-      project: '中国乡村发展基金会',
+      clientName: '中国乡村发展基金会',
       title: '乡村发展与扶贫事业',
-      challenge: '农村地区发展滞后',
-      action: '实施扶贫开发、乡村振兴项目',
-      results: ['30+年公益经验', '惠及千万农户'],
+      subtitle: '实施扶贫开发、乡村振兴项目',
       tags: ['乡村', '扶贫'],
-      coverImage: withBase('/images/cases/china-rural-foundation.png')
+      logoUrl: withBase('/images/cases/china-rural-foundation.png'),
+      slug: 'china-rural-foundation',
     },
     {
       industry: '汽车/新能源',
-      project: '蔚来汽车',
+      clientName: '蔚来汽车',
       title: '智能电动汽车与用户体验',
-      challenge: '新能源汽车市场竞争激烈',
-      action: '创造愉悦的用户生活方式',
-      results: ['全球用户社群', '换电网络覆盖全国'],
+      subtitle: '创造愉悦的用户生活方式',
       tags: ['汽车', '新能源'],
-      coverImage: withBase('/images/cases/nio.png')
+      logoUrl: withBase('/images/cases/nio.png'),
+      slug: 'nio',
     }
   ];
+
+  useEffect(() => {
+    let canceled = false;
+    const loadCases = async () => {
+      const result = await fetchCaseShowcases('published');
+      if (canceled) return;
+      if (result.ok && result.data) {
+        setCaseShowcases(result.data);
+      }
+    };
+    void loadCases();
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  const cases = caseShowcases.length ? caseShowcases : fallbackCases;
 
   // Insights data
   const insights = [
@@ -511,18 +515,18 @@ challenge: '社区居民参与度低',
       <section id="cases" className="py-0 px-0">
         {/* Cases Grid - responsive (avoid ultra-thin cards on mobile) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0 w-full">
-          {cases.map((caseItem, index) => (
+          {cases.map((caseItem) => (
             <div
-              key={index}
+              key={caseItem.slug}
               className="relative w-full aspect-[16/9] overflow-hidden group cursor-pointer"
-              onClick={() => handleNavigateToCase(index)}
+              onClick={() => handleNavigateToCase(caseItem.slug)}
             >
               {/* Background Image */}
-              {caseItem.coverImage ? (
+              {caseItem.logoUrl ? (
                 <div className="w-full h-full bg-white flex items-center justify-center p-10 sm:p-12">
                   <img
-                    src={caseItem.coverImage}
-                    alt={caseItem.project}
+                    src={caseItem.logoUrl}
+                    alt={caseItem.clientName}
                     className="max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
                     loading="lazy"
                   />

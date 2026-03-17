@@ -29,6 +29,7 @@ import {
 import { getBooks, type Book } from '../lib/dataService';
 import type { User } from '../lib/dataService';
 import { useContentEngagement } from '../hooks/useContentEngagement';
+import { buildShareLandingUrl } from '../lib/shareLinks';
 
 // AI对话消息接口
 interface ChatMessage {
@@ -483,7 +484,7 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
 
                 <button
                   onClick={async () => {
-                    const shareUrl = window.location.href;
+                    const shareUrl = buildShareLandingUrl('book', book.id);
                     try {
                       await navigator.clipboard.writeText(shareUrl);
                       alert('已复制链接，可粘贴到微信/朋友圈');

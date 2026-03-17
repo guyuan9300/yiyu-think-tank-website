@@ -18,6 +18,7 @@ import { generateHTML } from '@tiptap/html';
 import DOMPurify from 'dompurify';
 import { getArticleTiptapExtensions } from '../lib/tiptapSchema';
 import { useContentEngagement } from '../hooks/useContentEngagement';
+import { buildShareLandingUrl } from '../lib/shareLinks';
 
 interface ArticleDetailPageProps {
   articleId: string;
@@ -341,8 +342,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
                 <button
                   onClick={async () => {
                     const slug = (displayArticle as any)?.shareSlug || displayArticle.id;
-                    const base = window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, '');
-                    const shareUrl = `${base}/share/article/${encodeURIComponent(slug)}/`;
+                    const shareUrl = buildShareLandingUrl('article', displayArticle.id, slug);
                     try {
                       await navigator.clipboard.writeText(shareUrl);
                       alert('已复制分享链接，可直接粘贴到微信/朋友圈');

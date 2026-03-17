@@ -149,9 +149,9 @@ export async function logoutCurrentSession() {
 
 export async function uploadAdminAsset(
   file: File,
-  kind: 'report' | 'book' | 'cover-preset',
+  kind: 'report' | 'book' | 'cover-preset' | 'case-logo' | 'case-ppt',
   options?: { contentType?: 'insight' | 'methodology' }
-): Promise<ApiResult<{ url: string; size: number; filename: string }>> {
+): Promise<ApiResult<{ url: string; size: number; filename: string; slides?: string[] }>> {
   try {
     const token = getSavedAuthToken();
     if (!token) {
