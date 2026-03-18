@@ -97,8 +97,213 @@ function initSesClient() {
 }
 
 const mailer = buildMailer();
+const SITE_PUBLIC_ROOT = process.env.YIYU_SITE_ROOT || '/var/www/yiyu-site';
 const ADMIN_UPLOAD_ROOT = process.env.YIYU_UPLOAD_ROOT || '/var/www/yiyu-site/uploads';
+const ARK_BASE_URL = (process.env.ARK_BASE_URL || 'https://ark.cn-beijing.volces.com').replace(/\/$/, '');
+const ARK_MODEL = process.env.ARK_MODEL || 'doubao-seed-2-0-lite-260215';
+const AI_PREFILL_TOPIC_OPTIONS = ['战略', '业务设计', '组织', 'AI 技术'];
 const execFileAsync = promisify(execFile);
+
+function isArkReady() {
+  return Boolean(process.env.ARK_API_KEY && ARK_MODEL);
+}
+
+function safeTopicArray(input) {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((item) => safeText(item))
+    .filter((item) => AI_PREFILL_TOPIC_OPTIONS.includes(item));
+}
+
+function resolveSiteFilePath(input) {
+  const raw = safeText(input);
+  if (!raw) {
+    throw new Error('缺少可解析的文件地址');
+  }
+
+  let pathname = raw;
+  if (/^https?:\/\//i.test(raw)) {
+    pathname = new URL(raw).pathname;
+  }
+
+  if (!pathname.startsWith('/')) {
+    pathname = `/${pathname}`;
+  }
+
+  if (!pathname.startsWith('/uploads/') && !pathname.startsWith('/docs/')) {
+    throw new Error('当前仅支持解析站内已上传的 PDF 文件');
+  }
+
+  return path.join(SITE_PUBLIC_ROOT, pathname.replace(/^\/+/, ''));
+}
+
+async function ensureReadableFile(filePath) {
+  const stat = await fs.stat(filePath).catch(() => null);
+  if (!stat || !stat.isFile()) {
+    throw new Error('未找到可解析的文件，请先上传 PDF 文件');
+  }
+}
+
+function parsePdfInfoOutput(output) {
+  const lines = String(output || '').split(/\r?\n/);
+  const info = {};
+  for (const line of lines) {
+    const match = line.match(/^([^:]+):\s*(.*)$/);
+    if (!match) continue;
+    info[match[1].trim()] = match[2].trim();
+  }
+  return info;
+}
+
+async function extractPdfArtifacts(filePath) {
+  await ensureReadableFile(filePath);
+
+  const pdfInfoResult = await execFileAsync('pdfinfo', [filePath]).catch((error) => {
+    throw new Error(`读取 PDF 元信息失败：${error?.message || '未知错误'}`);
+  });
+  const pdfInfo = parsePdfInfoOutput(pdfInfoResult.stdout);
+  const pages = Number.parseInt(String(pdfInfo.Pages || ''), 10) || 0;
+
+  const textResult = await execFileAsync('pdftotext', ['-f', '1', '-l', '12', '-layout', filePath, '-']).catch((error) => {
+    throw new Error(`提取 PDF 文本失败：${error?.message || '未知错误'}`);
+  });
+
+  return {
+    pages,
+    metaTitle: safeText(pdfInfo.Title || ''),
+    metaAuthor: safeText(pdfInfo.Author || ''),
+    text: String(textResult.stdout || '').trim(),
+  };
+}
+
+async function renderPdfFirstPageCover(filePath, contentType) {
+  const normalizedType = contentType === 'book' ? 'book' : 'report';
+  const coverDir = path.join(ADMIN_UPLOAD_ROOT, 'ai-covers', normalizedType);
+  await fs.mkdir(coverDir, { recursive: true });
+
+  const baseName = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+  const outputPrefix = path.join(coverDir, baseName);
+  await execFileAsync('pdftoppm', ['-png', '-f', '1', '-singlefile', filePath, outputPrefix]).catch((error) => {
+    throw new Error(`提取 PDF 首图失败：${error?.message || '未知错误'}`);
+  });
+
+  const coverPath = `${outputPrefix}.png`;
+  await ensureReadableFile(coverPath);
+  return `/uploads/ai-covers/${normalizedType}/${path.basename(coverPath)}`;
+}
+
+async function callArkChat(messages) {
+  if (!isArkReady()) {
+    throw new Error('未配置火山方舟模型，请先完成后端密钥配置');
+  }
+
+  const response = await fetch(`${ARK_BASE_URL}/api/v3/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.ARK_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: ARK_MODEL,
+      reasoning_effort: 'low',
+      temperature: 0.2,
+      messages,
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error?.message || data?.message || `火山方舟调用失败(${response.status})`);
+  }
+
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error('火山方舟未返回可用内容');
+  }
+  return String(content);
+}
+
+function extractJsonObject(text) {
+  const raw = String(text || '').trim();
+  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = fenced ? fenced[1].trim() : raw;
+  const start = candidate.indexOf('{');
+  const end = candidate.lastIndexOf('}');
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error('AI 返回内容中未找到 JSON');
+  }
+  return JSON.parse(candidate.slice(start, end + 1));
+}
+
+function buildAiPrefillMessages(contentType, current, pdfData) {
+  const isBook = contentType === 'book';
+  const system = [
+    '你是一个中文内容运营助手。',
+    '请根据 PDF 的文本与元信息，为后台表单生成结构化内容。',
+    '你只能从以下标签中选择 1 到 3 个：战略、业务设计、组织、AI 技术。',
+    '只返回 JSON，不要返回 markdown、解释或多余文字。',
+  ].join('');
+
+  const userPayload = {
+    contentType,
+    allowedTopics: AI_PREFILL_TOPIC_OPTIONS,
+    current,
+    pdfMeta: {
+      title: pdfData.metaTitle,
+      author: pdfData.metaAuthor,
+      pages: pdfData.pages,
+    },
+    pdfExcerpt: pdfData.text.slice(0, 14000),
+    outputSchema: isBook
+      ? {
+          title: '书名，字符串',
+          author: '作者名，无法判断则返回空字符串',
+          description: '80-160字中文简介',
+          topics: ['从允许标签中选择 1-3 个'],
+        }
+      : {
+          title: '报告标题，字符串',
+          publisher: '发布机构，无法判断则返回空字符串',
+          summary: '80-160字中文摘要',
+          topics: ['从允许标签中选择 1-3 个'],
+        },
+  };
+
+  return [
+    { role: 'system', content: system },
+    { role: 'user', content: JSON.stringify(userPayload) },
+  ];
+}
+
+async function buildAiPrefillResult({ contentType, fileUrl, current }) {
+  const filePath = resolveSiteFilePath(fileUrl);
+  const pdfData = await extractPdfArtifacts(filePath);
+  const coverImage = await renderPdfFirstPageCover(filePath, contentType);
+  const aiText = await callArkChat(buildAiPrefillMessages(contentType, current, pdfData));
+  const aiJson = extractJsonObject(aiText);
+
+  if (contentType === 'book') {
+    return {
+      title: safeText(aiJson.title) || safeText(current?.title) || '',
+      author: safeText(aiJson.author) || safeText(pdfData.metaAuthor) || safeText(current?.author) || '',
+      description: safeText(aiJson.description) || safeText(current?.description) || '',
+      topics: safeTopicArray(aiJson.topics).length ? safeTopicArray(aiJson.topics) : safeTopicArray(current?.topics),
+      coverImage,
+      pages: pdfData.pages || 0,
+      fileUrl,
+    };
+  }
+
+  return {
+    title: safeText(aiJson.title) || safeText(pdfData.metaTitle) || safeText(current?.title) || '',
+    publisher: safeText(aiJson.publisher) || safeText(current?.publisher) || '',
+    summary: safeText(aiJson.summary) || safeText(current?.summary) || '',
+    topics: safeTopicArray(aiJson.topics).length ? safeTopicArray(aiJson.topics) : safeTopicArray(current?.topics),
+    coverImage,
+    pages: pdfData.pages || 0,
+    fileUrl,
+  };
+}
 
 const DEFAULT_CASE_SHOWCASES = [
   {
@@ -2290,6 +2495,7 @@ const server = http.createServer(async (req, res) => {
           && process.env.AUTH_SMTP_PASS
           && process.env.AUTH_EMAIL_FROM
         ),
+        aiReady: isArkReady(),
         paymentReady: getPaymentReadiness().enabled,
       });
     }
@@ -2470,6 +2676,26 @@ const server = http.createServer(async (req, res) => {
           slides,
         },
       });
+    }
+
+    if (url.pathname === '/api/auth/admin/ai-prefill' && req.method === 'POST') {
+      await requireAdmin(req);
+      const payload = await readJsonBody(req);
+      const contentType = safeText(payload.contentType);
+      const fileUrl = safeText(payload.fileUrl);
+      if (contentType !== 'report' && contentType !== 'book') {
+        return json(res, 400, { ok: false, error: 'AI 填充仅支持报告和书籍' });
+      }
+      if (!fileUrl) {
+        return json(res, 400, { ok: false, error: '请先上传 PDF 文件' });
+      }
+
+      const data = await buildAiPrefillResult({
+        contentType,
+        fileUrl,
+        current: payload.current && typeof payload.current === 'object' ? payload.current : {},
+      });
+      return json(res, 200, { ok: true, data });
     }
 
     if (url.pathname === '/api/auth/payment/readiness' && req.method === 'GET') {

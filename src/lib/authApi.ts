@@ -186,6 +186,17 @@ export async function uploadAdminAsset(
   }
 }
 
+export async function adminAiPrefill(params: {
+  contentType: 'report' | 'book';
+  fileUrl: string;
+  current?: Record<string, unknown>;
+}): Promise<ApiResult<Record<string, unknown>>> {
+  return authRequest<Record<string, unknown>>('/admin/ai-prefill', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  }, { withAuth: true });
+}
+
 export function normalizeLoginUser(u: AuthApiUser) {
   const now = new Date().toISOString();
   const email = u.email || '';

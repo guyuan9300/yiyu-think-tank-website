@@ -9,7 +9,7 @@ import {
   Search, Filter, MoreVertical, Edit, Trash2, Copy, CheckCircle, 
   XCircle, Plus, Download, RefreshCw, AlertTriangle, Eye, EyeOff,
   BookOpen, Tag, Folder, Upload, Image, File, Send, Check, Calendar,
-  User, Globe, TrendingUp, MoreHorizontal, Clock, FileText, Target, RotateCcw
+  User, Globe, TrendingUp, MoreHorizontal, Clock, FileText, Target, RotateCcw, Sparkles
 } from 'lucide-react';
 import { INVITE_CODE_TYPES, type InviteCode, type InviteCodeType, type InviteGrantKind } from '../lib/inviteCodeTypes';
 import { createInviteCode, deleteInviteCodeApi, disableInviteCodeApi, fetchInviteCodes } from '../lib/inviteCodeApi';
@@ -47,7 +47,7 @@ import {
   replyCommentApi,
   updateCommentStatusApi,
 } from '../lib/commentApi';
-import { uploadAdminAsset } from '../lib/authApi';
+import { adminAiPrefill, uploadAdminAsset } from '../lib/authApi';
 import {
   createCoverPreset,
   deleteCoverPreset,
@@ -226,6 +226,10 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const [calculatedReadTime, setCalculatedReadTime] = useState<string>('');
   const [reportFile, setReportFile] = useState<File | null>(null);
   const [bookFile, setBookFile] = useState<File | null>(null);
+  const [uploadedReportAsset, setUploadedReportAsset] = useState<{ url: string; size: number; filename: string } | null>(null);
+  const [uploadedBookAsset, setUploadedBookAsset] = useState<{ url: string; size: number; filename: string } | null>(null);
+  const [isReportAiFilling, setIsReportAiFilling] = useState(false);
+  const [isBookAiFilling, setIsBookAiFilling] = useState(false);
   const [reportStatus, setReportStatus] = useState<'draft' | 'published'>('published');
   const coverInputRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -642,6 +646,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         alert('请选择 PDF 格式的文件');
         return;
       }
+      setUploadedReportAsset(null);
       setReportFile(file);
     }
   };
@@ -657,6 +662,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         alert('请选择 PDF 格式的文件');
         return;
       }
+      setUploadedBookAsset(null);
       setBookFile(file);
     }
   };
@@ -689,6 +695,131 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const handleBookCoverButtonClick = () => {
     bookCoverFileInputRef.current?.click();
   };
+
+  const ensureUploadedAsset = useCallback(async (
+    kind: 'report' | 'book',
+    file: File | null,
+    existingUrl?: string,
+    existingSize?: number,
+    cached?: { url: string; size: number; filename: string } | null,
+    setCached?: React.Dispatch<React.SetStateAction<{ url: string; size: number; filename: string } | null>>,
+  ) => {
+    if (cached?.url) {
+      return cached;
+    }
+    if (file) {
+      const uploaded = await uploadAdminAsset(file, kind);
+      if (!uploaded.ok || !uploaded.data) {
+        throw new Error(uploaded.error || '文件上传失败');
+      }
+      const next = {
+        url: uploaded.data.url,
+        size: uploaded.data.size,
+        filename: uploaded.data.filename,
+      };
+      setCached?.(next);
+      return next;
+    }
+    if (existingUrl) {
+      return {
+        url: existingUrl,
+        size: existingSize || 0,
+        filename: decodeURIComponent(existingUrl.split('/').pop() || existingUrl),
+      };
+    }
+    return null;
+  }, []);
+
+  const handleReportAiPrefill = useCallback(async (draft: {
+    title: string;
+    publisher: string;
+    summary: string;
+    topics: ResourceTopic[];
+  }) => {
+    setIsReportAiFilling(true);
+    try {
+      const current = editingItem as Report | null;
+      const asset = await ensureUploadedAsset(
+        'report',
+        reportFile,
+        current?.fileUrl,
+        current?.fileSize,
+        uploadedReportAsset,
+        setUploadedReportAsset,
+      );
+      if (!asset?.url) {
+        throw new Error('请先选择或上传 PDF 报告文件');
+      }
+
+      const result = await adminAiPrefill({
+        contentType: 'report',
+        fileUrl: asset.url,
+        current: draft,
+      });
+      if (!result.ok || !result.data) {
+        throw new Error(result.error || 'AI 填充失败');
+      }
+      const data = result.data as any;
+      if (data.coverImage) {
+        setCoverImage(data.coverImage);
+      }
+      if (typeof data.pages === 'number' && data.pages > 0) {
+        setReportPages(data.pages);
+      }
+      return {
+        title: String(data.title || draft.title || ''),
+        publisher: String(data.publisher || draft.publisher || ''),
+        summary: String(data.summary || draft.summary || ''),
+        topics: (Array.isArray(data.topics) && data.topics.length ? data.topics : draft.topics) as ResourceTopic[],
+      };
+    } finally {
+      setIsReportAiFilling(false);
+    }
+  }, [editingItem, ensureUploadedAsset, reportFile, uploadedReportAsset]);
+
+  const handleBookAiPrefill = useCallback(async (draft: {
+    title: string;
+    author: string;
+    description: string;
+    topics: ResourceTopic[];
+  }) => {
+    setIsBookAiFilling(true);
+    try {
+      const current = editingItem as Book | null;
+      const asset = await ensureUploadedAsset(
+        'book',
+        bookFile,
+        current?.fileUrl,
+        current?.fileSize,
+        uploadedBookAsset,
+        setUploadedBookAsset,
+      );
+      if (!asset?.url) {
+        throw new Error('请先选择或上传 PDF 书籍文件');
+      }
+
+      const result = await adminAiPrefill({
+        contentType: 'book',
+        fileUrl: asset.url,
+        current: draft,
+      });
+      if (!result.ok || !result.data) {
+        throw new Error(result.error || 'AI 填充失败');
+      }
+      const data = result.data as any;
+      if (data.coverImage) {
+        setBookCoverImage(data.coverImage);
+      }
+      return {
+        title: String(data.title || draft.title || ''),
+        author: String(data.author || draft.author || ''),
+        description: String(data.description || draft.description || ''),
+        topics: (Array.isArray(data.topics) && data.topics.length ? data.topics : draft.topics) as ResourceTopic[],
+      };
+    } finally {
+      setIsBookAiFilling(false);
+    }
+  }, [bookFile, editingItem, ensureUploadedAsset, uploadedBookAsset]);
 
   // tags/usedTags removed (topics-only schema)
 
@@ -767,7 +898,10 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     let nextFileUrl = current?.fileUrl;
     let nextFileSize = current?.fileSize;
 
-    if (reportFile) {
+    if (uploadedReportAsset?.url) {
+      nextFileUrl = uploadedReportAsset.url;
+      nextFileSize = uploadedReportAsset.size;
+    } else if (reportFile) {
       const uploaded = await uploadAdminAsset(reportFile, 'report');
       if (!uploaded.ok || !uploaded.data) {
         setMessage({ type: 'error', text: uploaded.error || '报告文件上传失败' });
@@ -775,6 +909,11 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       }
       nextFileUrl = uploaded.data.url;
       nextFileSize = uploaded.data.size;
+      setUploadedReportAsset({
+        url: uploaded.data.url,
+        size: uploaded.data.size,
+        filename: uploaded.data.filename,
+      });
     }
 
     const reportData: Partial<Report> = {
@@ -789,7 +928,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       format: ['PDF'],
       // 必填项：封面缺失时用占位
       coverImage: coverImage || current?.coverImage || 'images/placeholders/document.svg',
-      pages: current?.pages,
+      pages: reportPages || current?.pages,
       // publishDate 作为前台展示用的发布日期；后台列表统一显示真实 updatedAt
       publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
       status: reportStatus,
@@ -813,9 +952,10 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     setCoverImage(null);
     setReportPages(0);
     setCalculatedReadTime('');
-                setReportFile(null);
-                setReportStatus('published');
-                setMessage({ type: 'success', text: '报告已发布，前台报告库可见！' });
+    setReportFile(null);
+    setUploadedReportAsset(null);
+    setReportStatus('published');
+    setMessage({ type: 'success', text: '报告已发布，前台报告库可见！' });
   };
 
   // 删除报告
@@ -1532,6 +1672,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       setCoverImage(null);
                       setReportPages(0);
                       setCalculatedReadTime('');
+                      setReportFile(null);
+                      setUploadedReportAsset(null);
                       setReportStatus('published');
                       setSyncClientIds([]);
                       setShowReportForm(true);
@@ -1597,6 +1739,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                   setCoverImage(report.coverImage);
                                   setReportPages(report.pages || 0);
                                   setCalculatedReadTime(report.pages ? calculateReadTime(report.pages) : '');
+                                  setReportFile(null);
+                                  setUploadedReportAsset(null);
                                   setSyncClientIds([]);
                                   (async () => {
                                     try {
@@ -1715,6 +1859,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                     onClick={() => {
                       setEditingItem(null);
                       setBookCoverImage(null);
+                      setBookFile(null);
+                      setUploadedBookAsset(null);
                       setSyncClientIds([]);
                       setShowBookForm(true);
                     }}
@@ -1779,6 +1925,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                 onClick={() => {
                                   setEditingItem(book);
                                   setBookCoverImage(book.coverImage || null);
+                                  setBookFile(null);
+                                  setUploadedBookAsset(null);
                                   setSyncClientIds([]);
                                   (async () => {
                                     try {
@@ -2313,6 +2461,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setReportPages(0);
                 setCalculatedReadTime('');
                 setReportFile(null);
+                setUploadedReportAsset(null);
                 setReportStatus('published');
               }}
               onSave={handleSaveReport}
@@ -2326,12 +2475,15 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               setSyncClientIds={setSyncClientIds}
               reportFile={reportFile}
               setReportFile={setReportFile}
+              clearUploadedAsset={() => setUploadedReportAsset(null)}
               setCalculatedReadTime={setCalculatedReadTime}
               reportStatus={reportStatus}
               setReportStatus={setReportStatus}
               reportFileInputRef={reportFileInputRef}
               handleReportFileButtonClick={handleReportFileButtonClick}
               handleReportFileSelect={handleReportFileSelect}
+              onAiPrefill={handleReportAiPrefill}
+              isAiFilling={isReportAiFilling}
             />
           )}
 
@@ -2467,6 +2619,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setEditingItem(null);
                 setBookCoverImage(null);
                 setBookFile(null);
+                setUploadedBookAsset(null);
               }}
               onSave={async (e: React.FormEvent<HTMLFormElement>) => {
                 e.preventDefault();
@@ -2477,7 +2630,10 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 let nextFileUrl = current?.fileUrl;
                 let nextFileSize = current?.fileSize;
 
-                if (bookFile) {
+                if (uploadedBookAsset?.url) {
+                  nextFileUrl = uploadedBookAsset.url;
+                  nextFileSize = uploadedBookAsset.size;
+                } else if (bookFile) {
                   const uploaded = await uploadAdminAsset(bookFile, 'book');
                   if (!uploaded.ok || !uploaded.data) {
                     setMessage({ type: 'error', text: uploaded.error || '书籍文件上传失败' });
@@ -2485,6 +2641,11 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   }
                   nextFileUrl = uploaded.data.url;
                   nextFileSize = uploaded.data.size;
+                  setUploadedBookAsset({
+                    url: uploaded.data.url,
+                    size: uploaded.data.size,
+                    filename: uploaded.data.filename,
+                  });
                 }
 
                 const bookData: Partial<Book> = {
@@ -2498,6 +2659,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   coverImage: bookCoverImage || current?.coverImage || 'images/placeholders/document.svg',
                   fileUrl: nextFileUrl,
                   fileSize: nextFileSize,
+                  pages: current?.pages,
                   publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
                   status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
                   showOnHome: false,
@@ -2515,6 +2677,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setEditingItem(null);
                 setBookCoverImage(null);
                 setBookFile(null);
+                setUploadedBookAsset(null);
                 setMessage({ type: 'success', text: '书籍已保存，前台书库可见！' });
               }}
               strategyClients={strategyClients}
@@ -2525,11 +2688,14 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               bookCoverFileInputRef={bookCoverFileInputRef}
               bookFile={bookFile}
               setBookFile={setBookFile}
+              clearUploadedAsset={() => setUploadedBookAsset(null)}
               bookFileInputRef={bookFileInputRef}
               handleBookCoverButtonClick={handleBookCoverButtonClick}
               handleBookCoverImageSelect={handleBookCoverImageSelect}
               handleBookFileButtonClick={handleBookFileButtonClick}
               handleBookFileSelect={handleBookFileSelect}
+              onAiPrefill={handleBookAiPrefill}
+              isAiFilling={isBookAiFilling}
               showProjectSync={false}
             />
           )}
@@ -2625,11 +2791,24 @@ interface ReportFormModalProps {
   handleCoverImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   reportFile: File | null;
   setReportFile: React.Dispatch<React.SetStateAction<File | null>>;
+  clearUploadedAsset: () => void;
   reportStatus: 'draft' | 'published';
   setReportStatus: React.Dispatch<React.SetStateAction<'draft' | 'published'>>;
   reportFileInputRef: React.RefObject<HTMLInputElement>;
   handleReportFileButtonClick: () => void;
   handleReportFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onAiPrefill: (draft: {
+    title: string;
+    publisher: string;
+    summary: string;
+    topics: ResourceTopic[];
+  }) => Promise<{
+    title: string;
+    publisher: string;
+    summary: string;
+    topics: ResourceTopic[];
+  }>;
+  isAiFilling: boolean;
   showProjectSync: boolean;
   strategyClients: ClientProject[];
   syncClientIds: string[];
@@ -2653,11 +2832,14 @@ function ReportFormModal({
   handleCoverImageSelect,
   reportFile,
   setReportFile,
+  clearUploadedAsset,
   reportStatus,
   setReportStatus,
   reportFileInputRef,
   handleReportFileButtonClick,
   handleReportFileSelect,
+  onAiPrefill,
+  isAiFilling,
   showProjectSync,
   strategyClients,
   syncClientIds,
@@ -2666,6 +2848,17 @@ function ReportFormModal({
   // tags/usedTags 已废弃（统一改为 topics）。
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [titleValue, setTitleValue] = useState(editingItem?.title || '');
+  const [publisherValue, setPublisherValue] = useState(editingItem?.publisher || '');
+  const [summaryValue, setSummaryValue] = useState(editingItem?.summary || '');
+  const [selectedTopics, setSelectedTopics] = useState<ResourceTopic[]>(editingItem?.topics || ['战略']);
+
+  useEffect(() => {
+    setTitleValue(editingItem?.title || '');
+    setPublisherValue(editingItem?.publisher || '');
+    setSummaryValue(editingItem?.summary || '');
+    setSelectedTopics(editingItem?.topics || ['战略']);
+  }, [editingItem?.id, editingItem?.title, editingItem?.publisher, editingItem?.summary, editingItem?.topics]);
 
   // 处理报告文件拖放 - 简化版本，不自动提取
   const handleFileDrop = (e: React.DragEvent) => {
@@ -2700,6 +2893,23 @@ function ReportFormModal({
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingFile(false);
+  };
+
+  const handleAiPrefillClick = async () => {
+    try {
+      const next = await onAiPrefill({
+        title: titleValue,
+        publisher: publisherValue,
+        summary: summaryValue,
+        topics: selectedTopics,
+      });
+      setTitleValue(next.title);
+      setPublisherValue(next.publisher);
+      setSummaryValue(next.summary);
+      setSelectedTopics(next.topics.length ? next.topics : ['战略']);
+    } catch (error: any) {
+      alert(error?.message || 'AI 填充失败，请稍后重试');
+    }
   };
 
   return (
@@ -2820,6 +3030,7 @@ function ReportFormModal({
                       type="button"
                       onClick={() => {
                         setReportFile(null);
+                        clearUploadedAsset();
                       }}
                       className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-500"
                     >
@@ -2884,6 +3095,22 @@ function ReportFormModal({
             )}
           </div>
 
+          <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-gray-900">AI 填充元信息</p>
+              <p className="text-xs text-gray-600">自动提取 PDF 首图作为封面，并回填标题、发布机构、摘要和标签。</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleAiPrefillClick}
+              disabled={isAiFilling}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isAiFilling ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {isAiFilling ? 'AI 填充中...' : 'AI 填充'}
+            </button>
+          </div>
+
           <hr className="border-gray-200" />
 
           {/* 基本信息 */}
@@ -2896,7 +3123,8 @@ function ReportFormModal({
               name="title"
               placeholder="请输入报告标题"
               required
-              defaultValue={editingItem?.title || ''}
+              value={titleValue}
+              onChange={(e) => setTitleValue(e.target.value)}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
@@ -2910,7 +3138,8 @@ function ReportFormModal({
                 type="text"
                 name="publisher"
                 placeholder="请输入发布机构"
-                defaultValue={editingItem?.publisher || ''}
+                value={publisherValue}
+                onChange={(e) => setPublisherValue(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
@@ -2941,7 +3170,8 @@ function ReportFormModal({
               name="summary"
               rows={4}
               placeholder="请输入报告摘要描述..."
-              defaultValue={editingItem?.summary || ''}
+              value={summaryValue}
+              onChange={(e) => setSummaryValue(e.target.value)}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
             />
           </div>
@@ -3012,7 +3242,12 @@ function ReportFormModal({
                     type="checkbox"
                     name="topics"
                     value={t}
-                    defaultChecked={(editingItem as any)?.topics?.includes(t)}
+                    checked={selectedTopics.includes(t)}
+                    onChange={(e) => {
+                      setSelectedTopics((prev) => e.target.checked
+                        ? Array.from(new Set([...prev, t]))
+                        : prev.filter((item) => item !== t));
+                    }}
                     className="w-4 h-4 text-green-600 rounded"
                   />
                   <span className="text-sm text-gray-800">{t}</span>
@@ -3473,11 +3708,24 @@ interface BookFormModalProps {
   bookCoverFileInputRef: React.RefObject<HTMLInputElement>;
   bookFile: File | null;
   setBookFile: React.Dispatch<React.SetStateAction<File | null>>;
+  clearUploadedAsset: () => void;
   bookFileInputRef: React.RefObject<HTMLInputElement>;
   handleBookCoverButtonClick: () => void;
   handleBookCoverImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleBookFileButtonClick: () => void;
   handleBookFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onAiPrefill: (draft: {
+    title: string;
+    author: string;
+    description: string;
+    topics: ResourceTopic[];
+  }) => Promise<{
+    title: string;
+    author: string;
+    description: string;
+    topics: ResourceTopic[];
+  }>;
+  isAiFilling: boolean;
   showProjectSync: boolean;
   strategyClients: ClientProject[];
   syncClientIds: string[];
@@ -3494,11 +3742,14 @@ function BookFormModal({
   bookCoverFileInputRef,
   bookFile,
   setBookFile,
+  clearUploadedAsset,
   bookFileInputRef,
   handleBookCoverButtonClick,
   handleBookCoverImageSelect,
   handleBookFileButtonClick,
   handleBookFileSelect,
+  onAiPrefill,
+  isAiFilling,
   showProjectSync,
   strategyClients,
   syncClientIds,
@@ -3506,6 +3757,34 @@ function BookFormModal({
 }: BookFormModalProps) {
   const currentFileUrl = editingItem?.fileUrl || '';
   const currentFileName = currentFileUrl ? decodeURIComponent(currentFileUrl.split('/').pop() || currentFileUrl) : '';
+  const [titleValue, setTitleValue] = useState(editingItem?.title || '');
+  const [authorValue, setAuthorValue] = useState(editingItem?.author || '');
+  const [descriptionValue, setDescriptionValue] = useState(editingItem?.description || '');
+  const [selectedTopics, setSelectedTopics] = useState<ResourceTopic[]>(editingItem?.topics || ['战略']);
+
+  useEffect(() => {
+    setTitleValue(editingItem?.title || '');
+    setAuthorValue(editingItem?.author || '');
+    setDescriptionValue(editingItem?.description || '');
+    setSelectedTopics(editingItem?.topics || ['战略']);
+  }, [editingItem?.id, editingItem?.title, editingItem?.author, editingItem?.description, editingItem?.topics]);
+
+  const handleAiPrefillClick = async () => {
+    try {
+      const next = await onAiPrefill({
+        title: titleValue,
+        author: authorValue,
+        description: descriptionValue,
+        topics: selectedTopics,
+      });
+      setTitleValue(next.title);
+      setAuthorValue(next.author);
+      setDescriptionValue(next.description);
+      setSelectedTopics(next.topics.length ? next.topics : ['战略']);
+    } catch (error: any) {
+      alert(error?.message || 'AI 填充失败，请稍后重试');
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-auto">
@@ -3617,7 +3896,10 @@ function BookFormModal({
                     </span>
                     <button
                       type="button"
-                      onClick={() => setBookFile(null)}
+                      onClick={() => {
+                        setBookFile(null);
+                        clearUploadedAsset();
+                      }}
                       className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-500"
                     >
                       <X className="w-5 h-5" />
@@ -3665,6 +3947,22 @@ function BookFormModal({
             )}
           </div>
 
+          <div className="rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-gray-900">AI 填充元信息</p>
+              <p className="text-xs text-gray-600">自动提取 PDF 首图作为封面，并回填书名、作者、简介和标签。</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleAiPrefillClick}
+              disabled={isAiFilling}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isAiFilling ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {isAiFilling ? 'AI 填充中...' : 'AI 填充'}
+            </button>
+          </div>
+
           {/* 书名 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -3675,7 +3973,8 @@ function BookFormModal({
               name="title"
               placeholder="请输入书名"
               required
-              defaultValue={editingItem?.title || ''}
+              value={titleValue}
+              onChange={(e) => setTitleValue(e.target.value)}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
@@ -3690,7 +3989,8 @@ function BookFormModal({
               name="author"
               placeholder="作者名称"
               required
-              defaultValue={editingItem?.author || ''}
+              value={authorValue}
+              onChange={(e) => setAuthorValue(e.target.value)}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
@@ -3708,7 +4008,12 @@ function BookFormModal({
                     type="checkbox"
                     name="topics"
                     value={t}
-                    defaultChecked={(editingItem as any)?.topics?.includes(t)}
+                    checked={selectedTopics.includes(t)}
+                    onChange={(e) => {
+                      setSelectedTopics((prev) => e.target.checked
+                        ? Array.from(new Set([...prev, t]))
+                        : prev.filter((item) => item !== t));
+                    }}
                     className="w-4 h-4 text-purple-600 rounded"
                   />
                   <span className="text-sm text-gray-800">{t}</span>
@@ -3727,7 +4032,8 @@ function BookFormModal({
               rows={3}
               required
               placeholder="请输入书籍简介..."
-              defaultValue={editingItem?.description || ''}
+              value={descriptionValue}
+              onChange={(e) => setDescriptionValue(e.target.value)}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
             />
           </div>
