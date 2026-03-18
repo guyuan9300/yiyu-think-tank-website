@@ -304,7 +304,7 @@ function classifyDocxParagraph(paragraphXml, innerText) {
   const isBold = docxParagraphHasBold(paragraphXml);
   const normalizedText = normalizeExtractedText(innerText);
 
-  if (!normalizedText) return 'skip';
+  if (!normalizedText) return 'blank';
   if (styleName.includes('listbullet')) return 'ul';
   if (styleName.includes('listnumber')) return 'ol';
   if (styleName.includes('title')) return 'h2';
@@ -337,10 +337,13 @@ function convertDocxXmlToHtml(documentXml, relXml) {
 
   for (const paragraphXml of paragraphs) {
     const innerHtml = extractDocxInlineHtml(paragraphXml, relMap).trim();
-    if (!innerHtml) continue;
     const paragraphKind = classifyDocxParagraph(paragraphXml, innerHtml);
 
-    if (paragraphKind === 'skip') {
+    if (paragraphKind === 'blank') {
+      flushList();
+      if (blocks[blocks.length - 1] !== '<p><br /></p>') {
+        blocks.push('<p><br /></p>');
+      }
       continue;
     }
 

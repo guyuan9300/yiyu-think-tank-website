@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useEditor, EditorContent, type JSONContent } from '@tiptap/react';
-import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Highlighter, Link as LinkIcon, List, ListOrdered, Quote, Heading2, Heading3, Minus, Image as ImageIcon, RemoveFormatting } from 'lucide-react';
+import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Highlighter, Link as LinkIcon, List, ListOrdered, Quote, Minus, Image as ImageIcon, RemoveFormatting } from 'lucide-react';
 import { getArticleTiptapExtensions } from '../lib/tiptapSchema';
 import { fileToCompressedDataUrl } from '../lib/imageCompress';
 
@@ -9,6 +9,8 @@ export type ArticleEditorValue = {
   html: string;
   text: string;
 };
+
+const FONT_SIZE_STEPS = ['14px', '16px', '18px', '20px', '24px', '30px'] as const;
 
 export function ArticleEditor({
   value,
@@ -20,7 +22,6 @@ export function ArticleEditor({
   placeholder?: string;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const extensions = useMemo(() => getArticleTiptapExtensions(), []);
 
   const editor = useEditor({
@@ -28,32 +29,27 @@ export function ArticleEditor({
     content: value ?? undefined,
     editorProps: {
       attributes: {
-        class:
-          'prose prose-purple max-w-none focus:outline-none min-h-[240px] px-4 py-3',
+        class: 'prose max-w-none focus:outline-none min-h-[280px] px-4 py-4 prose-p:my-4 prose-headings:my-5 prose-li:my-1',
       },
     },
     onUpdate: ({ editor }) => {
-      const json = editor.getJSON();
-      const html = editor.getHTML();
-      const text = editor.getText();
-      onChange?.({ json, html, text });
+      onChange?.({
+        json: editor.getJSON(),
+        html: editor.getHTML(),
+        text: editor.getText(),
+      });
     },
   });
 
-  // When `value` changes from parent, sync once (avoid stomping local typing).
   useEffect(() => {
-    if (!editor) return;
-    if (!value) return;
+    if (!editor || !value) return;
     const current = editor.getJSON();
-    // cheap compare: stringify (ok for this scale)
     if (JSON.stringify(current) !== JSON.stringify(value)) {
       editor.commands.setContent(value);
     }
   }, [editor, value]);
 
   const insertImageFromFile = async (file: File) => {
-    // Static GitHub Pages MVP: store as base64 DataURL.
-    // IMPORTANT: localStorage has strict size limits (often ~5MB). We must compress.
     const dataUrl = await fileToCompressedDataUrl(file, {
       maxWidth: 1600,
       maxHeight: 1600,
@@ -84,31 +80,98 @@ export function ArticleEditor({
     );
   }
 
+  const toolbarButtonClass = (active = false) =>
+    `px-2 py-1 rounded hover:bg-white border text-sm ${active ? 'bg-white border-purple-300 text-gray-900' : 'border-transparent text-gray-700'}`;
+  const currentFontSize = String(editor.getAttributes('textStyle').fontSize || '16px');
+  const resolvedFontSize = FONT_SIZE_STEPS.includes(currentFontSize as (typeof FONT_SIZE_STEPS)[number]) ? currentFontSize : '16px';
+  const currentFontIndex = FONT_SIZE_STEPS.indexOf(resolvedFontSize as (typeof FONT_SIZE_STEPS)[number]);
+
+  const setFontSizeStep = (nextSize: string) => {
+    if (nextSize === '16px') {
+      editor.chain().focus().unsetFontSize().run();
+      return;
+    }
+    editor.chain().focus().setFontSize(nextSize).run();
+  };
+
+  const nudgeFontSize = (direction: -1 | 1) => {
+    const nextIndex = Math.min(FONT_SIZE_STEPS.length - 1, Math.max(0, currentFontIndex + direction));
+    setFontSizeStep(FONT_SIZE_STEPS[nextIndex]);
+  };
+
   return (
     <div className="w-full border border-gray-200 rounded-xl overflow-hidden bg-white">
       <div className="flex flex-wrap items-center gap-1 px-2 py-2 border-b bg-gray-50">
         <button
           type="button"
+          onClick={() => editor.chain().focus().setParagraph().run()}
+          className={toolbarButtonClass(editor.isActive('paragraph'))}
+          title="正文"
+        >
+          正文
+        </button>
+        <button
+          type="button"
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className={`px-2 py-1 rounded hover:bg-white border ${editor.isActive('heading', { level: 2 }) ? 'bg-white border-purple-300' : 'border-transparent'}`}
+          className={toolbarButtonClass(editor.isActive('heading', { level: 2 }))}
           title="标题 H2"
         >
-          <Heading2 size={16} />
+          H2
         </button>
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          className={`px-2 py-1 rounded hover:bg-white border ${editor.isActive('heading', { level: 3 }) ? 'bg-white border-purple-300' : 'border-transparent'}`}
+          className={toolbarButtonClass(editor.isActive('heading', { level: 3 }))}
           title="标题 H3"
         >
-          <Heading3 size={16} />
+          H3
         </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
+          className={toolbarButtonClass(editor.isActive('heading', { level: 4 }))}
+          title="标题 H4"
+        >
+          H4
+        </button>
+
+        <span className="mx-1 h-5 w-px bg-gray-200" />
+
+        <button
+          type="button"
+          onClick={() => nudgeFontSize(-1)}
+          className={toolbarButtonClass(false)}
+          title="统一缩小字号"
+        >
+          A-
+        </button>
+        <select
+          value={resolvedFontSize}
+          onChange={(e) => setFontSizeStep(e.target.value)}
+          className="h-8 rounded border border-gray-200 bg-white px-2 text-sm text-gray-700"
+          title="字号"
+        >
+          {FONT_SIZE_STEPS.map((step) => (
+            <option key={step} value={step}>
+              {step.replace('px', '')} 号
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={() => nudgeFontSize(1)}
+          className={toolbarButtonClass(false)}
+          title="统一放大字号"
+        >
+          A+
+        </button>
+
         <span className="mx-1 h-5 w-px bg-gray-200" />
 
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBold().run()}
-          className={`px-2 py-1 rounded hover:bg-white border ${editor.isActive('bold') ? 'bg-white border-purple-300' : 'border-transparent'}`}
+          className={toolbarButtonClass(editor.isActive('bold'))}
           title="加粗"
         >
           <Bold size={16} />
@@ -116,7 +179,7 @@ export function ArticleEditor({
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={`px-2 py-1 rounded hover:bg-white border ${editor.isActive('italic') ? 'bg-white border-purple-300' : 'border-transparent'}`}
+          className={toolbarButtonClass(editor.isActive('italic'))}
           title="斜体"
         >
           <Italic size={16} />
@@ -124,7 +187,7 @@ export function ArticleEditor({
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleUnderline().run()}
-          className={`px-2 py-1 rounded hover:bg-white border ${editor.isActive('underline') ? 'bg-white border-purple-300' : 'border-transparent'}`}
+          className={toolbarButtonClass(editor.isActive('underline'))}
           title="下划线"
         >
           <UnderlineIcon size={16} />
@@ -132,7 +195,7 @@ export function ArticleEditor({
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleStrike().run()}
-          className={`px-2 py-1 rounded hover:bg-white border ${editor.isActive('strike') ? 'bg-white border-purple-300' : 'border-transparent'}`}
+          className={toolbarButtonClass(editor.isActive('strike'))}
           title="删除线"
         >
           <Strikethrough size={16} />
@@ -140,7 +203,7 @@ export function ArticleEditor({
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleHighlight().run()}
-          className={`px-2 py-1 rounded hover:bg-white border ${editor.isActive('highlight') ? 'bg-white border-purple-300' : 'border-transparent'}`}
+          className={toolbarButtonClass(editor.isActive('highlight'))}
           title="高亮"
         >
           <Highlighter size={16} />
@@ -148,7 +211,7 @@ export function ArticleEditor({
         <button
           type="button"
           onClick={promptLink}
-          className={`px-2 py-1 rounded hover:bg-white border ${editor.isActive('link') ? 'bg-white border-purple-300' : 'border-transparent'}`}
+          className={toolbarButtonClass(editor.isActive('link'))}
           title="链接"
         >
           <LinkIcon size={16} />
@@ -159,7 +222,7 @@ export function ArticleEditor({
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={`px-2 py-1 rounded hover:bg-white border ${editor.isActive('bulletList') ? 'bg-white border-purple-300' : 'border-transparent'}`}
+          className={toolbarButtonClass(editor.isActive('bulletList'))}
           title="无序列表"
         >
           <List size={16} />
@@ -167,7 +230,7 @@ export function ArticleEditor({
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={`px-2 py-1 rounded hover:bg-white border ${editor.isActive('orderedList') ? 'bg-white border-purple-300' : 'border-transparent'}`}
+          className={toolbarButtonClass(editor.isActive('orderedList'))}
           title="有序列表"
         >
           <ListOrdered size={16} />
@@ -175,7 +238,7 @@ export function ArticleEditor({
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          className={`px-2 py-1 rounded hover:bg-white border ${editor.isActive('blockquote') ? 'bg-white border-purple-300' : 'border-transparent'}`}
+          className={toolbarButtonClass(editor.isActive('blockquote'))}
           title="引用"
         >
           <Quote size={16} />
@@ -183,7 +246,7 @@ export function ArticleEditor({
         <button
           type="button"
           onClick={() => editor.chain().focus().setHorizontalRule().run()}
-          className="px-2 py-1 rounded hover:bg-white border border-transparent"
+          className={toolbarButtonClass(false)}
           title="分割线"
         >
           <Minus size={16} />
@@ -194,7 +257,7 @@ export function ArticleEditor({
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="px-2 py-1 rounded hover:bg-white border border-transparent"
+          className={toolbarButtonClass(false)}
           title="插入图片"
         >
           <ImageIcon size={16} />
@@ -216,7 +279,7 @@ export function ArticleEditor({
         <button
           type="button"
           onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()}
-          className="px-2 py-1 rounded hover:bg-white border border-transparent"
+          className={toolbarButtonClass(false)}
           title="清除格式"
         >
           <RemoveFormatting size={16} />
