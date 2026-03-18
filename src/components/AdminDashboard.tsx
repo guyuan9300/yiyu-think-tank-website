@@ -223,19 +223,28 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [bookCoverImage, setBookCoverImage] = useState<string | null>(null);
   const [reportPages, setReportPages] = useState<number>(0);
+  const [bookPages, setBookPages] = useState<number>(0);
   const [calculatedReadTime, setCalculatedReadTime] = useState<string>('');
   const [reportFile, setReportFile] = useState<File | null>(null);
   const [bookFile, setBookFile] = useState<File | null>(null);
+  const [insightFile, setInsightFile] = useState<File | null>(null);
+  const [methodologyFile, setMethodologyFile] = useState<File | null>(null);
   const [uploadedReportAsset, setUploadedReportAsset] = useState<{ url: string; size: number; filename: string } | null>(null);
   const [uploadedBookAsset, setUploadedBookAsset] = useState<{ url: string; size: number; filename: string } | null>(null);
+  const [uploadedInsightAsset, setUploadedInsightAsset] = useState<{ url: string; size: number; filename: string } | null>(null);
+  const [uploadedMethodologyAsset, setUploadedMethodologyAsset] = useState<{ url: string; size: number; filename: string } | null>(null);
   const [isReportAiFilling, setIsReportAiFilling] = useState(false);
   const [isBookAiFilling, setIsBookAiFilling] = useState(false);
+  const [isInsightAiFilling, setIsInsightAiFilling] = useState(false);
+  const [isMethodologyAiFilling, setIsMethodologyAiFilling] = useState(false);
   const [reportStatus, setReportStatus] = useState<'draft' | 'published'>('published');
   const coverInputRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const reportFileInputRef = useRef<HTMLInputElement>(null);
   const bookCoverFileInputRef = useRef<HTMLInputElement>(null);
   const bookFileInputRef = useRef<HTMLInputElement>(null);
+  const insightFileInputRef = useRef<HTMLInputElement>(null);
+  const methodologyFileInputRef = useRef<HTMLInputElement>(null);
   // tagInputRef removed (topics-only schema)
 
   const loadAdminComments = useCallback(async () => {
@@ -628,6 +637,13 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     }
   };
 
+  const isValidAiSourceFile = (file: File) => {
+    const name = file.name.toLowerCase();
+    return isValidPdfFile(file)
+      || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      || name.endsWith('.docx');
+  };
+
   // 处理点击上传封面图按钮
   const handleCoverButtonClick = () => {
     fileInputRef.current?.click();
@@ -667,6 +683,38 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     }
   };
 
+  const handleInsightFileButtonClick = () => {
+    insightFileInputRef.current?.click();
+  };
+
+  const handleMethodologyFileButtonClick = () => {
+    methodologyFileInputRef.current?.click();
+  };
+
+  const handleInsightFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!isValidAiSourceFile(file)) {
+        alert('请选择 PDF 或 DOCX 格式的文件');
+        return;
+      }
+      setUploadedInsightAsset(null);
+      setInsightFile(file);
+    }
+  };
+
+  const handleMethodologyFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!isValidAiSourceFile(file)) {
+        alert('请选择 PDF 或 DOCX 格式的文件');
+        return;
+      }
+      setUploadedMethodologyAsset(null);
+      setMethodologyFile(file);
+    }
+  };
+
   // 处理封面图片选择
   const handleCoverImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -697,7 +745,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   };
 
   const ensureUploadedAsset = useCallback(async (
-    kind: 'report' | 'book',
+    kind: 'report' | 'book' | 'insight' | 'methodology',
     file: File | null,
     existingUrl?: string,
     existingSize?: number,
@@ -767,9 +815,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         setReportPages(data.pages);
       }
       return {
-        title: String(data.title || draft.title || ''),
-        publisher: String(data.publisher || draft.publisher || ''),
-        summary: String(data.summary || draft.summary || ''),
+        title: String(data.title ?? ''),
+        publisher: String(data.publisher ?? ''),
+        summary: String(data.summary ?? ''),
         topics: (Array.isArray(data.topics) && data.topics.length ? data.topics : draft.topics) as ResourceTopic[],
       };
     } finally {
@@ -810,16 +858,101 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       if (data.coverImage) {
         setBookCoverImage(data.coverImage);
       }
+      if (typeof data.pages === 'number' && data.pages > 0) {
+        setBookPages(data.pages);
+      }
       return {
-        title: String(data.title || draft.title || ''),
-        author: String(data.author || draft.author || ''),
-        description: String(data.description || draft.description || ''),
+        title: String(data.title ?? ''),
+        author: String(data.author ?? ''),
+        description: String(data.description ?? ''),
         topics: (Array.isArray(data.topics) && data.topics.length ? data.topics : draft.topics) as ResourceTopic[],
       };
     } finally {
       setIsBookAiFilling(false);
     }
   }, [bookFile, editingItem, ensureUploadedAsset, uploadedBookAsset]);
+
+  const handleInsightAiPrefill = useCallback(async (draft: {
+    title: string;
+    excerpt: string;
+    topics: ResourceTopic[];
+  }) => {
+    setIsInsightAiFilling(true);
+    try {
+      const current = editingItem as InsightArticle | null;
+      const asset = await ensureUploadedAsset(
+        'insight',
+        insightFile,
+        current?.fileUrl,
+        current?.fileSize,
+        uploadedInsightAsset,
+        setUploadedInsightAsset,
+      );
+      if (!asset?.url) {
+        throw new Error('请先选择或上传 PDF/DOCX 文章文件');
+      }
+
+      const result = await adminAiPrefill({
+        contentType: 'insight',
+        fileUrl: asset.url,
+      });
+      if (!result.ok || !result.data) {
+        throw new Error(result.error || 'AI 填充失败');
+      }
+      const data = result.data as any;
+      return {
+        title: String(data.title ?? ''),
+        excerpt: String(data.excerpt ?? ''),
+        topics: (Array.isArray(data.topics) && data.topics.length ? data.topics : draft.topics) as ResourceTopic[],
+        contentText: String(data.contentText ?? ''),
+        fileUrl: String(data.fileUrl || asset.url),
+        fileSize: asset.size,
+      };
+    } finally {
+      setIsInsightAiFilling(false);
+    }
+  }, [editingItem, ensureUploadedAsset, insightFile, uploadedInsightAsset]);
+
+  const handleMethodologyAiPrefill = useCallback(async (draft: {
+    title: string;
+    excerpt: string;
+    topics: ResourceTopic[];
+  }) => {
+    setIsMethodologyAiFilling(true);
+    try {
+      const current = editingItem as Methodology | null;
+      const asset = await ensureUploadedAsset(
+        'methodology',
+        methodologyFile,
+        current?.fileUrl,
+        current?.fileSize,
+        uploadedMethodologyAsset,
+        setUploadedMethodologyAsset,
+      );
+      if (!asset?.url) {
+        throw new Error('请先选择或上传 PDF/DOCX 方法论文件');
+      }
+
+      const result = await adminAiPrefill({
+        contentType: 'methodology',
+        fileUrl: asset.url,
+      });
+      if (!result.ok || !result.data) {
+        throw new Error(result.error || 'AI 填充失败');
+      }
+      const data = result.data as any;
+      return {
+        title: String(data.title ?? ''),
+        excerpt: String(data.excerpt ?? ''),
+        topics: (Array.isArray(data.topics) && data.topics.length ? data.topics : draft.topics) as ResourceTopic[],
+        contentText: String(data.contentText ?? ''),
+        fileUrl: String(data.fileUrl || asset.url),
+        fileSize: asset.size,
+      };
+    } finally {
+      setIsMethodologyAiFilling(false);
+    }
+  }, [editingItem, ensureUploadedAsset, methodologyFile, uploadedMethodologyAsset]);
 
   // tags/usedTags removed (topics-only schema)
 
@@ -1331,6 +1464,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                     onClick={() => {
                       setEditingItem(null);
                       setSyncClientIds([]);
+                      setInsightFile(null);
+                      setUploadedInsightAsset(null);
                       setShowInsightForm(true);
                     }}
                     className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors"
@@ -1388,6 +1523,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                 onClick={() => {
                                   setEditingItem(article);
                                   setSyncClientIds([]);
+                                  setInsightFile(null);
+                                  setUploadedInsightAsset(null);
                                   (async () => {
                                     try {
                                       const all = await getCourseRecommendations();
@@ -1513,6 +1650,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                     onClick={() => {
                       setEditingItem(null);
                       setSyncClientIds([]);
+                      setMethodologyFile(null);
+                      setUploadedMethodologyAsset(null);
                       setShowMethodologyForm(true);
                     }}
                     className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors"
@@ -1556,6 +1695,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-blue-600"
                                 onClick={() => {
                                   setEditingItem(item as any);
+                                  setMethodologyFile(null);
+                                  setUploadedMethodologyAsset(null);
                                   setShowMethodologyForm(true);
                                 }}
                                 title="编辑"
@@ -1859,6 +2000,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                     onClick={() => {
                       setEditingItem(null);
                       setBookCoverImage(null);
+                      setBookPages(0);
                       setBookFile(null);
                       setUploadedBookAsset(null);
                       setSyncClientIds([]);
@@ -1925,6 +2067,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                 onClick={() => {
                                   setEditingItem(book);
                                   setBookCoverImage(book.coverImage || null);
+                                  setBookPages(book.pages || 0);
                                   setBookFile(null);
                                   setUploadedBookAsset(null);
                                   setSyncClientIds([]);
@@ -2494,6 +2637,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               onClose={() => {
                 setShowInsightForm(false);
                 setEditingItem(null);
+                setInsightFile(null);
+                setUploadedInsightAsset(null);
               }}
               onSave={async (e: React.FormEvent<HTMLFormElement>) => {
                 e.preventDefault();
@@ -2506,6 +2651,26 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 const current = editingItem as InsightArticle | null;
                 const coverPresetId = (formData.get('coverPresetId') as string) || current?.coverPresetId || '';
                 const coverPresetImage = (formData.get('coverPresetImage') as string) || current?.coverImage || '';
+                let nextFileUrl = current?.fileUrl;
+                let nextFileSize = current?.fileSize;
+
+                if (uploadedInsightAsset?.url) {
+                  nextFileUrl = uploadedInsightAsset.url;
+                  nextFileSize = uploadedInsightAsset.size;
+                } else if (insightFile) {
+                  const uploaded = await uploadAdminAsset(insightFile, 'insight');
+                  if (!uploaded.ok || !uploaded.data) {
+                    setMessage({ type: 'error', text: uploaded.error || '文章源文件上传失败' });
+                    return;
+                  }
+                  nextFileUrl = uploaded.data.url;
+                  nextFileSize = uploaded.data.size;
+                  setUploadedInsightAsset({
+                    url: uploaded.data.url,
+                    size: uploaded.data.size,
+                    filename: uploaded.data.filename,
+                  });
+                }
 
                 const articleData: Partial<InsightArticle> = {
                   id: current ? current.id : undefined,
@@ -2521,6 +2686,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   showOnHome: false,
                   coverImage: coverPresetImage || (current as any)?.coverImage || '',
                   coverPresetId: coverPresetId || undefined,
+                  fileUrl: nextFileUrl,
+                  fileSize: nextFileSize,
                   shareEnabled: false,
                   shareSlug: undefined,
                   shareTitle: undefined,
@@ -2539,6 +2706,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 clearInsightFilters();
                 setShowInsightForm(false);
                 setEditingItem(null);
+                setInsightFile(null);
+                setUploadedInsightAsset(null);
                 setMessage({ type: 'success', text: '文章已保存，已返回未筛选的文章列表。' });
               }}
               showProjectSync={false}
@@ -2548,6 +2717,14 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               entityLabel="文章"
               contentType="insight"
               sequenceSeed={insights.length}
+              sourceFile={insightFile}
+              setSourceFile={setInsightFile}
+              clearUploadedAsset={() => setUploadedInsightAsset(null)}
+              fileInputRef={insightFileInputRef}
+              handleFileButtonClick={handleInsightFileButtonClick}
+              handleFileSelect={handleInsightFileSelect}
+              onAiPrefill={handleInsightAiPrefill}
+              isAiFilling={isInsightAiFilling}
             />
           )}
 
@@ -2558,6 +2735,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               onClose={() => {
                 setShowMethodologyForm(false);
                 setEditingItem(null);
+                setMethodologyFile(null);
+                setUploadedMethodologyAsset(null);
               }}
               onSave={async (e: React.FormEvent<HTMLFormElement>) => {
                 e.preventDefault();
@@ -2570,6 +2749,26 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 const current = editingItem as Methodology | null;
                 const coverPresetId = (formData.get('coverPresetId') as string) || current?.coverPresetId || '';
                 const coverPresetImage = (formData.get('coverPresetImage') as string) || current?.coverImage || '';
+                let nextFileUrl = current?.fileUrl;
+                let nextFileSize = current?.fileSize;
+
+                if (uploadedMethodologyAsset?.url) {
+                  nextFileUrl = uploadedMethodologyAsset.url;
+                  nextFileSize = uploadedMethodologyAsset.size;
+                } else if (methodologyFile) {
+                  const uploaded = await uploadAdminAsset(methodologyFile, 'methodology');
+                  if (!uploaded.ok || !uploaded.data) {
+                    setMessage({ type: 'error', text: uploaded.error || '方法论源文件上传失败' });
+                    return;
+                  }
+                  nextFileUrl = uploaded.data.url;
+                  nextFileSize = uploaded.data.size;
+                  setUploadedMethodologyAsset({
+                    url: uploaded.data.url,
+                    size: uploaded.data.size,
+                    filename: uploaded.data.filename,
+                  });
+                }
 
                 const data: Partial<Methodology> = {
                   id: current ? current.id : undefined,
@@ -2585,6 +2784,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   showOnHome: false,
                   coverImage: coverPresetImage || (current as any)?.coverImage || '',
                   coverPresetId: coverPresetId || undefined,
+                  fileUrl: nextFileUrl,
+                  fileSize: nextFileSize,
                 };
 
                 const saved = await saveMethodologyDirect(data);
@@ -2598,6 +2799,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 refreshAllData();
                 setShowMethodologyForm(false);
                 setEditingItem(null);
+                setMethodologyFile(null);
+                setUploadedMethodologyAsset(null);
                 setMessage({ type: 'success', text: '方法论已保存！' });
               }}
               showProjectSync={false}
@@ -2607,6 +2810,14 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               entityLabel="方法论"
               contentType="methodology"
               sequenceSeed={methodologies.length}
+              sourceFile={methodologyFile}
+              setSourceFile={setMethodologyFile}
+              clearUploadedAsset={() => setUploadedMethodologyAsset(null)}
+              fileInputRef={methodologyFileInputRef}
+              handleFileButtonClick={handleMethodologyFileButtonClick}
+              handleFileSelect={handleMethodologyFileSelect}
+              onAiPrefill={handleMethodologyAiPrefill}
+              isAiFilling={isMethodologyAiFilling}
             />
           )}
 
@@ -2618,6 +2829,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setShowBookForm(false);
                 setEditingItem(null);
                 setBookCoverImage(null);
+                setBookPages(0);
                 setBookFile(null);
                 setUploadedBookAsset(null);
               }}
@@ -2653,13 +2865,13 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   title: (formData.get('title') as string) || current?.title || '待补充',
                   author: (formData.get('author') as string) || current?.author || '待补充',
                   description: (formData.get('description') as string) || current?.description || '待补充',
-                  abstract: current?.abstract || '',
+                  abstract: (formData.get('description') as string) || current?.description || current?.abstract || '待补充',
                   topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
                   rating: current?.rating || 0,
                   coverImage: bookCoverImage || current?.coverImage || 'images/placeholders/document.svg',
                   fileUrl: nextFileUrl,
                   fileSize: nextFileSize,
-                  pages: current?.pages,
+                  pages: bookPages || current?.pages,
                   publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
                   status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
                   showOnHome: false,
@@ -2676,6 +2888,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setShowBookForm(false);
                 setEditingItem(null);
                 setBookCoverImage(null);
+                setBookPages(0);
                 setBookFile(null);
                 setUploadedBookAsset(null);
                 setMessage({ type: 'success', text: '书籍已保存，前台书库可见！' });
@@ -2876,6 +3089,7 @@ function ReportFormModal({
         return;
       }
 
+      clearUploadedAsset();
       setReportFile(file);
       setUploadSuccess(true);
       setTimeout(() => setUploadSuccess(false), 3000);
@@ -3323,6 +3537,25 @@ interface InsightFormModalProps {
   entityLabel: '文章' | '方法论';
   contentType: CoverPresetContentType;
   sequenceSeed: number;
+  sourceFile: File | null;
+  setSourceFile: React.Dispatch<React.SetStateAction<File | null>>;
+  clearUploadedAsset: () => void;
+  fileInputRef: React.RefObject<HTMLInputElement>;
+  handleFileButtonClick: () => void;
+  handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onAiPrefill: (draft: {
+    title: string;
+    excerpt: string;
+    topics: ResourceTopic[];
+  }) => Promise<{
+    title: string;
+    excerpt: string;
+    topics: ResourceTopic[];
+    contentText: string;
+    fileUrl: string;
+    fileSize: number;
+  }>;
+  isAiFilling: boolean;
 }
 
 function InsightFormModal({
@@ -3336,11 +3569,23 @@ function InsightFormModal({
   entityLabel,
   contentType,
   sequenceSeed,
+  sourceFile,
+  setSourceFile,
+  clearUploadedAsset,
+  fileInputRef,
+  handleFileButtonClick,
+  handleFileSelect,
+  onAiPrefill,
+  isAiFilling,
 }: InsightFormModalProps) {
   const [editorValue, setEditorValue] = useState<ArticleEditorValue | null>(null);
+  const [editorDocument, setEditorDocument] = useState<any>(buildEditorDocument((editingItem as any)?.contentJson, editingItem?.content));
   const [coverPresets, setCoverPresets] = useState<CoverPreset[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState('');
   const [isPresetLoading, setIsPresetLoading] = useState(false);
+  const [titleValue, setTitleValue] = useState(editingItem?.title || '');
+  const [excerptValue, setExcerptValue] = useState(editingItem?.excerpt || '');
+  const [selectedTopics, setSelectedTopics] = useState<ResourceTopic[]>(editingItem?.topics || ['战略']);
   const presetUploadInputRef = useRef<HTMLInputElement>(null);
 
   const loadPresets = useCallback(async () => {
@@ -3363,7 +3608,11 @@ function InsightFormModal({
 
   useEffect(() => {
     setEditorValue(null);
-  }, [editingItem?.id]);
+    setEditorDocument(buildEditorDocument((editingItem as any)?.contentJson, editingItem?.content));
+    setTitleValue(editingItem?.title || '');
+    setExcerptValue(editingItem?.excerpt || '');
+    setSelectedTopics(editingItem?.topics || ['战略']);
+  }, [editingItem?.id, editingItem?.title, editingItem?.excerpt, editingItem?.topics, editingItem?.content, (editingItem as any)?.contentJson]);
 
   useEffect(() => {
     setSelectedPresetId(editingItem?.coverPresetId || '');
@@ -3414,6 +3663,24 @@ function InsightFormModal({
     setSelectedPresetId((prev) => (prev === presetId ? '' : prev));
   };
 
+  const handleAiPrefillClick = async () => {
+    try {
+      const next = await onAiPrefill({
+        title: titleValue,
+        excerpt: excerptValue,
+        topics: selectedTopics,
+      });
+      const nextDoc = buildEditorDocument(undefined, next.contentText);
+      setTitleValue(next.title);
+      setExcerptValue(next.excerpt);
+      setSelectedTopics(next.topics.length ? next.topics : ['战略']);
+      setEditorDocument(nextDoc);
+      setEditorValue(nextDoc ? { json: nextDoc, html: '', text: next.contentText } : null);
+    } catch (error: any) {
+      alert(error?.message || 'AI 填充失败，请稍后重试');
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-auto">
       <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto my-8">
@@ -3430,6 +3697,14 @@ function InsightFormModal({
         </div>
         
         <form onSubmit={onSave} className="p-6 space-y-6">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+
           <div className="border border-gray-200 rounded-2xl p-4 bg-gray-50/80">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
@@ -3501,6 +3776,90 @@ function InsightFormModal({
             <input type="hidden" name="coverPresetImage" value={selectedPreset?.imageUrl || editingItem?.coverImage || ''} />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              源文件 <span className="text-gray-400 text-xs">(支持 PDF / DOCX，用于 AI 填充)</span>
+            </label>
+
+            {sourceFile ? (
+              <div className="border-2 border-purple-500 bg-purple-50 rounded-xl p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileText className="w-10 h-10 text-purple-600 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 truncate">{sourceFile.name}</p>
+                      <p className="text-sm text-gray-500">{formatFileSize(sourceFile.size)}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSourceFile(null);
+                      clearUploadedAsset();
+                    }}
+                    className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-500"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            ) : (editingItem as any)?.fileUrl ? (
+              <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileText className="w-10 h-10 text-purple-600 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 truncate">
+                        {decodeURIComponent(((editingItem as any).fileUrl || '').split('/').pop() || (editingItem as any).fileUrl)}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {(editingItem as any).fileSize ? formatFileSize((editingItem as any).fileSize) : '已保存到腾讯云当前配置'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleFileButtonClick}
+                    className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium"
+                  >
+                    重新上传
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-purple-500 transition-colors">
+                <div className="flex flex-col items-center justify-center text-gray-400">
+                  <Upload className="w-12 h-12 mb-2" />
+                  <p className="text-sm mb-4">点击上传 PDF 或 DOCX 文件</p>
+                  <button
+                    type="button"
+                    onClick={handleFileButtonClick}
+                    className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors font-medium"
+                  >
+                    <Upload className="w-5 h-5" />
+                    选择内容文件
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-gray-900">AI 填充元信息</p>
+              <p className="text-xs text-gray-600">自动读取源文件内容，并回填标题、摘要、正文和标签。</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleAiPrefillClick}
+              disabled={isAiFilling}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isAiFilling ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {isAiFilling ? 'AI 填充中...' : 'AI 填充'}
+            </button>
+          </div>
+
           {/* 标题 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -3509,9 +3868,10 @@ function InsightFormModal({
             <input
               type="text"
               name="title"
-              placeholder="请输入文章标题"
+              placeholder={`请输入${entityLabel}标题`}
               required
-              defaultValue={editingItem?.title || ''}
+              value={titleValue}
+              onChange={(e) => setTitleValue(e.target.value)}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
@@ -3531,7 +3891,12 @@ function InsightFormModal({
                     type="checkbox"
                     name="topics"
                     value={t}
-                    defaultChecked={(editingItem as any)?.topics?.includes(t)}
+                    checked={selectedTopics.includes(t)}
+                    onChange={(e) => {
+                      setSelectedTopics((prev) => e.target.checked
+                        ? Array.from(new Set([...prev, t]))
+                        : prev.filter((item) => item !== t));
+                    }}
                     className="w-4 h-4 text-purple-600 rounded"
                   />
                   <span className="text-sm text-gray-800">{t}</span>
@@ -3549,8 +3914,9 @@ function InsightFormModal({
               name="excerpt"
               rows={3}
               required
-              placeholder="请输入文章摘要（在列表页显示）..."
-              defaultValue={editingItem?.excerpt || ''}
+              placeholder={`请输入${entityLabel}摘要（在列表页显示）...`}
+              value={excerptValue}
+              onChange={(e) => setExcerptValue(e.target.value)}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
             />
           </div>
@@ -3561,18 +3927,21 @@ function InsightFormModal({
               {entityLabel}正文
             </label>
             <ArticleEditor
-              value={buildEditorDocument((editingItem as any)?.contentJson, editingItem?.content)}
-              onChange={setEditorValue}
+              value={editorDocument}
+              onChange={(next) => {
+                setEditorValue(next);
+                setEditorDocument(next.json);
+              }}
               placeholder={`请输入${entityLabel}正文内容…`}
             />
-            <input type="hidden" name="content" value={editorValue?.text || editingItem?.content || ''} />
+            <input type="hidden" name="content" value={editorValue?.text || ((editingItem as any)?.contentText || editingItem?.content || '')} />
             <input
               type="hidden"
               name="contentJson"
-              value={editorValue ? JSON.stringify(editorValue.json) : ((editingItem as any)?.contentJson ? JSON.stringify((editingItem as any).contentJson) : '')}
+              value={editorValue ? JSON.stringify(editorValue.json) : ((editingItem as any)?.contentJson ? JSON.stringify((editingItem as any).contentJson) : (editorDocument ? JSON.stringify(editorDocument) : ''))}
             />
             <input type="hidden" name="contentHtml" value={editorValue?.html || (editingItem as any)?.contentHtml || ''} />
-            <input type="hidden" name="contentText" value={editorValue?.text || (editingItem as any)?.contentText || editingItem?.content || ''} />
+            <input type="hidden" name="contentText" value={editorValue?.text || ((editingItem as any)?.contentText || editingItem?.content || '')} />
           </div>
           
 

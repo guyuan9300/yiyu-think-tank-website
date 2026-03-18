@@ -143,6 +143,8 @@ export const saveInsightDirect = async (article: Partial<InsightArticle> | Insig
         contentJson: sanitizedArticle.contentJson,
         contentHtml: sanitizedArticle.contentHtml,
         contentText: sanitizedArticle.contentText,
+        fileUrl: sanitizedArticle.fileUrl,
+        fileSize: sanitizedArticle.fileSize,
         topics: normalizeTopics((sanitizedArticle as any).topics),
         coverImage: sanitizedArticle.coverImage,
         coverPresetId: (sanitizedArticle as any).coverPresetId,
@@ -166,6 +168,8 @@ export const saveInsightDirect = async (article: Partial<InsightArticle> | Insig
       contentJson: sanitizedArticle.contentJson,
       contentHtml: sanitizedArticle.contentHtml,
       contentText: sanitizedArticle.contentText,
+      fileUrl: sanitizedArticle.fileUrl,
+      fileSize: sanitizedArticle.fileSize,
       topics: normalizeTopics((sanitizedArticle as any).topics),
       coverImage: sanitizedArticle.coverImage,
       coverPresetId: (sanitizedArticle as any).coverPresetId,
@@ -219,6 +223,8 @@ export const saveMethodologyDirect = async (item: Partial<Methodology> | Methodo
         contentJson: item.contentJson,
         contentHtml: item.contentHtml,
         contentText: item.contentText,
+        fileUrl: item.fileUrl,
+        fileSize: item.fileSize,
         topics: normalizeTopics((item as any).topics),
         coverImage: item.coverImage,
         coverPresetId: (item as any).coverPresetId,
@@ -242,6 +248,8 @@ export const saveMethodologyDirect = async (item: Partial<Methodology> | Methodo
       contentJson: item.contentJson,
       contentHtml: item.contentHtml,
       contentText: item.contentText,
+      fileUrl: item.fileUrl,
+      fileSize: item.fileSize,
       topics: normalizeTopics((item as any).topics),
       coverImage: item.coverImage,
       coverPresetId: (item as any).coverPresetId,
@@ -275,6 +283,8 @@ export const saveBookDirect = async (book: Partial<Book> | Book): Promise<Book> 
   const books = getBooks();
   const now = new Date().toISOString();
   let saved: Book;
+  const normalizedDescription = book.description || '';
+  const normalizedAbstract = book.abstract || normalizedDescription;
 
   if ('id' in book && book.id) {
     const index = books.findIndex(b => b.id === book.id);
@@ -282,6 +292,8 @@ export const saveBookDirect = async (book: Partial<Book> | Book): Promise<Book> 
       books[index] = {
         ...books[index],
         ...book,
+        description: normalizedDescription || books[index].description || '',
+        abstract: normalizedAbstract || books[index].abstract || normalizedDescription || '',
         topics: normalizeTopics((book as any).topics ?? books[index].topics),
         updatedAt: now,
       };
@@ -291,8 +303,8 @@ export const saveBookDirect = async (book: Partial<Book> | Book): Promise<Book> 
         id: book.id,
         title: book.title || '无标题书籍',
         author: book.author || '',
-        description: book.description || '',
-        abstract: book.abstract || '',
+        description: normalizedDescription,
+        abstract: normalizedAbstract,
         topics: normalizeTopics((book as any).topics),
         pages: (book as any).pages || 100,
         duration: (book as any).duration || calculateReadTime((book as any).pages || 100),
@@ -318,8 +330,8 @@ export const saveBookDirect = async (book: Partial<Book> | Book): Promise<Book> 
       id: `book_${Date.now()}`,
       title: book.title || '无标题书籍',
       author: book.author || '',
-      description: book.description || '',
-      abstract: book.abstract || '',
+      description: normalizedDescription,
+      abstract: normalizedAbstract,
       topics: normalizeTopics((book as any).topics),
       pages: (book as any).pages || 100,
       duration: (book as any).duration || calculateReadTime((book as any).pages || 100),

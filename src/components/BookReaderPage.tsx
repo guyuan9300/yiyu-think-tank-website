@@ -6,8 +6,6 @@ import {
   BookOpen,
   MessageSquare,
   Bookmark,
-  Star,
-  Clock,
   ChevronLeft,
   ChevronRight,
   ZoomIn,
@@ -327,7 +325,7 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
               <div className="flex flex-wrap items-center gap-3 text-sm">
                 <span className="text-gray-600">作者：{book.author}</span>
                 <span className="text-gray-300">|</span>
-                <span className="text-gray-600">发布时间：{String((book as any).updatedAt || (book as any).publishDate || '').split('T')[0] || '—'}</span>
+                <span className="text-gray-600">发布时间：{String((book as any).publishDate || (book as any).updatedAt || '').split('T')[0] || '—'}</span>
               </div>
             </div>
           </div>
@@ -335,7 +333,7 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
           {/* 第2行：导读与收获 - 更紧凑 */}
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6">
             <p className="text-[16px] sm:text-[17px] text-gray-700 italic mb-4">
-              "{(book as any).abstract || (book as any).description || ''}"
+              "{(book as any).description || (book as any).abstract || ''}"
             </p>
             <div className="flex flex-wrap gap-2">
               {((book as any).topics || []).map((t: string, index: number) => (

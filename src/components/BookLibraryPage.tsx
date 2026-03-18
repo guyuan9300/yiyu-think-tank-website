@@ -1,7 +1,7 @@
 import { Header } from './Header';
 import { Footer } from './Footer';
-import { 
-  BookOpen, Search, Filter, Grid3X3, List, Eye, Star, Clock, ChevronRight
+import {
+  BookOpen, Search, Filter, Grid3X3, List, Eye, ChevronRight
 } from 'lucide-react';
 import { getBooks, type Book } from '../lib/dataService';
 import { useState, useEffect, useMemo } from 'react';
@@ -324,13 +324,10 @@ const filteredBooks = useMemo(() => {
                   </p>
 
                   <div className="flex items-center justify-between pt-4 border-t border-border/30 text-[12px] text-muted-foreground/50">
+                    <span>{book.publishDate}</span>
                     <span className="flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" />
-                      {book.duration}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                      {book.rating}
+                      <Eye className="w-3.5 h-3.5" />
+                      {book.views?.toLocaleString?.() ? book.views.toLocaleString() : book.views}
                     </span>
                   </div>
                 </div>

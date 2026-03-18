@@ -109,10 +109,16 @@ function isArkReady() {
 }
 
 function safeTopicArray(input) {
-  if (!Array.isArray(input)) return [];
-  return input
-    .map((item) => safeText(item))
-    .filter((item) => AI_PREFILL_TOPIC_OPTIONS.includes(item));
+  const list = Array.isArray(input)
+    ? input
+    : typeof input === 'string'
+      ? input.split(/[、,，/｜|]/)
+      : [];
+  return Array.from(new Set(
+    list
+      .map((item) => safeText(item))
+      .filter((item) => AI_PREFILL_TOPIC_OPTIONS.includes(item))
+  ));
 }
 
 function resolveSiteFilePath(input) {
@@ -131,7 +137,7 @@ function resolveSiteFilePath(input) {
   }
 
   if (!pathname.startsWith('/uploads/') && !pathname.startsWith('/docs/')) {
-    throw new Error('当前仅支持解析站内已上传的 PDF 文件');
+    throw new Error('当前仅支持解析站内已上传的文件');
   }
 
   return path.join(SITE_PUBLIC_ROOT, pathname.replace(/^\/+/, ''));
@@ -140,8 +146,60 @@ function resolveSiteFilePath(input) {
 async function ensureReadableFile(filePath) {
   const stat = await fs.stat(filePath).catch(() => null);
   if (!stat || !stat.isFile()) {
-    throw new Error('未找到可解析的文件，请先上传 PDF 文件');
+    throw new Error('未找到可解析的文件，请先上传内容文件');
   }
+}
+
+function normalizeExtractedText(input) {
+  return String(input || '')
+    .replace(/\r/g, '')
+    .replace(/\u0000/g, '')
+    .replace(/\t/g, ' ')
+    .replace(/[ \u00a0]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function stripXmlToText(input) {
+  return normalizeExtractedText(
+    String(input || '')
+      .replace(/<w:tab\/>/g, ' ')
+      .replace(/<w:br\/>/g, '\n')
+      .replace(/<\/w:p>/g, '\n\n')
+      .replace(/<[^>]+>/g, ' ')
+  );
+}
+
+function inferTitleFromText(text, fallbackPath = '') {
+  const lines = normalizeExtractedText(text)
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !/^(第?\s*\d+\s*页|page\s*\d+)$/i.test(line));
+
+  const titleLine = lines.find((line) => line.length >= 4 && line.length <= 48);
+  if (titleLine) return titleLine;
+
+  const base = decodeURIComponent(path.basename(fallbackPath || '', path.extname(fallbackPath || '')))
+    .replace(/[-_]+/g, ' ')
+    .trim();
+  return base || '';
+}
+
+async function extractDocxArtifacts(filePath) {
+  await ensureReadableFile(filePath);
+  const textResult = await execFileAsync('unzip', ['-p', filePath, 'word/document.xml']).catch((error) => {
+    throw new Error(`提取 DOCX 文本失败：${error?.message || '未知错误'}`);
+  });
+
+  const text = stripXmlToText(textResult.stdout);
+  return {
+    pages: 0,
+    metaTitle: '',
+    metaAuthor: '',
+    text,
+    fileExt: '.docx',
+  };
 }
 
 function parsePdfInfoOutput(output) {
@@ -155,8 +213,9 @@ function parsePdfInfoOutput(output) {
   return info;
 }
 
-async function extractPdfArtifacts(filePath) {
+async function extractPdfArtifacts(filePath, options = {}) {
   await ensureReadableFile(filePath);
+  const maxPages = Number.isFinite(Number(options.maxPages)) ? Number(options.maxPages) : 12;
 
   const pdfInfoResult = await execFileAsync('pdfinfo', [filePath]).catch((error) => {
     throw new Error(`读取 PDF 元信息失败：${error?.message || '未知错误'}`);
@@ -164,7 +223,7 @@ async function extractPdfArtifacts(filePath) {
   const pdfInfo = parsePdfInfoOutput(pdfInfoResult.stdout);
   const pages = Number.parseInt(String(pdfInfo.Pages || ''), 10) || 0;
 
-  const textResult = await execFileAsync('pdftotext', ['-f', '1', '-l', '12', '-layout', filePath, '-']).catch((error) => {
+  const textResult = await execFileAsync('pdftotext', ['-f', '1', '-l', String(maxPages), '-layout', filePath, '-']).catch((error) => {
     throw new Error(`提取 PDF 文本失败：${error?.message || '未知错误'}`);
   });
 
@@ -172,12 +231,13 @@ async function extractPdfArtifacts(filePath) {
     pages,
     metaTitle: safeText(pdfInfo.Title || ''),
     metaAuthor: safeText(pdfInfo.Author || ''),
-    text: String(textResult.stdout || '').trim(),
+    text: normalizeExtractedText(textResult.stdout),
+    fileExt: '.pdf',
   };
 }
 
 async function renderPdfFirstPageCover(filePath, contentType) {
-  const normalizedType = contentType === 'book' ? 'book' : 'report';
+  const normalizedType = ['book', 'insight', 'methodology'].includes(contentType) ? contentType : 'report';
   const coverDir = path.join(ADMIN_UPLOAD_ROOT, 'ai-covers', normalizedType);
   await fs.mkdir(coverDir, { recursive: true });
 
@@ -190,6 +250,18 @@ async function renderPdfFirstPageCover(filePath, contentType) {
   const coverPath = `${outputPrefix}.png`;
   await ensureReadableFile(coverPath);
   return `/uploads/ai-covers/${normalizedType}/${path.basename(coverPath)}`;
+}
+
+async function extractSourceArtifacts(filePath, contentType) {
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === '.docx') {
+    return extractDocxArtifacts(filePath);
+  }
+  if (ext === '.pdf') {
+    const maxPages = contentType === 'insight' || contentType === 'methodology' ? 40 : 12;
+    return extractPdfArtifacts(filePath, { maxPages });
+  }
+  throw new Error('当前仅支持解析 PDF 或 DOCX 文件');
 }
 
 async function callArkChat(messages) {
@@ -207,6 +279,7 @@ async function callArkChat(messages) {
       model: ARK_MODEL,
       reasoning_effort: 'low',
       temperature: 0.2,
+      max_tokens: 600,
       messages,
     }),
   });
@@ -235,26 +308,34 @@ function extractJsonObject(text) {
   return JSON.parse(candidate.slice(start, end + 1));
 }
 
-function buildAiPrefillMessages(contentType, current, pdfData) {
+function buildAiPrefillMessages(contentType, sourceData, filePath) {
   const isBook = contentType === 'book';
+  const isArticleLike = contentType === 'insight' || contentType === 'methodology';
   const system = [
     '你是一个中文内容运营助手。',
-    '请根据 PDF 的文本与元信息，为后台表单生成结构化内容。',
+    '请根据上传文件的文本与元信息，为后台表单生成结构化内容。',
     '你只能从以下标签中选择 1 到 3 个：战略、业务设计、组织、AI 技术。',
+    '现有表单中的旧值可能是错的或过时的，不要参考旧值，只以文件内容为准。',
     '只返回 JSON，不要返回 markdown、解释或多余文字。',
   ].join('');
 
   const userPayload = {
     contentType,
     allowedTopics: AI_PREFILL_TOPIC_OPTIONS,
-    current,
-    pdfMeta: {
-      title: pdfData.metaTitle,
-      author: pdfData.metaAuthor,
-      pages: pdfData.pages,
+    fileName: path.basename(filePath),
+    fileMeta: {
+      title: sourceData.metaTitle,
+      author: sourceData.metaAuthor,
+      pages: sourceData.pages,
     },
-    pdfExcerpt: pdfData.text.slice(0, 14000),
-    outputSchema: isBook
+    fileExcerpt: sourceData.text.slice(0, isArticleLike ? 12000 : 8000),
+    outputSchema: isArticleLike
+      ? {
+          title: '标题，字符串',
+          excerpt: '80-160字中文摘要',
+          topics: ['从允许标签中选择 1-3 个'],
+        }
+      : isBook
       ? {
           title: '书名，字符串',
           author: '作者名，无法判断则返回空字符串',
@@ -277,30 +358,47 @@ function buildAiPrefillMessages(contentType, current, pdfData) {
 
 async function buildAiPrefillResult({ contentType, fileUrl, current }) {
   const filePath = resolveSiteFilePath(fileUrl);
-  const pdfData = await extractPdfArtifacts(filePath);
-  const coverImage = await renderPdfFirstPageCover(filePath, contentType);
-  const aiText = await callArkChat(buildAiPrefillMessages(contentType, current, pdfData));
+  const sourceData = await extractSourceArtifacts(filePath, contentType);
+  if (normalizeExtractedText(sourceData.text).length < 80) {
+    throw new Error('当前文件可提取文字过少，AI 无法可靠识别内容。请优先上传可复制文字的 PDF 或 DOCX；若是扫描件，需后续补 OCR。');
+  }
+  const coverImage = sourceData.fileExt === '.pdf' ? await renderPdfFirstPageCover(filePath, contentType) : '';
+  const aiText = await callArkChat(buildAiPrefillMessages(contentType, sourceData, filePath));
   const aiJson = extractJsonObject(aiText);
+  const inferredTitle = inferTitleFromText(sourceData.text, filePath);
+  const fallbackTopics = safeTopicArray(current?.topics).length ? safeTopicArray(current?.topics) : ['战略'];
+
+  if (contentType === 'insight' || contentType === 'methodology') {
+    return {
+      title: safeText(aiJson.title) || sourceData.metaTitle || inferredTitle || '',
+      excerpt: safeText(aiJson.excerpt) || '',
+      topics: safeTopicArray(aiJson.topics).length ? safeTopicArray(aiJson.topics) : fallbackTopics,
+      contentText: sourceData.text || '',
+      coverImage,
+      fileUrl,
+      fileSize: 0,
+    };
+  }
 
   if (contentType === 'book') {
     return {
-      title: safeText(aiJson.title) || safeText(current?.title) || '',
-      author: safeText(aiJson.author) || safeText(pdfData.metaAuthor) || safeText(current?.author) || '',
-      description: safeText(aiJson.description) || safeText(current?.description) || '',
-      topics: safeTopicArray(aiJson.topics).length ? safeTopicArray(aiJson.topics) : safeTopicArray(current?.topics),
+      title: safeText(aiJson.title) || sourceData.metaTitle || inferredTitle || '',
+      author: safeText(aiJson.author) || safeText(sourceData.metaAuthor) || '',
+      description: safeText(aiJson.description) || '',
+      topics: safeTopicArray(aiJson.topics).length ? safeTopicArray(aiJson.topics) : fallbackTopics,
       coverImage,
-      pages: pdfData.pages || 0,
+      pages: sourceData.pages || 0,
       fileUrl,
     };
   }
 
   return {
-    title: safeText(aiJson.title) || safeText(pdfData.metaTitle) || safeText(current?.title) || '',
-    publisher: safeText(aiJson.publisher) || safeText(current?.publisher) || '',
-    summary: safeText(aiJson.summary) || safeText(current?.summary) || '',
-    topics: safeTopicArray(aiJson.topics).length ? safeTopicArray(aiJson.topics) : safeTopicArray(current?.topics),
+    title: safeText(aiJson.title) || sourceData.metaTitle || inferredTitle || '',
+    publisher: safeText(aiJson.publisher) || '',
+    summary: safeText(aiJson.summary) || '',
+    topics: safeTopicArray(aiJson.topics).length ? safeTopicArray(aiJson.topics) : fallbackTopics,
     coverImage,
-    pages: pdfData.pages || 0,
+    pages: sourceData.pages || 0,
     fileUrl,
   };
 }
@@ -554,6 +652,8 @@ function normalizePlanId(input) {
 function normalizeUploadKind(input) {
   return input === 'report'
     || input === 'book'
+    || input === 'insight'
+    || input === 'methodology'
     || input === 'cover-preset'
     || input === 'case-logo'
     || input === 'case-ppt'
@@ -1120,12 +1220,16 @@ async function ensureSchema() {
       ADD COLUMN IF NOT EXISTS content_json JSONB,
       ADD COLUMN IF NOT EXISTS content_html TEXT,
       ADD COLUMN IF NOT EXISTS content_text TEXT,
+      ADD COLUMN IF NOT EXISTS file_url TEXT,
+      ADD COLUMN IF NOT EXISTS file_size BIGINT,
       ADD COLUMN IF NOT EXISTS cover_preset_id TEXT,
       ADD COLUMN IF NOT EXISTS favorites_count INT NOT NULL DEFAULT 0;
     ALTER TABLE methodologies
       ADD COLUMN IF NOT EXISTS content_json JSONB,
       ADD COLUMN IF NOT EXISTS content_html TEXT,
       ADD COLUMN IF NOT EXISTS content_text TEXT,
+      ADD COLUMN IF NOT EXISTS file_url TEXT,
+      ADD COLUMN IF NOT EXISTS file_size BIGINT,
       ADD COLUMN IF NOT EXISTS cover_preset_id TEXT,
       ADD COLUMN IF NOT EXISTS favorites_count INT NOT NULL DEFAULT 0;
     ALTER TABLE reports
@@ -2601,6 +2705,8 @@ const server = http.createServer(async (req, res) => {
       const isCoverPreset = kind === 'cover-preset';
       const isCaseLogo = kind === 'case-logo';
       const isCasePpt = kind === 'case-ppt';
+      const isInsightAsset = kind === 'insight';
+      const isMethodologyAsset = kind === 'methodology';
       const contentType = isCoverPreset ? normalizeCoverPresetContentType(url.searchParams.get('contentType')) : null;
       const defaultExt = isCoverPreset || isCaseLogo ? '.png' : isCasePpt ? '.pptx' : '.pdf';
       const filename = sanitizeUploadFilename(
@@ -2623,6 +2729,10 @@ const server = http.createServer(async (req, res) => {
         if (!['.ppt', '.pptx'].includes(ext)) {
           return json(res, 400, { ok: false, error: '案例展示仅支持上传 PPT/PPTX 文件' });
         }
+      } else if (isInsightAsset || isMethodologyAsset) {
+        if (!['.pdf', '.docx'].includes(ext)) {
+          return json(res, 400, { ok: false, error: '文章与方法论仅支持上传 PDF 或 DOCX 文件' });
+        }
       } else if (ext !== '.pdf') {
         return json(res, 400, { ok: false, error: '目前仅支持上传 PDF 文件' });
       }
@@ -2638,6 +2748,10 @@ const server = http.createServer(async (req, res) => {
           ? 'reports'
           : kind === 'book'
             ? 'books'
+            : kind === 'insight'
+              ? 'insights'
+              : kind === 'methodology'
+                ? 'methodologies'
             : kind === 'case-logo'
               ? path.join('case-showcases', 'logos')
               : kind === 'case-ppt'
@@ -2660,7 +2774,14 @@ const server = http.createServer(async (req, res) => {
           publicUrl = `/uploads/case-showcases/presentations/${savedName}`;
           slides = await convertPresentationToSlides(targetPath, savedName);
         } else {
-          publicUrl = `/uploads/${kind === 'report' ? 'reports' : 'books'}/${savedName}`;
+          const uploadFolder = kind === 'report'
+            ? 'reports'
+            : kind === 'book'
+              ? 'books'
+              : kind === 'insight'
+                ? 'insights'
+                : 'methodologies';
+          publicUrl = `/uploads/${uploadFolder}/${savedName}`;
         }
       } catch (error) {
         await fs.rm(targetPath, { force: true }).catch(() => {});
@@ -2683,11 +2804,11 @@ const server = http.createServer(async (req, res) => {
       const payload = await readJsonBody(req);
       const contentType = safeText(payload.contentType);
       const fileUrl = safeText(payload.fileUrl);
-      if (contentType !== 'report' && contentType !== 'book') {
-        return json(res, 400, { ok: false, error: 'AI 填充仅支持报告和书籍' });
+      if (!['report', 'book', 'insight', 'methodology'].includes(contentType)) {
+        return json(res, 400, { ok: false, error: 'AI 填充仅支持四类内容资源' });
       }
       if (!fileUrl) {
-        return json(res, 400, { ok: false, error: '请先上传 PDF 文件' });
+        return json(res, 400, { ok: false, error: '请先上传内容文件' });
       }
 
       const data = await buildAiPrefillResult({

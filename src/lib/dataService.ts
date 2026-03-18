@@ -45,6 +45,8 @@ export interface InsightArticle {
   contentJson?: any;
   contentHtml?: string;
   contentText?: string;
+  fileUrl?: string;
+  fileSize?: number;
 
   /** 统一标签（四类，多选）。旧 category/tags/readTime/featured/author 已彻底废弃。 */
   topics: ResourceTopic[];
@@ -124,6 +126,8 @@ export interface Methodology {
   contentJson?: any;
   contentHtml?: string;
   contentText?: string;
+  fileUrl?: string;
+  fileSize?: number;
 
   /** 统一标签（四类，多选）。旧 category/tags/readTime/featured/author 已彻底废弃。 */
   topics: ResourceTopic[];
@@ -806,6 +810,11 @@ export const saveMethodology = (item: Partial<Methodology> | Methodology): Metho
     title: (item as any).title || '待补充',
     excerpt: (item as any).excerpt || '待补充',
     content: (item as any).content || '',
+    contentJson: (item as any).contentJson,
+    contentHtml: (item as any).contentHtml,
+    contentText: (item as any).contentText,
+    fileUrl: (item as any).fileUrl,
+    fileSize: (item as any).fileSize,
     topics: normalizeTopics((item as any).topics).length > 0 ? normalizeTopics((item as any).topics) : ['战略'],
     coverImage: (item as any).coverImage,
     coverPresetId: (item as any).coverPresetId,
@@ -859,6 +868,11 @@ export const saveInsight = (article: Partial<InsightArticle> | InsightArticle): 
     title: article.title || '无标题文章',
     excerpt: article.excerpt || '',
     content: article.content || '',
+    contentJson: (article as any).contentJson,
+    contentHtml: (article as any).contentHtml,
+    contentText: (article as any).contentText,
+    fileUrl: (article as any).fileUrl,
+    fileSize: (article as any).fileSize,
     topics: normalizeTopics((article as any).topics).length > 0 ? normalizeTopics((article as any).topics) : ['战略'],
     coverImage: article.coverImage,
     coverPresetId: (article as any).coverPresetId,

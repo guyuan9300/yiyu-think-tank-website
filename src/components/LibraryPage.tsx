@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { PdfCoverImage } from './PdfCoverImage';
-import { BookOpen, Star, Eye, Wrench, ArrowRight } from 'lucide-react';
+import { BookOpen, Eye, Wrench, ArrowRight } from 'lucide-react';
 import { getBooks, getMethodologies, type Book as StoredBook, type Methodology as StoredMethodology } from '../lib/dataService';
 
 interface Book {
@@ -10,14 +10,8 @@ interface Book {
   title: string;
   author: string;
   description: string;
-  abstract: string;
   topics: string[];
-  valuePoints?: string[];
-  pages: number;
-  duration: string;
-  rating: number;
   views: number;
-  reviewCount: number;
   date: string;
   coverColor?: string;
   /** Optional: manual/auto cover image (DataURL or URL). */
@@ -76,14 +70,9 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
         id: b.id,
         title: b.title,
         author: b.author,
-        description: b.description,
-        abstract: b.abstract,
+        description: b.description || b.abstract || '',
         topics: (b.topics || []) as any,
-        pages: b.pages,
-        duration: b.duration,
-        rating: b.rating,
         views: b.views,
-        reviewCount: b.reviews,
         date: b.publishDate,
         coverColor: b.coverColor,
         coverImage: b.coverImage,
@@ -310,11 +299,6 @@ function BookCard({ book, onClick, getCategoryColor }: { book: Book; onClick: ()
             width={520}
           />
         ) : null}
-        {/* Rating */}
-        <div className="absolute top-3 right-3 flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
-          <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-          <span className="text-[12px] font-medium text-foreground">{book.rating}</span>
-        </div>
 
         {/* Icon */}
         <div className={`w-14 h-14 rounded-[16px] bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center transform group-hover:scale-110 transition-transform duration-300 ${book.pdfUrl ? 'opacity-0' : ''}`}>
@@ -336,27 +320,27 @@ function BookCard({ book, onClick, getCategoryColor }: { book: Book; onClick: ()
           {book.title}
         </h3>
 
+        <p className="text-[13px] text-muted-foreground/60 mb-3 line-clamp-1">
+          {book.author}
+        </p>
+
         {/* Description */}
         <p className="text-[13px] text-muted-foreground/70 mb-4 line-clamp-2 leading-relaxed">
           {book.description}
         </p>
 
-        {/* Value Points Preview */}
         <div className="flex items-center gap-1.5 mb-4 flex-wrap">
-          {(book.valuePoints && book.valuePoints.length > 0 ? book.valuePoints : (book.topics || []))
-            .slice(0, 2)
-            .map((point, index) => (
-              <span key={index} className="px-2 py-0.5 rounded bg-success/10 text-success/80 text-[11px]">
-                {String(point).substring(0, 12)}...
-              </span>
-            ))}
+          {(book.topics || []).slice(0, 2).map((topic, index) => (
+            <span key={index} className="px-2 py-0.5 rounded bg-success/10 text-success/80 text-[11px]">
+              {topic}
+            </span>
+          ))}
         </div>
 
         {/* Meta */}
         <div className="flex items-center justify-between text-[12px] text-muted-foreground/50 pt-4 border-t border-border/40">
-          <div className="flex items-center gap-4">
-            <span>{book.pages}页</span>
-            <span>{book.duration}</span>
+          <div className="flex items-center gap-2">
+            <Eye className="w-3.5 h-3.5" />
             <span>{book.views.toLocaleString()}</span>
           </div>
           <span>{book.date}</span>

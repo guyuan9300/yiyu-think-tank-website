@@ -149,7 +149,7 @@ export async function logoutCurrentSession() {
 
 export async function uploadAdminAsset(
   file: File,
-  kind: 'report' | 'book' | 'cover-preset' | 'case-logo' | 'case-ppt',
+  kind: 'report' | 'book' | 'insight' | 'methodology' | 'cover-preset' | 'case-logo' | 'case-ppt',
   options?: { contentType?: 'insight' | 'methodology' }
 ): Promise<ApiResult<{ url: string; size: number; filename: string; slides?: string[] }>> {
   try {
@@ -187,7 +187,7 @@ export async function uploadAdminAsset(
 }
 
 export async function adminAiPrefill(params: {
-  contentType: 'report' | 'book';
+  contentType: 'report' | 'book' | 'insight' | 'methodology';
   fileUrl: string;
   current?: Record<string, unknown>;
 }): Promise<ApiResult<Record<string, unknown>>> {

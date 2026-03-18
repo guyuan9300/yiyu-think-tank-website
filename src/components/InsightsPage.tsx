@@ -8,7 +8,6 @@ import {
   ChevronRight,
   Sparkles,
   ArrowRight,
-  Clock
 } from 'lucide-react';
 import { getReports, getCategories, getInsights, type Report, type InsightArticle } from '../lib/dataService';
 import { PdfCoverImage } from './PdfCoverImage';
@@ -51,7 +50,7 @@ function ReportCard({ report, onClick }: { report: Report; onClick?: () => void 
 
         {/* 内容区域 */}
         <div className="p-6">
-          {/* topics 与版本 */}
+          {/* topics */}
           <div className="flex items-center gap-2 mb-3 flex-wrap">
             {(report.topics || []).slice(0, 2).map((t, idx) => (
               <span
@@ -61,9 +60,6 @@ function ReportCard({ report, onClick }: { report: Report; onClick?: () => void 
                 {t}
               </span>
             ))}
-            <span className="text-[12px] text-muted-foreground/40">
-              v{report.version}
-            </span>
           </div>
 
           {/* 标题 */}

@@ -342,6 +342,12 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
 
           <div className="flex items-center gap-2 mb-6 text-[14px] text-gray-600">
             <span>发布时间：{report.publishDate}</span>
+            {report.publisher ? (
+              <>
+                <span className="text-gray-300">|</span>
+                <span>发布机构：{report.publisher}</span>
+              </>
+            ) : null}
           </div>
 
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6">

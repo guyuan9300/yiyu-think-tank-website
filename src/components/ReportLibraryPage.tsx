@@ -59,14 +59,17 @@ function ReportCardGrid({ report, onClick }: { report: Report; onClick?: () => v
                 {t}
               </span>
             ))}
-            <span className="text-[12px] text-muted-foreground/40">
-              v{report.version}
-            </span>
           </div>
 
           <h3 className="text-[18px] font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors leading-[1.4]">
             {report.title}
           </h3>
+
+          {report.publisher ? (
+            <p className="text-[12px] text-muted-foreground/55 mb-2 line-clamp-1">
+              {report.publisher}
+            </p>
+          ) : null}
 
           <p className="text-[14px] text-muted-foreground/70 line-clamp-2 leading-[1.6] mb-4">
             {report.summary}
@@ -129,6 +132,11 @@ function ReportListItem({ report, onClick }: { report: Report; onClick?: () => v
         <h3 className="font-medium text-[15px] text-foreground mb-1 truncate group-hover:text-primary transition-colors">
           {report.title}
         </h3>
+        {report.publisher ? (
+          <p className="text-[12px] text-muted-foreground/55 line-clamp-1 mb-1">
+            {report.publisher}
+          </p>
+        ) : null}
         <p className="text-[13px] text-muted-foreground/70 line-clamp-1">
           {report.summary}
         </p>
@@ -149,7 +157,6 @@ function ReportListItem({ report, onClick }: { report: Report; onClick?: () => v
       {/* 元数据 */}
       <div className="flex flex-col items-end gap-1.5 text-[12px] text-muted-foreground/50 w-32">
         <span>{report.publishDate}</span>
-        <span>v{report.version}</span>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
             <Eye className="w-3 h-3" />
@@ -222,6 +229,7 @@ export function ReportLibraryPage({
       const matchesSearch = !searchQuery ||
         report.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         report.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (report.publisher || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (report.topics || []).some((t: string) => t.toLowerCase().includes(searchQuery.toLowerCase()));
 
       const matchesTopic = selectedTopic === 'all' || (report.topics || []).includes(selectedTopic);
