@@ -184,12 +184,18 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
   // Load recommended content for Home (7:3 content:product)
   useEffect(() => {
     const load = () => {
+      const byLatest = <T extends { publishDate?: string; updatedAt?: string }>(a: T, b: T) => {
+        const publishDiff = new Date(b.publishDate || '').getTime() - new Date(a.publishDate || '').getTime();
+        if (Number.isFinite(publishDiff) && publishDiff !== 0) return publishDiff;
+        return new Date(b.updatedAt || '').getTime() - new Date(a.updatedAt || '').getTime();
+      };
       const insights = getInsights()
         .filter(i => i.status === 'published' && i.showOnHome)
-        // topics-only schema: no featured sorting
+        .sort(byLatest)
         .slice(0, 4);
       const reports = getReports()
         .filter(r => r.status === 'published' && r.showOnHome)
+        .sort(byLatest)
         .slice(0, 4);
       setHomeInsights(insights);
       setHomeReports(reports);
@@ -260,6 +266,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
     title: string;
     excerpt: string;
     date: string;
+    updatedAt?: string;
     coverImage?: string;
     coverColor?: string;
   };
@@ -280,6 +287,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
         title: a.title,
         excerpt: a.excerpt,
         date: a.publishDate,
+        updatedAt: a.updatedAt,
         coverImage: a.coverImage,
       }));
 
@@ -291,6 +299,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
         title: r.title,
         excerpt: r.summary,
         date: r.publishDate,
+        updatedAt: r.updatedAt,
         coverImage: r.coverImage,
       }));
 
@@ -302,6 +311,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
         title: b.title,
         excerpt: b.description,
         date: b.publishDate,
+        updatedAt: b.updatedAt,
         coverImage: b.coverImage,
         coverColor: (b as any).coverColor,
       }));
@@ -314,11 +324,16 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
         title: m.title,
         excerpt: m.excerpt,
         date: m.publishDate,
+        updatedAt: m.updatedAt,
         coverImage: (m as any).coverImage,
       }));
 
     return [...articles, ...reports, ...books, ...methods]
-      .sort((a, b) => asDate(b.date) - asDate(a.date))
+      .sort((a, b) => {
+        const publishDiff = asDate(b.date) - asDate(a.date);
+        if (publishDiff !== 0) return publishDiff;
+        return asDate(b.updatedAt) - asDate(a.updatedAt);
+      })
       .slice(0, 6);
   }, [latestTopic]);
 
