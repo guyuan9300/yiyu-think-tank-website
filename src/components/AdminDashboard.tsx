@@ -49,17 +49,16 @@ import {
   updateCommentStatusApi,
 } from '../lib/commentApi';
 import { adminAiPrefill, uploadAdminAsset } from '../lib/authApi';
-import {
-  createCoverPreset,
-  deleteCoverPreset,
-  fetchCoverPresets,
-  type CoverPreset,
-  type CoverPresetContentType,
-} from '../lib/coverPresetApi';
 import { getArticleTiptapExtensions } from '../lib/tiptapSchema';
 import { ArticleEditor, type ArticleEditorValue } from './ArticleEditor';
 
 const RESOURCE_TOPICS: ResourceTopic[] = ['战略', '业务设计', '组织', 'AI 技术'];
+type InsightCoverContentType = 'insight' | 'methodology';
+const DEFAULT_INSIGHT_COVER = '/images/default-covers/insight-default.svg';
+const DEFAULT_METHODOLOGY_COVER = '/images/default-covers/methodology-default.svg';
+
+const getDefaultCoverImage = (contentType: InsightCoverContentType) =>
+  contentType === 'insight' ? DEFAULT_INSIGHT_COVER : DEFAULT_METHODOLOGY_COVER;
 
 const buildEditorDocument = (contentJson: any, legacyContent?: string | null, contentHtml?: string | null) => {
   if (contentJson && typeof contentJson === 'object') {
@@ -911,6 +910,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         throw new Error(result.error || 'AI 填充失败');
       }
       const data = result.data as any;
+      if (data.coverImage) {
+        setCoverImage(data.coverImage);
+      }
       return {
         title: String(data.title ?? ''),
         excerpt: String(data.excerpt ?? ''),
@@ -953,6 +955,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         throw new Error(result.error || 'AI 填充失败');
       }
       const data = result.data as any;
+      if (data.coverImage) {
+        setCoverImage(data.coverImage);
+      }
       return {
         title: String(data.title ?? ''),
         excerpt: String(data.excerpt ?? ''),
@@ -1477,6 +1482,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                     onClick={() => {
                       setEditingItem(null);
                       setSyncClientIds([]);
+                      setCoverImage(null);
                       setInsightFile(null);
                       setUploadedInsightAsset(null);
                       setShowInsightForm(true);
@@ -1536,6 +1542,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                 onClick={() => {
                                   setEditingItem(article);
                                   setSyncClientIds([]);
+                                  setCoverImage(article.coverImage || null);
                                   setInsightFile(null);
                                   setUploadedInsightAsset(null);
                                   (async () => {
@@ -1663,6 +1670,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                     onClick={() => {
                       setEditingItem(null);
                       setSyncClientIds([]);
+                      setCoverImage(null);
                       setMethodologyFile(null);
                       setUploadedMethodologyAsset(null);
                       setShowMethodologyForm(true);
@@ -1708,6 +1716,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-blue-600"
                                 onClick={() => {
                                   setEditingItem(item as any);
+                                  setCoverImage(item.coverImage || null);
                                   setMethodologyFile(null);
                                   setUploadedMethodologyAsset(null);
                                   setShowMethodologyForm(true);
@@ -2647,9 +2656,12 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
           {showInsightForm && (
             <InsightFormModal
               editingItem={editingItem as InsightArticle | null}
+              coverImage={coverImage}
+              setCoverImage={setCoverImage}
               onClose={() => {
                 setShowInsightForm(false);
                 setEditingItem(null);
+                setCoverImage(null);
                 setInsightFile(null);
                 setUploadedInsightAsset(null);
               }}
@@ -2662,8 +2674,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
                 const selectedTopics = (formData.getAll('topics') as string[]).map(s => s.trim()).filter(Boolean) as any;
                 const current = editingItem as InsightArticle | null;
-                const coverPresetId = (formData.get('coverPresetId') as string) || current?.coverPresetId || '';
-                const coverPresetImage = (formData.get('coverPresetImage') as string) || current?.coverImage || '';
                 let nextFileUrl = current?.fileUrl;
                 let nextFileSize = current?.fileSize;
 
@@ -2697,8 +2707,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
                   status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
                   showOnHome: false,
-                  coverImage: coverPresetImage || (current as any)?.coverImage || '',
-                  coverPresetId: coverPresetId || undefined,
+                  coverImage: coverImage || current?.coverImage || getDefaultCoverImage('insight'),
                   fileUrl: nextFileUrl,
                   fileSize: nextFileSize,
                   shareEnabled: false,
@@ -2719,6 +2728,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 clearInsightFilters();
                 setShowInsightForm(false);
                 setEditingItem(null);
+                setCoverImage(null);
                 setInsightFile(null);
                 setUploadedInsightAsset(null);
                 setMessage({ type: 'success', text: '文章已保存，已返回未筛选的文章列表。' });
@@ -2729,7 +2739,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               setSyncClientIds={setSyncClientIds}
               entityLabel="文章"
               contentType="insight"
-              sequenceSeed={insights.length}
               sourceFile={insightFile}
               setSourceFile={setInsightFile}
               clearUploadedAsset={() => setUploadedInsightAsset(null)}
@@ -2745,9 +2754,12 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
           {showMethodologyForm && (
             <InsightFormModal
               editingItem={editingItem as any}
+              coverImage={coverImage}
+              setCoverImage={setCoverImage}
               onClose={() => {
                 setShowMethodologyForm(false);
                 setEditingItem(null);
+                setCoverImage(null);
                 setMethodologyFile(null);
                 setUploadedMethodologyAsset(null);
               }}
@@ -2760,8 +2772,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
                 const selectedTopics = (formData.getAll('topics') as string[]).map(s => s.trim()).filter(Boolean) as any;
                 const current = editingItem as Methodology | null;
-                const coverPresetId = (formData.get('coverPresetId') as string) || current?.coverPresetId || '';
-                const coverPresetImage = (formData.get('coverPresetImage') as string) || current?.coverImage || '';
                 let nextFileUrl = current?.fileUrl;
                 let nextFileSize = current?.fileSize;
 
@@ -2795,8 +2805,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
                   status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
                   showOnHome: false,
-                  coverImage: coverPresetImage || (current as any)?.coverImage || '',
-                  coverPresetId: coverPresetId || undefined,
+                  coverImage: coverImage || current?.coverImage || getDefaultCoverImage('methodology'),
                   fileUrl: nextFileUrl,
                   fileSize: nextFileSize,
                 };
@@ -2812,6 +2821,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 refreshAllData();
                 setShowMethodologyForm(false);
                 setEditingItem(null);
+                setCoverImage(null);
                 setMethodologyFile(null);
                 setUploadedMethodologyAsset(null);
                 setMessage({ type: 'success', text: '方法论已保存！' });
@@ -2822,7 +2832,6 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               setSyncClientIds={setSyncClientIds}
               entityLabel="方法论"
               contentType="methodology"
-              sequenceSeed={methodologies.length}
               sourceFile={methodologyFile}
               setSourceFile={setMethodologyFile}
               clearUploadedAsset={() => setUploadedMethodologyAsset(null)}
@@ -3541,6 +3550,8 @@ function ReportFormModal({
 // 洞察文章表单模态框组件
 interface InsightFormModalProps {
   editingItem: InsightArticle | Methodology | null;
+  coverImage: string | null;
+  setCoverImage: React.Dispatch<React.SetStateAction<string | null>>;
   onClose: () => void;
   onSave: (e: React.FormEvent<HTMLFormElement>) => void;
   showProjectSync: boolean;
@@ -3548,8 +3559,7 @@ interface InsightFormModalProps {
   syncClientIds: string[];
   setSyncClientIds: React.Dispatch<React.SetStateAction<string[]>>;
   entityLabel: '文章' | '方法论';
-  contentType: CoverPresetContentType;
-  sequenceSeed: number;
+  contentType: InsightCoverContentType;
   sourceFile: File | null;
   setSourceFile: React.Dispatch<React.SetStateAction<File | null>>;
   clearUploadedAsset: () => void;
@@ -3574,6 +3584,8 @@ interface InsightFormModalProps {
 
 function InsightFormModal({
   editingItem,
+  coverImage,
+  setCoverImage,
   onClose,
   onSave,
   showProjectSync,
@@ -3582,7 +3594,6 @@ function InsightFormModal({
   setSyncClientIds,
   entityLabel,
   contentType,
-  sequenceSeed,
   sourceFile,
   setSourceFile,
   clearUploadedAsset,
@@ -3594,31 +3605,12 @@ function InsightFormModal({
 }: InsightFormModalProps) {
   const [editorValue, setEditorValue] = useState<ArticleEditorValue | null>(null);
   const [editorDocument, setEditorDocument] = useState<any>(buildEditorDocument((editingItem as any)?.contentJson, editingItem?.content, (editingItem as any)?.contentHtml));
-  const [coverPresets, setCoverPresets] = useState<CoverPreset[]>([]);
-  const [selectedPresetId, setSelectedPresetId] = useState('');
-  const [isPresetLoading, setIsPresetLoading] = useState(false);
   const [titleValue, setTitleValue] = useState(editingItem?.title || '');
   const [excerptValue, setExcerptValue] = useState(editingItem?.excerpt || '');
   const [selectedTopics, setSelectedTopics] = useState<ResourceTopic[]>(editingItem?.topics || ['战略']);
-  const presetUploadInputRef = useRef<HTMLInputElement>(null);
-
-  const loadPresets = useCallback(async () => {
-    setIsPresetLoading(true);
-    const result = await fetchCoverPresets(contentType);
-    if (result.ok && result.data) {
-      const presetList = result.data;
-      setCoverPresets(presetList);
-      setSelectedPresetId((prev) => {
-        if (editingItem?.coverPresetId) return editingItem.coverPresetId;
-        if (editingItem?.id) return prev;
-        if (prev) return prev;
-        if (!presetList.length) return '';
-        const nextPreset = presetList[sequenceSeed % presetList.length];
-        return nextPreset?.id || presetList[0].id;
-      });
-    }
-    setIsPresetLoading(false);
-  }, [contentType, editingItem?.coverPresetId, editingItem?.id, sequenceSeed]);
+  const coverUploadInputRef = useRef<HTMLInputElement>(null);
+  const defaultCoverImage = getDefaultCoverImage(contentType);
+  const effectiveCoverImage = coverImage || editingItem?.coverImage || defaultCoverImage;
 
   useEffect(() => {
     setEditorValue(null);
@@ -3628,14 +3620,7 @@ function InsightFormModal({
     setSelectedTopics(editingItem?.topics || ['战略']);
   }, [editingItem?.id, editingItem?.title, editingItem?.excerpt, editingItem?.topics, editingItem?.content, (editingItem as any)?.contentJson, (editingItem as any)?.contentHtml]);
 
-  useEffect(() => {
-    setSelectedPresetId(editingItem?.coverPresetId || '');
-    void loadPresets();
-  }, [editingItem?.coverPresetId, loadPresets]);
-
-  const selectedPreset = coverPresets.find((item) => item.id === selectedPresetId);
-
-  const handleUploadPreset = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadCover = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
 
@@ -3645,36 +3630,8 @@ function InsightFormModal({
       e.target.value = '';
       return;
     }
-
-    const created = await createCoverPreset({
-      contentType,
-      imageUrl: uploaded.data.url,
-      title: file.name.replace(/\.[^.]+$/, ''),
-      sourceType: 'upload',
-    });
-
-    if (!created.ok || !created.data) {
-      alert(created.error || '封面新增失败');
-      e.target.value = '';
-      return;
-    }
-
-    await loadPresets();
-    setSelectedPresetId(created.data.id);
+    setCoverImage(uploaded.data.url);
     e.target.value = '';
-  };
-
-  const handleDeletePreset = async (presetId: string) => {
-    const preset = coverPresets.find((item) => item.id === presetId);
-    if (!preset) return;
-    if (!window.confirm(`确定删除封面“${preset.title}”吗？`)) return;
-    const result = await deleteCoverPreset(presetId);
-    if (!result.ok) {
-      alert(result.error || '删除封面失败');
-      return;
-    }
-    await loadPresets();
-    setSelectedPresetId((prev) => (prev === presetId ? '' : prev));
   };
 
   const handleAiPrefillClick = async () => {
@@ -3718,76 +3675,40 @@ function InsightFormModal({
             onChange={handleFileSelect}
             className="hidden"
           />
+          <input
+            ref={coverUploadInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleUploadCover}
+            className="hidden"
+          />
 
           <div className="border border-gray-200 rounded-2xl p-4 bg-gray-50/80">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
-                <p className="text-sm font-semibold text-gray-900">可用封面</p>
-                <p className="text-xs text-gray-500">发布时默认使用这里的通用封面，可删除和新增。</p>
+                <p className="text-sm font-semibold text-gray-900">封面预览</p>
+                <p className="text-xs text-gray-500">默认使用系统封面，你也可以上传图片替换；恢复默认后会回到这张封面。</p>
               </div>
               <div className="flex items-center gap-2">
-                <input
-                  ref={presetUploadInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleUploadPreset}
-                  className="hidden"
-                />
                 <button
                   type="button"
-                  onClick={() => presetUploadInputRef.current?.click()}
+                  onClick={() => coverUploadInputRef.current?.click()}
                   className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                 >
-                  新增封面
+                  上传替换封面
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCoverImage(defaultCoverImage)}
+                  className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  恢复默认封面
                 </button>
               </div>
             </div>
-
-            {isPresetLoading ? (
-              <div className="text-sm text-gray-500">封面加载中…</div>
-            ) : coverPresets.length === 0 ? (
-              <div className="text-sm text-gray-500">当前还没有可用封面。</div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {coverPresets.map((preset) => {
-                  const active = preset.id === selectedPresetId;
-                  return (
-                    <div
-                      key={preset.id}
-                      className={`relative rounded-2xl overflow-hidden border-2 transition-all ${
-                        active ? 'border-purple-500 shadow-lg shadow-purple-100' : 'border-gray-200'
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setSelectedPresetId(preset.id)}
-                        className="block w-full text-left"
-                      >
-                        <img src={preset.imageUrl} alt={preset.title} className="w-full aspect-[16/9] object-cover" />
-                        <div className="px-3 py-2 bg-white">
-                          <p className="text-sm font-medium text-gray-900 truncate">{preset.title}</p>
-                        </div>
-                      </button>
-                      <div className="absolute top-2 right-2 flex items-center gap-2">
-                        {active ? (
-                          <span className="px-2 py-1 rounded-full bg-purple-600 text-white text-xs">已选中</span>
-                        ) : null}
-                        <button
-                          type="button"
-                          onClick={() => void handleDeletePreset(preset.id)}
-                          className="p-1.5 rounded-full bg-white/90 text-rose-600 hover:bg-white"
-                          title="删除封面"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            <input type="hidden" name="coverPresetId" value={selectedPresetId} />
-            <input type="hidden" name="coverPresetImage" value={selectedPreset?.imageUrl || editingItem?.coverImage || ''} />
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+              <img src={effectiveCoverImage} alt={`${entityLabel}封面`} className="w-full aspect-[16/9] object-cover" />
+            </div>
           </div>
 
           <div>
