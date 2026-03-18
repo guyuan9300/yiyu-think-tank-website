@@ -60,6 +60,11 @@ const DEFAULT_METHODOLOGY_COVER = '/images/default-covers/methodology-default.sv
 const getDefaultCoverImage = (contentType: InsightCoverContentType) =>
   contentType === 'insight' ? DEFAULT_INSIGHT_COVER : DEFAULT_METHODOLOGY_COVER;
 
+const MAX_ADMIN_UPLOAD_SIZE = 64 * 1024 * 1024;
+const RECOMMENDED_ADMIN_UPLOAD_SIZE = 50 * 1024 * 1024;
+const getAdminUploadHint = (extensions: string) =>
+  `支持 ${extensions}；建议控制在 ${Math.round(RECOMMENDED_ADMIN_UPLOAD_SIZE / 1024 / 1024)}MB 以内，当前上传上限为 ${Math.round(MAX_ADMIN_UPLOAD_SIZE / 1024 / 1024)}MB。`;
+
 const buildEditorDocument = (contentJson: any, legacyContent?: string | null, contentHtml?: string | null) => {
   if (contentJson && typeof contentJson === 'object') {
     return contentJson;
@@ -106,6 +111,20 @@ import {
   type ClientProject,
   type CourseRecommendation,
 } from '../lib/strategySyncCloud';
+
+const validateAdminUploadSize = (
+  file: File,
+  setMessage: React.Dispatch<React.SetStateAction<{ type: 'success' | 'error'; text: string } | null>>
+) => {
+  if (file.size > MAX_ADMIN_UPLOAD_SIZE) {
+    setMessage({
+      type: 'error',
+      text: `文件过大：${file.name} 为 ${formatFileSize(file.size)}，超过当前 ${Math.round(MAX_ADMIN_UPLOAD_SIZE / 1024 / 1024)}MB 上传上限。建议先压缩后再上传。`,
+    });
+    return false;
+  }
+  return true;
+};
 
 // Props
 interface AdminDashboardProps {
@@ -673,6 +692,10 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         alert('请选择 PDF 格式的文件');
         return;
       }
+      if (!validateAdminUploadSize(file, setMessage)) {
+        e.target.value = '';
+        return;
+      }
       setUploadedReportAsset(null);
       setReportFile(file);
     }
@@ -687,6 +710,10 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     if (file) {
       if (!isValidPdfFile(file)) {
         alert('请选择 PDF 格式的文件');
+        return;
+      }
+      if (!validateAdminUploadSize(file, setMessage)) {
+        e.target.value = '';
         return;
       }
       setUploadedBookAsset(null);
@@ -709,6 +736,10 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         alert('请选择 PDF 或 DOCX 格式的文件');
         return;
       }
+      if (!validateAdminUploadSize(file, setMessage)) {
+        e.target.value = '';
+        return;
+      }
       setUploadedInsightAsset(null);
       setInsightFile(file);
     }
@@ -719,6 +750,10 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     if (file) {
       if (!isValidAiSourceFile(file)) {
         alert('请选择 PDF 或 DOCX 格式的文件');
+        return;
+      }
+      if (!validateAdminUploadSize(file, setMessage)) {
+        e.target.value = '';
         return;
       }
       setUploadedMethodologyAsset(null);
@@ -3310,7 +3345,7 @@ function ReportFormModal({
           {/* 报告文件上传 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              报告文件 <span className="text-gray-400 text-xs">(支持 PDF 格式)</span>
+              报告文件 <span className="text-gray-400 text-xs">({getAdminUploadHint('PDF')})</span>
             </label>
 
             {reportFile ? (
@@ -3392,7 +3427,7 @@ function ReportFormModal({
                     选择PDF文件
                   </button>
                   
-                  <p className="text-xs mt-4 text-gray-500">上传后会随报告一起保存到后台记录中。</p>
+                  <p className="text-xs mt-4 text-gray-500">上传后会随报告一起保存到后台记录中。{getAdminUploadHint('PDF')}</p>
                 </div>
               </div>
             )}
@@ -3783,7 +3818,7 @@ function InsightFormModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              源文件 <span className="text-gray-400 text-xs">(支持 PDF / DOCX，用于 AI 填充)</span>
+              源文件 <span className="text-gray-400 text-xs">({getAdminUploadHint('PDF / DOCX')}用于 AI 填充)</span>
             </label>
 
             {sourceFile ? (
@@ -3844,6 +3879,7 @@ function InsightFormModal({
                     <Upload className="w-5 h-5" />
                     选择内容文件
                   </button>
+                  <p className="text-xs mt-4 text-gray-500">{getAdminUploadHint('PDF / DOCX')}</p>
                 </div>
               </div>
             )}
@@ -4251,7 +4287,7 @@ function BookFormModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              书籍文件 <span className="text-gray-400 text-xs">(支持 PDF 格式)</span>
+              书籍文件 <span className="text-gray-400 text-xs">({getAdminUploadHint('PDF')})</span>
             </label>
 
             {bookFile ? (
@@ -4315,7 +4351,7 @@ function BookFormModal({
                     <Upload className="w-5 h-5" />
                     选择 PDF 文件
                   </button>
-                  <p className="text-xs mt-4 text-gray-500">保存后会把文件地址写入腾讯云内容配置。</p>
+                  <p className="text-xs mt-4 text-gray-500">{getAdminUploadHint('PDF')}</p>
                 </div>
               </div>
             )}
