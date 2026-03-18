@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   AlertCircle,
   CalendarClock,
@@ -6,10 +6,8 @@ import {
   ClipboardList,
   Clock3,
   Files,
-  Globe,
   GraduationCap,
   LayoutGrid,
-  LogOut,
   MessageSquare,
   Plus,
   Sparkles,
@@ -42,8 +40,6 @@ const adminCard = 'bg-white rounded-2xl border border-gray-100 shadow-sm';
 
 type Props = {
   onNavigate?: (page: string) => void;
-  onNavigateHome?: () => void;
-  onLogout?: () => void;
   showHeader?: boolean;
   viewMode?: 'admin' | 'frontend';
   accessMode?: StrategyAccessMode;
@@ -194,8 +190,6 @@ function SectionHeader({
 
 export default function AdminStrategyCompanionConceptPage({
   onNavigate,
-  onNavigateHome,
-  onLogout,
   showHeader = true,
   viewMode = 'admin',
   accessMode = 'admin',
@@ -214,15 +208,6 @@ export default function AdminStrategyCompanionConceptPage({
   const [publishing, setPublishing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const adminHeaderDate = useMemo(
-    () => new Intl.DateTimeFormat('zh-CN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      weekday: 'long',
-    }).format(new Date()),
-    []
-  );
 
   useEffect(() => {
     if (isFrontend) {
@@ -457,39 +442,6 @@ export default function AdminStrategyCompanionConceptPage({
       {showHeader ? <Header isLoggedIn userType="client" onNavigate={onNavigate} /> : null}
 
       <main className={containerClass}>
-        {canEdit && (
-          <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-slate-900">战略陪伴</h1>
-              <p className="text-[14px] text-slate-500">运营中枢 · 今天是 {adminHeaderDate}</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  if (onNavigateHome) {
-                    onNavigateHome();
-                    return;
-                  }
-                  onNavigate?.('home');
-                }}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
-              >
-                <Globe className="w-4 h-4" />
-                回到首页
-              </button>
-              <button
-                type="button"
-                onClick={onLogout}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#6F61FF] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#5c4df4]"
-              >
-                <LogOut className="w-4 h-4" />
-                退出登录
-              </button>
-            </div>
-          </section>
-        )}
-
         {canEdit && (
           <section className={`${sectionCard} p-3 sm:p-4`}>
             <div className="inline-flex rounded-2xl border border-slate-200 bg-white p-1">

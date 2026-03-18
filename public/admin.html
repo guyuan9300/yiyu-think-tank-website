@@ -1932,7 +1932,7 @@
       }
       if (normalizedTarget === 'homeBtn') {
         const basePath = window.location.pathname.replace(/admin\.html$/, '');
-        const targetUrl = `${window.location.origin}${basePath}?page=home`;
+        const targetUrl = `${window.location.origin}${basePath}`;
         if (window.top && window.top !== window) {
           window.top.location.href = targetUrl;
         } else {
