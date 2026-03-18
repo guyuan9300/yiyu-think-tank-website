@@ -282,28 +282,86 @@ function extractDocxInlineHtml(fragment, relMap) {
   return parts.join('');
 }
 
+function getDocxParagraphStyle(paragraphXml) {
+  return String(paragraphXml.match(/<w:pStyle[^>]+w:val="([^"]+)"/)?.[1] || '').trim();
+}
+
+function getDocxParagraphMaxFontSize(paragraphXml) {
+  const matches = Array.from(String(paragraphXml || '').matchAll(/<w:sz[^>]+w:val="(\d+)"/g));
+  const sizes = matches
+    .map((match) => Number.parseInt(match[1], 10))
+    .filter((value) => Number.isFinite(value));
+  return sizes.length ? Math.max(...sizes) : 0;
+}
+
+function docxParagraphHasBold(paragraphXml) {
+  return /<w:b(?:\s|\/|>)/.test(String(paragraphXml || ''));
+}
+
+function classifyDocxParagraph(paragraphXml, innerText) {
+  const styleName = getDocxParagraphStyle(paragraphXml).toLowerCase();
+  const maxFontSize = getDocxParagraphMaxFontSize(paragraphXml);
+  const isBold = docxParagraphHasBold(paragraphXml);
+  const normalizedText = normalizeExtractedText(innerText);
+
+  if (!normalizedText) return 'skip';
+  if (styleName.includes('listbullet')) return 'ul';
+  if (styleName.includes('listnumber')) return 'ol';
+  if (styleName.includes('title')) return 'h2';
+  if (styleName.includes('heading1') || styleName.includes('heading 1')) return 'h2';
+  if (styleName.includes('heading2') || styleName.includes('heading 2')) return 'h3';
+  if (styleName.includes('heading3') || styleName.includes('heading 3')) return 'h4';
+
+  // Heuristic fallback for Chinese Word docs that rely on typography instead of paragraph styles.
+  if (isBold && maxFontSize >= 34) return 'h2';
+  if (isBold && maxFontSize >= 28) return 'h3';
+  if (isBold && maxFontSize >= 24 && normalizedText.length <= 36) return 'h4';
+  if (/^(第[一二三四五六七八九十0-9]+[章节部分]|[一二三四五六七八九十]+、|[（(]?[一二三四五六七八九十0-9]+[)）])/u.test(normalizedText) && normalizedText.length <= 42) {
+    return 'h3';
+  }
+
+  return 'p';
+}
+
 function convertDocxXmlToHtml(documentXml, relXml) {
   const relMap = parseDocxRelationships(relXml);
   const paragraphs = String(documentXml || '').match(/<w:p\b[\s\S]*?<\/w:p>/g) || [];
   const blocks = [];
+  let listState = null;
+
+  const flushList = () => {
+    if (!listState || !listState.items.length) return;
+    blocks.push(`<${listState.tag}>${listState.items.join('')}</${listState.tag}>`);
+    listState = null;
+  };
 
   for (const paragraphXml of paragraphs) {
     const innerHtml = extractDocxInlineHtml(paragraphXml, relMap).trim();
     if (!innerHtml) continue;
+    const paragraphKind = classifyDocxParagraph(paragraphXml, innerHtml);
 
-    const styleName = paragraphXml.match(/<w:pStyle[^>]+w:val="([^"]+)"/)?.[1] || '';
-    if (/heading/i.test(styleName)) {
-      const headingLevel = Number.parseInt(styleName.replace(/\D+/g, ''), 10);
-      const normalizedLevel = Number.isFinite(headingLevel)
-        ? Math.min(4, Math.max(2, headingLevel))
-        : 2;
-      blocks.push(`<h${normalizedLevel}>${innerHtml}</h${normalizedLevel}>`);
+    if (paragraphKind === 'skip') {
       continue;
     }
 
+    if (paragraphKind === 'ul' || paragraphKind === 'ol') {
+      if (!listState || listState.tag !== paragraphKind) {
+        flushList();
+        listState = { tag: paragraphKind, items: [] };
+      }
+      listState.items.push(`<li>${innerHtml}</li>`);
+      continue;
+    }
+
+    flushList();
+    if (paragraphKind === 'h2' || paragraphKind === 'h3' || paragraphKind === 'h4') {
+      blocks.push(`<${paragraphKind}>${innerHtml}</${paragraphKind}>`);
+      continue;
+    }
     blocks.push(`<p>${innerHtml}</p>`);
   }
 
+  flushList();
   return blocks.join('\n');
 }
 

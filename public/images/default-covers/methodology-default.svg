@@ -1,31 +1,27 @@
 <svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="1600" height="900" fill="#F3EFE7"/>
-  <rect x="72" y="72" width="1456" height="756" rx="40" fill="url(#bg)"/>
-  <rect x="128" y="128" width="1344" height="644" rx="34" fill="#FBF8F1"/>
-  <rect x="128" y="128" width="268" height="644" rx="34" fill="#233A32"/>
-  <text x="186" y="238" fill="#FAF6EE" font-size="40" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="700">益语方法论</text>
-  <text x="186" y="292" fill="#CFE0D8" font-size="21" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-weight="500" letter-spacing="4">YIYU METHOD FRAMEWORK</text>
-  <line x1="186" y1="348" x2="322" y2="348" stroke="#84A698" stroke-width="4" stroke-linecap="round"/>
-  <text x="186" y="430" fill="#EEF5F1" font-size="26" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">问题定义</text>
-  <text x="186" y="482" fill="#EEF5F1" font-size="26" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">结构拆解</text>
-  <text x="186" y="534" fill="#EEF5F1" font-size="26" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">路径设计</text>
-  <text x="186" y="586" fill="#EEF5F1" font-size="26" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">行动闭环</text>
-  <text x="452" y="234" fill="#8A6B44" font-size="24" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="600" letter-spacing="3">方法工具</text>
-  <text x="452" y="350" fill="#1F2937" font-size="86" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="700">METHOD</text>
-  <text x="452" y="430" fill="#324D43" font-size="44" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="600">把经验沉淀成框架</text>
-  <text x="452" y="498" fill="#7C6542" font-size="28" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="400">为战略陪伴、项目设计与组织协同提供可复用的方法工具。</text>
-  <rect x="452" y="602" width="230" height="48" rx="24" fill="#233A32"/>
-  <text x="567" y="633" text-anchor="middle" fill="#FAF6EE" font-size="23" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-weight="600" letter-spacing="2">METHOD KIT</text>
-  <rect x="986" y="214" width="342" height="338" rx="30" fill="#F4E8D3"/>
-  <path d="M1060 302H1254" stroke="#233A32" stroke-width="14" stroke-linecap="round"/>
-  <path d="M1157 205V399" stroke="#233A32" stroke-width="14" stroke-linecap="round"/>
-  <rect x="1018" y="396" width="278" height="22" rx="11" fill="#233A32"/>
-  <rect x="1018" y="444" width="240" height="16" rx="8" fill="#8F7758" fill-opacity="0.28"/>
-  <rect x="1018" y="476" width="254" height="16" rx="8" fill="#8F7758" fill-opacity="0.28"/>
+  <rect width="1600" height="900" fill="#F2EEE6"/>
+  <rect x="72" y="72" width="1456" height="756" rx="38" fill="url(#bg)"/>
+  <rect x="128" y="128" width="260" height="644" rx="30" fill="#243A33"/>
+  <rect x="428" y="128" width="1044" height="644" rx="30" fill="#FBF8F1"/>
+  <text x="184" y="240" fill="#FAF6EE" font-size="40" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="700">益语方法论</text>
+  <text x="184" y="294" fill="#CFE0D8" font-size="21" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-weight="500" letter-spacing="4">YIYU METHOD FRAMEWORK</text>
+  <line x1="184" y1="350" x2="320" y2="350" stroke="#84A698" stroke-width="4" stroke-linecap="round"/>
+  <text x="184" y="432" fill="#EEF5F1" font-size="25" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">问题定义</text>
+  <text x="184" y="482" fill="#EEF5F1" font-size="25" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">结构拆解</text>
+  <text x="184" y="532" fill="#EEF5F1" font-size="25" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">行动闭环</text>
+  <text x="484" y="244" fill="#866740" font-size="22" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="600" letter-spacing="3">益语智库内容栏目</text>
+  <text x="484" y="362" fill="#1F2937" font-size="92" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-weight="700" letter-spacing="1">METHOD</text>
+  <text x="484" y="438" fill="#304B42" font-size="46" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="600">把经验沉淀成可复用的方法</text>
+  <text x="484" y="520" fill="#7A6648" font-size="28" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="400">为战略陪伴、组织协作与项目设计提供结构清楚、可直接使用的方法工具。</text>
+  <rect x="1052" y="250" width="254" height="214" rx="28" fill="#E8D5B6"/>
+  <path d="M1118 356H1240" stroke="#243A33" stroke-width="14" stroke-linecap="round"/>
+  <path d="M1179 295V417" stroke="#243A33" stroke-width="14" stroke-linecap="round"/>
+  <rect x="1052" y="516" width="320" height="18" rx="9" fill="#A68862" fill-opacity="0.34"/>
+  <rect x="1052" y="552" width="278" height="18" rx="9" fill="#A68862" fill-opacity="0.24"/>
   <defs>
     <linearGradient id="bg" x1="72" y1="72" x2="1528" y2="828" gradientUnits="userSpaceOnUse">
       <stop stop-color="#F7F2E7"/>
-      <stop offset="1" stop-color="#E8DED0"/>
+      <stop offset="1" stop-color="#E6DCCF"/>
     </linearGradient>
   </defs>
 </svg>

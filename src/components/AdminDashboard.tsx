@@ -231,6 +231,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   
   // 封面图状态
   const [coverImage, setCoverImage] = useState<string | null>(null);
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [bookCoverImage, setBookCoverImage] = useState<string | null>(null);
   const [reportPages, setReportPages] = useState<number>(0);
   const [bookPages, setBookPages] = useState<number>(0);
@@ -823,6 +824,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       const data = result.data as any;
       if (data.coverImage) {
         setCoverImage(data.coverImage);
+        setCoverImageFile(null);
       }
       if (typeof data.pages === 'number' && data.pages > 0) {
         setReportPages(data.pages);
@@ -924,6 +926,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       const data = result.data as any;
       if (data.coverImage) {
         setCoverImage(data.coverImage);
+        setCoverImageFile(null);
       }
       return {
         title: String(data.title ?? ''),
@@ -1501,6 +1504,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       setEditingItem(null);
                       setSyncClientIds([]);
                       setCoverImage(null);
+                      setCoverImageFile(null);
                       setInsightFile(null);
                       setUploadedInsightAsset(null);
                       setShowInsightForm(true);
@@ -1561,6 +1565,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                   setEditingItem(article);
                                   setSyncClientIds([]);
                                   setCoverImage(article.coverImage || null);
+                                  setCoverImageFile(null);
                                   setInsightFile(null);
                                   setUploadedInsightAsset(null);
                                   (async () => {
@@ -1689,6 +1694,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       setEditingItem(null);
                       setSyncClientIds([]);
                       setCoverImage(null);
+                      setCoverImageFile(null);
                       setMethodologyFile(null);
                       setUploadedMethodologyAsset(null);
                       setShowMethodologyForm(true);
@@ -1735,6 +1741,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                 onClick={() => {
                                   setEditingItem(item as any);
                                   setCoverImage(item.coverImage || null);
+                                  setCoverImageFile(null);
                                   setMethodologyFile(null);
                                   setUploadedMethodologyAsset(null);
                                   setShowMethodologyForm(true);
@@ -2675,11 +2682,13 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
             <InsightFormModal
               editingItem={editingItem as InsightArticle | null}
               coverImage={coverImage}
+              setCoverImageFile={setCoverImageFile}
               setCoverImage={setCoverImage}
               onClose={() => {
                 setShowInsightForm(false);
                 setEditingItem(null);
                 setCoverImage(null);
+                setCoverImageFile(null);
                 setInsightFile(null);
                 setUploadedInsightAsset(null);
               }}
@@ -2692,8 +2701,20 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
                 const selectedTopics = (formData.getAll('topics') as string[]).map(s => s.trim()).filter(Boolean) as any;
                 const current = editingItem as InsightArticle | null;
+                let nextCoverImage = coverImage || current?.coverImage || getDefaultCoverImage('insight');
                 let nextFileUrl = current?.fileUrl;
                 let nextFileSize = current?.fileSize;
+
+                if (coverImageFile) {
+                  const uploadedCover = await uploadAdminAsset(coverImageFile, 'cover-preset', { contentType: 'insight' });
+                  if (!uploadedCover.ok || !uploadedCover.data) {
+                    setMessage({ type: 'error', text: uploadedCover.error || '文章封面上传失败' });
+                    return;
+                  }
+                  nextCoverImage = uploadedCover.data.url;
+                  setCoverImageFile(null);
+                  setCoverImage(nextCoverImage);
+                }
 
                 if (uploadedInsightAsset?.url) {
                   nextFileUrl = uploadedInsightAsset.url;
@@ -2725,7 +2746,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
                   status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
                   showOnHome: false,
-                  coverImage: coverImage || current?.coverImage || getDefaultCoverImage('insight'),
+                  coverImage: nextCoverImage,
                   fileUrl: nextFileUrl,
                   fileSize: nextFileSize,
                   shareEnabled: false,
@@ -2747,6 +2768,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setShowInsightForm(false);
                 setEditingItem(null);
                 setCoverImage(null);
+                setCoverImageFile(null);
                 setInsightFile(null);
                 setUploadedInsightAsset(null);
                 setMessage({ type: 'success', text: '文章已保存，已返回未筛选的文章列表。' });
@@ -2773,11 +2795,13 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
             <InsightFormModal
               editingItem={editingItem as any}
               coverImage={coverImage}
+              setCoverImageFile={setCoverImageFile}
               setCoverImage={setCoverImage}
               onClose={() => {
                 setShowMethodologyForm(false);
                 setEditingItem(null);
                 setCoverImage(null);
+                setCoverImageFile(null);
                 setMethodologyFile(null);
                 setUploadedMethodologyAsset(null);
               }}
@@ -2790,8 +2814,20 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
                 const selectedTopics = (formData.getAll('topics') as string[]).map(s => s.trim()).filter(Boolean) as any;
                 const current = editingItem as Methodology | null;
+                let nextCoverImage = coverImage || current?.coverImage || getDefaultCoverImage('methodology');
                 let nextFileUrl = current?.fileUrl;
                 let nextFileSize = current?.fileSize;
+
+                if (coverImageFile) {
+                  const uploadedCover = await uploadAdminAsset(coverImageFile, 'cover-preset', { contentType: 'methodology' });
+                  if (!uploadedCover.ok || !uploadedCover.data) {
+                    setMessage({ type: 'error', text: uploadedCover.error || '方法论封面上传失败' });
+                    return;
+                  }
+                  nextCoverImage = uploadedCover.data.url;
+                  setCoverImageFile(null);
+                  setCoverImage(nextCoverImage);
+                }
 
                 if (uploadedMethodologyAsset?.url) {
                   nextFileUrl = uploadedMethodologyAsset.url;
@@ -2823,7 +2859,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
                   status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
                   showOnHome: false,
-                  coverImage: coverImage || current?.coverImage || getDefaultCoverImage('methodology'),
+                  coverImage: nextCoverImage,
                   fileUrl: nextFileUrl,
                   fileSize: nextFileSize,
                 };
@@ -2840,6 +2876,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setShowMethodologyForm(false);
                 setEditingItem(null);
                 setCoverImage(null);
+                setCoverImageFile(null);
                 setMethodologyFile(null);
                 setUploadedMethodologyAsset(null);
                 setMessage({ type: 'success', text: '方法论已保存！' });
@@ -3569,6 +3606,7 @@ function ReportFormModal({
 interface InsightFormModalProps {
   editingItem: InsightArticle | Methodology | null;
   coverImage: string | null;
+  setCoverImageFile: React.Dispatch<React.SetStateAction<File | null>>;
   setCoverImage: React.Dispatch<React.SetStateAction<string | null>>;
   onClose: () => void;
   onSave: (e: React.FormEvent<HTMLFormElement>) => void;
@@ -3603,6 +3641,7 @@ interface InsightFormModalProps {
 function InsightFormModal({
   editingItem,
   coverImage,
+  setCoverImageFile,
   setCoverImage,
   onClose,
   onSave,
@@ -3641,14 +3680,12 @@ function InsightFormModal({
   const handleUploadCover = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
-
-    const uploaded = await uploadAdminAsset(file, 'cover-preset', { contentType });
-    if (!uploaded.ok || !uploaded.data) {
-      alert(uploaded.error || '封面上传失败');
-      e.target.value = '';
-      return;
-    }
-    setCoverImage(uploaded.data.url);
+    setCoverImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setCoverImage((event.target?.result as string) || defaultCoverImage);
+    };
+    reader.readAsDataURL(file);
     e.target.value = '';
   };
 
@@ -3717,7 +3754,10 @@ function InsightFormModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setCoverImage(defaultCoverImage)}
+                  onClick={() => {
+                    setCoverImageFile(null);
+                    setCoverImage(defaultCoverImage);
+                  }}
                   className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                 >
                   恢复默认封面
