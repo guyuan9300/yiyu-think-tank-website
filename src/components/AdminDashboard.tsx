@@ -1104,72 +1104,86 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
-    const selectedTopics = (formData.getAll('topics') as string[])
-      .map(s => s.trim())
-      .filter(Boolean) as any;
+    try {
+      const selectedTopics = (formData.getAll('topics') as string[])
+        .map(s => s.trim())
+        .filter(Boolean) as any;
 
-    const current = editingItem as Report | null;
-    let nextFileUrl = current?.fileUrl;
-    let nextFileSize = current?.fileSize;
+      const current = editingItem as Report | null;
+      let nextFileUrl = current?.fileUrl;
+      let nextFileSize = current?.fileSize;
 
-    if (uploadedReportAsset?.url) {
-      nextFileUrl = uploadedReportAsset.url;
-      nextFileSize = uploadedReportAsset.size;
-    } else if (reportFile) {
-      const uploaded = await uploadAdminAsset(reportFile, 'report');
-      if (!uploaded.ok || !uploaded.data) {
-        setMessage({ type: 'error', text: uploaded.error || '报告文件上传失败' });
-        return;
+      if (uploadedReportAsset?.url) {
+        nextFileUrl = uploadedReportAsset.url;
+        nextFileSize = uploadedReportAsset.size;
+      } else if (reportFile) {
+        const uploaded = await uploadAdminAsset(reportFile, 'report');
+        if (!uploaded.ok || !uploaded.data) {
+          throw new Error(uploaded.error || '报告文件上传失败');
+        }
+        nextFileUrl = uploaded.data.url;
+        nextFileSize = uploaded.data.size;
+        setUploadedReportAsset({
+          url: uploaded.data.url,
+          size: uploaded.data.size,
+          filename: uploaded.data.filename,
+        });
       }
-      nextFileUrl = uploaded.data.url;
-      nextFileSize = uploaded.data.size;
-      setUploadedReportAsset({
-        url: uploaded.data.url,
-        size: uploaded.data.size,
-        filename: uploaded.data.filename,
+
+      const reportData: Partial<Report> = {
+        id: current ? current.id : undefined,
+        // 必填项缺失时先用“待补充”占位
+        title: (formData.get('title') as string) || current?.title || '待补充',
+        publisher: (formData.get('publisher') as string) || current?.publisher || '待补充',
+        // 统一四类标签（必填）
+        topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
+        summary: (formData.get('summary') as string) || current?.summary || '待补充',
+        version: current?.version || '',
+        format: ['PDF'],
+        // 必填项：封面缺失时用占位
+        coverImage: coverImage || current?.coverImage || 'images/placeholders/document.svg',
+        pages: reportPages || current?.pages,
+        // publishDate 作为前台展示用的发布日期；后台列表统一显示真实 updatedAt
+        publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
+        status: reportStatus,
+        showOnHome: false,
+        // 报告文件信息
+        fileUrl: nextFileUrl,
+        fileSize: nextFileSize,
+      };
+
+      const saved = await saveReportDirect(reportData);
+
+      if (syncClientIds.length > 0) {
+        try {
+          await syncInternalCourseRecommendations({
+            internalType: 'report',
+            internalId: saved.id,
+            title: saved.title,
+            selectedProjectIds: syncClientIds,
+          });
+        } catch (syncError) {
+          console.error('syncInternalCourseRecommendations(report) failed', syncError);
+        }
+      }
+
+      refreshAllData();
+      setShowReportForm(false);
+      setEditingItem(null);
+      setCoverImage(null);
+      setReportPages(0);
+      setCalculatedReadTime('');
+      setReportFile(null);
+      setUploadedReportAsset(null);
+      setReportStatus('published');
+      setMessage({ type: 'success', text: '报告已发布，前台报告库可见！' });
+    } catch (error) {
+      console.error('handleSaveReport failed', error);
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : '报告保存失败，请重试',
       });
     }
-
-    const reportData: Partial<Report> = {
-      id: current ? current.id : undefined,
-      // 必填项缺失时先用“待补充”占位
-      title: (formData.get('title') as string) || current?.title || '待补充',
-      publisher: (formData.get('publisher') as string) || current?.publisher || '待补充',
-      // 统一四类标签（必填）
-      topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
-      summary: (formData.get('summary') as string) || current?.summary || '待补充',
-      version: current?.version || '',
-      format: ['PDF'],
-      // 必填项：封面缺失时用占位
-      coverImage: coverImage || current?.coverImage || 'images/placeholders/document.svg',
-      pages: reportPages || current?.pages,
-      // publishDate 作为前台展示用的发布日期；后台列表统一显示真实 updatedAt
-      publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
-      status: reportStatus,
-      showOnHome: false,
-      // 报告文件信息
-      fileUrl: nextFileUrl,
-      fileSize: nextFileSize,
-    };
-
-    const saved = await saveReportDirect(reportData);
-    // 同步到战略陪伴客户（多选）
-    await syncInternalCourseRecommendations({
-      internalType: 'report',
-      internalId: saved.id,
-      title: saved.title,
-      selectedProjectIds: syncClientIds,
-    });
-    refreshAllData();
-    setShowReportForm(false);
-    setEditingItem(null);
-    setCoverImage(null);
-    setReportPages(0);
-    setCalculatedReadTime('');
-    setReportFile(null);
-    setUploadedReportAsset(null);
-    setReportStatus('published');
-    setMessage({ type: 'success', text: '报告已发布，前台报告库可见！' });
   };
 
   // 删除报告
