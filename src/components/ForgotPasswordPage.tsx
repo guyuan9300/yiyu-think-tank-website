@@ -20,8 +20,8 @@ export function ForgotPasswordPage({ onNavigate }: ForgotPasswordPageProps) {
 
   const formatError = (message?: string) => {
     if (!message) return '发送失败，请稍后重试';
-    if (message.includes('短信服务未配置')) {
-      return '手机验证码通道正在备案开通中，暂时无法发送短信验证码。请先使用邮箱找回密码。';
+    if (message.includes('短信服务未配置') || message.includes('短信模板未配置')) {
+      return '短信服务暂时不可用，请稍后重试或先使用邮箱找回密码。';
     }
     return message;
   };
@@ -126,7 +126,7 @@ export function ForgotPasswordPage({ onNavigate }: ForgotPasswordPageProps) {
                   <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="请输入手机号码" className="w-full py-3 pl-12 pr-4 rounded-full border border-border/60 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all bg-white" required />
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  当前短信备案审核中，如发送失败，请先切换到邮箱找回。
+                  若当前手机号已绑定到账号，短信验证码可直接用于找回密码。
                 </p>
               </div>
             )}

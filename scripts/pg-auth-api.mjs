@@ -1758,13 +1758,18 @@ async function sendSmsCode(phone, scene, code) {
   const signName = process.env.TC_SMS_SIGN;
   const smsSdkAppId = process.env.TC_SMS_SDK_APP_ID;
   if (!templateId || !signName || !smsSdkAppId) throw new Error('短信模板未配置');
-  await client.SendSms({
+  const response = await client.SendSms({
     SmsSdkAppId: smsSdkAppId,
     SignName: signName,
     TemplateId: templateId,
     TemplateParamSet: [code],
     PhoneNumberSet: [`+86${phone}`],
   });
+  const firstStatus = Array.isArray(response?.SendStatusSet) ? response.SendStatusSet[0] : null;
+  if (firstStatus && firstStatus.Code && firstStatus.Code !== 'Ok') {
+    throw new Error(firstStatus.Message || `短信发送失败(${firstStatus.Code})`);
+  }
+  return response;
 }
 
 async function sendEmailCode(email, scene, code) {
