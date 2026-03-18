@@ -6,8 +6,10 @@ import {
   ClipboardList,
   Clock3,
   Files,
+  Globe,
   GraduationCap,
   LayoutGrid,
+  LogOut,
   MessageSquare,
   Plus,
   Sparkles,
@@ -39,6 +41,8 @@ const card = 'bg-white/92 backdrop-blur-sm rounded-[22px] border border-slate-20
 
 type Props = {
   onNavigate?: (page: string) => void;
+  onNavigateHome?: () => void;
+  onLogout?: () => void;
   showHeader?: boolean;
   viewMode?: 'admin' | 'frontend';
   accessMode?: StrategyAccessMode;
@@ -189,6 +193,8 @@ function SectionHeader({
 
 export default function AdminStrategyCompanionConceptPage({
   onNavigate,
+  onNavigateHome,
+  onLogout,
   showHeader = true,
   viewMode = 'admin',
   accessMode = 'admin',
@@ -207,6 +213,15 @@ export default function AdminStrategyCompanionConceptPage({
   const [publishing, setPublishing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const adminHeaderDate = useMemo(
+    () => new Intl.DateTimeFormat('zh-CN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'long',
+    }).format(new Date()),
+    []
+  );
 
   useEffect(() => {
     if (isFrontend) {
@@ -284,19 +299,45 @@ export default function AdminStrategyCompanionConceptPage({
 
   const currentProject = snapshot?.project;
 
-  const saveSnapshot = async () => {
+  const saveAndPublishSnapshot = async () => {
     if (!snapshot?.project?.id) return;
     setSaving(true);
     setMessage(null);
-    const result = await saveStrategyProjectSnapshot(snapshot.project.id, snapshot);
-    setSaving(false);
-    if (!result.ok || !result.data) {
-      setMessage({ type: 'error', text: result.error || '战略陪伴内容保存失败。' });
+
+    const saveResult = await saveStrategyProjectSnapshot(snapshot.project.id, snapshot);
+    if (!saveResult.ok || !saveResult.data) {
+      setSaving(false);
+      setMessage({ type: 'error', text: saveResult.error || '战略陪伴内容保存失败。' });
       return;
     }
-    setSnapshot(cloneSnapshot(result.data));
-    setProjectOptions((prev) => prev.map((item) => (item.id === result.data?.project.id ? { ...item, ...result.data.project } : item)));
-    setMessage({ type: 'success', text: '战略陪伴内容已保存到腾讯云。' });
+
+    let nextSnapshot = cloneSnapshot(saveResult.data);
+
+    if (!nextSnapshot.project.isPublished) {
+      const publishResult = await publishStrategyProject(snapshot.project.id, true);
+      if (!publishResult.ok || !publishResult.data) {
+        setSaving(false);
+        setSnapshot(nextSnapshot);
+        setProjectOptions((prev) => prev.map((item) => (item.id === nextSnapshot.project.id ? { ...item, ...nextSnapshot.project } : item)));
+        setMessage({ type: 'error', text: publishResult.error || '已保存到腾讯云，但发布到前台失败。' });
+        return;
+      }
+      nextSnapshot = {
+        ...nextSnapshot,
+        project: {
+          ...nextSnapshot.project,
+          ...publishResult.data,
+        },
+      };
+    }
+
+    setSaving(false);
+    setSnapshot(nextSnapshot);
+    setProjectOptions((prev) => prev.map((item) => (item.id === nextSnapshot.project.id ? { ...item, ...nextSnapshot.project } : item)));
+    setMessage({
+      type: 'success',
+      text: nextSnapshot.project.isPublished ? '战略陪伴内容已保存并同步前台。' : '战略陪伴内容已保存。',
+    });
   };
 
   const togglePublish = async () => {
@@ -412,6 +453,41 @@ export default function AdminStrategyCompanionConceptPage({
 
       <main className={`max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 ${showHeader ? 'pt-24' : 'pt-6'} pb-20 ${spacing}`}>
         {canEdit && (
+          <section className={`${card} px-5 py-5 sm:px-6 sm:py-5`}>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-slate-900">战略陪伴</h1>
+                <p className="text-[14px] text-slate-500">运营中枢 · 今天是 {adminHeaderDate}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onNavigateHome) {
+                      onNavigateHome();
+                      return;
+                    }
+                    onNavigate?.('home');
+                  }}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                >
+                  <Globe className="w-4 h-4" />
+                  回到首页
+                </button>
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#6F61FF] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#5c4df4]"
+                >
+                  <LogOut className="w-4 h-4" />
+                  退出登录
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {canEdit && (
           <section className={`${card} p-3 sm:p-4`}>
             <div className="inline-flex rounded-2xl border border-slate-200 bg-white p-1">
               <button
@@ -470,14 +546,16 @@ export default function AdminStrategyCompanionConceptPage({
                     </button>
                     <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
                       <button onClick={() => setMode('immersive')} className={`px-3 py-1.5 rounded-lg text-[13px] ${mode === 'immersive' ? 'bg-slate-900 text-white' : 'text-slate-600'}`}>沉浸模式</button>
-                      <button onClick={() => setMode('work')} className={`px-3 py-1.5 rounded-lg text-[13px] ${mode === 'work' ? 'bg-slate-900 text-white' : 'text-slate-600'}`}>编辑模式</button>
+                    <button onClick={() => setMode('work')} className={`px-3 py-1.5 rounded-lg text-[13px] ${mode === 'work' ? 'bg-slate-900 text-white' : 'text-slate-600'}`}>编辑模式</button>
                     </div>
-                    <button onClick={saveSnapshot} disabled={saving} className="px-4 py-2 rounded-xl bg-blue-600 text-white text-[13px] font-medium hover:bg-blue-700 disabled:opacity-60">
-                      {saving ? '保存中…' : '保存到云端'}
+                    <button onClick={saveAndPublishSnapshot} disabled={saving} className="px-4 py-2 rounded-xl bg-blue-600 text-white text-[13px] font-medium hover:bg-blue-700 disabled:opacity-60">
+                      {saving ? '保存并发布中…' : snapshot.project.isPublished ? '保存并同步前台' : '保存并发布到前台'}
                     </button>
-                    <button onClick={togglePublish} disabled={publishing} className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-[13px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60">
-                      {publishing ? '处理中…' : snapshot.project.isPublished ? '取消发布' : '发布前台'}
-                    </button>
+                    {snapshot.project.isPublished ? (
+                      <button onClick={togglePublish} disabled={publishing} className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-[13px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60">
+                        {publishing ? '处理中…' : '取消发布'}
+                      </button>
+                    ) : null}
                   </>
                 )}
               </div>

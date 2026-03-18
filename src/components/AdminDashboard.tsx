@@ -2497,7 +2497,11 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
           {/* 战略客户管理 */}
           {activeMenu === 'strategy-companion' && (
-            <AdminStrategyCompanionConceptPage showHeader={false} />
+            <AdminStrategyCompanionConceptPage
+              showHeader={false}
+              onNavigateHome={onNavigateHome}
+              onLogout={onLogout}
+            />
           )}
 
           {/* 评论管理 */}
