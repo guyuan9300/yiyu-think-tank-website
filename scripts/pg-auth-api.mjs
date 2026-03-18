@@ -243,9 +243,15 @@ function parseDocxRelationships(input) {
 
 function wrapInlineMarks(text, runXml) {
   let html = escapeHtml(text).replace(/\n/g, '<br />');
+  const fontSizeMatch = String(runXml || '').match(/<w:sz[^>]+w:val="(\d+)"/);
+  const fontSizeHalfPoints = fontSizeMatch ? Number.parseInt(fontSizeMatch[1], 10) : 0;
+  const fontSizePx = fontSizeHalfPoints > 0
+    ? Math.max(20, Math.round((fontSizeHalfPoints / 2) * (96 / 72)))
+    : 0;
   if (/<w:b(?:\s|\/|>)/.test(runXml)) html = `<strong>${html}</strong>`;
   if (/<w:i(?:\s|\/|>)/.test(runXml)) html = `<em>${html}</em>`;
   if (/<w:u(?:\s|\/|>)/.test(runXml)) html = `<u>${html}</u>`;
+  if (fontSizePx) html = `<span style="font-size: ${fontSizePx}px">${html}</span>`;
   return html;
 }
 
@@ -298,6 +304,22 @@ function docxParagraphHasBold(paragraphXml) {
   return /<w:b(?:\s|\/|>)/.test(String(paragraphXml || ''));
 }
 
+function getDocxParagraphFontSizePx(paragraphXml, paragraphKind) {
+  const maxFontSize = getDocxParagraphMaxFontSize(paragraphXml);
+  if (paragraphKind === 'blank') return 0;
+  if (!maxFontSize) {
+    if (paragraphKind === 'h2') return 34;
+    if (paragraphKind === 'h3') return 28;
+    if (paragraphKind === 'h4') return 24;
+    return 20;
+  }
+  const px = Math.round((maxFontSize / 2) * (96 / 72));
+  if (paragraphKind === 'h2') return Math.max(34, px);
+  if (paragraphKind === 'h3') return Math.max(28, px);
+  if (paragraphKind === 'h4') return Math.max(24, px);
+  return Math.max(20, px);
+}
+
 function classifyDocxParagraph(paragraphXml, innerText) {
   const styleName = getDocxParagraphStyle(paragraphXml).toLowerCase();
   const maxFontSize = getDocxParagraphMaxFontSize(paragraphXml);
@@ -338,6 +360,9 @@ function convertDocxXmlToHtml(documentXml, relXml) {
   for (const paragraphXml of paragraphs) {
     const innerHtml = extractDocxInlineHtml(paragraphXml, relMap).trim();
     const paragraphKind = classifyDocxParagraph(paragraphXml, innerHtml);
+    const paragraphFontSizePx = getDocxParagraphFontSizePx(paragraphXml, paragraphKind);
+    const sizeStyle = paragraphFontSizePx ? ` style="font-size: ${paragraphFontSizePx}px"` : '';
+    const wrappedInnerHtml = paragraphFontSizePx ? `<span style="font-size: ${paragraphFontSizePx}px">${innerHtml}</span>` : innerHtml;
 
     if (paragraphKind === 'blank') {
       flushList();
@@ -352,16 +377,16 @@ function convertDocxXmlToHtml(documentXml, relXml) {
         flushList();
         listState = { tag: paragraphKind, items: [] };
       }
-      listState.items.push(`<li>${innerHtml}</li>`);
+      listState.items.push(`<li>${wrappedInnerHtml}</li>`);
       continue;
     }
 
     flushList();
     if (paragraphKind === 'h2' || paragraphKind === 'h3' || paragraphKind === 'h4') {
-      blocks.push(`<${paragraphKind}>${innerHtml}</${paragraphKind}>`);
+      blocks.push(`<${paragraphKind}>${wrappedInnerHtml}</${paragraphKind}>`);
       continue;
     }
-    blocks.push(`<p>${innerHtml}</p>`);
+    blocks.push(`<p>${wrappedInnerHtml}</p>`);
   }
 
   flushList();
