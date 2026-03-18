@@ -38,6 +38,7 @@ type Mode = 'immersive' | 'work';
 type AdminSurface = 'companion' | 'cases';
 
 const card = 'bg-white/92 backdrop-blur-sm rounded-[22px] border border-slate-200/70 shadow-[0_8px_28px_rgba(15,23,42,0.045)]';
+const adminCard = 'bg-white rounded-2xl border border-gray-100 shadow-sm';
 
 type Props = {
   onNavigate?: (page: string) => void;
@@ -298,6 +299,8 @@ export default function AdminStrategyCompanionConceptPage({
   }, [accessMode, canEdit, isFrontend, selectedProjectId]);
 
   const currentProject = snapshot?.project;
+  const sectionCard = canEdit ? adminCard : card;
+  const heroCard = canEdit ? `${adminCard} p-8 sm:p-10` : `${card} p-10 sm:p-12 bg-gradient-to-b from-white to-slate-50/70 border-slate-200/80`;
 
   const saveAndPublishSnapshot = async () => {
     if (!snapshot?.project?.id) return;
@@ -423,14 +426,14 @@ export default function AdminStrategyCompanionConceptPage({
     });
   };
 
-  const spacing = mode === 'immersive' ? 'space-y-12 lg:space-y-14' : 'space-y-8';
+  const spacing = canEdit ? 'space-y-6' : mode === 'immersive' ? 'space-y-12 lg:space-y-14' : 'space-y-8';
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F7F7F5]">
         {showHeader ? <Header isLoggedIn userType="client" onNavigate={onNavigate} /> : null}
         <main className={`max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 ${showHeader ? 'pt-24' : 'pt-6'} pb-20`}>
-          <div className={`${card} p-10 text-center text-slate-500`}>正在加载战略陪伴内容…</div>
+          <div className={`${sectionCard} p-10 text-center text-slate-500`}>正在加载战略陪伴内容…</div>
         </main>
       </div>
     );
@@ -441,7 +444,7 @@ export default function AdminStrategyCompanionConceptPage({
       <div className="min-h-screen bg-[#F7F7F5]">
         {showHeader ? <Header isLoggedIn userType="client" onNavigate={onNavigate} /> : null}
         <main className={`max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 ${showHeader ? 'pt-24' : 'pt-6'} pb-20`}>
-          <div className={`${card} p-10 text-center text-slate-500`}>当前没有可展示的机构战略陪伴页面。</div>
+          <div className={`${sectionCard} p-10 text-center text-slate-500`}>当前没有可展示的机构战略陪伴页面。</div>
         </main>
       </div>
     );
@@ -453,7 +456,7 @@ export default function AdminStrategyCompanionConceptPage({
 
       <main className={`max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 ${showHeader ? 'pt-24' : 'pt-6'} pb-20 ${spacing}`}>
         {canEdit && (
-          <section className={`${card} px-5 py-5 sm:px-6 sm:py-5`}>
+          <section className={`${sectionCard} px-5 py-5 sm:px-6 sm:py-5`}>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1">
                 <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-slate-900">战略陪伴</h1>
@@ -488,7 +491,7 @@ export default function AdminStrategyCompanionConceptPage({
         )}
 
         {canEdit && (
-          <section className={`${card} p-3 sm:p-4`}>
+          <section className={`${sectionCard} p-3 sm:p-4`}>
             <div className="inline-flex rounded-2xl border border-slate-200 bg-white p-1">
               <button
                 type="button"
@@ -519,7 +522,7 @@ export default function AdminStrategyCompanionConceptPage({
         )}
 
         {(canEdit || canSelectPublishedOnly) && (
-          <section className={`${card} p-5 sm:p-6`}>
+          <section className={`${sectionCard} p-5 sm:p-6`}>
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-wrap items-center gap-3">
                 {projectOptions.length > 0 && (
@@ -566,7 +569,7 @@ export default function AdminStrategyCompanionConceptPage({
           </section>
         )}
 
-        <section className={`${card} p-10 sm:p-12 bg-gradient-to-b from-white to-slate-50/70 border-slate-200/80`}>
+        <section className={heroCard}>
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between mb-10">
             <div className="flex items-start gap-4">
               {currentProject?.logoUrl ? (
@@ -662,7 +665,7 @@ export default function AdminStrategyCompanionConceptPage({
           )}
         </section>
 
-        <section className={`${card} p-7 sm:p-8`}>
+        <section className={`${sectionCard} p-7 sm:p-8`}>
           <SectionHeader
             title="战略里程碑时间线（Strategic Timeline）"
             subtitle=""
@@ -718,7 +721,7 @@ export default function AdminStrategyCompanionConceptPage({
           </div>
         </section>
 
-        <section className={`${card} p-7 sm:p-8`}>
+        <section className={`${sectionCard} p-7 sm:p-8`}>
           <SectionHeader title="年度北极星与承诺（North Star & Commitments）" subtitle="年度北极星 + 年度交付 + 14天动作" icon={<LayoutGrid className="w-4 h-4" />} />
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -757,7 +760,7 @@ export default function AdminStrategyCompanionConceptPage({
           </div>
         </section>
 
-        <section className={`${card} p-7 sm:p-8`}>
+        <section className={`${sectionCard} p-7 sm:p-8`}>
           <SectionHeader
             title="本季度重点目标（Quarter Focus Goals）"
             subtitle=""
@@ -799,7 +802,7 @@ export default function AdminStrategyCompanionConceptPage({
           </div>
         </section>
 
-        <section className={`${card} p-7 sm:p-8`}>
+        <section className={`${sectionCard} p-7 sm:p-8`}>
           <SectionHeader
             title="近期事件（Recent Events）"
             subtitle="跨部门近期推进与战略陪伴价值呈现"
@@ -855,7 +858,7 @@ export default function AdminStrategyCompanionConceptPage({
           </div>
         </section>
 
-        <section className={`${card} p-7 sm:p-8`}>
+        <section className={`${sectionCard} p-7 sm:p-8`}>
           <SectionHeader
             title="文档资源与会议记录（Resources & Records）"
             subtitle=""
@@ -974,7 +977,7 @@ export default function AdminStrategyCompanionConceptPage({
         </section>
 
         {accessMode === 'public' && isFrontend && (
-          <section className={`${card} p-7 sm:p-8`}>
+          <section className={`${sectionCard} p-7 sm:p-8`}>
             <SectionHeader title="体验说明" subtitle="" icon={<Sparkles className="w-4 h-4" />} />
             <div className="text-[14px] text-slate-600 leading-7">
               当前为战略陪伴展示页。绑定机构后，你将直接看到对应机构的战略陪伴页面；管理员则可查看所有已发布机构页并切换筛选。
