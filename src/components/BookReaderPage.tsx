@@ -322,13 +322,11 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
           className="max-w-4xl mx-auto w-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col"
           style={isMobile ? undefined : { height: `${contentHeightPx}px`, minHeight: '720px' }}
         >
-          {/* 文件信息条 */}
+          {/* 阅读信息条 */}
           <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
             <div className="flex items-center gap-3 min-w-0">
               <BookOpen className="w-4 h-4 text-gray-500 shrink-0" />
-              <span className="text-sm text-gray-600 truncate">
-                {decodeURIComponent((((book as any).fileUrl || '').split('/').pop()) || '书籍文件')}
-              </span>
+              <span className="text-sm text-gray-600">书籍阅读</span>
             </div>
             <div className="text-sm text-gray-500">
               {(book as any).pages ? `${(book as any).pages} 页` : 'PDF 阅读'}
@@ -355,7 +353,7 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
                 </div>
               ) : (
                 <object
-                  data={`${(book as any).fileUrl}#view=FitH`}
+                  data={`${(book as any).fileUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`}
                   type="application/pdf"
                   className="w-full h-full"
                   style={{ width: '100%', height: '100%', display: 'block' }}

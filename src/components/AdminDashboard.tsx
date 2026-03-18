@@ -1918,15 +1918,15 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full table-fixed">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">报告信息</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">发布机构</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标签</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最近修改</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                        <th className="w-[34%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">报告信息</th>
+                        <th className="w-[22%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">发布机构</th>
+                        <th className="w-[16%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标签</th>
+                        <th className="w-[12%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最近修改</th>
+                        <th className="w-[8%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                        <th className="w-[8%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -1935,18 +1935,22 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
                               {/* isHot removed (topics-only schema) */}
-                              <div>
-                                <p className="font-medium text-gray-900">{report.title}</p>
+                              <div className="min-w-0">
+                                <p className="font-medium leading-7 text-gray-900 break-words">{report.title}</p>
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                            {report.publisher}
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            <div className="break-words leading-6">{report.publisher}</div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full">
-                              {(report.topics || []).join(' / ')}
-                            </span>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-wrap gap-2">
+                              {(report.topics || []).map((topic: string, index: number) => (
+                                <span key={`${report.id}-${topic}-${index}`} className="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full">
+                                  {topic}
+                                </span>
+                              ))}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                             {formatModifiedDate(report.updatedAt, report.publishDate)}

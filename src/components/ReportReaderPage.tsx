@@ -361,13 +361,11 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
           className="max-w-4xl mx-auto w-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col"
           style={isMobile ? undefined : { height: `${contentHeightPx}px`, minHeight: '720px' }}
         >
-          {/* 文件信息条 */}
+          {/* 阅读信息条 */}
           <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
             <div className="flex items-center gap-3 min-w-0">
               <FileText className="w-4 h-4 text-gray-500 shrink-0" />
-              <span className="text-sm text-gray-600 truncate">
-                {decodeURIComponent((report.fileUrl || '').split('/').pop() || '报告文件')}
-              </span>
+              <span className="text-sm text-gray-600">报告阅读</span>
             </div>
             <div className="text-sm text-gray-500">
               {report.pages ? `${report.pages} 页` : 'PDF 阅读'}
@@ -394,7 +392,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
                 </div>
               ) : (
                 <object
-                  data={`${report.fileUrl}#view=FitH`}
+                  data={`${report.fileUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`}
                   type="application/pdf"
                   className="w-full h-full"
                   style={{ width: '100%', height: '100%', display: 'block' }}
