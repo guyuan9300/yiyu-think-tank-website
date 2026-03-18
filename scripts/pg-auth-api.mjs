@@ -103,9 +103,39 @@ const ARK_BASE_URL = (process.env.ARK_BASE_URL || 'https://ark.cn-beijing.volces
 const ARK_MODEL = process.env.ARK_MODEL || 'doubao-seed-2-0-lite-260215';
 const AI_PREFILL_TOPIC_OPTIONS = ['战略', '业务设计', '组织', 'AI 技术'];
 const execFileAsync = promisify(execFile);
+let ocrCapabilityPromise = null;
 
 function isArkReady() {
   return Boolean(process.env.ARK_API_KEY && ARK_MODEL);
+}
+
+async function getOcrCapabilities() {
+  if (!ocrCapabilityPromise) {
+    ocrCapabilityPromise = (async () => {
+      const result = {
+        binaryReady: false,
+        chineseReady: false,
+        languages: new Set(),
+      };
+      try {
+        const langs = await execFileAsync('tesseract', ['--list-langs'], {
+          maxBuffer: 8 * 1024 * 1024,
+        });
+        const lines = String(langs.stdout || '')
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .filter((line) => !/^list of available languages/i.test(line));
+        result.binaryReady = true;
+        result.languages = new Set(lines);
+        result.chineseReady = result.languages.has('chi_sim');
+      } catch {
+        // OCR tool is optional; fallback will be handled later.
+      }
+      return result;
+    })();
+  }
+  return ocrCapabilityPromise;
 }
 
 function safeTopicArray(input) {
@@ -233,7 +263,74 @@ async function extractPdfArtifacts(filePath, options = {}) {
     metaAuthor: safeText(pdfInfo.Author || ''),
     text: normalizeExtractedText(textResult.stdout),
     fileExt: '.pdf',
+    ocrUsed: false,
   };
+}
+
+async function extractPdfArtifactsWithOcr(filePath, options = {}) {
+  const pdfData = await extractPdfArtifacts(filePath, options);
+  if (pdfData.text.length >= 80) {
+    return pdfData;
+  }
+
+  const ocr = await getOcrCapabilities();
+  if (!ocr.binaryReady || !ocr.chineseReady) {
+    return pdfData;
+  }
+
+  const maxPages = Number.isFinite(Number(options.ocrPages)) ? Number(options.ocrPages) : 4;
+  const dpi = Number.isFinite(Number(options.ocrDpi)) ? Number(options.ocrDpi) : 120;
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'yiyu-ocr-'));
+
+  try {
+    const prefix = path.join(tempDir, 'page');
+    await execFileAsync(
+      'pdftoppm',
+      ['-png', '-r', String(dpi), '-f', '1', '-l', String(maxPages), filePath, prefix],
+      { maxBuffer: 16 * 1024 * 1024 }
+    );
+
+    const imageFiles = (await fs.readdir(tempDir))
+      .filter((name) => /^page-\d+\.png$/i.test(name))
+      .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+
+    if (!imageFiles.length) {
+      return pdfData;
+    }
+
+    const textChunks = [];
+    for (const imageName of imageFiles) {
+      const imagePath = path.join(tempDir, imageName);
+      const { stdout } = await execFileAsync(
+        'tesseract',
+        [imagePath, 'stdout', '-l', 'chi_sim+eng', '--psm', '6'],
+        {
+          maxBuffer: 16 * 1024 * 1024,
+          env: {
+            ...process.env,
+            OMP_THREAD_LIMIT: '1',
+          },
+        }
+      );
+      const normalized = normalizeExtractedText(stdout);
+      if (normalized) {
+        textChunks.push(normalized);
+      }
+    }
+
+    const ocrText = normalizeExtractedText(textChunks.join('\n\n'));
+    if (!ocrText) {
+      return pdfData;
+    }
+
+    return {
+      ...pdfData,
+      text: ocrText,
+      ocrUsed: true,
+    };
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+  }
 }
 
 async function renderPdfFirstPageCover(filePath, contentType) {
@@ -258,8 +355,12 @@ async function extractSourceArtifacts(filePath, contentType) {
     return extractDocxArtifacts(filePath);
   }
   if (ext === '.pdf') {
-    const maxPages = contentType === 'insight' || contentType === 'methodology' ? 40 : 12;
-    return extractPdfArtifacts(filePath, { maxPages });
+    const isArticleLike = contentType === 'insight' || contentType === 'methodology';
+    return extractPdfArtifactsWithOcr(filePath, {
+      maxPages: isArticleLike ? 30 : 10,
+      ocrPages: isArticleLike ? 3 : 2,
+      ocrDpi: 110,
+    });
   }
   throw new Error('当前仅支持解析 PDF 或 DOCX 文件');
 }
@@ -327,6 +428,7 @@ function buildAiPrefillMessages(contentType, sourceData, filePath) {
       title: sourceData.metaTitle,
       author: sourceData.metaAuthor,
       pages: sourceData.pages,
+      ocrUsed: Boolean(sourceData.ocrUsed),
     },
     fileExcerpt: sourceData.text.slice(0, isArticleLike ? 12000 : 8000),
     outputSchema: isArticleLike
@@ -2600,6 +2702,7 @@ const server = http.createServer(async (req, res) => {
           && process.env.AUTH_EMAIL_FROM
         ),
         aiReady: isArkReady(),
+        ocrReady: (await getOcrCapabilities()).binaryReady && (await getOcrCapabilities()).chineseReady,
         paymentReady: getPaymentReadiness().enabled,
       });
     }
