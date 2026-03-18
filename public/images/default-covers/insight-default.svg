@@ -3,16 +3,14 @@
   <rect x="72" y="72" width="1456" height="756" rx="38" fill="url(#bg)"/>
   <rect x="128" y="128" width="244" height="644" rx="30" fill="#123B68"/>
   <rect x="412" y="128" width="1060" height="644" rx="30" fill="#F8FBFF"/>
-  <text x="184" y="240" fill="#F8FBFF" font-size="40" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="700">洞察文章</text>
-  <text x="184" y="294" fill="#C7D7EA" font-size="21" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-weight="500" letter-spacing="4">INSIGHT ARTICLE</text>
-  <line x1="184" y1="350" x2="316" y2="350" stroke="#8FB3D9" stroke-width="4" stroke-linecap="round"/>
-  <text x="184" y="432" fill="#EAF2FB" font-size="25" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">研究判断</text>
-  <text x="184" y="482" fill="#EAF2FB" font-size="25" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">趋势分析</text>
-  <text x="184" y="532" fill="#EAF2FB" font-size="25" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">行动线索</text>
-  <text x="468" y="244" fill="#4A6B89" font-size="22" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="600" letter-spacing="3">益语智库内容栏目</text>
-  <text x="468" y="362" fill="#102A43" font-size="94" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-weight="700" letter-spacing="1">INSIGHT</text>
-  <text x="468" y="438" fill="#1F3D5B" font-size="46" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="600">把变化看清，把判断说透</text>
-  <text x="468" y="520" fill="#627D98" font-size="28" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="400">围绕战略、组织与 AI，把复杂议题整理成清晰、可执行的洞察。</text>
+  <text x="250" y="260" text-anchor="middle" fill="#F8FBFF" font-size="42" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="700">洞察文章</text>
+  <line x1="184" y1="332" x2="316" y2="332" stroke="#8FB3D9" stroke-width="4" stroke-linecap="round"/>
+  <text x="250" y="434" text-anchor="middle" fill="#EAF2FB" font-size="25" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">研究判断</text>
+  <text x="250" y="484" text-anchor="middle" fill="#EAF2FB" font-size="25" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">趋势分析</text>
+  <text x="250" y="534" text-anchor="middle" fill="#EAF2FB" font-size="25" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">行动线索</text>
+  <text x="468" y="330" fill="#102A43" font-size="94" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-weight="700" letter-spacing="1">INSIGHT</text>
+  <text x="468" y="418" fill="#1F3D5B" font-size="46" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="600">把变化看清，把判断说透</text>
+  <text x="468" y="500" fill="#627D98" font-size="28" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="400">围绕战略、组织与 AI，把复杂议题整理成清晰、可执行的洞察。</text>
   <path d="M872 626C964 576 1060 550 1160 552C1254 554 1344 579 1424 626" stroke="#9CB3CA" stroke-width="4" stroke-linecap="round"/>
   <path d="M838 676C958 638 1066 620 1166 628C1254 634 1342 653 1422 694" stroke="#748DA9" stroke-width="4" stroke-linecap="round"/>
   <defs>
