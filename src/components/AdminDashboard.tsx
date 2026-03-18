@@ -1004,6 +1004,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       selectedProjectIds: string[];
     }) => {
       const { internalType, internalId, title, selectedProjectIds } = params;
+      if (!selectedProjectIds?.length) {
+        return;
+      }
       const selected = new Set((selectedProjectIds || []).filter(Boolean));
 
       const all = await getCourseRecommendations();
@@ -1052,7 +1055,11 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         }
       });
 
-      await Promise.all(tasks);
+      try {
+        await Promise.all(tasks);
+      } catch (error) {
+        console.error('syncInternalCourseRecommendations failed', error);
+      }
     },
     []
   );
@@ -2693,85 +2700,90 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setUploadedInsightAsset(null);
               }}
               onSave={async (e: React.FormEvent<HTMLFormElement>) => {
-                e.preventDefault();
-                const formData = new FormData(e.currentTarget);
-                const contentJsonRaw = (formData.get('contentJson') as string) || '';
-                const contentHtml = (formData.get('contentHtml') as string) || '';
-                const contentText = (formData.get('contentText') as string) || '';
+                try {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  const contentJsonRaw = (formData.get('contentJson') as string) || '';
+                  const contentHtml = (formData.get('contentHtml') as string) || '';
+                  const contentText = (formData.get('contentText') as string) || '';
 
-                const selectedTopics = (formData.getAll('topics') as string[]).map(s => s.trim()).filter(Boolean) as any;
-                const current = editingItem as InsightArticle | null;
-                let nextCoverImage = coverImage || current?.coverImage || getDefaultCoverImage('insight');
-                let nextFileUrl = current?.fileUrl;
-                let nextFileSize = current?.fileSize;
+                  const selectedTopics = (formData.getAll('topics') as string[]).map(s => s.trim()).filter(Boolean) as any;
+                  const current = editingItem as InsightArticle | null;
+                  let nextCoverImage = coverImage || current?.coverImage || getDefaultCoverImage('insight');
+                  let nextFileUrl = current?.fileUrl;
+                  let nextFileSize = current?.fileSize;
 
-                if (coverImageFile) {
-                  const uploadedCover = await uploadAdminAsset(coverImageFile, 'cover-preset', { contentType: 'insight' });
-                  if (!uploadedCover.ok || !uploadedCover.data) {
-                    setMessage({ type: 'error', text: uploadedCover.error || '文章封面上传失败' });
-                    return;
+                  if (coverImageFile) {
+                    const uploadedCover = await uploadAdminAsset(coverImageFile, 'cover-preset', { contentType: 'insight' });
+                    if (!uploadedCover.ok || !uploadedCover.data) {
+                      setMessage({ type: 'error', text: uploadedCover.error || '文章封面上传失败' });
+                      return;
+                    }
+                    nextCoverImage = uploadedCover.data.url;
+                    setCoverImageFile(null);
+                    setCoverImage(nextCoverImage);
                   }
-                  nextCoverImage = uploadedCover.data.url;
-                  setCoverImageFile(null);
-                  setCoverImage(nextCoverImage);
-                }
 
-                if (uploadedInsightAsset?.url) {
-                  nextFileUrl = uploadedInsightAsset.url;
-                  nextFileSize = uploadedInsightAsset.size;
-                } else if (insightFile) {
-                  const uploaded = await uploadAdminAsset(insightFile, 'insight');
-                  if (!uploaded.ok || !uploaded.data) {
-                    setMessage({ type: 'error', text: uploaded.error || '文章源文件上传失败' });
-                    return;
+                  if (uploadedInsightAsset?.url) {
+                    nextFileUrl = uploadedInsightAsset.url;
+                    nextFileSize = uploadedInsightAsset.size;
+                  } else if (insightFile) {
+                    const uploaded = await uploadAdminAsset(insightFile, 'insight');
+                    if (!uploaded.ok || !uploaded.data) {
+                      setMessage({ type: 'error', text: uploaded.error || '文章源文件上传失败' });
+                      return;
+                    }
+                    nextFileUrl = uploaded.data.url;
+                    nextFileSize = uploaded.data.size;
+                    setUploadedInsightAsset({
+                      url: uploaded.data.url,
+                      size: uploaded.data.size,
+                      filename: uploaded.data.filename,
+                    });
                   }
-                  nextFileUrl = uploaded.data.url;
-                  nextFileSize = uploaded.data.size;
-                  setUploadedInsightAsset({
-                    url: uploaded.data.url,
-                    size: uploaded.data.size,
-                    filename: uploaded.data.filename,
+
+                  const articleData: Partial<InsightArticle> = {
+                    id: current ? current.id : undefined,
+                    title: (formData.get('title') as string) || current?.title || '待补充',
+                    excerpt: (formData.get('excerpt') as string) || current?.excerpt || '待补充',
+                    content: (formData.get('content') as string) || current?.content || '',
+                    contentJson: contentJsonRaw ? JSON.parse(contentJsonRaw) : current?.contentJson,
+                    contentHtml: contentHtml || current?.contentHtml || '',
+                    contentText: contentText || current?.contentText || '',
+                    topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
+                    publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
+                    status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
+                    showOnHome: false,
+                    coverImage: nextCoverImage,
+                    fileUrl: nextFileUrl,
+                    fileSize: nextFileSize,
+                    shareEnabled: false,
+                    shareSlug: undefined,
+                    shareTitle: undefined,
+                    shareDescription: undefined,
+                    shareImage: undefined,
+                  };
+
+                  const saved = await saveInsightDirect(articleData);
+                  await syncInternalCourseRecommendations({
+                    internalType: 'article',
+                    internalId: saved.id,
+                    title: saved.title,
+                    selectedProjectIds: syncClientIds,
                   });
+                  await refreshAllData();
+                  clearInsightFilters();
+                  setShowInsightForm(false);
+                  setEditingItem(null);
+                  setCoverImage(null);
+                  setCoverImageFile(null);
+                  setInsightFile(null);
+                  setUploadedInsightAsset(null);
+                  setMessage({ type: 'success', text: '文章已保存，已返回未筛选的文章列表。' });
+                } catch (error: any) {
+                  console.error('save insight failed', error);
+                  setMessage({ type: 'error', text: error?.message || '文章保存失败，请稍后重试' });
                 }
-
-                const articleData: Partial<InsightArticle> = {
-                  id: current ? current.id : undefined,
-                  title: (formData.get('title') as string) || current?.title || '待补充',
-                  excerpt: (formData.get('excerpt') as string) || current?.excerpt || '待补充',
-                  content: (formData.get('content') as string) || current?.content || '',
-                  contentJson: contentJsonRaw ? JSON.parse(contentJsonRaw) : current?.contentJson,
-                  contentHtml: contentHtml || current?.contentHtml || '',
-                  contentText: contentText || current?.contentText || '',
-                  topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
-                  publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
-                  status: (formData.get('status') as 'draft' | 'published') || current?.status || 'draft',
-                  showOnHome: false,
-                  coverImage: nextCoverImage,
-                  fileUrl: nextFileUrl,
-                  fileSize: nextFileSize,
-                  shareEnabled: false,
-                  shareSlug: undefined,
-                  shareTitle: undefined,
-                  shareDescription: undefined,
-                  shareImage: undefined,
-                };
-
-                const saved = await saveInsightDirect(articleData);
-                await syncInternalCourseRecommendations({
-                  internalType: 'article',
-                  internalId: saved.id,
-                  title: saved.title,
-                  selectedProjectIds: syncClientIds,
-                });
-                refreshAllData();
-                clearInsightFilters();
-                setShowInsightForm(false);
-                setEditingItem(null);
-                setCoverImage(null);
-                setCoverImageFile(null);
-                setInsightFile(null);
-                setUploadedInsightAsset(null);
-                setMessage({ type: 'success', text: '文章已保存，已返回未筛选的文章列表。' });
               }}
               showProjectSync={false}
               strategyClients={strategyClients}
