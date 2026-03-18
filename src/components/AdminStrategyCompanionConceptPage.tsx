@@ -299,8 +299,12 @@ export default function AdminStrategyCompanionConceptPage({
   }, [accessMode, canEdit, isFrontend, selectedProjectId]);
 
   const currentProject = snapshot?.project;
+  const spacing = canEdit ? 'space-y-6' : mode === 'immersive' ? 'space-y-12 lg:space-y-14' : 'space-y-8';
   const sectionCard = canEdit ? adminCard : card;
   const heroCard = canEdit ? `${adminCard} p-8 sm:p-10` : `${card} p-10 sm:p-12 bg-gradient-to-b from-white to-slate-50/70 border-slate-200/80`;
+  const containerClass = canEdit
+    ? `${spacing}`
+    : `max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 ${showHeader ? 'pt-24' : 'pt-6'} pb-20 ${spacing}`;
 
   const saveAndPublishSnapshot = async () => {
     if (!snapshot?.project?.id) return;
@@ -426,13 +430,11 @@ export default function AdminStrategyCompanionConceptPage({
     });
   };
 
-  const spacing = canEdit ? 'space-y-6' : mode === 'immersive' ? 'space-y-12 lg:space-y-14' : 'space-y-8';
-
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F7F7F5]">
         {showHeader ? <Header isLoggedIn userType="client" onNavigate={onNavigate} /> : null}
-        <main className={`max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 ${showHeader ? 'pt-24' : 'pt-6'} pb-20`}>
+        <main className={canEdit ? 'w-full' : `max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 ${showHeader ? 'pt-24' : 'pt-6'} pb-20`}>
           <div className={`${sectionCard} p-10 text-center text-slate-500`}>正在加载战略陪伴内容…</div>
         </main>
       </div>
@@ -443,7 +445,7 @@ export default function AdminStrategyCompanionConceptPage({
     return (
       <div className="min-h-screen bg-[#F7F7F5]">
         {showHeader ? <Header isLoggedIn userType="client" onNavigate={onNavigate} /> : null}
-        <main className={`max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 ${showHeader ? 'pt-24' : 'pt-6'} pb-20`}>
+        <main className={canEdit ? 'w-full' : `max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 ${showHeader ? 'pt-24' : 'pt-6'} pb-20`}>
           <div className={`${sectionCard} p-10 text-center text-slate-500`}>当前没有可展示的机构战略陪伴页面。</div>
         </main>
       </div>
@@ -454,38 +456,36 @@ export default function AdminStrategyCompanionConceptPage({
     <div className="min-h-screen bg-[#F7F7F5]">
       {showHeader ? <Header isLoggedIn userType="client" onNavigate={onNavigate} /> : null}
 
-      <main className={`max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 ${showHeader ? 'pt-24' : 'pt-6'} pb-20 ${spacing}`}>
+      <main className={containerClass}>
         {canEdit && (
-          <section className={`${sectionCard} px-5 py-5 sm:px-6 sm:py-5`}>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-1">
-                <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-slate-900">战略陪伴</h1>
-                <p className="text-[14px] text-slate-500">运营中枢 · 今天是 {adminHeaderDate}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onNavigateHome) {
-                      onNavigateHome();
-                      return;
-                    }
-                    onNavigate?.('home');
-                  }}
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
-                >
-                  <Globe className="w-4 h-4" />
-                  回到首页
-                </button>
-                <button
-                  type="button"
-                  onClick={onLogout}
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#6F61FF] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#5c4df4]"
-                >
-                  <LogOut className="w-4 h-4" />
-                  退出登录
-                </button>
-              </div>
+          <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-slate-900">战略陪伴</h1>
+              <p className="text-[14px] text-slate-500">运营中枢 · 今天是 {adminHeaderDate}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (onNavigateHome) {
+                    onNavigateHome();
+                    return;
+                  }
+                  onNavigate?.('home');
+                }}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                <Globe className="w-4 h-4" />
+                回到首页
+              </button>
+              <button
+                type="button"
+                onClick={onLogout}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#6F61FF] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#5c4df4]"
+              >
+                <LogOut className="w-4 h-4" />
+                退出登录
+              </button>
             </div>
           </section>
         )}
