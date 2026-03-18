@@ -392,7 +392,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
                 </div>
               ) : (
                 <object
-                  data={`${report.fileUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`}
+                  data={`${report.fileUrl}#view=FitH`}
                   type="application/pdf"
                   className="w-full h-full"
                   style={{ width: '100%', height: '100%', display: 'block' }}
