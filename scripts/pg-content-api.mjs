@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { execFile } from 'node:child_process';
+import { spawn } from 'node:child_process';
 
 const PORT = Number(process.env.PG_API_PORT || 8790);
 const PGHOST = process.env.PGHOST || '127.0.0.1';
@@ -32,26 +32,62 @@ function readJsonBody(req) {
 function runSql(sql) {
   return new Promise((resolve, reject) => {
     const env = { ...process.env, PGPASSWORD };
-    const args = ['-h', PGHOST, '-p', PGPORT, '-U', PGUSER, '-d', PGDATABASE, '-v', 'ON_ERROR_STOP=1', '-c', sql];
-    execFile('psql', args, { env, maxBuffer: 40 * 1024 * 1024 }, (err, stdout, stderr) => {
-      if (err) return reject(new Error(stderr || err.message));
+    const args = ['-h', PGHOST, '-p', PGPORT, '-U', PGUSER, '-d', PGDATABASE, '-v', 'ON_ERROR_STOP=1'];
+    const child = spawn('psql', args, { env });
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (chunk) => {
+      stdout += String(chunk);
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += String(chunk);
+    });
+    child.on('error', (err) => {
+      reject(err);
+    });
+    child.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(stderr || `psql exited with code ${code}`));
+        return;
+      }
       resolve(stdout);
     });
+
+    child.stdin.end(sql);
   });
 }
 
 function psqlJson(sql) {
   return new Promise((resolve, reject) => {
     const env = { ...process.env, PGPASSWORD };
-    const args = ['-h', PGHOST, '-p', PGPORT, '-U', PGUSER, '-d', PGDATABASE, '-At', '-c', `select coalesce(json_agg(t), '[]'::json)::text from (${sql}) t;`];
-    execFile('psql', args, { env, maxBuffer: 20 * 1024 * 1024 }, (err, stdout, stderr) => {
-      if (err) return reject(new Error(stderr || err.message));
+    const args = ['-h', PGHOST, '-p', PGPORT, '-U', PGUSER, '-d', PGDATABASE, '-At'];
+    const child = spawn('psql', args, { env });
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (chunk) => {
+      stdout += String(chunk);
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += String(chunk);
+    });
+    child.on('error', (err) => {
+      reject(err);
+    });
+    child.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(stderr || `psql exited with code ${code}`));
+        return;
+      }
       try {
         resolve(JSON.parse((stdout || '[]').trim() || '[]'));
       } catch (e) {
         reject(e);
       }
     });
+
+    child.stdin.end(`select coalesce(json_agg(t), '[]'::json)::text from (${sql}) t;`);
   });
 }
 
