@@ -35,38 +35,54 @@ export const refreshContentCacheFromApi = async () => {
   await bootstrapFromPgApi();
 };
 
+const numberOr = (value: unknown, fallback: number) => {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+};
+
 export const saveReportDirect = async (report: Partial<Report> | Report): Promise<Report> => {
   await refreshContentCacheFromApi();
   const reports = getReports();
   const now = new Date().toISOString();
   let saved: Report;
+  const normalizedReport = {
+    ...report,
+    likes: numberOr((report as any).likes, 0),
+    favoritesCount: numberOr((report as any).favoritesCount, 0),
+    views: numberOr(report.views, 0),
+    downloads: numberOr(report.downloads, 0),
+  };
 
-  if ('id' in report && report.id) {
-    const index = reports.findIndex(r => r.id === report.id);
+  if ('id' in normalizedReport && normalizedReport.id) {
+    const index = reports.findIndex(r => r.id === normalizedReport.id);
     if (index !== -1) {
-      reports[index] = { ...reports[index], ...report, topics: normalizeTopics((report as any).topics ?? reports[index].topics), updatedAt: now };
+      reports[index] = {
+        ...reports[index],
+        ...normalizedReport,
+        topics: normalizeTopics((normalizedReport as any).topics ?? reports[index].topics),
+        updatedAt: now,
+      };
       saved = reports[index];
     } else {
       saved = {
-        id: report.id,
-        title: report.title || '无标题报告',
-        publisher: report.publisher || '',
-        summary: report.summary || '',
-        topics: normalizeTopics((report as any).topics),
-        version: report.version || 'v1.0',
-        format: report.format || ['PDF'],
-        coverImage: report.coverImage,
-        likes: (report as any).likes,
-        favoritesCount: (report as any).favoritesCount,
-        fileUrl: report.fileUrl,
-        fileSize: report.fileSize,
-        pages: report.pages,
-        publishDate: report.publishDate || new Date().toISOString().split('T')[0],
-        status: report.status || 'draft',
-        showOnHome: report.showOnHome || false,
-        views: report.views || 0,
-        downloads: report.downloads || 0,
-        createdAt: report.createdAt || now,
+        id: normalizedReport.id,
+        title: normalizedReport.title || '无标题报告',
+        publisher: normalizedReport.publisher || '',
+        summary: normalizedReport.summary || '',
+        topics: normalizeTopics((normalizedReport as any).topics),
+        version: normalizedReport.version || 'v1.0',
+        format: normalizedReport.format || ['PDF'],
+        coverImage: normalizedReport.coverImage,
+        likes: numberOr((normalizedReport as any).likes, 0),
+        favoritesCount: numberOr((normalizedReport as any).favoritesCount, 0),
+        fileUrl: normalizedReport.fileUrl,
+        fileSize: normalizedReport.fileSize,
+        pages: normalizedReport.pages,
+        publishDate: normalizedReport.publishDate || new Date().toISOString().split('T')[0],
+        status: normalizedReport.status || 'draft',
+        showOnHome: normalizedReport.showOnHome || false,
+        views: numberOr(normalizedReport.views, 0),
+        downloads: numberOr(normalizedReport.downloads, 0),
+        createdAt: normalizedReport.createdAt || now,
         updatedAt: now,
       };
       reports.unshift(saved);
@@ -74,24 +90,24 @@ export const saveReportDirect = async (report: Partial<Report> | Report): Promis
   } else {
     saved = {
       id: `report_${Date.now()}`,
-      title: report.title || '无标题报告',
-      publisher: report.publisher || '',
-      summary: report.summary || '',
-      topics: normalizeTopics((report as any).topics),
-      version: report.version || 'v1.0',
-      format: report.format || ['PDF'],
-      coverImage: report.coverImage,
-      likes: (report as any).likes,
-      favoritesCount: (report as any).favoritesCount,
-      fileUrl: report.fileUrl,
-      fileSize: report.fileSize,
-      pages: report.pages,
-      publishDate: report.publishDate || new Date().toISOString().split('T')[0],
-      status: report.status || 'draft',
-      showOnHome: report.showOnHome || false,
-      views: report.views || 0,
-      downloads: report.downloads || 0,
-      createdAt: report.createdAt || now,
+      title: normalizedReport.title || '无标题报告',
+      publisher: normalizedReport.publisher || '',
+      summary: normalizedReport.summary || '',
+      topics: normalizeTopics((normalizedReport as any).topics),
+      version: normalizedReport.version || 'v1.0',
+      format: normalizedReport.format || ['PDF'],
+      coverImage: normalizedReport.coverImage,
+      likes: numberOr((normalizedReport as any).likes, 0),
+      favoritesCount: numberOr((normalizedReport as any).favoritesCount, 0),
+      fileUrl: normalizedReport.fileUrl,
+      fileSize: normalizedReport.fileSize,
+      pages: normalizedReport.pages,
+      publishDate: normalizedReport.publishDate || new Date().toISOString().split('T')[0],
+      status: normalizedReport.status || 'draft',
+      showOnHome: normalizedReport.showOnHome || false,
+      views: numberOr(normalizedReport.views, 0),
+      downloads: numberOr(normalizedReport.downloads, 0),
+      createdAt: normalizedReport.createdAt || now,
       updatedAt: now,
     };
     reports.unshift(saved);
@@ -122,6 +138,9 @@ export const saveInsightDirect = async (article: Partial<InsightArticle> | Insig
     shareTitle: undefined,
     shareDescription: undefined,
     shareImage: undefined,
+    views: numberOr(article.views, 0),
+    likes: numberOr(article.likes, 0),
+    favoritesCount: numberOr((article as any).favoritesCount, 0),
   };
 
   if ('id' in sanitizedArticle && sanitizedArticle.id) {
@@ -203,38 +222,44 @@ export const saveMethodologyDirect = async (item: Partial<Methodology> | Methodo
   const list = getMethodologies();
   const now = new Date().toISOString();
   let saved: Methodology;
+  const normalizedItem = {
+    ...item,
+    views: numberOr(item.views, 0),
+    likes: numberOr(item.likes, 0),
+    favoritesCount: numberOr((item as any).favoritesCount, 0),
+  };
 
-  if ('id' in item && item.id) {
-    const index = list.findIndex(r => r.id === item.id);
+  if ('id' in normalizedItem && normalizedItem.id) {
+    const index = list.findIndex(r => r.id === normalizedItem.id);
     if (index !== -1) {
       list[index] = {
         ...list[index],
-        ...item,
-        topics: normalizeTopics((item as any).topics ?? list[index].topics),
+        ...normalizedItem,
+        topics: normalizeTopics((normalizedItem as any).topics ?? list[index].topics),
         updatedAt: now,
       };
       saved = list[index];
     } else {
       saved = {
-        id: item.id,
-        title: item.title || '待补充',
-        excerpt: item.excerpt || '待补充',
-        content: item.content || '',
-        contentJson: item.contentJson,
-        contentHtml: item.contentHtml,
-        contentText: item.contentText,
-        fileUrl: item.fileUrl,
-        fileSize: item.fileSize,
-        topics: normalizeTopics((item as any).topics),
-        coverImage: item.coverImage,
-        coverPresetId: (item as any).coverPresetId,
-        publishDate: item.publishDate || new Date().toISOString().split('T')[0],
-        status: item.status || 'draft',
-        showOnHome: item.showOnHome || false,
-        views: item.views || 0,
-        likes: item.likes || 0,
-        favoritesCount: (item as any).favoritesCount || 0,
-        createdAt: item.createdAt || now,
+        id: normalizedItem.id,
+        title: normalizedItem.title || '待补充',
+        excerpt: normalizedItem.excerpt || '待补充',
+        content: normalizedItem.content || '',
+        contentJson: normalizedItem.contentJson,
+        contentHtml: normalizedItem.contentHtml,
+        contentText: normalizedItem.contentText,
+        fileUrl: normalizedItem.fileUrl,
+        fileSize: normalizedItem.fileSize,
+        topics: normalizeTopics((normalizedItem as any).topics),
+        coverImage: normalizedItem.coverImage,
+        coverPresetId: (normalizedItem as any).coverPresetId,
+        publishDate: normalizedItem.publishDate || new Date().toISOString().split('T')[0],
+        status: normalizedItem.status || 'draft',
+        showOnHome: normalizedItem.showOnHome || false,
+        views: numberOr(normalizedItem.views, 0),
+        likes: numberOr(normalizedItem.likes, 0),
+        favoritesCount: numberOr((normalizedItem as any).favoritesCount, 0),
+        createdAt: normalizedItem.createdAt || now,
         updatedAt: now,
       };
       list.unshift(saved);
@@ -242,24 +267,24 @@ export const saveMethodologyDirect = async (item: Partial<Methodology> | Methodo
   } else {
     saved = {
       id: `methodology_${Date.now()}`,
-      title: item.title || '待补充',
-      excerpt: item.excerpt || '待补充',
-      content: item.content || '',
-      contentJson: item.contentJson,
-      contentHtml: item.contentHtml,
-      contentText: item.contentText,
-      fileUrl: item.fileUrl,
-      fileSize: item.fileSize,
-      topics: normalizeTopics((item as any).topics),
-      coverImage: item.coverImage,
-      coverPresetId: (item as any).coverPresetId,
-      publishDate: item.publishDate || new Date().toISOString().split('T')[0],
-      status: item.status || 'draft',
-      showOnHome: item.showOnHome || false,
-      views: item.views || 0,
-      likes: item.likes || 0,
-      favoritesCount: (item as any).favoritesCount || 0,
-      createdAt: item.createdAt || now,
+      title: normalizedItem.title || '待补充',
+      excerpt: normalizedItem.excerpt || '待补充',
+      content: normalizedItem.content || '',
+      contentJson: normalizedItem.contentJson,
+      contentHtml: normalizedItem.contentHtml,
+      contentText: normalizedItem.contentText,
+      fileUrl: normalizedItem.fileUrl,
+      fileSize: normalizedItem.fileSize,
+      topics: normalizeTopics((normalizedItem as any).topics),
+      coverImage: normalizedItem.coverImage,
+      coverPresetId: (normalizedItem as any).coverPresetId,
+      publishDate: normalizedItem.publishDate || new Date().toISOString().split('T')[0],
+      status: normalizedItem.status || 'draft',
+      showOnHome: normalizedItem.showOnHome || false,
+      views: numberOr(normalizedItem.views, 0),
+      likes: numberOr(normalizedItem.likes, 0),
+      favoritesCount: numberOr((normalizedItem as any).favoritesCount, 0),
+      createdAt: normalizedItem.createdAt || now,
       updatedAt: now,
     };
     list.unshift(saved);
@@ -285,42 +310,49 @@ export const saveBookDirect = async (book: Partial<Book> | Book): Promise<Book> 
   let saved: Book;
   const normalizedDescription = book.description || '';
   const normalizedAbstract = book.abstract || normalizedDescription;
+  const normalizedBook = {
+    ...book,
+    likes: numberOr((book as any).likes, 0),
+    favoritesCount: numberOr((book as any).favoritesCount, 0),
+    views: numberOr(book.views, 0),
+    reviews: numberOr(book.reviews, 0),
+  };
 
-  if ('id' in book && book.id) {
-    const index = books.findIndex(b => b.id === book.id);
+  if ('id' in normalizedBook && normalizedBook.id) {
+    const index = books.findIndex(b => b.id === normalizedBook.id);
     if (index !== -1) {
       books[index] = {
         ...books[index],
-        ...book,
+        ...normalizedBook,
         description: normalizedDescription || books[index].description || '',
         abstract: normalizedAbstract || books[index].abstract || normalizedDescription || '',
-        topics: normalizeTopics((book as any).topics ?? books[index].topics),
+        topics: normalizeTopics((normalizedBook as any).topics ?? books[index].topics),
         updatedAt: now,
       };
       saved = books[index];
     } else {
       saved = {
-        id: book.id,
-        title: book.title || '无标题书籍',
-        author: book.author || '',
+        id: normalizedBook.id,
+        title: normalizedBook.title || '无标题书籍',
+        author: normalizedBook.author || '',
         description: normalizedDescription,
         abstract: normalizedAbstract,
-        topics: normalizeTopics((book as any).topics),
-        pages: (book as any).pages || 100,
-        duration: (book as any).duration || calculateReadTime((book as any).pages || 100),
-        rating: (book as any).rating || 4.5,
-        coverImage: (book as any).coverImage,
-        coverColor: (book as any).coverColor || 'from-blue-600 to-indigo-800',
-        likes: (book as any).likes || 0,
-        favoritesCount: (book as any).favoritesCount || 0,
-        fileUrl: book.fileUrl,
-        fileSize: book.fileSize,
-        publishDate: (book as any).publishDate || new Date().toISOString().split('T')[0],
-        status: book.status || 'published',
-        showOnHome: (book as any).showOnHome || false,
-        views: book.views || 0,
-        reviews: book.reviews || 0,
-        createdAt: book.createdAt || now,
+        topics: normalizeTopics((normalizedBook as any).topics),
+        pages: (normalizedBook as any).pages || 100,
+        duration: (normalizedBook as any).duration || calculateReadTime((normalizedBook as any).pages || 100),
+        rating: (normalizedBook as any).rating || 4.5,
+        coverImage: (normalizedBook as any).coverImage,
+        coverColor: (normalizedBook as any).coverColor || 'from-blue-600 to-indigo-800',
+        likes: numberOr((normalizedBook as any).likes, 0),
+        favoritesCount: numberOr((normalizedBook as any).favoritesCount, 0),
+        fileUrl: normalizedBook.fileUrl,
+        fileSize: normalizedBook.fileSize,
+        publishDate: (normalizedBook as any).publishDate || new Date().toISOString().split('T')[0],
+        status: normalizedBook.status || 'published',
+        showOnHome: (normalizedBook as any).showOnHome || false,
+        views: numberOr(normalizedBook.views, 0),
+        reviews: numberOr(normalizedBook.reviews, 0),
+        createdAt: normalizedBook.createdAt || now,
         updatedAt: now,
       };
       books.unshift(saved);
@@ -328,26 +360,26 @@ export const saveBookDirect = async (book: Partial<Book> | Book): Promise<Book> 
   } else {
     saved = {
       id: `book_${Date.now()}`,
-      title: book.title || '无标题书籍',
-      author: book.author || '',
+      title: normalizedBook.title || '无标题书籍',
+      author: normalizedBook.author || '',
       description: normalizedDescription,
       abstract: normalizedAbstract,
-      topics: normalizeTopics((book as any).topics),
-      pages: (book as any).pages || 100,
-      duration: (book as any).duration || calculateReadTime((book as any).pages || 100),
-      rating: (book as any).rating || 4.5,
-      coverImage: (book as any).coverImage,
-      coverColor: (book as any).coverColor || 'from-blue-600 to-indigo-800',
-      likes: (book as any).likes || 0,
-      favoritesCount: (book as any).favoritesCount || 0,
-      fileUrl: book.fileUrl,
-      fileSize: book.fileSize,
-      publishDate: (book as any).publishDate || new Date().toISOString().split('T')[0],
-      status: book.status || 'published',
-      showOnHome: (book as any).showOnHome || false,
-      views: book.views || 0,
-      reviews: book.reviews || 0,
-      createdAt: book.createdAt || now,
+      topics: normalizeTopics((normalizedBook as any).topics),
+      pages: (normalizedBook as any).pages || 100,
+      duration: (normalizedBook as any).duration || calculateReadTime((normalizedBook as any).pages || 100),
+      rating: (normalizedBook as any).rating || 4.5,
+      coverImage: (normalizedBook as any).coverImage,
+      coverColor: (normalizedBook as any).coverColor || 'from-blue-600 to-indigo-800',
+      likes: numberOr((normalizedBook as any).likes, 0),
+      favoritesCount: numberOr((normalizedBook as any).favoritesCount, 0),
+      fileUrl: normalizedBook.fileUrl,
+      fileSize: normalizedBook.fileSize,
+      publishDate: (normalizedBook as any).publishDate || new Date().toISOString().split('T')[0],
+      status: normalizedBook.status || 'published',
+      showOnHome: (normalizedBook as any).showOnHome || false,
+      views: numberOr(normalizedBook.views, 0),
+      reviews: numberOr(normalizedBook.reviews, 0),
+      createdAt: normalizedBook.createdAt || now,
       updatedAt: now,
     };
     books.unshift(saved);
