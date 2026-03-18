@@ -190,6 +190,26 @@ function normalizeExtractedText(input) {
     .trim();
 }
 
+function decodeXmlEntities(input) {
+  return String(input || '')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, num) => String.fromCodePoint(Number.parseInt(num, 10)));
+}
+
+function escapeHtml(input) {
+  return String(input || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function stripXmlToText(input) {
   return normalizeExtractedText(
     String(input || '')
@@ -198,6 +218,82 @@ function stripXmlToText(input) {
       .replace(/<\/w:p>/g, '\n\n')
       .replace(/<[^>]+>/g, ' ')
   );
+}
+
+function parseDocxRelationships(input) {
+  const relMap = new Map();
+  const xml = String(input || '');
+  const regex = /<Relationship\b[^>]*Id="([^"]+)"[^>]*Target="([^"]+)"[^>]*\/?>/g;
+  for (const match of xml.matchAll(regex)) {
+    relMap.set(match[1], decodeXmlEntities(match[2]));
+  }
+  return relMap;
+}
+
+function wrapInlineMarks(text, runXml) {
+  let html = escapeHtml(text).replace(/\n/g, '<br />');
+  if (/<w:b(?:\s|\/|>)/.test(runXml)) html = `<strong>${html}</strong>`;
+  if (/<w:i(?:\s|\/|>)/.test(runXml)) html = `<em>${html}</em>`;
+  if (/<w:u(?:\s|\/|>)/.test(runXml)) html = `<u>${html}</u>`;
+  return html;
+}
+
+function extractDocxInlineHtml(fragment, relMap) {
+  const parts = [];
+  const tokenRegex = /<w:hyperlink\b[\s\S]*?<\/w:hyperlink>|<w:r\b[\s\S]*?<\/w:r>|<w:br\s*\/>/g;
+
+  for (const match of String(fragment || '').matchAll(tokenRegex)) {
+    const token = match[0];
+    if (/^<w:br/i.test(token)) {
+      parts.push('<br />');
+      continue;
+    }
+
+    if (/^<w:hyperlink/i.test(token)) {
+      const relId = token.match(/r:id="([^"]+)"/)?.[1] || '';
+      const href = relMap.get(relId) || '';
+      const inner = extractDocxInlineHtml(token, relMap);
+      if (!inner) continue;
+      parts.push(href ? `<a href="${escapeHtml(href)}">${inner}</a>` : inner);
+      continue;
+    }
+
+    const text = decodeXmlEntities(
+      (token.match(/<w:t[^>]*>[\s\S]*?<\/w:t>/g) || [])
+        .map((item) => item.replace(/^<w:t[^>]*>|<\/w:t>$/g, ''))
+        .join('')
+    );
+    const runText = text || (token.includes('<w:tab/>') ? ' ' : '');
+    if (!runText.trim()) continue;
+    parts.push(wrapInlineMarks(runText, token));
+  }
+
+  return parts.join('');
+}
+
+function convertDocxXmlToHtml(documentXml, relXml) {
+  const relMap = parseDocxRelationships(relXml);
+  const paragraphs = String(documentXml || '').match(/<w:p\b[\s\S]*?<\/w:p>/g) || [];
+  const blocks = [];
+
+  for (const paragraphXml of paragraphs) {
+    const innerHtml = extractDocxInlineHtml(paragraphXml, relMap).trim();
+    if (!innerHtml) continue;
+
+    const styleName = paragraphXml.match(/<w:pStyle[^>]+w:val="([^"]+)"/)?.[1] || '';
+    if (/heading/i.test(styleName)) {
+      const headingLevel = Number.parseInt(styleName.replace(/\D+/g, ''), 10);
+      const normalizedLevel = Number.isFinite(headingLevel)
+        ? Math.min(4, Math.max(2, headingLevel))
+        : 2;
+      blocks.push(`<h${normalizedLevel}>${innerHtml}</h${normalizedLevel}>`);
+      continue;
+    }
+
+    blocks.push(`<p>${innerHtml}</p>`);
+  }
+
+  return blocks.join('\n');
 }
 
 function inferTitleFromText(text, fallbackPath = '') {
@@ -216,18 +312,43 @@ function inferTitleFromText(text, fallbackPath = '') {
   return base || '';
 }
 
+function inferAuthorFromCoverText(text) {
+  const lines = normalizeExtractedText(text)
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 20);
+
+  for (const line of lines) {
+    const labeled = line.match(/(?:作者|编著|主编|出品|机构)[:：\s]*([一-龥A-Za-z·]{2,24})/);
+    if (labeled?.[1]) {
+      return labeled[1];
+    }
+
+    const separated = line.match(/^([一-龥A-Za-z·]{2,24})\s*[|｜／/]/);
+    if (separated?.[1]) {
+      return separated[1];
+    }
+  }
+
+  return '';
+}
+
 async function extractDocxArtifacts(filePath) {
   await ensureReadableFile(filePath);
   const textResult = await execFileAsync('unzip', ['-p', filePath, 'word/document.xml']).catch((error) => {
     throw new Error(`提取 DOCX 文本失败：${error?.message || '未知错误'}`);
   });
+  const relResult = await execFileAsync('unzip', ['-p', filePath, 'word/_rels/document.xml.rels']).catch(() => ({ stdout: '' }));
 
   const text = stripXmlToText(textResult.stdout);
+  const html = convertDocxXmlToHtml(textResult.stdout, relResult.stdout);
   return {
     pages: 0,
     metaTitle: '',
     metaAuthor: '',
     text,
+    html,
     fileExt: '.docx',
   };
 }
@@ -349,6 +470,36 @@ async function renderPdfFirstPageCover(filePath, contentType) {
   return `/uploads/ai-covers/${normalizedType}/${path.basename(coverPath)}`;
 }
 
+async function extractPdfCoverText(filePath, options = {}) {
+  const dpi = Number.isFinite(Number(options.dpi)) ? Number(options.dpi) : 150;
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'yiyu-cover-ocr-'));
+
+  try {
+    const outputPrefix = path.join(tempDir, 'cover');
+    await execFileAsync('pdftoppm', ['-png', '-r', String(dpi), '-f', '1', '-singlefile', filePath, outputPrefix], {
+      maxBuffer: 16 * 1024 * 1024,
+    });
+
+    const imagePath = `${outputPrefix}.png`;
+    const { stdout } = await execFileAsync(
+      'tesseract',
+      [imagePath, 'stdout', '-l', 'chi_sim+eng', '--psm', '6'],
+      {
+        maxBuffer: 16 * 1024 * 1024,
+        env: {
+          ...process.env,
+          OMP_THREAD_LIMIT: '1',
+        },
+      }
+    );
+    return normalizeExtractedText(stdout);
+  } catch {
+    return '';
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
 async function extractSourceArtifacts(filePath, contentType) {
   const ext = path.extname(filePath).toLowerCase();
   if (ext === '.docx') {
@@ -356,11 +507,18 @@ async function extractSourceArtifacts(filePath, contentType) {
   }
   if (ext === '.pdf') {
     const isArticleLike = contentType === 'insight' || contentType === 'methodology';
-    return extractPdfArtifactsWithOcr(filePath, {
+    const pdfData = await extractPdfArtifactsWithOcr(filePath, {
       maxPages: isArticleLike ? 30 : 10,
       ocrPages: isArticleLike ? 3 : 2,
       ocrDpi: 110,
     });
+    if (contentType === 'book') {
+      return {
+        ...pdfData,
+        coverText: await extractPdfCoverText(filePath, { dpi: 150 }),
+      };
+    }
+    return pdfData;
   }
   throw new Error('当前仅支持解析 PDF 或 DOCX 文件');
 }
@@ -430,6 +588,7 @@ function buildAiPrefillMessages(contentType, sourceData, filePath) {
       pages: sourceData.pages,
       ocrUsed: Boolean(sourceData.ocrUsed),
     },
+    coverTextExcerpt: contentType === 'book' ? String(sourceData.coverText || '').slice(0, 1200) : '',
     fileExcerpt: sourceData.text.slice(0, isArticleLike ? 12000 : 8000),
     outputSchema: isArticleLike
       ? {
@@ -440,7 +599,7 @@ function buildAiPrefillMessages(contentType, sourceData, filePath) {
       : isBook
       ? {
           title: '书名，字符串',
-          author: '作者名，无法判断则返回空字符串',
+          author: '作者名或机构名，优先从封面、扉页、版权页识别；无法判断则返回空字符串',
           description: '80-160字中文简介',
           topics: ['从允许标签中选择 1-3 个'],
         }
@@ -476,6 +635,7 @@ async function buildAiPrefillResult({ contentType, fileUrl, current }) {
       excerpt: safeText(aiJson.excerpt) || '',
       topics: safeTopicArray(aiJson.topics).length ? safeTopicArray(aiJson.topics) : fallbackTopics,
       contentText: sourceData.text || '',
+      contentHtml: sourceData.html || '',
       coverImage,
       fileUrl,
       fileSize: 0,
@@ -485,7 +645,7 @@ async function buildAiPrefillResult({ contentType, fileUrl, current }) {
   if (contentType === 'book') {
     return {
       title: safeText(aiJson.title) || sourceData.metaTitle || inferredTitle || '',
-      author: safeText(aiJson.author) || safeText(sourceData.metaAuthor) || '',
+      author: safeText(aiJson.author) || safeText(sourceData.metaAuthor) || inferAuthorFromCoverText(sourceData.coverText) || '',
       description: safeText(aiJson.description) || '',
       topics: safeTopicArray(aiJson.topics).length ? safeTopicArray(aiJson.topics) : fallbackTopics,
       coverImage,

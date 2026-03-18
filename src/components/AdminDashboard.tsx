@@ -3,6 +3,7 @@
  * 实现内容管理功能，支持真实数据持久化
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { generateJSON } from '@tiptap/html';
 import { 
   Users, BarChart3, MessageSquare, LogOut,
   Menu, X, ChevronRight, Database, Shield, Bell, Gift, Crown,
@@ -55,13 +56,23 @@ import {
   type CoverPreset,
   type CoverPresetContentType,
 } from '../lib/coverPresetApi';
+import { getArticleTiptapExtensions } from '../lib/tiptapSchema';
 import { ArticleEditor, type ArticleEditorValue } from './ArticleEditor';
 
 const RESOURCE_TOPICS: ResourceTopic[] = ['战略', '业务设计', '组织', 'AI 技术'];
 
-const buildEditorDocument = (contentJson: any, legacyContent?: string | null) => {
+const buildEditorDocument = (contentJson: any, legacyContent?: string | null, contentHtml?: string | null) => {
   if (contentJson && typeof contentJson === 'object') {
     return contentJson;
+  }
+
+  const normalizedHtml = String(contentHtml || '').trim();
+  if (normalizedHtml) {
+    try {
+      return generateJSON(normalizedHtml, getArticleTiptapExtensions() as any);
+    } catch {
+      // Fallback to plain text paragraphs below.
+    }
   }
 
   const normalized = String(legacyContent || '').trim();
@@ -905,6 +916,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         excerpt: String(data.excerpt ?? ''),
         topics: (Array.isArray(data.topics) && data.topics.length ? data.topics : draft.topics) as ResourceTopic[],
         contentText: String(data.contentText ?? ''),
+        contentHtml: String(data.contentHtml ?? ''),
         fileUrl: String(data.fileUrl || asset.url),
         fileSize: asset.size,
       };
@@ -946,6 +958,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         excerpt: String(data.excerpt ?? ''),
         topics: (Array.isArray(data.topics) && data.topics.length ? data.topics : draft.topics) as ResourceTopic[],
         contentText: String(data.contentText ?? ''),
+        contentHtml: String(data.contentHtml ?? ''),
         fileUrl: String(data.fileUrl || asset.url),
         fileSize: asset.size,
       };
@@ -3552,6 +3565,7 @@ interface InsightFormModalProps {
     excerpt: string;
     topics: ResourceTopic[];
     contentText: string;
+    contentHtml?: string;
     fileUrl: string;
     fileSize: number;
   }>;
@@ -3579,7 +3593,7 @@ function InsightFormModal({
   isAiFilling,
 }: InsightFormModalProps) {
   const [editorValue, setEditorValue] = useState<ArticleEditorValue | null>(null);
-  const [editorDocument, setEditorDocument] = useState<any>(buildEditorDocument((editingItem as any)?.contentJson, editingItem?.content));
+  const [editorDocument, setEditorDocument] = useState<any>(buildEditorDocument((editingItem as any)?.contentJson, editingItem?.content, (editingItem as any)?.contentHtml));
   const [coverPresets, setCoverPresets] = useState<CoverPreset[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState('');
   const [isPresetLoading, setIsPresetLoading] = useState(false);
@@ -3608,11 +3622,11 @@ function InsightFormModal({
 
   useEffect(() => {
     setEditorValue(null);
-    setEditorDocument(buildEditorDocument((editingItem as any)?.contentJson, editingItem?.content));
+    setEditorDocument(buildEditorDocument((editingItem as any)?.contentJson, editingItem?.content, (editingItem as any)?.contentHtml));
     setTitleValue(editingItem?.title || '');
     setExcerptValue(editingItem?.excerpt || '');
     setSelectedTopics(editingItem?.topics || ['战略']);
-  }, [editingItem?.id, editingItem?.title, editingItem?.excerpt, editingItem?.topics, editingItem?.content, (editingItem as any)?.contentJson]);
+  }, [editingItem?.id, editingItem?.title, editingItem?.excerpt, editingItem?.topics, editingItem?.content, (editingItem as any)?.contentJson, (editingItem as any)?.contentHtml]);
 
   useEffect(() => {
     setSelectedPresetId(editingItem?.coverPresetId || '');
@@ -3670,12 +3684,12 @@ function InsightFormModal({
         excerpt: excerptValue,
         topics: selectedTopics,
       });
-      const nextDoc = buildEditorDocument(undefined, next.contentText);
+      const nextDoc = buildEditorDocument(undefined, next.contentText, next.contentHtml);
       setTitleValue(next.title);
       setExcerptValue(next.excerpt);
       setSelectedTopics(next.topics.length ? next.topics : ['战略']);
       setEditorDocument(nextDoc);
-      setEditorValue(nextDoc ? { json: nextDoc, html: '', text: next.contentText } : null);
+      setEditorValue(nextDoc ? { json: nextDoc, html: next.contentHtml || '', text: next.contentText } : null);
     } catch (error: any) {
       alert(error?.message || 'AI 填充失败，请稍后重试');
     }
