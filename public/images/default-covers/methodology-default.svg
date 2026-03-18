@@ -1,26 +1,34 @@
 <svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="1600" height="900" fill="#F8F5EF"/>
-  <rect x="84" y="84" width="1432" height="732" rx="40" fill="url(#panel)"/>
-  <rect x="140" y="146" width="176" height="36" rx="18" fill="#A16207" fill-opacity="0.14"/>
-  <rect x="140" y="214" width="574" height="124" rx="28" fill="#1C1917"/>
-  <rect x="140" y="372" width="374" height="18" rx="9" fill="#44403C" fill-opacity="0.24"/>
-  <rect x="140" y="414" width="434" height="16" rx="8" fill="#44403C" fill-opacity="0.14"/>
-  <rect x="140" y="446" width="412" height="16" rx="8" fill="#44403C" fill-opacity="0.14"/>
-  <rect x="140" y="478" width="348" height="16" rx="8" fill="#44403C" fill-opacity="0.14"/>
-  <rect x="918" y="168" width="462" height="516" rx="36" fill="#FFFCF5"/>
-  <rect x="980" y="230" width="154" height="154" rx="24" fill="#FDE68A"/>
-  <rect x="1168" y="230" width="154" height="154" rx="24" fill="#FCD34D"/>
-  <rect x="980" y="418" width="342" height="22" rx="11" fill="#1C1917"/>
-  <rect x="980" y="466" width="288" height="16" rx="8" fill="#57534E" fill-opacity="0.18"/>
-  <rect x="980" y="498" width="302" height="16" rx="8" fill="#57534E" fill-opacity="0.18"/>
-  <rect x="980" y="530" width="248" height="16" rx="8" fill="#57534E" fill-opacity="0.18"/>
-  <path d="M1055 294H1247" stroke="#1C1917" stroke-width="16" stroke-linecap="round"/>
-  <path d="M1151 198V390" stroke="#1C1917" stroke-width="16" stroke-linecap="round"/>
-  <rect x="140" y="652" width="210" height="44" rx="22" fill="#1C1917"/>
+  <rect width="1600" height="900" fill="#F3EFE7"/>
+  <rect x="72" y="72" width="1456" height="756" rx="40" fill="url(#bg)"/>
+  <rect x="136" y="136" width="1328" height="628" rx="34" fill="#FBF8F1"/>
+  <rect x="136" y="136" width="272" height="628" rx="34" fill="#233A32"/>
+  <text x="188" y="238" fill="#FAF6EE" font-size="42" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="700">益语方法论</text>
+  <text x="188" y="292" fill="#CFE0D8" font-size="22" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-weight="500" letter-spacing="4">YIYU METHOD FRAMEWORK</text>
+  <line x1="188" y1="352" x2="324" y2="352" stroke="#84A698" stroke-width="4" stroke-linecap="round"/>
+  <text x="188" y="430" fill="#EEF5F1" font-size="28" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">问题定义</text>
+  <text x="188" y="486" fill="#EEF5F1" font-size="28" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">结构拆解</text>
+  <text x="188" y="542" fill="#EEF5F1" font-size="28" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">路径设计</text>
+  <text x="188" y="598" fill="#EEF5F1" font-size="28" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">行动闭环</text>
+  <text x="470" y="226" fill="#87663E" font-size="24" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="600" letter-spacing="3">方法工具</text>
+  <text x="470" y="336" fill="#1F2937" font-size="84" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="700">益语方法论</text>
+  <text x="470" y="398" fill="#7C6542" font-size="30" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-weight="500" letter-spacing="5">METHODS FOR STRATEGY &amp; EXECUTION</text>
+  <text x="470" y="494" fill="#475467" font-size="31" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">把抽象经验沉淀成可复用、可交付、可协作的方法工具</text>
+  <rect x="470" y="560" width="244" height="48" rx="24" fill="#233A32"/>
+  <text x="592" y="592" text-anchor="middle" fill="#FAF6EE" font-size="23" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-weight="600" letter-spacing="2">METHOD KIT</text>
+  <rect x="974" y="216" width="378" height="398" rx="30" fill="#F4E8D3"/>
+  <rect x="1018" y="262" width="110" height="110" rx="22" fill="#D7B37A"/>
+  <rect x="1152" y="262" width="156" height="110" rx="22" fill="#E9D1A3"/>
+  <rect x="1018" y="396" width="290" height="22" rx="11" fill="#233A32"/>
+  <rect x="1018" y="444" width="252" height="16" rx="8" fill="#8F7758" fill-opacity="0.28"/>
+  <rect x="1018" y="476" width="266" height="16" rx="8" fill="#8F7758" fill-opacity="0.28"/>
+  <rect x="1018" y="508" width="214" height="16" rx="8" fill="#8F7758" fill-opacity="0.28"/>
+  <path d="M1073 317H1253" stroke="#233A32" stroke-width="14" stroke-linecap="round"/>
+  <path d="M1163 227V407" stroke="#233A32" stroke-width="14" stroke-linecap="round"/>
   <defs>
-    <linearGradient id="panel" x1="84" y1="84" x2="1516" y2="816" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FEFCF7"/>
-      <stop offset="1" stop-color="#F3EEE3"/>
+    <linearGradient id="bg" x1="72" y1="72" x2="1528" y2="828" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7F2E7"/>
+      <stop offset="1" stop-color="#E8DED0"/>
     </linearGradient>
   </defs>
 </svg>
