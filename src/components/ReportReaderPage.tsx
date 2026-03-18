@@ -7,9 +7,7 @@ import {
   FileText,
   MessageSquare,
   Bookmark,
-  ChevronLeft,
   ChevronRight,
-  Maximize,
   Sparkles,
   Send,
   Copy,
@@ -32,8 +30,6 @@ interface ReportReaderPageProps {
 export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
   const [report, setReport] = useState<Report | null>(null);
   const [loadState, setLoadState] = useState<'loading' | 'loaded' | 'not_found'>('loading');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(50);
   // NOTE: "智能助手"功能已移除（详情页仅保留阅读区）。
   const [activeTab, setActiveTab] = useState<'chat' | 'favorites' | 'feedback' | 'comments'>('chat');
   const [chatMessages, setChatMessages] = useState<{id: string; role: 'user' | 'assistant'; content: string; timestamp: string; isBookmarked?: boolean}[]>([]);
@@ -64,7 +60,6 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
 
       if (foundReport) {
         setReport(foundReport);
-        setTotalPages(foundReport.pages || 50);
         setLoadState('loaded');
       } else {
         setReport(null);
@@ -179,15 +174,6 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
 
     setDownloadFeedback('已在新标签页打开 PDF');
     window.setTimeout(() => setDownloadFeedback(null), 3500);
-  };
-
-  // 翻页控制
-  const handlePageChange = (direction: 'prev' | 'next') => {
-    if (direction === 'prev' && currentPage > 1) {
-      setCurrentPage(prev => prev - 1);
-    } else if (direction === 'next' && currentPage < totalPages) {
-      setCurrentPage(prev => prev + 1);
-    }
   };
 
   // 发送消息
@@ -375,45 +361,16 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
           className="max-w-4xl mx-auto w-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col"
           style={isMobile ? undefined : { height: `${contentHeightPx}px`, minHeight: '720px' }}
         >
-          {/* PDF工具条 */}
+          {/* 文件信息条 */}
           <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handlePageChange('prev')}
-                  disabled={currentPage === 1}
-                  className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <span className="text-sm text-gray-600 min-w-[80px] text-center">
-                  {currentPage} / {totalPages}
-                </span>
-                <button
-                  onClick={() => handlePageChange('next')}
-                  disabled={currentPage === totalPages}
-                  className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="w-px h-6 bg-gray-300"></div>
-
-              <button
-                className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
-                title="页面适配"
-              >
-                <Maximize className="w-5 h-5" />
-              </button>
-
-
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">
-                滚动滑轮可翻页
+            <div className="flex items-center gap-3 min-w-0">
+              <FileText className="w-4 h-4 text-gray-500 shrink-0" />
+              <span className="text-sm text-gray-600 truncate">
+                {decodeURIComponent((report.fileUrl || '').split('/').pop() || '报告文件')}
               </span>
+            </div>
+            <div className="text-sm text-gray-500">
+              {report.pages ? `${report.pages} 页` : 'PDF 阅读'}
             </div>
           </div>
 

@@ -329,14 +329,6 @@ function BookCard({ book, onClick, getCategoryColor }: { book: Book; onClick: ()
           {book.description}
         </p>
 
-        <div className="flex items-center gap-1.5 mb-4 flex-wrap">
-          {(book.topics || []).slice(0, 2).map((topic, index) => (
-            <span key={index} className="px-2 py-0.5 rounded bg-success/10 text-success/80 text-[11px]">
-              {topic}
-            </span>
-          ))}
-        </div>
-
         {/* Meta */}
         <div className="flex items-center justify-between text-[12px] text-muted-foreground/50 pt-4 border-t border-border/40">
           <div className="flex items-center gap-2">

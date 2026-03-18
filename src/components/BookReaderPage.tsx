@@ -6,12 +6,7 @@ import {
   BookOpen,
   MessageSquare,
   Bookmark,
-  ChevronLeft,
   ChevronRight,
-  ZoomIn,
-  ZoomOut,
-  Maximize,
-  Columns,
   Sparkles,
   Send,
   Copy,
@@ -53,9 +48,6 @@ interface BookReaderPageProps {
 export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNavigate }: BookReaderPageProps) {
   // 从URL参数或全局状态获取书籍信息
   const [bookId, setBookId] = useState<string>(initialBookId);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(328);
-  const [zoomLevel, setZoomLevel] = useState(100);
   // NOTE: "智能助手"功能已移除（详情页仅保留阅读区）。
   const [activeTab, setActiveTab] = useState<'chat' | 'favorites' | 'feedback' | 'comments'>('chat');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -103,12 +95,6 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
       window.removeEventListener('storage', checkUserStatus);
     };
   }, []);
-
-  // Keep total pages in sync with book metadata
-  useEffect(() => {
-    const pages = (book as any).pages;
-    if (typeof pages === 'number' && pages > 0) setTotalPages(pages);
-  }, [bookId]);
 
   // Mobile layout: avoid embedding PDF <object> (often blocks touch scrolling in WebView)
   // and avoid fixed-height containers that can make the page feel "stuck".
@@ -181,26 +167,6 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
     createdAt: '2026-02-26',
     updatedAt: '2026-02-26',
   } as any);
-
-  // 翻页控制
-  const handlePageChange = (direction: 'prev' | 'next') => {
-    if (direction === 'prev' && currentPage > 1) {
-      setCurrentPage(prev => prev - 1);
-    } else if (direction === 'next' && currentPage < totalPages) {
-      setCurrentPage(prev => prev + 1);
-    }
-  };
-
-  // 缩放控制
-  const handleZoom = (action: 'in' | 'out' | 'fit') => {
-    if (action === 'in' && zoomLevel < 200) {
-      setZoomLevel(prev => prev + 25);
-    } else if (action === 'out' && zoomLevel > 50) {
-      setZoomLevel(prev => prev - 25);
-    } else if (action === 'fit') {
-      setZoomLevel(100);
-    }
-  };
 
   // 发送消息
   const handleSendMessage = () => {
@@ -356,46 +322,16 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
           className="max-w-4xl mx-auto w-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col"
           style={isMobile ? undefined : { height: `${contentHeightPx}px`, minHeight: '720px' }}
         >
-          {/* PDF工具条 - 精简版 */}
+          {/* 文件信息条 */}
           <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
-            <div className="flex items-center gap-4">
-              {/* 翻页控制 */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handlePageChange('prev')}
-                  disabled={currentPage === 1}
-                  className="p-1.5 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <span className="text-sm text-gray-600 min-w-[80px] text-center">
-                  {currentPage} / {totalPages}
-                </span>
-                <button
-                  onClick={() => handlePageChange('next')}
-                  disabled={currentPage === totalPages}
-                  className="p-1.5 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="w-px h-5 bg-gray-300"></div>
-
-              {/* 适配控制 */}
-              <button
-                className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors"
-                title="页面适配"
-                onClick={() => handleZoom('fit')}
-              >
-                <Maximize className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">
-                滚动滑轮可翻页
+            <div className="flex items-center gap-3 min-w-0">
+              <BookOpen className="w-4 h-4 text-gray-500 shrink-0" />
+              <span className="text-sm text-gray-600 truncate">
+                {decodeURIComponent((((book as any).fileUrl || '').split('/').pop()) || '书籍文件')}
               </span>
+            </div>
+            <div className="text-sm text-gray-500">
+              {(book as any).pages ? `${(book as any).pages} 页` : 'PDF 阅读'}
             </div>
           </div>
 
