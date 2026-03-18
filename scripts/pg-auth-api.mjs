@@ -169,7 +169,9 @@ function resolveSiteFilePath(input) {
   if (!pathname.startsWith('/uploads/') && !pathname.startsWith('/docs/')) {
     throw new Error('当前仅支持解析站内已上传的文件');
   }
-
+  if (pathname.startsWith('/uploads/')) {
+    return path.join(ADMIN_UPLOAD_ROOT, pathname.replace(/^\/uploads\/+/, ''));
+  }
   return path.join(SITE_PUBLIC_ROOT, pathname.replace(/^\/+/, ''));
 }
 
@@ -188,6 +190,15 @@ function normalizeExtractedText(input) {
     .replace(/[ \u00a0]{2,}/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+}
+
+function stripHtmlTags(input) {
+  return normalizeExtractedText(
+    String(input || '')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|li|h[1-6]|blockquote)>/gi, '\n\n')
+      .replace(/<[^>]+>/g, ' ')
+  );
 }
 
 function decodeXmlEntities(input) {
@@ -523,6 +534,57 @@ async function extractSourceArtifacts(filePath, contentType) {
   throw new Error('当前仅支持解析 PDF 或 DOCX 文件');
 }
 
+function buildFallbackSourceArtifacts(contentType, current = {}) {
+  const contentHtml = safeText(current.contentHtml || '');
+  const contentText = normalizeExtractedText(
+    current.contentText || current.content || stripHtmlTags(contentHtml)
+  );
+  if (!contentText && !contentHtml) {
+    return null;
+  }
+
+  if (contentType === 'insight' || contentType === 'methodology') {
+    return {
+      pages: 0,
+      metaTitle: safeText(current.title || ''),
+      metaAuthor: '',
+      text: contentText,
+      html: contentHtml,
+      fileExt: '.fallback',
+      ocrUsed: false,
+    };
+  }
+
+  if (contentType === 'book') {
+    const description = safeText(current.description || '');
+    const author = safeText(current.author || '');
+    const composedText = normalizeExtractedText([current.title, author, description].filter(Boolean).join('\n\n'));
+    if (!composedText) return null;
+    return {
+      pages: 0,
+      metaTitle: safeText(current.title || ''),
+      metaAuthor: author,
+      text: composedText,
+      coverText: author,
+      fileExt: '.fallback',
+      ocrUsed: false,
+    };
+  }
+
+  const summary = safeText(current.summary || '');
+  const publisher = safeText(current.publisher || '');
+  const composedText = normalizeExtractedText([current.title, publisher, summary].filter(Boolean).join('\n\n'));
+  if (!composedText) return null;
+  return {
+    pages: 0,
+    metaTitle: safeText(current.title || ''),
+    metaAuthor: publisher,
+    text: composedText,
+    fileExt: '.fallback',
+    ocrUsed: false,
+  };
+}
+
 async function callArkChat(messages) {
   if (!isArkReady()) {
     throw new Error('未配置火山方舟模型，请先完成后端密钥配置');
@@ -618,13 +680,26 @@ function buildAiPrefillMessages(contentType, sourceData, filePath) {
 }
 
 async function buildAiPrefillResult({ contentType, fileUrl, current }) {
-  const filePath = resolveSiteFilePath(fileUrl);
-  const sourceData = await extractSourceArtifacts(filePath, contentType);
+  let filePath = '';
+  let sourceData = null;
+  try {
+    filePath = resolveSiteFilePath(fileUrl);
+    sourceData = await extractSourceArtifacts(filePath, contentType);
+  } catch (error) {
+    const fallbackSource = buildFallbackSourceArtifacts(contentType, current);
+    if (!fallbackSource) {
+      throw error;
+    }
+    sourceData = fallbackSource;
+  }
+
   if (normalizeExtractedText(sourceData.text).length < 80) {
     throw new Error('当前文件可提取文字过少，AI 无法可靠识别内容。请优先上传可复制文字的 PDF 或 DOCX；若是扫描件，需后续补 OCR。');
   }
-  const coverImage = sourceData.fileExt === '.pdf' ? await renderPdfFirstPageCover(filePath, contentType) : '';
-  const aiText = await callArkChat(buildAiPrefillMessages(contentType, sourceData, filePath));
+  const coverImage = sourceData.fileExt === '.pdf' && filePath
+    ? await renderPdfFirstPageCover(filePath, contentType)
+    : safeText(current?.coverImage || '');
+  const aiText = await callArkChat(buildAiPrefillMessages(contentType, sourceData, filePath || fileUrl || `${contentType}-current`));
   const aiJson = extractJsonObject(aiText);
   const inferredTitle = inferTitleFromText(sourceData.text, filePath);
   const fallbackTopics = safeTopicArray(current?.topics).length ? safeTopicArray(current?.topics) : ['战略'];

@@ -161,22 +161,21 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
               )}
 
               {/* readability overlays */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/10 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/18 via-black/6 to-transparent" />
               <div className="absolute inset-0 bg-[radial-gradient(1000px_circle_at_18%_12%,rgba(255,255,255,0.35),transparent_55%)]" />
+            </div>
 
-              {/* Title on cover (mobile-first) */}
-              <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8">
-                <h1 className="text-white text-[30px] sm:text-[40px] font-semibold leading-[1.12] tracking-[-0.02em] drop-shadow-sm">
-                  {displayArticle.title}
-                </h1>
-                <p className="mt-3 text-white/82 text-[15px] sm:text-[16px] leading-[1.65] max-w-3xl">
-                  {displayArticle.excerpt}
-                </p>
-              </div>
+            <div className="px-6 sm:px-8 py-7 sm:py-8 bg-white/70 backdrop-blur-xl border-t border-border/30">
+              <h1 className="text-[30px] sm:text-[40px] font-semibold leading-[1.12] tracking-[-0.02em] text-foreground">
+                {displayArticle.title}
+              </h1>
+              <p className="mt-4 text-[15px] sm:text-[17px] text-muted-foreground/80 leading-[1.75] max-w-3xl">
+                {displayArticle.excerpt}
+              </p>
             </div>
 
             {/* Meta + actions row */}
-            <div className="px-6 sm:px-8 py-5 sm:py-6 bg-white/45 backdrop-blur-xl">
+            <div className="px-6 sm:px-8 py-5 sm:py-6 bg-white/45 backdrop-blur-xl border-t border-border/30">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-muted-foreground/70">
                   <div className="flex items-center gap-2">

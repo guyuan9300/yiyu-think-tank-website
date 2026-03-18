@@ -170,21 +170,21 @@ export function MethodologyLibraryPage({
                     <FileText className="w-16 h-16 text-primary/15" />
                   </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/18 via-black/6 to-transparent" />
+              </div>
 
-                <div className="absolute inset-x-0 bottom-0 p-6 sm:p-10">
-                  <h1 className="text-white text-[28px] sm:text-[38px] font-semibold leading-[1.2] tracking-tight">
-                    {selected.title}
-                  </h1>
+              <div className="px-6 sm:px-8 py-7 sm:py-8 bg-white/70 backdrop-blur-xl border-t border-border/30">
+                <h1 className="text-[28px] sm:text-[38px] font-semibold leading-[1.18] tracking-tight text-foreground">
+                  {selected.title}
+                </h1>
 
-                  <p className="mt-3 text-white/85 text-[14px] max-w-3xl line-clamp-2">
-                    {selected.excerpt}
-                  </p>
-                </div>
+                <p className="mt-4 text-[15px] sm:text-[16px] text-muted-foreground/80 leading-[1.75] max-w-3xl">
+                  {selected.excerpt}
+                </p>
               </div>
 
               {/* Meta row (match Article cover) */}
-              <div className="px-6 sm:px-8 py-5 sm:py-6 bg-white/45 backdrop-blur-xl">
+              <div className="px-6 sm:px-8 py-5 sm:py-6 bg-white/45 backdrop-blur-xl border-t border-border/30">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-muted-foreground/70">
                     <div className="flex items-center gap-2">

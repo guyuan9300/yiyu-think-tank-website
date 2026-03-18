@@ -1,26 +1,22 @@
 <svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="1600" height="900" fill="#EAF0F7"/>
   <rect x="72" y="72" width="1456" height="756" rx="40" fill="url(#bg)"/>
-  <rect x="132" y="132" width="230" height="636" rx="30" fill="#0F2745"/>
-  <rect x="402" y="148" width="1048" height="604" rx="32" fill="#F8FBFF"/>
-  <rect x="452" y="198" width="160" height="38" rx="19" fill="#DCE8F6"/>
-  <text x="532" y="222" text-anchor="middle" fill="#325D8C" font-size="24" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="600" letter-spacing="3">洞察文章</text>
-  <text x="452" y="330" fill="#102A43" font-size="86" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="700">益语前沿洞察</text>
-  <text x="452" y="396" fill="#486581" font-size="30" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-weight="500" letter-spacing="6">YIYU THINK TANK INSIGHT</text>
-  <text x="452" y="498" fill="#334E68" font-size="32" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">用研究视角拆解公益、组织与 AI 的关键变化</text>
-  <text x="452" y="552" fill="#627D98" font-size="28" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="400">以清晰判断替代信息堆叠，以结构分析连接现实决策。</text>
-  <path d="M878 629C958 568 1046 537 1142 537C1238 537 1336 565 1438 622" stroke="#9FB3C8" stroke-width="4" stroke-linecap="round"/>
-  <path d="M846 662C944 614 1045 590 1148 590C1252 590 1350 618 1440 675" stroke="#7B93AE" stroke-width="4" stroke-linecap="round"/>
-  <path d="M808 700C928 661 1047 645 1166 653C1270 661 1360 688 1438 730" stroke="#54759A" stroke-width="4" stroke-linecap="round"/>
-  <rect x="452" y="632" width="262" height="48" rx="24" fill="#123B68"/>
-  <text x="583" y="663" text-anchor="middle" fill="#F8FBFF" font-size="24" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-weight="600" letter-spacing="2">INSIGHT SERIES</text>
-  <text x="184" y="250" fill="#F8FBFF" font-size="42" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="700">益语智库</text>
-  <text x="184" y="304" fill="#C7D7EA" font-size="22" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-weight="500" letter-spacing="4">YIYU THINK TANK</text>
-  <line x1="184" y1="364" x2="312" y2="364" stroke="#8FB3D9" stroke-width="4" stroke-linecap="round"/>
-  <text x="184" y="436" fill="#E7EFF8" font-size="28" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">战略</text>
-  <text x="184" y="488" fill="#E7EFF8" font-size="28" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">业务设计</text>
-  <text x="184" y="540" fill="#E7EFF8" font-size="28" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">组织</text>
-  <text x="184" y="592" fill="#E7EFF8" font-size="28" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">AI 技术</text>
+  <rect x="128" y="128" width="1344" height="644" rx="34" fill="#F9FBFE"/>
+  <rect x="128" y="128" width="250" height="644" rx="34" fill="#123B68"/>
+  <text x="186" y="240" fill="#F7FBFF" font-size="40" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="700">益语前沿洞察</text>
+  <text x="186" y="294" fill="#C7D7EA" font-size="21" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-weight="500" letter-spacing="4">YIYU THINK TANK INSIGHT</text>
+  <line x1="186" y1="350" x2="314" y2="350" stroke="#8FB3D9" stroke-width="4" stroke-linecap="round"/>
+  <text x="186" y="432" fill="#E7EFF8" font-size="26" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">研究判断</text>
+  <text x="186" y="484" fill="#E7EFF8" font-size="26" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">趋势分析</text>
+  <text x="186" y="536" fill="#E7EFF8" font-size="26" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="500">行动线索</text>
+  <text x="448" y="234" fill="#466887" font-size="24" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="600" letter-spacing="3">洞察文章</text>
+  <text x="448" y="350" fill="#102A43" font-size="92" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="700">INSIGHT</text>
+  <text x="448" y="432" fill="#2F4D6A" font-size="44" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="600">看见变化，提炼判断</text>
+  <text x="448" y="500" fill="#627D98" font-size="28" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="400">从战略、组织到 AI，把复杂问题写成可执行的洞察。</text>
+  <path d="M860 624C960 565 1060 537 1160 540C1252 542 1341 568 1428 622" stroke="#A8BED5" stroke-width="4" stroke-linecap="round"/>
+  <path d="M820 666C944 618 1060 600 1170 610C1268 618 1354 641 1426 686" stroke="#7B93AE" stroke-width="4" stroke-linecap="round"/>
+  <rect x="448" y="604" width="252" height="48" rx="24" fill="#123B68"/>
+  <text x="574" y="635" text-anchor="middle" fill="#F8FBFF" font-size="24" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-weight="600" letter-spacing="2">EDITORIAL NOTE</text>
   <defs>
     <linearGradient id="bg" x1="72" y1="72" x2="1528" y2="828" gradientUnits="userSpaceOnUse">
       <stop stop-color="#F4F8FC"/>

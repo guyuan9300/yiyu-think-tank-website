@@ -812,7 +812,10 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       const result = await adminAiPrefill({
         contentType: 'report',
         fileUrl: asset.url,
-        current: draft,
+        current: {
+          ...draft,
+          coverImage: coverImage || current?.coverImage || '',
+        },
       });
       if (!result.ok || !result.data) {
         throw new Error(result.error || 'AI 填充失败');
@@ -859,7 +862,10 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       const result = await adminAiPrefill({
         contentType: 'book',
         fileUrl: asset.url,
-        current: draft,
+        current: {
+          ...draft,
+          coverImage: bookCoverImage || current?.coverImage || '',
+        },
       });
       if (!result.ok || !result.data) {
         throw new Error(result.error || 'AI 填充失败');
@@ -905,6 +911,12 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       const result = await adminAiPrefill({
         contentType: 'insight',
         fileUrl: asset.url,
+        current: {
+          ...draft,
+          contentText: current?.contentText || current?.content || '',
+          contentHtml: (current as any)?.contentHtml || '',
+          coverImage: coverImage || current?.coverImage || '',
+        },
       });
       if (!result.ok || !result.data) {
         throw new Error(result.error || 'AI 填充失败');
@@ -950,6 +962,12 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       const result = await adminAiPrefill({
         contentType: 'methodology',
         fileUrl: asset.url,
+        current: {
+          ...draft,
+          contentText: current?.contentText || current?.content || '',
+          contentHtml: (current as any)?.contentHtml || '',
+          coverImage: coverImage || current?.coverImage || '',
+        },
       });
       if (!result.ok || !result.data) {
         throw new Error(result.error || 'AI 填充失败');
