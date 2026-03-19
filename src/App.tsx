@@ -242,7 +242,7 @@ export default function App() {
   const [unknownPage, setUnknownPage] = useState<string | null>(initialUnknown);
   const [selectedBookId, setSelectedBookId] = useState<string>(initialParams.get('id') || 'shimeshiquanli');
   const [selectedDetailId, setSelectedDetailId] = useState<string>(initialParams.get('id') || '');
-  const [selectedCaseId, setSelectedCaseId] = useState<string>(initialParams.get('id') || 'blue-letter');
+  const [selectedCaseId, setSelectedCaseId] = useState<string>(initialParams.get('id') || 'case-1');
 
   const buildUrlForState = (page: string, detailId?: string, caseId?: string) => {
     const basePath = window.location.pathname;
@@ -312,7 +312,7 @@ export default function App() {
         setSelectedBookId(id || 'shimeshiquanli');
       }
       if (page === 'case') {
-        setSelectedCaseId(id || 'blue-letter');
+        setSelectedCaseId(id || 'case-1');
       }
     };
 
@@ -361,7 +361,7 @@ export default function App() {
     } else if (page === 'login' || page === 'register' || page === 'forgot-password' || page === 'reset-password' || page === 'terms-of-service' || page === 'privacy-policy') {
       setCurrentPage(page);
     } else if (page === 'case') {
-      setSelectedCaseId(caseId || 'blue-letter');
+      setSelectedCaseId(caseId || 'case-1');
       setCurrentPage('case');
     } else if (page === 'admin') {
       setCurrentPage('admin');
@@ -525,7 +525,15 @@ export default function App() {
   if (currentPage === 'strategy') {
     return (
       <>
-        <StrategyPage onNavigate={(page) => handleNavigate(page as any)} />
+        <StrategyPage
+          onNavigate={(page, id) => {
+            if (page === 'case') {
+              handleNavigate('case', undefined, id);
+              return;
+            }
+            handleNavigate(page as any, id);
+          }}
+        />
       </>
     );
   }

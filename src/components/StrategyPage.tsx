@@ -524,7 +524,7 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
             <p className="mt-2 text-[13px] text-[rgba(15,23,42,0.54)]">点击logo可查看客户介绍</p>
           </div>
 
-          <div className="mx-auto max-w-[920px] space-y-0">
+          <div className="mx-auto max-w-[736px] space-y-0">
             {caseRows.map((row, rowIndex) => (
               <div key={`case-row-${rowIndex}`} className="flex justify-center">
                 <div className="flex w-full justify-center">
@@ -543,11 +543,11 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
                       >
                         <div className="relative aspect-[1.08/1] overflow-hidden">
                           {caseItem.logoUrl ? (
-                            <div className="relative z-10 flex h-full w-full items-center justify-center p-2 sm:p-3">
+                            <div className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden bg-white">
                               <img
                                 src={caseItem.logoUrl}
                                 alt={caseItem.clientName}
-                                className="h-full w-full object-contain"
+                                className="h-full w-full object-cover object-center"
                                 loading="lazy"
                               />
                             </div>
