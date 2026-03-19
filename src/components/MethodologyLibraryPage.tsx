@@ -20,6 +20,7 @@ import { generateHTML } from '@tiptap/html';
 import { getArticleTiptapExtensions } from '../lib/tiptapSchema';
 import { useContentEngagement } from '../hooks/useContentEngagement';
 import { buildShareLandingUrl } from '../lib/shareLinks';
+import { normalizeRichContentHtml } from '../lib/richContent';
 
 type Topic = '战略' | '业务设计' | '组织' | 'AI 技术';
 
@@ -122,16 +123,16 @@ export function MethodologyLibraryPage({
     let html = '';
 
     if (String(anySelected.contentHtml || '').trim()) {
-      html = DOMPurify.sanitize(String(anySelected.contentHtml), { USE_PROFILES: { html: true } });
+      html = DOMPurify.sanitize(normalizeRichContentHtml(String(anySelected.contentHtml)), { USE_PROFILES: { html: true } });
     } else if (anySelected.contentJson) {
       try {
         const generated = generateHTML(anySelected.contentJson, getArticleTiptapExtensions() as any);
-        html = DOMPurify.sanitize(generated, { USE_PROFILES: { html: true } });
+        html = DOMPurify.sanitize(normalizeRichContentHtml(generated), { USE_PROFILES: { html: true } });
       } catch {
         html = '';
       }
     } else if (String(selected.content || '').trim()) {
-      html = DOMPurify.sanitize(String(selected.content), { USE_PROFILES: { html: true } });
+      html = DOMPurify.sanitize(normalizeRichContentHtml(String(selected.content)), { USE_PROFILES: { html: true } });
     }
 
     return (

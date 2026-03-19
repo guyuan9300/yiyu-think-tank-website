@@ -49,6 +49,7 @@ import {
 } from '../lib/commentApi';
 import { adminAiPrefill, uploadAdminAsset } from '../lib/authApi';
 import { getArticleTiptapExtensions } from '../lib/tiptapSchema';
+import { normalizeRichContentHtml } from '../lib/richContent';
 import { ArticleEditor, type ArticleEditorValue } from './ArticleEditor';
 
 const RESOURCE_TOPICS: ResourceTopic[] = ['战略', '业务设计', '组织', 'AI 技术'];
@@ -2752,7 +2753,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   e.preventDefault();
                   const formData = new FormData(e.currentTarget);
                   const contentJsonRaw = (formData.get('contentJson') as string) || '';
-                  const contentHtml = (formData.get('contentHtml') as string) || '';
+                  const contentHtml = normalizeRichContentHtml((formData.get('contentHtml') as string) || '');
                   const contentText = (formData.get('contentText') as string) || '';
 
                   const selectedTopics = (formData.getAll('topics') as string[]).map(s => s.trim()).filter(Boolean) as any;
@@ -2796,7 +2797,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                     excerpt: (formData.get('excerpt') as string) || current?.excerpt || '待补充',
                     content: (formData.get('content') as string) || current?.content || '',
                     contentJson: contentJsonRaw ? JSON.parse(contentJsonRaw) : current?.contentJson,
-                    contentHtml: contentHtml || current?.contentHtml || '',
+                    contentHtml: contentHtml || normalizeRichContentHtml(current?.contentHtml || ''),
                     contentText: contentText || current?.contentText || '',
                     topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
                     publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
@@ -2869,7 +2870,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
                 const contentJsonRaw = (formData.get('contentJson') as string) || '';
-                const contentHtml = (formData.get('contentHtml') as string) || '';
+                const contentHtml = normalizeRichContentHtml((formData.get('contentHtml') as string) || '');
                 const contentText = (formData.get('contentText') as string) || '';
 
                 const selectedTopics = (formData.getAll('topics') as string[]).map(s => s.trim()).filter(Boolean) as any;
@@ -2913,7 +2914,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   excerpt: (formData.get('excerpt') as string) || current?.excerpt || '待补充',
                   content: (formData.get('content') as string) || current?.content || '',
                   contentJson: contentJsonRaw ? JSON.parse(contentJsonRaw) : current?.contentJson,
-                  contentHtml: contentHtml || current?.contentHtml || '',
+                  contentHtml: contentHtml || normalizeRichContentHtml(current?.contentHtml || ''),
                   contentText: contentText || current?.contentText || '',
                   topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
                   publishDate: (formData.get('publishDate') as string) || current?.publishDate || new Date().toISOString().split('T')[0],
@@ -3756,7 +3757,8 @@ function InsightFormModal({
         excerpt: excerptValue,
         topics: selectedTopics,
       });
-      const nextDoc = buildEditorDocument(undefined, next.contentText, next.contentHtml);
+      const normalizedHtml = normalizeRichContentHtml(next.contentHtml || '');
+      const nextDoc = buildEditorDocument(undefined, next.contentText, normalizedHtml);
       setTitleValue(next.title);
       setExcerptValue(next.excerpt);
       setSelectedTopics(next.topics.length ? next.topics : ['战略']);

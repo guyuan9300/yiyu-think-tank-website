@@ -3,6 +3,7 @@ import { useEditor, EditorContent, type JSONContent } from '@tiptap/react';
 import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Highlighter, Link as LinkIcon, List, ListOrdered, Quote, Minus, Image as ImageIcon, RemoveFormatting } from 'lucide-react';
 import { getArticleTiptapExtensions } from '../lib/tiptapSchema';
 import { fileToCompressedDataUrl } from '../lib/imageCompress';
+import { normalizeRichContentHtml } from '../lib/richContent';
 
 export type ArticleEditorValue = {
   json: JSONContent;
@@ -35,7 +36,7 @@ export function ArticleEditor({
     onUpdate: ({ editor }) => {
       onChange?.({
         json: editor.getJSON(),
-        html: editor.getHTML(),
+        html: normalizeRichContentHtml(editor.getHTML()),
         text: editor.getText(),
       });
     },
@@ -44,7 +45,7 @@ export function ArticleEditor({
   useEffect(() => {
     if (!editor || !value) return;
     if (typeof value === 'string') {
-      const nextHtml = value.trim();
+      const nextHtml = normalizeRichContentHtml(value.trim());
       const currentHtml = editor.getHTML().trim();
       if (nextHtml && currentHtml !== nextHtml) {
         editor.commands.setContent(nextHtml);

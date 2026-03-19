@@ -19,6 +19,7 @@ import DOMPurify from 'dompurify';
 import { getArticleTiptapExtensions } from '../lib/tiptapSchema';
 import { useContentEngagement } from '../hooks/useContentEngagement';
 import { buildShareLandingUrl } from '../lib/shareLinks';
+import { normalizeRichContentHtml } from '../lib/richContent';
 
 interface ArticleDetailPageProps {
   articleId: string;
@@ -215,7 +216,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
 
               // Prefer saved HTML snapshot; else render from JSON; else fallback to legacy plain text.
               if (htmlFromSnapshot.trim()) {
-                const safe = DOMPurify.sanitize(htmlFromSnapshot, { USE_PROFILES: { html: true } });
+                const safe = DOMPurify.sanitize(normalizeRichContentHtml(htmlFromSnapshot), { USE_PROFILES: { html: true } });
                 return (
                   <div
                     className="text-[17px] leading-[1.8] font-light [&_ol]:list-decimal [&_ul]:list-disc [&_ol]:list-inside [&_ul]:list-inside [&_ol]:pl-2 [&_ul]:pl-2 [&_ol>li]:list-item [&_ul>li]:list-item [&_li]:my-2 [&_figure]:my-8 [&_figure]:text-center [&_figure_img]:mx-auto [&_figure_img]:block [&_img]:mx-auto [&_img]:block"
@@ -227,7 +228,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
               if (hasJson) {
                 try {
                   const html = generateHTML(anyArticle.contentJson, getArticleTiptapExtensions() as any);
-                  const safe = DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+                  const safe = DOMPurify.sanitize(normalizeRichContentHtml(html), { USE_PROFILES: { html: true } });
                   return (
                     <div
                       className="text-[17px] leading-[1.8] font-light [&_ol]:list-decimal [&_ul]:list-disc [&_ol]:list-inside [&_ul]:list-inside [&_ol]:pl-2 [&_ul]:pl-2 [&_ol>li]:list-item [&_ul>li]:list-item [&_li]:my-2 [&_figure]:my-8 [&_figure]:text-center [&_figure_img]:mx-auto [&_figure_img]:block [&_img]:mx-auto [&_img]:block"

@@ -21,6 +21,7 @@ import { CaseDetailPage } from './components/CaseDetailPage';
 import { AdminDashboard } from './components/AdminDashboard';
 import { buildAdminUrl, getAdminTabFromSearchParams } from './lib/adminConsole';
 import { fetchCurrentSession, normalizeLoginUser } from './lib/authApi';
+import { bootstrapFromPgApi } from './lib/dataService';
 import {
   ADMIN_EMAIL_KEY,
   ADMIN_FLAG_KEY,
@@ -149,6 +150,40 @@ export default function App() {
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
     }
+  }, []);
+
+  useEffect(() => {
+    let refreshing = false;
+
+    const refreshSnapshot = async () => {
+      if (refreshing) return;
+      refreshing = true;
+      try {
+        await bootstrapFromPgApi();
+      } finally {
+        refreshing = false;
+      }
+    };
+
+    const handleFocus = () => {
+      void refreshSnapshot();
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshSnapshot();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('pageshow', handleFocus);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('pageshow', handleFocus);
+    };
   }, []);
 
   // Initialize state from URL synchronously so we don't wipe query params (e.g. clientId)

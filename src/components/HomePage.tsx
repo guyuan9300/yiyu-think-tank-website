@@ -273,6 +273,12 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
 
   const latestResources = useMemo(() => {
     const topic = latestTopic;
+    const typeWeight: Record<LatestResource['kind'], number> = {
+      article: 4,
+      report: 3,
+      methodology: 2,
+      book: 1,
+    };
 
     const asDate = (s?: string) => {
       const t = s ? new Date(s).getTime() : 0;
@@ -332,6 +338,8 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
       .sort((a, b) => {
         const publishDiff = asDate(b.date) - asDate(a.date);
         if (publishDiff !== 0) return publishDiff;
+        const typeDiff = typeWeight[b.kind] - typeWeight[a.kind];
+        if (typeDiff !== 0) return typeDiff;
         return asDate(b.updatedAt) - asDate(a.updatedAt);
       })
       .slice(0, 6);
