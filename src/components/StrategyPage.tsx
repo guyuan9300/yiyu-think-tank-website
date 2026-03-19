@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { fetchCaseShowcases, type CaseShowcase } from '../lib/caseShowcaseApi';
@@ -44,37 +44,6 @@ interface StrategyPageProps {
 }
 
 export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: StrategyPageProps) {
-  // Scroll to anchor functionality
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
-  // Anchor navigation state
-  const [activeAnchor, setActiveAnchor] = useState('results');
-
-  // Track scroll to update active anchor
-  useEffect(() => {
-    const handleScroll = () => {
-      const sections = ['results', 'cases', 'insights', 'tools', 'cooperation'];
-      for (const section of sections) {
-        const element = document.getElementById(section);
-        if (element) {
-          const rect = element.getBoundingClientRect();
-          if (rect.top <= 200 && rect.bottom >= 200) {
-            setActiveAnchor(section);
-            break;
-          }
-        }
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
   // Insight filter state
   const [selectedInsightTag, setSelectedInsightTag] = useState('all');
 
@@ -92,14 +61,6 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       onNavigate('case', caseSlug);
     }
   };
-
-  // Anchor configuration
-  const anchors = [
-    { id: 'cases', label: '案例' },
-    { id: 'insights', label: '洞察' },
-    { id: 'tools', label: '工具' },
-    { id: 'cooperation', label: '合作' }
-  ];
 
   // Principles data
   const principles = [
@@ -467,22 +428,6 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
               </div>
             </div>
 
-            {/* Anchor Navigation - Apple Style */}
-            <div className="flex items-center justify-center gap-2 pt-8 border-t border-[rgba(15,23,42,0.06)]">
-              {anchors.map((anchor) => (
-                <button
-                  key={anchor.id}
-                  onClick={() => scrollToSection(anchor.id)}
-                  className={`px-4 py-2.5 rounded-[12px] text-[14px] font-medium transition-all duration-200 ${
-                    activeAnchor === anchor.id
-                      ? 'bg-[rgba(99,102,241,0.08)] text-[rgba(99,102,241,0.92)]'
-                      : 'text-[rgba(15,23,42,0.55)] hover:text-[rgba(15,23,42,0.85)] hover:bg-[rgba(15,23,42,0.04)]'
-                  }`}
-                >
-                  {anchor.label}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
       </section>
@@ -513,42 +458,41 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       )}
 
       {/* Cases Section */}
-      <section id="cases" className="pt-0 pb-14 px-4 sm:px-6 lg:px-8">
+      <section id="cases" className="pt-2 pb-14 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1200px] mx-auto">
-          <div className="rounded-[34px] border border-[rgba(15,23,42,0.05)] bg-[linear-gradient(180deg,rgba(235,242,250,0.98)_0%,rgba(244,247,251,0.98)_100%)] p-4 sm:p-5 lg:p-6 shadow-[0_22px_52px_rgba(15,23,42,0.055)]">
-            <div className="mb-5 flex items-center gap-4">
-              <h2 className="text-[24px] sm:text-[26px] font-semibold tracking-tight text-[rgba(15,23,42,0.92)]">客户案例</h2>
-              <div className="h-px flex-1 bg-[linear-gradient(90deg,rgba(15,23,42,0.10)_0%,rgba(15,23,42,0)_100%)]" />
-            </div>
+          <div className="mb-7 text-center">
+            <h2 className="text-[24px] sm:text-[28px] font-semibold tracking-tight text-[rgba(15,23,42,0.92)]">部分服务客户</h2>
+          </div>
 
-            <div className="flex flex-wrap justify-center gap-2.5 sm:gap-3">
-              {cases.map((caseItem) => (
-                <button
-                  key={caseItem.slug}
-                  type="button"
-                  onClick={() => handleNavigateToCase(caseItem.slug)}
-                  className="group relative block w-[calc(50%-5px)] text-left lg:w-[calc((100%-24px)/3)]"
-                  aria-label={`查看 ${caseItem.clientName} 案例详情`}
-                >
-                  <div className="relative aspect-[1.34/1] overflow-hidden rounded-[28px] border border-[rgba(255,255,255,0.78)] bg-[linear-gradient(135deg,rgba(255,255,255,0.98)_0%,rgba(242,246,252,0.96)_100%)] shadow-[0_14px_30px_rgba(15,23,42,0.07)] transition-all duration-350 group-hover:-translate-y-1.5 group-hover:shadow-[0_24px_46px_rgba(37,99,235,0.14)]">
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.12),transparent_64%)] opacity-0 transition-opacity duration-350 group-hover:opacity-100" />
-                    {caseItem.logoUrl ? (
+          <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+            {cases.map((caseItem) => (
+              <button
+                key={caseItem.slug}
+                type="button"
+                onClick={() => handleNavigateToCase(caseItem.slug)}
+                className="group relative block w-[calc(50%-6px)] text-left md:w-[calc(25%-12px)]"
+                aria-label={`查看 ${caseItem.clientName} 案例详情`}
+              >
+                <div className="relative aspect-[1.15/1] overflow-hidden rounded-[28px] bg-[linear-gradient(180deg,rgba(240,245,251,0.95)_0%,rgba(233,240,247,0.98)_100%)] shadow-[0_12px_30px_rgba(15,23,42,0.06)] transition-all duration-350 group-hover:-translate-y-1.5 group-hover:shadow-[0_22px_42px_rgba(37,99,235,0.14)]">
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.10),transparent_64%)] opacity-0 transition-opacity duration-350 group-hover:opacity-100" />
+                  {caseItem.logoUrl ? (
+                    <div className="relative z-10 flex h-full w-full items-center justify-center p-4 sm:p-5">
                       <img
                         src={caseItem.logoUrl}
                         alt={caseItem.clientName}
-                        className="relative z-10 h-full w-full origin-center object-contain scale-[1.12] transition-transform duration-500 group-hover:scale-[1.24]"
+                        className="h-full w-full origin-center object-contain scale-[1.18] transition-transform duration-500 group-hover:scale-[1.3]"
                         loading="lazy"
                       />
-                    ) : (
-                      <div className="relative z-10 h-full w-full bg-gradient-to-br from-blue-500 to-indigo-600" />
-                    )}
-                  </div>
-                  <span className="pointer-events-none absolute bottom-0 left-1/2 inline-flex h-10 w-10 -translate-x-1/2 translate-y-1/2 items-center justify-center rounded-full border border-[rgba(59,130,246,0.16)] bg-white text-[rgba(37,99,235,0.86)] shadow-[0_14px_28px_rgba(15,23,42,0.12)] opacity-0 transition-all duration-350 group-hover:translate-y-[38%] group-hover:opacity-100">
+                    </div>
+                  ) : (
+                    <div className="relative z-10 h-full w-full bg-gradient-to-br from-blue-500 to-indigo-600" />
+                  )}
+                  <span className="pointer-events-none absolute bottom-3 left-1/2 inline-flex h-9 w-9 -translate-x-1/2 translate-y-3 items-center justify-center rounded-full bg-white/96 text-[rgba(37,99,235,0.88)] shadow-[0_10px_24px_rgba(15,23,42,0.12)] opacity-0 transition-all duration-350 group-hover:translate-y-0 group-hover:opacity-100">
                     <MoveRight className="h-4 w-4" />
                   </span>
-                </button>
-              ))}
-            </div>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       </section>
