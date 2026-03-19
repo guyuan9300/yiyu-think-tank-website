@@ -216,7 +216,10 @@ export function MethodologyLibraryPage({
           <div className="max-w-4xl mx-auto">
             <article className="prose prose-lg max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-muted-foreground/80 prose-p:leading-relaxed prose-a:text-primary hover:prose-a:text-primary/80">
               {html ? (
-                <div dangerouslySetInnerHTML={{ __html: html }} />
+                <div
+                  className="text-[17px] leading-[1.8] font-light [&_ol]:list-decimal [&_ul]:list-disc [&_ol]:pl-6 [&_ul]:pl-6 [&_li]:my-2 [&_figure]:my-8 [&_figure]:text-center [&_figure_img]:mx-auto [&_figure_img]:block [&_img]:mx-auto [&_img]:block"
+                  dangerouslySetInnerHTML={{ __html: html }}
+                />
               ) : (
                 <div className="text-[17px] leading-[1.8] font-light">
                   {selected.content || selected.excerpt}

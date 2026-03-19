@@ -217,7 +217,10 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
               if (htmlFromSnapshot.trim()) {
                 const safe = DOMPurify.sanitize(htmlFromSnapshot, { USE_PROFILES: { html: true } });
                 return (
-                  <div className="text-[17px] leading-[1.8] font-light" dangerouslySetInnerHTML={{ __html: safe }} />
+                  <div
+                    className="text-[17px] leading-[1.8] font-light [&_ol]:list-decimal [&_ul]:list-disc [&_ol]:pl-6 [&_ul]:pl-6 [&_li]:my-2 [&_figure]:my-8 [&_figure]:text-center [&_figure_img]:mx-auto [&_figure_img]:block [&_img]:mx-auto [&_img]:block"
+                    dangerouslySetInnerHTML={{ __html: safe }}
+                  />
                 );
               }
 
@@ -226,7 +229,10 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
                   const html = generateHTML(anyArticle.contentJson, getArticleTiptapExtensions() as any);
                   const safe = DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
                   return (
-                    <div className="text-[17px] leading-[1.8] font-light" dangerouslySetInnerHTML={{ __html: safe }} />
+                    <div
+                      className="text-[17px] leading-[1.8] font-light [&_ol]:list-decimal [&_ul]:list-disc [&_ol]:pl-6 [&_ul]:pl-6 [&_li]:my-2 [&_figure]:my-8 [&_figure]:text-center [&_figure_img]:mx-auto [&_figure_img]:block [&_img]:mx-auto [&_img]:block"
+                      dangerouslySetInnerHTML={{ __html: safe }}
+                    />
                   );
                 } catch {
                   // fall through to legacy
