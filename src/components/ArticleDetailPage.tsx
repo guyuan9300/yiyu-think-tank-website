@@ -218,7 +218,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
                 const safe = DOMPurify.sanitize(htmlFromSnapshot, { USE_PROFILES: { html: true } });
                 return (
                   <div
-                    className="text-[17px] leading-[1.8] font-light [&_ol]:list-decimal [&_ul]:list-disc [&_ol]:pl-6 [&_ul]:pl-6 [&_ol>li]:list-item [&_ul>li]:list-item [&_li]:my-2 [&_figure]:my-8 [&_figure]:text-center [&_figure_img]:mx-auto [&_figure_img]:block [&_img]:mx-auto [&_img]:block"
+                    className="text-[17px] leading-[1.8] font-light [&_ol]:list-decimal [&_ul]:list-disc [&_ol]:list-inside [&_ul]:list-inside [&_ol]:pl-2 [&_ul]:pl-2 [&_ol>li]:list-item [&_ul>li]:list-item [&_li]:my-2 [&_figure]:my-8 [&_figure]:text-center [&_figure_img]:mx-auto [&_figure_img]:block [&_img]:mx-auto [&_img]:block"
                     dangerouslySetInnerHTML={{ __html: safe }}
                   />
                 );
@@ -230,7 +230,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
                   const safe = DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
                   return (
                     <div
-                      className="text-[17px] leading-[1.8] font-light [&_ol]:list-decimal [&_ul]:list-disc [&_ol]:pl-6 [&_ul]:pl-6 [&_ol>li]:list-item [&_ul>li]:list-item [&_li]:my-2 [&_figure]:my-8 [&_figure]:text-center [&_figure_img]:mx-auto [&_figure_img]:block [&_img]:mx-auto [&_img]:block"
+                      className="text-[17px] leading-[1.8] font-light [&_ol]:list-decimal [&_ul]:list-disc [&_ol]:list-inside [&_ul]:list-inside [&_ol]:pl-2 [&_ul]:pl-2 [&_ol>li]:list-item [&_ul>li]:list-item [&_li]:my-2 [&_figure]:my-8 [&_figure]:text-center [&_figure_img]:mx-auto [&_figure_img]:block [&_img]:mx-auto [&_img]:block"
                       dangerouslySetInnerHTML={{ __html: safe }}
                     />
                   );

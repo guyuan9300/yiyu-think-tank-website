@@ -399,6 +399,28 @@ function getDocxParagraphFontSizePx(paragraphXml, paragraphKind) {
   return Math.max(20, px);
 }
 
+function isImageOnlyHtml(input) {
+  const normalized = String(input || '')
+    .replace(/<br\s*\/?>/gi, '')
+    .replace(/<span[^>]*>/gi, '')
+    .replace(/<\/span>/gi, '')
+    .trim();
+  return /^<img\b[\s\S]*?>$/i.test(normalized);
+}
+
+function getListStyles(tag) {
+  if (tag === 'ol') {
+    return {
+      list: 'style="list-style-type: decimal; list-style-position: inside; padding-left: 0.5rem; margin: 1rem 0;"',
+      item: 'style="display: list-item; margin: 0.5rem 0;"',
+    };
+  }
+  return {
+    list: 'style="list-style-type: disc; list-style-position: inside; padding-left: 0.5rem; margin: 1rem 0;"',
+    item: 'style="display: list-item; margin: 0.5rem 0;"',
+  };
+}
+
 function classifyDocxParagraph(paragraphXml, innerText, numberingMap) {
   const styleName = getDocxParagraphStyle(paragraphXml).toLowerCase();
   const maxFontSize = getDocxParagraphMaxFontSize(paragraphXml);
@@ -436,7 +458,8 @@ async function convertDocxXmlToHtml(documentXml, relXml, numberingXml, filePath)
 
   const flushList = () => {
     if (!listState || !listState.items.length) return;
-    blocks.push(`<${listState.tag}>${listState.items.join('')}</${listState.tag}>`);
+    const styles = getListStyles(listState.tag);
+    blocks.push(`<${listState.tag} ${styles.list}>${listState.items.join('')}</${listState.tag}>`);
     listState = null;
   };
 
@@ -459,11 +482,17 @@ async function convertDocxXmlToHtml(documentXml, relXml, numberingXml, filePath)
         flushList();
         listState = { tag: paragraphKind, items: [] };
       }
-      listState.items.push(`<li>${wrappedInnerHtml}</li>`);
+      listState.items.push(`<li ${getListStyles(paragraphKind).item}>${wrappedInnerHtml}</li>`);
       continue;
     }
 
     flushList();
+    if (isImageOnlyHtml(wrappedInnerHtml)) {
+      blocks.push(
+        `<figure style="margin: 2rem 0; text-align: center;">${wrappedInnerHtml.replace(/<img\b/i, '<img style="display: block; max-width: 100%; margin: 0 auto; border-radius: 1rem;" ')}</figure>`
+      );
+      continue;
+    }
     if (paragraphKind === 'h2' || paragraphKind === 'h3' || paragraphKind === 'h4') {
       blocks.push(`<${paragraphKind}>${wrappedInnerHtml}</${paragraphKind}>`);
       continue;
@@ -530,7 +559,8 @@ function convertPlainTextToHtmlBlocks(text) {
 
   const flushList = () => {
     if (!listState || !listState.items.length) return;
-    blocks.push(`<${listState.tag}>${listState.items.join('')}</${listState.tag}>`);
+    const styles = getListStyles(listState.tag);
+    blocks.push(`<${listState.tag} ${styles.list}>${listState.items.join('')}</${listState.tag}>`);
     listState = null;
   };
 
@@ -553,7 +583,7 @@ function convertPlainTextToHtmlBlocks(text) {
         flushList();
         listState = { tag: kind, items: [] };
       }
-      listState.items.push(`<li>${escapeHtml(normalizeListLine(line))}</li>`);
+      listState.items.push(`<li ${getListStyles(kind).item}>${escapeHtml(normalizeListLine(line))}</li>`);
       continue;
     }
 
