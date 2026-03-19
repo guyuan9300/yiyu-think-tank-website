@@ -541,13 +541,13 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
                         }}
                         aria-label={`查看 ${caseItem.clientName} 案例详情`}
                       >
-                        <div className="relative aspect-[1.08/1] overflow-hidden">
+                        <div className="relative aspect-square overflow-hidden">
                           {caseItem.logoUrl ? (
                             <div className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden bg-white">
                               <img
                                 src={caseItem.logoUrl}
                                 alt={caseItem.clientName}
-                                className="h-full w-full object-cover object-center"
+                                className="h-full w-full object-contain object-center"
                                 loading="lazy"
                               />
                             </div>
