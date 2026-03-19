@@ -458,25 +458,26 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       )}
 
       {/* Cases Section */}
-      <section id="cases" className="pt-2 pb-14 px-4 sm:px-6 lg:px-8">
+      <section id="cases" className="pt-0 pb-14 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1200px] mx-auto">
-          <div className="mb-7 text-center">
+          <div className="mb-6 text-center">
             <h2 className="text-[24px] sm:text-[28px] font-semibold tracking-tight text-[rgba(15,23,42,0.92)]">部分服务客户</h2>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+          <div className="rounded-[32px] bg-[linear-gradient(180deg,rgba(237,243,248,0.9)_0%,rgba(232,239,246,0.96)_100%)] p-3 sm:p-4 md:p-5">
+            <div className="flex flex-wrap justify-center gap-3 md:gap-4">
             {cases.map((caseItem) => (
               <button
                 key={caseItem.slug}
                 type="button"
                 onClick={() => handleNavigateToCase(caseItem.slug)}
-                className="group relative block w-[calc(50%-6px)] text-left md:w-[calc(25%-12px)]"
+                className="group relative block w-[calc((100%-12px)/2)] text-left md:w-[calc((100%-48px)/4)]"
                 aria-label={`查看 ${caseItem.clientName} 案例详情`}
               >
-                <div className="relative aspect-[1.15/1] overflow-hidden rounded-[28px] bg-[linear-gradient(180deg,rgba(240,245,251,0.95)_0%,rgba(233,240,247,0.98)_100%)] shadow-[0_12px_30px_rgba(15,23,42,0.06)] transition-all duration-350 group-hover:-translate-y-1.5 group-hover:shadow-[0_22px_42px_rgba(37,99,235,0.14)]">
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.10),transparent_64%)] opacity-0 transition-opacity duration-350 group-hover:opacity-100" />
+                <div className="relative aspect-[1.08/1] overflow-hidden rounded-[26px] bg-transparent transition-all duration-350 group-hover:-translate-y-1">
+                  <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.78),rgba(255,255,255,0.14)_72%,transparent_100%)] opacity-0 transition-opacity duration-350 group-hover:opacity-100" />
                   {caseItem.logoUrl ? (
-                    <div className="relative z-10 flex h-full w-full items-center justify-center p-4 sm:p-5">
+                    <div className="relative z-10 flex h-full w-full items-center justify-center p-2 sm:p-3">
                       <img
                         src={caseItem.logoUrl}
                         alt={caseItem.clientName}
@@ -485,14 +486,15 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
                       />
                     </div>
                   ) : (
-                    <div className="relative z-10 h-full w-full bg-gradient-to-br from-blue-500 to-indigo-600" />
+                    <div className="relative z-10 h-full w-full rounded-[26px] bg-gradient-to-br from-blue-500 to-indigo-600" />
                   )}
-                  <span className="pointer-events-none absolute bottom-3 left-1/2 inline-flex h-9 w-9 -translate-x-1/2 translate-y-3 items-center justify-center rounded-full bg-white/96 text-[rgba(37,99,235,0.88)] shadow-[0_10px_24px_rgba(15,23,42,0.12)] opacity-0 transition-all duration-350 group-hover:translate-y-0 group-hover:opacity-100">
+                  <span className="pointer-events-none absolute bottom-3 left-1/2 inline-flex h-9 w-9 -translate-x-1/2 translate-y-4 items-center justify-center rounded-full bg-white text-[rgba(37,99,235,0.88)] shadow-[0_10px_24px_rgba(15,23,42,0.14)] opacity-0 transition-all duration-350 group-hover:translate-y-0 group-hover:opacity-100">
                     <MoveRight className="h-4 w-4" />
                   </span>
                 </div>
               </button>
             ))}
+            </div>
           </div>
         </div>
       </section>

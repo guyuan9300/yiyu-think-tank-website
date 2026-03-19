@@ -5,7 +5,7 @@ import { fetchCaseShowcaseDetail, fetchCaseShowcases, type CaseShowcase } from '
 
 interface CaseDetailPageProps {
   caseId: string;
-  onNavigate: (page: 'home' | 'strategy' | 'article' | 'report' | 'topic' | 'case', id?: string) => void;
+  onNavigate: (page: 'home' | 'strategy' | 'article' | 'report' | 'topic' | 'case' | 'admin' | 'user-center', id?: string) => void;
 }
 
 export function CaseDetailPage({ caseId, onNavigate }: CaseDetailPageProps) {
@@ -57,13 +57,7 @@ export function CaseDetailPage({ caseId, onNavigate }: CaseDetailPageProps) {
       <Header
         isLoggedIn={isLoggedIn}
         userType={isLoggedIn ? 'member' : 'visitor'}
-        onNavigate={(page) => {
-          if (page === 'strategy' || page === 'home') {
-            onNavigate(page as 'home' | 'strategy');
-          } else {
-            onNavigate('strategy');
-          }
-        }}
+        onNavigate={(page) => onNavigate(page as any)}
       />
 
       <main className="pt-24 pb-16">
@@ -121,7 +115,7 @@ export function CaseDetailPage({ caseId, onNavigate }: CaseDetailPageProps) {
                 ) : (
                   <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/70 px-6 py-14 text-center text-slate-500">
                     <FileImage className="w-8 h-8 mx-auto mb-3" />
-                    当前案例的客户介绍 PPT 图片尚未上传。
+                    暂无客户介绍图片
                   </div>
                 )}
               </div>
