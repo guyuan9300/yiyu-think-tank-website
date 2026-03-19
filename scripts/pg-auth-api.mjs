@@ -236,9 +236,78 @@ function parseDocxRelationships(input) {
   const xml = String(input || '');
   const regex = /<Relationship\b[^>]*Id="([^"]+)"[^>]*Target="([^"]+)"[^>]*\/?>/g;
   for (const match of xml.matchAll(regex)) {
-    relMap.set(match[1], decodeXmlEntities(match[2]));
+    relMap.set(match[1], decodeXmlEntities(match[2]).replace(/\\/g, '/'));
   }
   return relMap;
+}
+
+function parseDocxNumbering(input) {
+  const xml = String(input || '');
+  const abstractLevelMap = new Map();
+
+  for (const abstractMatch of xml.matchAll(/<w:abstractNum\b[\s\S]*?w:abstractNumId="([^"]+)"[\s\S]*?<\/w:abstractNum>/g)) {
+    const abstractId = abstractMatch[1];
+    const block = abstractMatch[0];
+    const levelMap = new Map();
+
+    for (const levelMatch of block.matchAll(/<w:lvl\b[\s\S]*?w:ilvl="([^"]+)"[\s\S]*?<w:numFmt\b[^>]*w:val="([^"]+)"/g)) {
+      levelMap.set(levelMatch[1], String(levelMatch[2] || '').trim().toLowerCase());
+    }
+
+    abstractLevelMap.set(abstractId, levelMap);
+  }
+
+  const numberingMap = new Map();
+  for (const numMatch of xml.matchAll(/<w:num\b[\s\S]*?w:numId="([^"]+)"[\s\S]*?<w:abstractNumId\b[^>]*w:val="([^"]+)"/g)) {
+    const numId = numMatch[1];
+    const abstractId = numMatch[2];
+    numberingMap.set(numId, abstractLevelMap.get(abstractId) || new Map());
+  }
+
+  return numberingMap;
+}
+
+function getDocxParagraphListTag(paragraphXml, numberingMap) {
+  const xml = String(paragraphXml || '');
+  const numId = xml.match(/<w:numId\b[^>]*w:val="([^"]+)"/)?.[1] || '';
+  if (!numId) return '';
+
+  const level = xml.match(/<w:ilvl\b[^>]*w:val="([^"]+)"/)?.[1] || '0';
+  const format = numberingMap.get(numId)?.get(level) || numberingMap.get(numId)?.get('0') || '';
+  if (!format) return 'ol';
+  return format === 'bullet' ? 'ul' : 'ol';
+}
+
+async function extractDocxMediaAsset(filePath, target, mediaCache) {
+  const normalizedTarget = String(target || '')
+    .replace(/^(\.\.\/)+/g, '')
+    .replace(/^word\//, '')
+    .trim();
+
+  if (!normalizedTarget.startsWith('media/')) {
+    return '';
+  }
+
+  if (mediaCache.has(normalizedTarget)) {
+    return mediaCache.get(normalizedTarget) || '';
+  }
+
+  const ext = path.extname(normalizedTarget).toLowerCase() || '.bin';
+  const outputDir = path.join(ADMIN_UPLOAD_ROOT, 'ai-imports', 'docx');
+  await fs.mkdir(outputDir, { recursive: true });
+
+  const outputName = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}${ext}`;
+  const outputPath = path.join(outputDir, outputName);
+
+  const { stdout } = await execFileAsync('unzip', ['-p', filePath, `word/${normalizedTarget}`], {
+    encoding: 'buffer',
+    maxBuffer: 32 * 1024 * 1024,
+  });
+  await fs.writeFile(outputPath, stdout);
+
+  const publicUrl = `/uploads/ai-imports/docx/${outputName}`;
+  mediaCache.set(normalizedTarget, publicUrl);
+  return publicUrl;
 }
 
 function wrapInlineMarks(text, runXml) {
@@ -255,7 +324,7 @@ function wrapInlineMarks(text, runXml) {
   return html;
 }
 
-function extractDocxInlineHtml(fragment, relMap) {
+async function extractDocxInlineHtml(fragment, relMap, filePath, mediaCache) {
   const parts = [];
   const tokenRegex = /<w:hyperlink\b[\s\S]*?<\/w:hyperlink>|<w:r\b[\s\S]*?<\/w:r>|<w:br\s*\/>/g;
 
@@ -269,7 +338,7 @@ function extractDocxInlineHtml(fragment, relMap) {
     if (/^<w:hyperlink/i.test(token)) {
       const relId = token.match(/r:id="([^"]+)"/)?.[1] || '';
       const href = relMap.get(relId) || '';
-      const inner = extractDocxInlineHtml(token, relMap);
+      const inner = await extractDocxInlineHtml(token, relMap, filePath, mediaCache);
       if (!inner) continue;
       parts.push(href ? `<a href="${escapeHtml(href)}">${inner}</a>` : inner);
       continue;
@@ -281,8 +350,18 @@ function extractDocxInlineHtml(fragment, relMap) {
         .join('')
     );
     const runText = text || (token.includes('<w:tab/>') ? ' ' : '');
-    if (!runText.trim()) continue;
-    parts.push(wrapInlineMarks(runText, token));
+    if (runText.trim()) {
+      parts.push(wrapInlineMarks(runText, token));
+    }
+
+    const imageEmbedIds = Array.from(token.matchAll(/<a:blip\b[^>]*r:embed="([^"]+)"/g)).map((item) => item[1]).filter(Boolean);
+    for (const embedId of imageEmbedIds) {
+      const target = relMap.get(embedId) || '';
+      const imageUrl = target ? await extractDocxMediaAsset(filePath, target, mediaCache) : '';
+      if (imageUrl) {
+        parts.push(`<img src="${escapeHtml(imageUrl)}" alt="" />`);
+      }
+    }
   }
 
   return parts.join('');
@@ -320,13 +399,15 @@ function getDocxParagraphFontSizePx(paragraphXml, paragraphKind) {
   return Math.max(20, px);
 }
 
-function classifyDocxParagraph(paragraphXml, innerText) {
+function classifyDocxParagraph(paragraphXml, innerText, numberingMap) {
   const styleName = getDocxParagraphStyle(paragraphXml).toLowerCase();
   const maxFontSize = getDocxParagraphMaxFontSize(paragraphXml);
   const isBold = docxParagraphHasBold(paragraphXml);
   const normalizedText = normalizeExtractedText(innerText);
+  const listTag = getDocxParagraphListTag(paragraphXml, numberingMap);
 
-  if (!normalizedText) return 'blank';
+  if (!normalizedText && !/<a:blip\b/i.test(String(paragraphXml || ''))) return 'blank';
+  if (listTag) return listTag;
   if (styleName.includes('listbullet')) return 'ul';
   if (styleName.includes('listnumber')) return 'ol';
   if (styleName.includes('title')) return 'h2';
@@ -345,8 +426,10 @@ function classifyDocxParagraph(paragraphXml, innerText) {
   return 'p';
 }
 
-function convertDocxXmlToHtml(documentXml, relXml) {
+async function convertDocxXmlToHtml(documentXml, relXml, numberingXml, filePath) {
   const relMap = parseDocxRelationships(relXml);
+  const numberingMap = parseDocxNumbering(numberingXml);
+  const mediaCache = new Map();
   const paragraphs = String(documentXml || '').match(/<w:p\b[\s\S]*?<\/w:p>/g) || [];
   const blocks = [];
   let listState = null;
@@ -358,10 +441,9 @@ function convertDocxXmlToHtml(documentXml, relXml) {
   };
 
   for (const paragraphXml of paragraphs) {
-    const innerHtml = extractDocxInlineHtml(paragraphXml, relMap).trim();
-    const paragraphKind = classifyDocxParagraph(paragraphXml, innerHtml);
+    const innerHtml = (await extractDocxInlineHtml(paragraphXml, relMap, filePath, mediaCache)).trim();
+    const paragraphKind = classifyDocxParagraph(paragraphXml, innerHtml, numberingMap);
     const paragraphFontSizePx = getDocxParagraphFontSizePx(paragraphXml, paragraphKind);
-    const sizeStyle = paragraphFontSizePx ? ` style="font-size: ${paragraphFontSizePx}px"` : '';
     const wrappedInnerHtml = paragraphFontSizePx ? `<span style="font-size: ${paragraphFontSizePx}px">${innerHtml}</span>` : innerHtml;
 
     if (paragraphKind === 'blank') {
@@ -409,6 +491,139 @@ function inferTitleFromText(text, fallbackPath = '') {
   return base || '';
 }
 
+function normalizePdfPageTexts(input) {
+  return String(input || '')
+    .split('\f')
+    .map((page) => normalizeExtractedText(page))
+    .filter(Boolean);
+}
+
+function normalizeListLine(input) {
+  return String(input || '')
+    .replace(/^[•·●○■□▪◦▪▫‣⁃\-–—]+\s*/u, '')
+    .replace(/^\(?\d+[.)、]\)?\s*/u, '')
+    .replace(/^[（(]?[一二三四五六七八九十百千万0-9]+[)）][、.]?\s*/u, '')
+    .trim();
+}
+
+function classifyPlainTextLine(line) {
+  const value = String(line || '').trim();
+  if (!value) return 'blank';
+  if (/^[•·●○■□▪◦▪▫‣⁃\-–—]+\s+/u.test(value)) return 'ul';
+  if (/^\(?\d+[.)、]\)?\s+/u.test(value)) return 'ol';
+  if (/^[（(]?[一二三四五六七八九十百千万0-9]+[)）][、.]?\s+/u.test(value)) return 'ol';
+  if (value.length <= 28 && !/[。！？；：:，,、]$/.test(value)) return 'h3';
+  return 'p';
+}
+
+function convertPlainTextToHtmlBlocks(text) {
+  const lines = String(text || '').replace(/\r/g, '').split('\n');
+  const blocks = [];
+  let paragraphLines = [];
+  let listState = null;
+
+  const flushParagraph = () => {
+    if (!paragraphLines.length) return;
+    blocks.push(`<p>${paragraphLines.map((item) => escapeHtml(item)).join('<br />')}</p>`);
+    paragraphLines = [];
+  };
+
+  const flushList = () => {
+    if (!listState || !listState.items.length) return;
+    blocks.push(`<${listState.tag}>${listState.items.join('')}</${listState.tag}>`);
+    listState = null;
+  };
+
+  for (const rawLine of lines) {
+    const line = String(rawLine || '').trim();
+    const kind = classifyPlainTextLine(line);
+
+    if (kind === 'blank') {
+      flushParagraph();
+      flushList();
+      if (blocks[blocks.length - 1] !== '<p><br /></p>') {
+        blocks.push('<p><br /></p>');
+      }
+      continue;
+    }
+
+    if (kind === 'ul' || kind === 'ol') {
+      flushParagraph();
+      if (!listState || listState.tag !== kind) {
+        flushList();
+        listState = { tag: kind, items: [] };
+      }
+      listState.items.push(`<li>${escapeHtml(normalizeListLine(line))}</li>`);
+      continue;
+    }
+
+    flushList();
+    if (kind === 'h3') {
+      flushParagraph();
+      blocks.push(`<h3>${escapeHtml(line)}</h3>`);
+      continue;
+    }
+
+    paragraphLines.push(line);
+  }
+
+  flushParagraph();
+  flushList();
+  return blocks.join('\n');
+}
+
+async function renderPdfPageImages(filePath, contentType, maxPages = 6) {
+  const normalizedType = ['book', 'insight', 'methodology'].includes(contentType) ? contentType : 'report';
+  const outputDir = path.join(ADMIN_UPLOAD_ROOT, 'ai-pages', normalizedType);
+  await fs.mkdir(outputDir, { recursive: true });
+
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'yiyu-pdf-pages-'));
+  try {
+    const prefix = path.join(tempDir, 'page');
+    await execFileAsync(
+      'pdftoppm',
+      ['-png', '-r', '110', '-f', '1', '-l', String(maxPages), filePath, prefix],
+      { maxBuffer: 32 * 1024 * 1024 }
+    );
+
+    const pageFiles = (await fs.readdir(tempDir))
+      .filter((name) => /^page-\d+\.png$/i.test(name))
+      .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+
+    const urls = [];
+    for (const pageFile of pageFiles) {
+      const srcPath = path.join(tempDir, pageFile);
+      const outputName = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${pageFile}`;
+      const destPath = path.join(outputDir, outputName);
+      await fs.copyFile(srcPath, destPath);
+      urls.push(`/uploads/ai-pages/${normalizedType}/${outputName}`);
+    }
+
+    return urls;
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+function buildPdfArticleHtml(pageTexts, pageImages) {
+  const blocks = [];
+  const maxLength = Math.max(pageTexts.length, pageImages.length);
+
+  for (let i = 0; i < maxLength; i += 1) {
+    const imageUrl = safeText(pageImages[i] || '');
+    const pageText = safeText(pageTexts[i] || '');
+
+    if (imageUrl) {
+      blocks.push(`<figure><img src="${escapeHtml(imageUrl)}" alt="第${i + 1}页" /></figure>`);
+    }
+    if (pageText) {
+      blocks.push(convertPlainTextToHtmlBlocks(pageText));
+    }
+  }
+
+  return blocks.join('\n');
+}
+
 function inferAuthorFromCoverText(text) {
   const lines = normalizeExtractedText(text)
     .split(/\n+/)
@@ -437,9 +652,10 @@ async function extractDocxArtifacts(filePath) {
     throw new Error(`提取 DOCX 文本失败：${error?.message || '未知错误'}`);
   });
   const relResult = await execFileAsync('unzip', ['-p', filePath, 'word/_rels/document.xml.rels']).catch(() => ({ stdout: '' }));
+  const numberingResult = await execFileAsync('unzip', ['-p', filePath, 'word/numbering.xml']).catch(() => ({ stdout: '' }));
 
   const text = stripXmlToText(textResult.stdout);
-  const html = convertDocxXmlToHtml(textResult.stdout, relResult.stdout);
+  const html = await convertDocxXmlToHtml(textResult.stdout, relResult.stdout, numberingResult.stdout, filePath);
   return {
     pages: 0,
     metaTitle: '',
@@ -475,11 +691,13 @@ async function extractPdfArtifacts(filePath, options = {}) {
     throw new Error(`提取 PDF 文本失败：${error?.message || '未知错误'}`);
   });
 
+  const rawText = String(textResult.stdout || '');
   return {
     pages,
     metaTitle: safeText(pdfInfo.Title || ''),
     metaAuthor: safeText(pdfInfo.Author || ''),
-    text: normalizeExtractedText(textResult.stdout),
+    text: normalizeExtractedText(rawText),
+    pageTexts: normalizePdfPageTexts(rawText),
     fileExt: '.pdf',
     ocrUsed: false,
   };
@@ -544,6 +762,7 @@ async function extractPdfArtifactsWithOcr(filePath, options = {}) {
     return {
       ...pdfData,
       text: ocrText,
+      pageTexts: normalizePdfPageTexts(ocrText),
       ocrUsed: true,
     };
   } finally {
@@ -609,6 +828,13 @@ async function extractSourceArtifacts(filePath, contentType) {
       ocrPages: isArticleLike ? 3 : 2,
       ocrDpi: 110,
     });
+    if (isArticleLike) {
+      const pageImages = await renderPdfPageImages(filePath, contentType, Math.min(Math.max(pdfData.pageTexts?.length || 1, 1), 6));
+      return {
+        ...pdfData,
+        html: buildPdfArticleHtml(pdfData.pageTexts || [pdfData.text || ''], pageImages),
+      };
+    }
     if (contentType === 'book') {
       return {
         ...pdfData,
