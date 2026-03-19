@@ -7,7 +7,7 @@ function createDraftCase(order: number): CaseShowcase {
   const stamp = Date.now();
   return {
     id: `case_${stamp}`,
-    slug: `case-${stamp}`,
+    slug: `case-${order}`,
     clientName: '新机构案例',
     industry: '',
     title: '新机构案例',

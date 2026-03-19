@@ -41,7 +41,7 @@ export function CaseDetailPage({ caseId, onNavigate }: CaseDetailPageProps) {
       setCaseData(detailResult.ok && detailResult.data ? detailResult.data : null);
       setRelatedCases(
         listResult.ok && listResult.data
-          ? listResult.data.filter((item) => item.slug !== caseId).slice(0, 3)
+          ? listResult.data.filter((item) => item.slug !== caseId && item.id !== detailResult.data?.id).slice(0, 3)
           : []
       );
       setLoading(false);

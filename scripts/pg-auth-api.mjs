@@ -1126,7 +1126,7 @@ async function buildAiPrefillResult({ contentType, fileUrl, current }) {
 const DEFAULT_CASE_SHOWCASES = [
   {
     id: 'case-blue-letter',
-    slug: 'blue-letter',
+    slug: 'case-1',
     clientName: '蓝信封',
     industry: '公益/教育',
     title: '专注于乡村儿童心理健康服务的公益机构',
@@ -1137,7 +1137,7 @@ const DEFAULT_CASE_SHOWCASES = [
   },
   {
     id: 'case-vision-capital',
-    slug: 'vision-capital',
+    slug: 'case-2',
     clientName: '愿景资本',
     industry: '金融/投资',
     title: '国家新兴产业创投基金管理公司',
@@ -1148,7 +1148,7 @@ const DEFAULT_CASE_SHOWCASES = [
   },
   {
     id: 'case-beike-foundation',
-    slug: 'beike-foundation',
+    slug: 'case-3',
     clientName: '贝壳公益基金会',
     industry: '公益/房地产',
     title: '城市社区公益平台',
@@ -1159,7 +1159,7 @@ const DEFAULT_CASE_SHOWCASES = [
   },
   {
     id: 'case-rici-foundation',
-    slug: 'rici-foundation',
+    slug: 'case-4',
     clientName: '日慈基金会',
     industry: '公益/教育',
     title: '青少年心智素养教育',
@@ -1170,7 +1170,7 @@ const DEFAULT_CASE_SHOWCASES = [
   },
   {
     id: 'case-tianzige',
-    slug: 'tianzige',
+    slug: 'case-5',
     clientName: '田字格',
     industry: '公益/教育',
     title: '乡土人本教育探索',
@@ -1181,7 +1181,7 @@ const DEFAULT_CASE_SHOWCASES = [
   },
   {
     id: 'case-abc-consulting',
-    slug: 'abc-consulting',
+    slug: 'case-6',
     clientName: 'ABC美好社会咨询社',
     industry: '公益/咨询',
     title: '专业公益咨询服务',
@@ -1192,7 +1192,7 @@ const DEFAULT_CASE_SHOWCASES = [
   },
   {
     id: 'case-lithium-sodium-krypton-strontium',
-    slug: 'lithium-sodium-krypton-strontium',
+    slug: 'case-7',
     clientName: '锂钠氪锶',
     industry: '教育/科技',
     title: '教育科技解决方案',
@@ -1203,7 +1203,7 @@ const DEFAULT_CASE_SHOWCASES = [
   },
   {
     id: 'case-china-rural-foundation',
-    slug: 'china-rural-foundation',
+    slug: 'case-8',
     clientName: '中国乡村发展基金会',
     industry: '公益/乡村振兴',
     title: '乡村发展与扶贫事业',
@@ -1214,7 +1214,7 @@ const DEFAULT_CASE_SHOWCASES = [
   },
   {
     id: 'case-nio',
-    slug: 'nio',
+    slug: 'case-9',
     clientName: '蔚来汽车',
     industry: '汽车/新能源',
     title: '智能电动汽车与用户体验',
@@ -1403,6 +1403,14 @@ function normalizeCaseShowcaseScope(input) {
 
 function toCaseShowcaseSlug(input) {
   return toProjectSlug(input).replace(/^project-/, 'case-');
+}
+
+function toCaseShowcaseSlotSlug(sortOrder, fallback = '') {
+  const order = toPositiveInt(sortOrder, 0);
+  if (order > 0) {
+    return `case-${order}`;
+  }
+  return toCaseShowcaseSlug(fallback || `case-${crypto.randomUUID()}`);
 }
 
 function normalizeContentType(input) {
@@ -2035,6 +2043,7 @@ async function ensureSchema() {
 
   await seedDefaultCoverPresets(pool);
   await seedDefaultCaseShowcases();
+  await syncCaseShowcaseSlotSlugs();
 
   if (DEFAULT_ADMIN_EMAILS.size > 0) {
     await pool.query(
@@ -2520,7 +2529,7 @@ function mapStrategyLearningResource(row) {
 function mapCaseShowcase(row) {
   return {
     id: row.id,
-    slug: row.slug || toCaseShowcaseSlug(row.client_name || row.title || row.id),
+    slug: row.slug || toCaseShowcaseSlotSlug(row.sort_order, row.client_name || row.title || row.id),
     clientName: row.client_name || '',
     industry: row.industry || '',
     title: row.title || '',
@@ -2540,9 +2549,10 @@ function mapCaseShowcase(row) {
 function sanitizeCaseShowcasePayload(payload, fallbackRow = null) {
   const clientName = safeText(payload?.clientName, fallbackRow?.client_name || '未命名机构');
   const title = clientName;
+  const sortOrder = toPositiveInt(payload?.sortOrder, Number(fallbackRow?.sort_order || 0));
   return {
     id: safeText(payload?.id, fallbackRow?.id || `case_${crypto.randomUUID()}`),
-    slug: toCaseShowcaseSlug(payload?.slug || fallbackRow?.slug || clientName),
+    slug: toCaseShowcaseSlotSlug(sortOrder, payload?.slug || fallbackRow?.slug || clientName),
     clientName,
     industry: '',
     title,
@@ -2557,8 +2567,30 @@ function sanitizeCaseShowcasePayload(payload, fallbackRow = null) {
         ? fallbackRow.slide_images.map((item) => safeText(item)).filter(Boolean)
         : [],
     isPublished: normalizeBool(payload?.isPublished, fallbackRow?.is_published || false),
-    sortOrder: toPositiveInt(payload?.sortOrder, Number(fallbackRow?.sort_order || 0)),
+    sortOrder,
   };
+}
+
+async function syncCaseShowcaseSlotSlugs() {
+  const duplicates = await pool.query(
+    `SELECT sort_order
+     FROM case_showcases
+     WHERE is_active = true AND sort_order IS NOT NULL AND sort_order > 0
+     GROUP BY sort_order
+     HAVING COUNT(*) > 1`
+  );
+  if (duplicates.rows.length) {
+    return;
+  }
+  await pool.query(
+    `UPDATE case_showcases
+     SET slug = 'case-' || sort_order::text,
+         updated_at = now()
+     WHERE is_active = true
+       AND sort_order IS NOT NULL
+       AND sort_order > 0
+       AND slug IS DISTINCT FROM ('case-' || sort_order::text)`
+  );
 }
 
 async function listCaseShowcases(scope = 'published') {
