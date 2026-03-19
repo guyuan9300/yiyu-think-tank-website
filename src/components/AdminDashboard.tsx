@@ -3,7 +3,6 @@
  * 实现内容管理功能，支持真实数据持久化
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { generateJSON } from '@tiptap/html';
 import { 
   Users, BarChart3, MessageSquare, LogOut,
   Menu, X, ChevronRight, Database, Shield, Bell, Gift, Crown,
@@ -72,11 +71,7 @@ const buildEditorDocument = (contentJson: any, legacyContent?: string | null, co
 
   const normalizedHtml = String(contentHtml || '').trim();
   if (normalizedHtml) {
-    try {
-      return generateJSON(normalizedHtml, getArticleTiptapExtensions() as any);
-    } catch {
-      // Fallback to plain text paragraphs below.
-    }
+    return normalizedHtml;
   }
 
   const normalized = String(legacyContent || '').trim();
@@ -3766,7 +3761,7 @@ function InsightFormModal({
       setExcerptValue(next.excerpt);
       setSelectedTopics(next.topics.length ? next.topics : ['战略']);
       setEditorDocument(nextDoc);
-      setEditorValue(nextDoc ? { json: nextDoc, html: next.contentHtml || '', text: next.contentText } : null);
+      setEditorValue(null);
     } catch (error: any) {
       alert(error?.message || 'AI 填充失败，请稍后重试');
     }

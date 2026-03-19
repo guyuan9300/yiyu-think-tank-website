@@ -17,7 +17,7 @@ export function ArticleEditor({
   onChange,
   placeholder = '请输入文章正文内容…',
 }: {
-  value?: JSONContent | null;
+  value?: JSONContent | string | null;
   onChange?: (v: ArticleEditorValue) => void;
   placeholder?: string;
 }) {
@@ -43,6 +43,14 @@ export function ArticleEditor({
 
   useEffect(() => {
     if (!editor || !value) return;
+    if (typeof value === 'string') {
+      const nextHtml = value.trim();
+      const currentHtml = editor.getHTML().trim();
+      if (nextHtml && currentHtml !== nextHtml) {
+        editor.commands.setContent(nextHtml);
+      }
+      return;
+    }
     const current = editor.getJSON();
     if (JSON.stringify(current) !== JSON.stringify(value)) {
       editor.commands.setContent(value);
