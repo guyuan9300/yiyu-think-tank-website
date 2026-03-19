@@ -25,7 +25,7 @@ import { ContentResourceCard } from './ContentResourceCard';
 import { PaginationControls } from './PaginationControls';
 
 type Topic = '战略' | '业务设计' | '组织' | 'AI 技术';
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 6;
 
 export function MethodologyLibraryPage({
   onNavigate,

@@ -527,6 +527,55 @@ function normalizePdfPageTexts(input) {
     .filter(Boolean);
 }
 
+function shouldJoinWithPreviousLine(previousLine, currentLine) {
+  const prev = String(previousLine || '').trim();
+  const current = String(currentLine || '').trim();
+  if (!prev || !current) return false;
+  if (classifyPlainTextLine(prev) !== 'p' || classifyPlainTextLine(current) !== 'p') return false;
+  if (/[。！？；.!?;:：]$/.test(prev)) return false;
+  if (/^(图|表)\s*[0-9一二三四五六七八九十]/u.test(current)) return false;
+  return true;
+}
+
+function joinArticleLines(previousLine, currentLine) {
+  const prev = String(previousLine || '').trim();
+  const current = String(currentLine || '').trim();
+  if (!prev) return current;
+  if (!current) return prev;
+  const needsSpace = /[A-Za-z0-9]$/.test(prev) && /^[A-Za-z0-9]/.test(current);
+  return `${prev}${needsSpace ? ' ' : ''}${current}`;
+}
+
+function reflowArticlePlainText(text) {
+  const lines = String(text || '').replace(/\r/g, '').split('\n');
+  const result = [];
+
+  for (const rawLine of lines) {
+    const line = String(rawLine || '').trim();
+    if (!line) {
+      if (result[result.length - 1] !== '') {
+        result.push('');
+      }
+      continue;
+    }
+
+    if (!result.length) {
+      result.push(line);
+      continue;
+    }
+
+    const previous = result[result.length - 1];
+    if (shouldJoinWithPreviousLine(previous, line)) {
+      result[result.length - 1] = joinArticleLines(previous, line);
+      continue;
+    }
+
+    result.push(line);
+  }
+
+  return result.join('\n');
+}
+
 function normalizeListLine(input) {
   return String(input || '')
     .replace(/^[•·●○■□▪◦▪▫‣⁃\-–—]+\s*/u, '')
@@ -635,21 +684,12 @@ async function renderPdfPageImages(filePath, contentType, maxPages = 6) {
   }
 }
 
-function buildPdfArticleHtml(pageTexts, pageImages) {
+function buildPdfArticleHtml(pageTexts) {
   const blocks = [];
-  const maxLength = Math.max(pageTexts.length, pageImages.length);
-
-  for (let i = 0; i < maxLength; i += 1) {
-    const imageUrl = safeText(pageImages[i] || '');
-    const pageText = safeText(pageTexts[i] || '');
-
-    if (imageUrl) {
-      blocks.push(
-        `<figure style="margin: 2rem 0; text-align: center;"><img src="${escapeHtml(imageUrl)}" alt="第${i + 1}页" style="display: block; max-width: 100%; margin: 0 auto; border-radius: 1rem;" /></figure>`
-      );
-    }
-    if (pageText) {
-      blocks.push(convertPlainTextToHtmlBlocks(pageText));
+  for (const pageText of pageTexts) {
+    const normalizedPageText = reflowArticlePlainText(pageText);
+    if (normalizedPageText) {
+      blocks.push(convertPlainTextToHtmlBlocks(normalizedPageText));
     }
   }
 
@@ -861,10 +901,9 @@ async function extractSourceArtifacts(filePath, contentType) {
       ocrDpi: 110,
     });
     if (isArticleLike) {
-      const pageImages = await renderPdfPageImages(filePath, contentType, Math.min(Math.max(pdfData.pageTexts?.length || 1, 1), 6));
       return {
         ...pdfData,
-        html: buildPdfArticleHtml(pdfData.pageTexts || [pdfData.text || ''], pageImages),
+        html: buildPdfArticleHtml(pdfData.pageTexts || [pdfData.text || '']),
       };
     }
     if (contentType === 'book') {

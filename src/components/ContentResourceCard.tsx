@@ -70,8 +70,8 @@ export function ContentResourceCard({
           {cover}
         </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <div className="flex-1 min-w-0 flex flex-col">
+          <div className="flex items-center gap-2 mb-3 flex-wrap min-h-[28px]">
             {tags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
@@ -82,23 +82,19 @@ export function ContentResourceCard({
             ))}
           </div>
 
-          <h3 className="text-[18px] font-semibold text-foreground leading-[1.4] line-clamp-1 group-hover:text-primary transition-colors">
+          <h3 className="min-h-[1.8rem] text-[18px] font-semibold text-foreground leading-[1.4] line-clamp-1 group-hover:text-primary transition-colors">
             {title}
           </h3>
 
-          {author ? (
-            <p className="mt-2 text-[13px] text-muted-foreground/55 line-clamp-1">
-              {author}
-            </p>
-          ) : null}
+          <p className={`mt-2 min-h-[1.25rem] text-[13px] line-clamp-1 ${author ? 'text-muted-foreground/55' : 'invisible'}`}>
+            {author || '—'}
+          </p>
 
-          {excerpt ? (
-            <p className="mt-2 text-[14px] text-muted-foreground/72 line-clamp-2 leading-[1.6]">
-              {excerpt}
-            </p>
-          ) : null}
+          <p className={`mt-2 min-h-[2.9rem] text-[14px] leading-[1.6] line-clamp-2 ${excerpt ? 'text-muted-foreground/72' : 'invisible'}`}>
+            {excerpt || '—'}
+          </p>
 
-          <div className="mt-4 flex items-center justify-between gap-4 border-t border-border/30 pt-4">
+          <div className="mt-auto flex items-center justify-between gap-4 border-t border-border/30 pt-4">
             <Metrics views={views} likes={likes} favorites={favorites} />
             <span className="text-[12px] text-muted-foreground/55 whitespace-nowrap">{publishDate || '-'}</span>
           </div>
@@ -108,14 +104,14 @@ export function ContentResourceCard({
   }
 
   return (
-    <article className="group cursor-pointer" onClick={onClick}>
-      <div className="overflow-hidden rounded-3xl border border-border/40 bg-white/70 transition-all duration-300 hover:-translate-y-1 hover:border-border/60 hover:bg-white/90 hover:shadow-[0_24px_70px_-45px_rgba(0,0,0,0.35)]">
+    <article className="group h-full cursor-pointer" onClick={onClick}>
+      <div className="h-full overflow-hidden rounded-3xl border border-border/40 bg-white/70 transition-all duration-300 hover:-translate-y-1 hover:border-border/60 hover:bg-white/90 hover:shadow-[0_24px_70px_-45px_rgba(0,0,0,0.35)] flex flex-col">
         <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-primary/[0.03] to-accent/[0.03]">
           {cover}
         </div>
 
-        <div className="p-6">
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <div className="p-6 flex flex-1 flex-col">
+          <div className="flex items-center gap-2 mb-3 flex-wrap min-h-[28px]">
             {tags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
@@ -126,23 +122,19 @@ export function ContentResourceCard({
             ))}
           </div>
 
-          <h3 className="text-[18px] font-semibold leading-[1.4] text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+          <h3 className="min-h-[3.2rem] text-[18px] font-semibold leading-[1.4] text-foreground line-clamp-2 group-hover:text-primary transition-colors">
             {title}
           </h3>
 
-          {author ? (
-            <p className="mt-2 text-[13px] text-muted-foreground/55 line-clamp-1">
-              {author}
-            </p>
-          ) : null}
+          <p className={`mt-2 min-h-[1.25rem] text-[13px] line-clamp-1 ${author ? 'text-muted-foreground/55' : 'invisible'}`}>
+            {author || '—'}
+          </p>
 
-          {excerpt ? (
-            <p className="mt-3 text-[14px] text-muted-foreground/72 line-clamp-2 leading-[1.6]">
-              {excerpt}
-            </p>
-          ) : null}
+          <p className={`mt-3 min-h-[3rem] text-[14px] leading-[1.6] line-clamp-2 ${excerpt ? 'text-muted-foreground/72' : 'invisible'}`}>
+            {excerpt || '—'}
+          </p>
 
-          <div className="mt-5 flex items-center justify-between gap-4 border-t border-border/30 pt-4">
+          <div className="mt-auto flex items-center justify-between gap-4 border-t border-border/30 pt-4">
             <Metrics views={views} likes={likes} favorites={favorites} />
             <span className="text-[12px] text-muted-foreground/55 whitespace-nowrap">{publishDate || '-'}</span>
           </div>

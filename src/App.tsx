@@ -40,7 +40,7 @@ import { ConsultApplyPage } from './components/ConsultApplyPage';
 import { NotFoundPage } from './components/NotFoundPage';
 import { StrategyModuleIntroPage } from './components/StrategyModuleIntroPage';
 
-const ADMIN_SHELL_VERSION = '20260313-logout-home';
+const ADMIN_SHELL_VERSION = '20260319-admin-shell-refresh';
 
 function AdminRouteRedirect({ target }: { target: string }) {
   useEffect(() => {
