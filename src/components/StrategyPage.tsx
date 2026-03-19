@@ -513,53 +513,39 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       )}
 
       {/* Cases Section */}
-      <section id="cases" className="py-14 px-4 sm:px-6 lg:px-8">
+      <section id="cases" className="pt-6 pb-14 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1200px] mx-auto">
-          <div className="rounded-[32px] border border-[rgba(15,23,42,0.06)] bg-[linear-gradient(180deg,rgba(239,246,255,0.92)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-6 sm:px-7 sm:py-8 lg:px-8 lg:py-9 shadow-[0_18px_50px_rgba(15,23,42,0.05)]">
-            <div className="flex items-end justify-between gap-4 mb-6">
-              <div className="space-y-2">
-                <h2 className="text-[28px] font-semibold tracking-tight text-[rgba(15,23,42,0.92)]">客户案例</h2>
-                <p className="text-[14px] text-[rgba(15,23,42,0.52)]">点击机构 Logo 查看案例详情与客户介绍材料</p>
-              </div>
-              <p className="hidden sm:block text-[12px] tracking-[0.18em] uppercase text-[rgba(15,23,42,0.32)]">
-                {cases.length} 个案例
-              </p>
+          <div className="rounded-[34px] border border-[rgba(15,23,42,0.05)] bg-[linear-gradient(180deg,rgba(246,248,252,0.96)_0%,rgba(251,252,254,0.98)_100%)] px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-7 shadow-[0_18px_45px_rgba(15,23,42,0.045)]">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="text-[24px] sm:text-[26px] font-semibold tracking-tight text-[rgba(15,23,42,0.92)]">客户案例</h2>
+              <div className="h-px flex-1 ml-5 bg-[linear-gradient(90deg,rgba(15,23,42,0.12)_0%,rgba(15,23,42,0)_100%)]" />
             </div>
 
-            <div className="flex flex-wrap justify-center gap-4 sm:gap-5">
+            <div className="flex flex-wrap justify-center gap-x-5 gap-y-7 lg:gap-x-6 lg:gap-y-8">
               {cases.map((caseItem) => (
                 <button
                   key={caseItem.slug}
                   type="button"
                   onClick={() => handleNavigateToCase(caseItem.slug)}
-                  className="group relative flex min-h-[190px] w-full max-w-[360px] flex-col justify-between rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-white/94 p-5 text-left shadow-[0_12px_30px_rgba(15,23,42,0.05)] transition-all duration-300 hover:-translate-y-1 hover:border-[rgba(59,130,246,0.24)] hover:shadow-[0_18px_40px_rgba(37,99,235,0.14)] sm:w-[calc(50%-10px)] lg:w-[calc(33.333%-14px)]"
+                  className="group relative block w-full max-w-[360px] text-left sm:w-[calc(50%-10px)] lg:w-[calc(33.333%-16px)]"
+                  aria-label={`查看 ${caseItem.clientName} 案例详情`}
                 >
-                  <div className="absolute inset-x-5 top-5 h-[1px] bg-[linear-gradient(90deg,rgba(59,130,246,0)_0%,rgba(59,130,246,0.16)_35%,rgba(59,130,246,0)_100%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-
-                  <div className="flex min-h-[106px] items-center justify-center rounded-[22px] border border-[rgba(15,23,42,0.06)] bg-[linear-gradient(180deg,rgba(248,250,252,0.98)_0%,rgba(241,245,249,0.92)_100%)] px-6 py-5">
+                  <div className="relative overflow-hidden rounded-[26px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(135deg,rgba(255,255,255,0.98)_0%,rgba(244,247,252,0.96)_100%)] px-8 py-8 sm:px-10 sm:py-9 min-h-[150px] shadow-[0_12px_26px_rgba(15,23,42,0.05)] transition-all duration-350 group-hover:-translate-y-1.5 group-hover:border-[rgba(59,130,246,0.22)] group-hover:shadow-[0_24px_45px_rgba(37,99,235,0.12)]">
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_58%)] opacity-0 transition-opacity duration-350 group-hover:opacity-100" />
                     {caseItem.logoUrl ? (
                       <img
                         src={caseItem.logoUrl}
                         alt={caseItem.clientName}
-                        className="max-h-[68px] max-w-full object-contain transition-transform duration-300 group-hover:scale-[1.06]"
+                        className="relative z-10 mx-auto max-h-[86px] w-full object-contain transition-transform duration-350 group-hover:scale-[1.08]"
                         loading="lazy"
                       />
                     ) : (
-                      <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600" />
+                      <div className="relative z-10 mx-auto h-14 w-14 rounded-[20px] bg-gradient-to-br from-blue-500 to-indigo-600" />
                     )}
                   </div>
-
-                  <div className="mt-4 flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="text-[16px] font-medium text-[rgba(15,23,42,0.92)] truncate">{caseItem.clientName}</p>
-                      <p className="mt-1 text-[12px] text-[rgba(15,23,42,0.48)] truncate">
-                        {caseItem.industry || '点击查看案例详情'}
-                      </p>
-                    </div>
-                    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[rgba(59,130,246,0.16)] bg-[rgba(59,130,246,0.06)] text-[rgba(37,99,235,0.82)] transition-all duration-300 group-hover:translate-x-0.5 group-hover:scale-105 group-hover:bg-[rgba(59,130,246,0.1)]">
-                      <MoveRight className="h-4 w-4" />
-                    </span>
-                  </div>
+                  <span className="pointer-events-none absolute left-1/2 top-full inline-flex h-9 w-9 -translate-x-1/2 -translate-y-5 items-center justify-center rounded-full border border-[rgba(59,130,246,0.18)] bg-white text-[rgba(37,99,235,0.82)] shadow-[0_10px_20px_rgba(15,23,42,0.08)] opacity-0 transition-all duration-300 group-hover:-translate-y-3 group-hover:opacity-100">
+                    <MoveRight className="h-4 w-4 rotate-90" />
+                  </span>
                 </button>
               ))}
             </div>
