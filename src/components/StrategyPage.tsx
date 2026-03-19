@@ -24,7 +24,8 @@ import {
   Users,
   Zap,
   ArrowUpRight,
-  ChevronLeft
+  ChevronLeft,
+  MoveRight
 } from 'lucide-react';
 
 // Strategy Page Props
@@ -511,31 +512,58 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
         </section>
       )}
 
-      {/* Cases Section - 16:9 Seamless Grid */}
-      <section id="cases" className="py-0 px-0">
-        {/* Cases Grid - responsive (avoid ultra-thin cards on mobile) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0 w-full">
-          {cases.map((caseItem) => (
-            <div
-              key={caseItem.slug}
-              className="relative w-full aspect-[16/9] overflow-hidden group cursor-pointer"
-              onClick={() => handleNavigateToCase(caseItem.slug)}
-            >
-              {/* Background Image */}
-              {caseItem.logoUrl ? (
-                <div className="w-full h-full bg-white flex items-center justify-center p-10 sm:p-12">
-                  <img
-                    src={caseItem.logoUrl}
-                    alt={caseItem.clientName}
-                    className="max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
-                    loading="lazy"
-                  />
-                </div>
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600" />
-              )}
+      {/* Cases Section */}
+      <section id="cases" className="py-14 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="rounded-[32px] border border-[rgba(15,23,42,0.06)] bg-[linear-gradient(180deg,rgba(239,246,255,0.92)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-6 sm:px-7 sm:py-8 lg:px-8 lg:py-9 shadow-[0_18px_50px_rgba(15,23,42,0.05)]">
+            <div className="flex items-end justify-between gap-4 mb-6">
+              <div className="space-y-2">
+                <h2 className="text-[28px] font-semibold tracking-tight text-[rgba(15,23,42,0.92)]">客户案例</h2>
+                <p className="text-[14px] text-[rgba(15,23,42,0.52)]">点击机构 Logo 查看案例详情与客户介绍材料</p>
+              </div>
+              <p className="hidden sm:block text-[12px] tracking-[0.18em] uppercase text-[rgba(15,23,42,0.32)]">
+                {cases.length} 个案例
+              </p>
             </div>
-          ))}
+
+            <div className="flex flex-wrap justify-center gap-4 sm:gap-5">
+              {cases.map((caseItem) => (
+                <button
+                  key={caseItem.slug}
+                  type="button"
+                  onClick={() => handleNavigateToCase(caseItem.slug)}
+                  className="group relative flex min-h-[190px] w-full max-w-[360px] flex-col justify-between rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-white/94 p-5 text-left shadow-[0_12px_30px_rgba(15,23,42,0.05)] transition-all duration-300 hover:-translate-y-1 hover:border-[rgba(59,130,246,0.24)] hover:shadow-[0_18px_40px_rgba(37,99,235,0.14)] sm:w-[calc(50%-10px)] lg:w-[calc(33.333%-14px)]"
+                >
+                  <div className="absolute inset-x-5 top-5 h-[1px] bg-[linear-gradient(90deg,rgba(59,130,246,0)_0%,rgba(59,130,246,0.16)_35%,rgba(59,130,246,0)_100%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+                  <div className="flex min-h-[106px] items-center justify-center rounded-[22px] border border-[rgba(15,23,42,0.06)] bg-[linear-gradient(180deg,rgba(248,250,252,0.98)_0%,rgba(241,245,249,0.92)_100%)] px-6 py-5">
+                    {caseItem.logoUrl ? (
+                      <img
+                        src={caseItem.logoUrl}
+                        alt={caseItem.clientName}
+                        className="max-h-[68px] max-w-full object-contain transition-transform duration-300 group-hover:scale-[1.06]"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600" />
+                    )}
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-[16px] font-medium text-[rgba(15,23,42,0.92)] truncate">{caseItem.clientName}</p>
+                      <p className="mt-1 text-[12px] text-[rgba(15,23,42,0.48)] truncate">
+                        {caseItem.industry || '点击查看案例详情'}
+                      </p>
+                    </div>
+                    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[rgba(59,130,246,0.16)] bg-[rgba(59,130,246,0.06)] text-[rgba(37,99,235,0.82)] transition-all duration-300 group-hover:translate-x-0.5 group-hover:scale-105 group-hover:bg-[rgba(59,130,246,0.1)]">
+                      <MoveRight className="h-4 w-4" />
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
