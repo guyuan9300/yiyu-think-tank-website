@@ -501,17 +501,17 @@ function normalizePdfPageTexts(input) {
 function normalizeListLine(input) {
   return String(input || '')
     .replace(/^[•·●○■□▪◦▪▫‣⁃\-–—]+\s*/u, '')
-    .replace(/^\(?\d+[.)、]\)?\s*/u, '')
-    .replace(/^[（(]?[一二三四五六七八九十百千万0-9]+[)）][、.]?\s*/u, '')
+    .replace(/^\(?\d+[.)、:：-]\)?[\s\u00A0\u3000]*/u, '')
+    .replace(/^[（(]?[一二三四五六七八九十百千万0-9]+[)）][、.:：-]?[\s\u00A0\u3000]*/u, '')
     .trim();
 }
 
 function classifyPlainTextLine(line) {
   const value = String(line || '').trim();
   if (!value) return 'blank';
-  if (/^[•·●○■□▪◦▪▫‣⁃\-–—]+\s+/u.test(value)) return 'ul';
-  if (/^\(?\d+[.)、]\)?\s+/u.test(value)) return 'ol';
-  if (/^[（(]?[一二三四五六七八九十百千万0-9]+[)）][、.]?\s+/u.test(value)) return 'ol';
+  if (/^[•·●○■□▪◦▪▫‣⁃\-–—]+[\s\u00A0\u3000]*/u.test(value)) return 'ul';
+  if (/^\(?\d+[.)、:：-]\)?[\s\u00A0\u3000]*/u.test(value)) return 'ol';
+  if (/^[（(]?[一二三四五六七八九十百千万0-9]+[)）][、.:：-]?[\s\u00A0\u3000]*/u.test(value)) return 'ol';
   if (value.length <= 28 && !/[。！？；：:，,、]$/.test(value)) return 'h3';
   return 'p';
 }
@@ -614,7 +614,9 @@ function buildPdfArticleHtml(pageTexts, pageImages) {
     const pageText = safeText(pageTexts[i] || '');
 
     if (imageUrl) {
-      blocks.push(`<figure><img src="${escapeHtml(imageUrl)}" alt="第${i + 1}页" /></figure>`);
+      blocks.push(
+        `<figure style="margin: 2rem 0; text-align: center;"><img src="${escapeHtml(imageUrl)}" alt="第${i + 1}页" style="display: block; max-width: 100%; margin: 0 auto; border-radius: 1rem;" /></figure>`
+      );
     }
     if (pageText) {
       blocks.push(convertPlainTextToHtmlBlocks(pageText));

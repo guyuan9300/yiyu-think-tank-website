@@ -29,7 +29,7 @@ export function ArticleEditor({
     content: value ?? undefined,
     editorProps: {
       attributes: {
-        class: 'prose max-w-none focus:outline-none min-h-[280px] px-4 py-4 prose-p:my-4 prose-headings:my-5 prose-li:my-1 prose-ol:list-decimal prose-ul:list-disc prose-ol:pl-6 prose-ul:pl-6 [&_ol]:list-decimal [&_ul]:list-disc [&_ol]:pl-6 [&_ul]:pl-6 [&_li]:my-1 [&_figure]:my-6 [&_figure]:text-center [&_figure_img]:mx-auto [&_figure_img]:block [&_img]:mx-auto [&_img]:block',
+        class: 'prose max-w-none focus:outline-none min-h-[280px] px-4 py-4 prose-p:my-4 prose-headings:my-5 prose-li:my-1 prose-ol:list-decimal prose-ul:list-disc prose-ol:pl-6 prose-ul:pl-6 [&_ol]:list-decimal [&_ul]:list-disc [&_ol]:pl-6 [&_ul]:pl-6 [&_ol>li]:list-item [&_ul>li]:list-item [&_li]:my-1 [&_figure]:my-6 [&_figure]:text-center [&_figure_img]:mx-auto [&_figure_img]:block [&_img]:mx-auto [&_img]:block',
       },
     },
     onUpdate: ({ editor }) => {

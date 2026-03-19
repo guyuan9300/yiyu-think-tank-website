@@ -81,7 +81,7 @@ export function getArticleTiptapExtensions() {
       inline: false,
       allowBase64: true,
       HTMLAttributes: {
-        class: 'max-w-full rounded-xl my-4',
+        class: 'block mx-auto max-w-full rounded-xl my-4',
       },
     }),
   ];
