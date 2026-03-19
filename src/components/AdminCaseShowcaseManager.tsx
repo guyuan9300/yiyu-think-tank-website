@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, FileImage, FileText, Plus, Save, Trash2, Upload } from 'lucide-react';
+import { ChevronDown, FileImage, FileText, Save, Trash2, Upload } from 'lucide-react';
 import { deleteCaseShowcase, fetchCaseShowcaseDetail, fetchCaseShowcases, saveCaseShowcase, type CaseShowcase } from '../lib/caseShowcaseApi';
 import { uploadAdminAsset } from '../lib/authApi';
 
@@ -190,19 +190,11 @@ export function AdminCaseShowcaseManager() {
       ) : null}
 
       <div className="rounded-[22px] border border-slate-200 bg-white p-5 sm:p-6">
-        <div className="mb-5 flex items-center justify-between">
+        <div className="mb-5">
           <div>
             <h3 className="text-[16px] font-semibold text-slate-900">案例展示</h3>
             <p className="text-[12px] text-slate-500">点击客户记录展开后，只维护客户名称、Logo 与客户介绍 PPT。</p>
           </div>
-          <button
-            type="button"
-            onClick={handleCreate}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50"
-          >
-            <Plus className="h-4 w-4" />
-            新建
-          </button>
         </div>
 
         <div className="space-y-3">
