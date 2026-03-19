@@ -693,6 +693,24 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
               <div className="rounded-2xl border border-border/40 bg-white/80 p-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <div>
+                    <div className="text-sm font-medium text-foreground">付费服务</div>
+                    <p className="text-xs text-muted-foreground/70 mt-1">
+                      {paidActive ? '如需继续保持付费会员状态，可在这里续费。' : '开通付费会员后，可在后续统一解锁更多付费服务。'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate?.('membership')}
+                    className="px-5 py-3 rounded-2xl bg-foreground text-white hover:bg-foreground/90 text-sm"
+                  >
+                    {paidActive ? '续费' : '开通付费'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border/40 bg-white/80 p-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
                     <div className="text-sm font-medium text-foreground">兑换邀请码</div>
                     <p className="text-xs text-muted-foreground/70 mt-1">可用于开通付费会员或绑定机构战略陪伴。</p>
                   </div>

@@ -30,45 +30,28 @@ export const ZHIXIAOYUN_CONFIG = {
 
 // 会员套餐配置
 export const MEMBERSHIP_PLANS = {
-  monthly: {
-    id: 'monthly',
-    name: '月卡',
-    price: 99,
+  monthly_trial: {
+    id: 'monthly_trial',
+    name: '月包试用',
+    price: 19.8,
     currency: 'CNY',
     duration: 30, // 天数
     features: [
-      '解锁全部会员内容',
-      '优先客服支持',
-      '参与会员专属活动'
+      '体验 30 天付费会员服务',
+      '适合先熟悉平台内容',
+      '支付成功后立即生效'
     ]
   },
   yearly: {
     id: 'yearly',
-    name: '年卡',
-    price: 999,
+    name: '年包会员',
+    price: 198,
     currency: 'CNY',
     duration: 365,
-    discount: 0.1, // 9折
-    originalPrice: 999,
     features: [
-      '解锁全部会员内容',
-      '优先客服支持',
-      '参与会员专属活动',
-      '9折购买增值服务'
-    ]
-  },
-  lifetime: {
-    id: 'lifetime',
-    name: '终身会员',
-    price: 2999,
-    currency: 'CNY',
-    duration: null, // 永久
-    features: [
-      '解锁全部会员内容',
-      '优先客服支持',
-      '参与会员专属活动',
-      '8折购买增值服务',
-      '终身免费更新'
+      '365 天付费会员有效期',
+      '适合长期学习与持续使用',
+      '支付成功后自动开通'
     ]
   }
 };

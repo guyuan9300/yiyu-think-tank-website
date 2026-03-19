@@ -39,6 +39,9 @@ import AdminStrategyCompanionConceptPage from './components/AdminStrategyCompani
 import { ConsultApplyPage } from './components/ConsultApplyPage';
 import { NotFoundPage } from './components/NotFoundPage';
 import { StrategyModuleIntroPage } from './components/StrategyModuleIntroPage';
+import { PaymentIntroPage } from './components/PaymentIntroPage';
+import { PaymentCheckoutPage } from './components/PaymentCheckoutPage';
+import { PaymentResultPage } from './components/PaymentResultPage';
 
 const ADMIN_SHELL_VERSION = '20260319-admin-shell-refresh';
 
@@ -214,6 +217,9 @@ export default function App() {
     'admin',
     'admin-legacy',
     'user-center',
+    'membership',
+    'payment-checkout',
+    'payment-result',
     'strategy-companion',
     'consult-apply',
     'admin-strategy-companion',
@@ -273,6 +279,10 @@ export default function App() {
       return `?page=book-reader&id=${encodeURIComponent(detailId || '')}`;
     }
 
+    if (page === 'payment-checkout' || page === 'payment-result') {
+      return `?page=${page}&id=${encodeURIComponent(detailId || '')}`;
+    }
+
     if (page === 'strategy-companion') {
       // Preserve clientId from current URL if present.
       const params = new URLSearchParams(window.location.search);
@@ -305,7 +315,7 @@ export default function App() {
       const { page, unknown, id } = parseUrl();
       setUnknownPage(unknown);
       setCurrentPage(page);
-      if (page === 'article' || page === 'report' || page === 'methodology-library') {
+      if (page === 'article' || page === 'report' || page === 'methodology-library' || page === 'payment-checkout' || page === 'payment-result') {
         setSelectedDetailId(id);
       }
       if (page === 'book-reader') {
@@ -342,7 +352,7 @@ export default function App() {
     }
   }, [currentPage, selectedBookId, selectedDetailId, selectedCaseId, unknownPage]);
 
-  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'terms-of-service' | 'privacy-policy' | 'case' | 'admin' | 'user-center' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply' | 'book-library' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai', bookId?: string, caseId?: string) => {
+  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'terms-of-service' | 'privacy-policy' | 'case' | 'admin' | 'user-center' | 'membership' | 'payment-checkout' | 'payment-result' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply' | 'book-library' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai', bookId?: string, caseId?: string) => {
     // Reset scroll on page-level navigation so detail pages always open from the top.
     // (Otherwise the browser may keep the previous scroll position and look like it jumped to the bottom.)
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
@@ -367,6 +377,11 @@ export default function App() {
       setCurrentPage('admin');
     } else if (page === 'user-center') {
       setCurrentPage('user-center');
+    } else if (page === 'membership') {
+      setCurrentPage('membership');
+    } else if (page === 'payment-checkout' || page === 'payment-result') {
+      setSelectedDetailId(bookId || '');
+      setCurrentPage(page);
     } else if (page === 'my-learning') {
       setCurrentPage('my-learning');
     } else if (page === 'report-library') {
@@ -657,6 +672,30 @@ export default function App() {
     return (
       <>
         <UserCenterPage onNavigate={(page) => handleNavigate(page as any)} />
+      </>
+    );
+  }
+
+  if (currentPage === 'membership') {
+    return (
+      <>
+        <PaymentIntroPage onNavigate={(page, id) => handleNavigate(page as any, id)} />
+      </>
+    );
+  }
+
+  if (currentPage === 'payment-checkout') {
+    return (
+      <>
+        <PaymentCheckoutPage planId={selectedDetailId} onNavigate={(page, id) => handleNavigate(page as any, id)} />
+      </>
+    );
+  }
+
+  if (currentPage === 'payment-result') {
+    return (
+      <>
+        <PaymentResultPage orderNo={selectedDetailId} onNavigate={(page, id) => handleNavigate(page as any, id)} />
       </>
     );
   }

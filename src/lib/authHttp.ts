@@ -33,7 +33,7 @@ export async function authRequest<T = any>(
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || json?.ok === false) {
-      return { ok: false, error: json?.error || `请求失败(${res.status})` };
+      return { ok: false, error: json?.error || `请求失败(${res.status})`, data: json?.data, message: json?.message };
     }
     return { ok: true, data: json?.data, message: json?.message };
   } catch (error: any) {

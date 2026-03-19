@@ -10,7 +10,6 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 import {
-  extendAdminUserPaidApi,
   fetchAdminUsers,
   type AdminManagedUser,
 } from '../lib/adminUserApi';
@@ -56,7 +55,7 @@ function sanitizeEmail(email?: string) {
 
 function getOpenAmountFen(orders: PaymentOrder[]) {
   return orders
-    .filter((order) => ['awaiting_configuration', 'awaiting_provider_integration', 'pending'].includes(order.status))
+    .filter((order) => order.status === 'pending')
     .reduce((sum, order) => sum + order.amountFen, 0);
 }
 
@@ -67,7 +66,7 @@ function getOrderStatusMeta(order?: PaymentOrder) {
   if (order.status === 'paid') {
     return { label: '已支付', badgeClass: 'bg-emerald-100 text-emerald-700' };
   }
-  if (['awaiting_configuration', 'awaiting_provider_integration', 'pending'].includes(order.status)) {
+  if (order.status === 'pending') {
     return { label: '待支付', badgeClass: 'bg-amber-100 text-amber-700' };
   }
   if (order.status === 'expired') {
@@ -80,7 +79,7 @@ function getOrderStatusMeta(order?: PaymentOrder) {
 }
 
 function inferCycle(user: AdminManagedUser, latestOrder?: PaymentOrder) {
-  if (latestOrder?.planId === 'monthly') {
+  if (latestOrder?.planId === 'monthly_trial') {
     return { key: 'monthly' as const, label: '月卡', amountFen: latestOrder.amountFen };
   }
   if (latestOrder?.planId === 'yearly') {
@@ -213,7 +212,7 @@ export function PaymentManagementPage() {
         const latestOrder = latestOrderByUserId.get(user.id);
         const cycle = inferCycle(user, latestOrder);
         const statusMeta = getOrderStatusMeta(latestOrder);
-        const openAmountFen = latestOrder && ['awaiting_configuration', 'awaiting_provider_integration', 'pending'].includes(latestOrder.status)
+        const openAmountFen = latestOrder && latestOrder.status === 'pending'
           ? latestOrder.amountFen
           : 0;
         return {
@@ -264,16 +263,6 @@ export function PaymentManagementPage() {
       receivableFen: getOpenAmountFen(orders),
     };
   }, [latestOrderByUserId, orders, users]);
-
-  const handleExtend = async (user: AdminManagedUser) => {
-    const result = await extendAdminUserPaidApi(user.id, 30);
-    if (!result.ok) {
-      flash('error', result.error || '续期失败，请稍后重试');
-      return;
-    }
-    flash('success', `已为 ${user.nickname || '该用户'} 顺延 30 天付费资格`);
-    await loadData(true);
-  };
 
   const handleExport = () => {
     if (paidRows.length === 0) {
@@ -397,11 +386,12 @@ export function PaymentManagementPage() {
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">联系方式</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">会员周期</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">应收金额</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">金额</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">下单时间</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">支付时间</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">到期时间</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">订单状态</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">备注</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -437,6 +427,8 @@ export function PaymentManagementPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">{openAmountFen || cycle.amountFen ? formatMoney(openAmountFen || cycle.amountFen) : '—'}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{latestOrder?.createdAt ? formatDate(latestOrder.createdAt, '-') : '-'}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{latestOrder?.paidAt ? formatDate(latestOrder.paidAt, '-') : '-'}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{formatDate(user.paidExpiresAt)}</td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${statusMeta.badgeClass}`}>
@@ -444,16 +436,7 @@ export function PaymentManagementPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
-                    {latestOrder?.note || user.paidNote || '—'}
-                  </td>
-                  <td className="px-6 py-4">
-                    <button
-                      type="button"
-                      onClick={() => void handleExtend(user)}
-                      className="px-3 py-2 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors text-sm"
-                    >
-                      顺延 30 天
-                    </button>
+                    {latestOrder?.buyerNote || latestOrder?.note || user.paidNote || '—'}
                   </td>
                 </tr>
               ))}

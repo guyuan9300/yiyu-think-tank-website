@@ -37,9 +37,8 @@ const corsHeaders = {
 };
 
 const PAYMENT_PLANS = {
-  monthly: { id: 'monthly', name: '月卡', amountFen: 9900, currency: 'CNY', durationDays: 30 },
-  yearly: { id: 'yearly', name: '年卡', amountFen: 99900, currency: 'CNY', durationDays: 365 },
-  lifetime: { id: 'lifetime', name: '终身会员', amountFen: 299900, currency: 'CNY', durationDays: null },
+  monthly_trial: { id: 'monthly_trial', name: '月包试用', amountFen: 1980, currency: 'CNY', durationDays: 30 },
+  yearly: { id: 'yearly', name: '年包会员', amountFen: 19800, currency: 'CNY', durationDays: 365 },
 };
 
 const PAYMENT_PREP_CHECKS = [
@@ -47,8 +46,11 @@ const PAYMENT_PREP_CHECKS = [
   { env: 'WECHAT_PAY_APPID', label: 'AppID' },
   { env: 'WECHAT_PAY_MCH_SERIAL_NO', label: '商户证书序列号' },
   { env: 'WECHAT_PAY_PRIVATE_KEY', label: '商户私钥' },
+  { env: 'WECHAT_PAY_API_V3_KEY', label: 'API v3 密钥' },
+  { env: 'WECHAT_PAY_PLATFORM_CERT', label: '微信支付平台证书' },
   { env: 'WECHAT_PAY_NOTIFY_URL', label: '支付结果通知地址' },
   { env: 'WECHAT_PAY_H5_DOMAIN', label: 'H5 支付域名' },
+  { env: 'WECHAT_PAY_RETURN_URL', label: '支付完成回跳地址' },
 ];
 
 const SmsClient = tencentcloud.sms.v20210111.Client;
@@ -104,6 +106,7 @@ const ARK_MODEL = process.env.ARK_MODEL || 'doubao-seed-2-0-lite-260215';
 const AI_PREFILL_TOPIC_OPTIONS = ['战略', '业务设计', '组织', 'AI 技术'];
 const execFileAsync = promisify(execFile);
 let ocrCapabilityPromise = null;
+const WECHAT_API_BASE = 'https://api.mch.weixin.qq.com';
 
 function isArkReady() {
   return Boolean(process.env.ARK_API_KEY && ARK_MODEL);
@@ -136,6 +139,34 @@ async function getOcrCapabilities() {
     })();
   }
   return ocrCapabilityPromise;
+}
+
+function readPemValue(raw) {
+  const value = String(raw || '').trim();
+  if (!value) return '';
+  return value.includes('\\n') ? value.replace(/\\n/g, '\n') : value;
+}
+
+async function readPemFromEnv(primaryEnv, pathEnv) {
+  const direct = readPemValue(process.env[primaryEnv]);
+  if (direct) return direct;
+  const filePath = String(process.env[pathEnv] || '').trim();
+  if (!filePath) return '';
+  try {
+    return await fs.readFile(filePath, 'utf8');
+  } catch {
+    return '';
+  }
+}
+
+function envConfigured(key) {
+  if (key === 'WECHAT_PAY_PRIVATE_KEY') {
+    return Boolean(readPemValue(process.env.WECHAT_PAY_PRIVATE_KEY) || String(process.env.WECHAT_PAY_PRIVATE_KEY_PATH || '').trim());
+  }
+  if (key === 'WECHAT_PAY_PLATFORM_CERT') {
+    return Boolean(readPemValue(process.env.WECHAT_PAY_PLATFORM_CERT) || String(process.env.WECHAT_PAY_PLATFORM_CERT_PATH || '').trim());
+  }
+  return Boolean(String(process.env[key] || '').trim());
 }
 
 function safeTopicArray(input) {
@@ -1735,13 +1766,21 @@ function mapPaymentOrder(row) {
     amount: Number(row.amount_fen || 0) / 100,
     currency: row.currency || 'CNY',
     durationDays: row.duration_days === null ? null : Number(row.duration_days || 0),
-    memberTypeTarget: row.member_type_target || 'gold',
+    memberTypeTarget: row.member_type_target || 'paid',
     channel: row.channel || 'wechat_h5',
     providerName: row.provider_name || 'wechatpay',
     status: row.status,
+    buyerName: row.buyer_name || undefined,
+    buyerOrg: row.buyer_org || undefined,
+    buyerPhone: row.buyer_phone || undefined,
+    buyerEmail: row.buyer_email || undefined,
+    buyerNote: row.buyer_note || undefined,
     note: row.note || undefined,
     expiresAt: row.expires_at || undefined,
+    timeExpire: row.time_expire || undefined,
     paidAt: row.paid_at || undefined,
+    h5UrlSnapshot: row.h5_url_snapshot || undefined,
+    providerOrderId: row.provider_order_id || undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -1751,18 +1790,121 @@ function getPaymentReadiness() {
   const items = PAYMENT_PREP_CHECKS.map((item) => ({
     key: item.env,
     label: item.label,
-    configured: Boolean(String(process.env[item.env] || '').trim()),
+    configured: envConfigured(item.env),
   }));
   const enabled = items.every((item) => item.configured);
   return {
     provider: 'wechatpay',
     channel: 'wechat_h5',
-    mode: 'prep_only',
+    mode: enabled ? 'live' : 'setup_pending',
     enabled,
     items,
     notifyUrl: process.env.WECHAT_PAY_NOTIFY_URL || undefined,
     h5Domain: process.env.WECHAT_PAY_H5_DOMAIN || undefined,
+    returnUrl: process.env.WECHAT_PAY_RETURN_URL || undefined,
   };
+}
+
+async function loadWeChatPayConfig() {
+  const privateKeyPem = await readPemFromEnv('WECHAT_PAY_PRIVATE_KEY', 'WECHAT_PAY_PRIVATE_KEY_PATH');
+  const platformCertPem = await readPemFromEnv('WECHAT_PAY_PLATFORM_CERT', 'WECHAT_PAY_PLATFORM_CERT_PATH');
+  return {
+    mchid: String(process.env.WECHAT_PAY_MCHID || '').trim(),
+    appid: String(process.env.WECHAT_PAY_APPID || '').trim(),
+    mchSerialNo: String(process.env.WECHAT_PAY_MCH_SERIAL_NO || '').trim(),
+    privateKeyPem,
+    apiV3Key: String(process.env.WECHAT_PAY_API_V3_KEY || '').trim(),
+    platformCertPem,
+    notifyUrl: String(process.env.WECHAT_PAY_NOTIFY_URL || '').trim(),
+    h5Domain: String(process.env.WECHAT_PAY_H5_DOMAIN || '').trim(),
+    returnUrl: String(process.env.WECHAT_PAY_RETURN_URL || '').trim(),
+  };
+}
+
+function getClientIp(req) {
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  if (forwarded) return forwarded;
+  const realIp = String(req.headers['x-real-ip'] || '').trim();
+  if (realIp) return realIp;
+  return req.socket.remoteAddress || '127.0.0.1';
+}
+
+function buildWechatSignatureMessage(method, pathnameWithQuery, timestamp, nonce, body) {
+  return `${method.toUpperCase()}\n${pathnameWithQuery}\n${timestamp}\n${nonce}\n${body}\n`;
+}
+
+function buildWechatNotifySignatureMessage(timestamp, nonce, body) {
+  return `${timestamp}\n${nonce}\n${body}\n`;
+}
+
+function signWithPrivateKey(privateKeyPem, message) {
+  return crypto.createSign('RSA-SHA256').update(message).end().sign(privateKeyPem, 'base64');
+}
+
+function verifyWithPlatformCert(platformCertPem, message, signature) {
+  return crypto.createVerify('RSA-SHA256')
+    .update(message)
+    .end()
+    .verify(platformCertPem, signature, 'base64');
+}
+
+function decryptWechatResource(apiV3Key, resource) {
+  const nonce = Buffer.from(resource.nonce || '', 'utf8');
+  const associatedData = Buffer.from(resource.associated_data || '', 'utf8');
+  const cipherText = Buffer.from(resource.ciphertext || '', 'base64');
+  const authTag = cipherText.subarray(cipherText.length - 16);
+  const encrypted = cipherText.subarray(0, cipherText.length - 16);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', Buffer.from(apiV3Key, 'utf8'), nonce);
+  decipher.setAuthTag(authTag);
+  if (associatedData.length) {
+    decipher.setAAD(associatedData);
+  }
+  const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+  return JSON.parse(decrypted.toString('utf8'));
+}
+
+async function wechatRequest(config, method, pathnameWithQuery, payload) {
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const body = payload ? JSON.stringify(payload) : '';
+  const signature = signWithPrivateKey(
+    config.privateKeyPem,
+    buildWechatSignatureMessage(method, pathnameWithQuery, timestamp, nonce, body)
+  );
+
+  const res = await fetch(`${WECHAT_API_BASE}${pathnameWithQuery}`, {
+    method,
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      'User-Agent': 'yiyu-think-tank/1.0',
+      Authorization: `WECHATPAY2-SHA256-RSA2048 mchid="${config.mchid}",nonce_str="${nonce}",timestamp="${timestamp}",serial_no="${config.mchSerialNo}",signature="${signature}"`,
+    },
+    body: body || undefined,
+  });
+  const text = await res.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
+  if (!res.ok) {
+    const err = new Error(data?.message || data?.detail || `微信支付请求失败(${res.status})`);
+    err.statusCode = res.status;
+    err.payload = data || text;
+    throw err;
+  }
+  return data;
+}
+
+function mapWechatTradeStateToOrderStatus(tradeState) {
+  if (tradeState === 'SUCCESS') return 'paid';
+  if (tradeState === 'CLOSED') return 'closed';
+  if (tradeState === 'REVOKED') return 'closed';
+  if (tradeState === 'PAYERROR') return 'failed';
+  if (tradeState === 'NOTPAY' || tradeState === 'USERPAYING') return 'pending';
+  return 'pending';
 }
 
 async function ensureSchema() {
@@ -1885,14 +2027,21 @@ async function ensureSchema() {
       amount_fen INT NOT NULL,
       currency TEXT NOT NULL DEFAULT 'CNY',
       duration_days INT,
-      member_type_target TEXT NOT NULL DEFAULT 'gold',
+      member_type_target TEXT NOT NULL DEFAULT 'paid',
+      buyer_name TEXT,
+      buyer_org TEXT,
+      buyer_phone TEXT,
+      buyer_email TEXT,
+      buyer_note TEXT,
       channel TEXT NOT NULL DEFAULT 'wechat_h5',
       provider_name TEXT NOT NULL DEFAULT 'wechatpay',
-      status TEXT NOT NULL DEFAULT 'awaiting_configuration',
+      status TEXT NOT NULL DEFAULT 'pending',
       note TEXT,
       expires_at TIMESTAMPTZ,
+      time_expire TIMESTAMPTZ,
       paid_at TIMESTAMPTZ,
       provider_order_id TEXT,
+      h5_url_snapshot TEXT,
       provider_payload JSONB,
       notify_payload JSONB,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -1922,6 +2071,23 @@ async function ensureSchema() {
     );
     CREATE INDEX IF NOT EXISTS idx_project_learning_resources_project_sort
       ON project_learning_resources(project_id, sort_order, created_at DESC);
+  `);
+
+  await pool.query(`
+    ALTER TABLE payment_orders
+      ALTER COLUMN member_type_target SET DEFAULT 'paid',
+      ALTER COLUMN status SET DEFAULT 'pending';
+  `);
+
+  await pool.query(`
+    ALTER TABLE payment_orders
+      ADD COLUMN IF NOT EXISTS buyer_name TEXT,
+      ADD COLUMN IF NOT EXISTS buyer_org TEXT,
+      ADD COLUMN IF NOT EXISTS buyer_phone TEXT,
+      ADD COLUMN IF NOT EXISTS buyer_email TEXT,
+      ADD COLUMN IF NOT EXISTS buyer_note TEXT,
+      ADD COLUMN IF NOT EXISTS time_expire TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS h5_url_snapshot TEXT;
   `);
 
   await pool.query(`
@@ -2416,24 +2582,181 @@ async function listComments({ contentId, contentType, status, scope }) {
   return q.rows.map(mapComment);
 }
 
-async function createPaymentOrderRow(userRow, planId) {
-  const plan = PAYMENT_PLANS[planId];
+function sanitizeBuyerField(input, maxLength = 120) {
+  const value = String(input || '').trim();
+  return value ? value.slice(0, maxLength) : '';
+}
+
+function paymentProviderError(error, fallback) {
+  const message = error?.payload?.message
+    || error?.payload?.detail
+    || error?.message
+    || fallback;
+  return String(message || fallback);
+}
+
+async function getPaymentOrderRowByOrderNo(db, orderNo, { forUpdate = false } = {}) {
+  const sql = `SELECT * FROM payment_orders WHERE order_no=$1 LIMIT 1${forUpdate ? ' FOR UPDATE' : ''}`;
+  const q = await db.query(sql, [orderNo]);
+  return q.rows[0] || null;
+}
+
+async function updatePaymentOrderState(db, orderNo, patch) {
+  const entries = Object.entries(patch).filter(([, value]) => value !== undefined);
+  if (entries.length === 0) {
+    return getPaymentOrderRowByOrderNo(db, orderNo);
+  }
+  const setters = entries.map(([key], index) => `${key}=$${index + 2}`);
+  const values = entries.map(([, value]) => value);
+  const sql = `UPDATE payment_orders SET ${setters.join(', ')}, updated_at=now() WHERE order_no=$1`;
+  await db.query(sql, [orderNo, ...values]);
+  return getPaymentOrderRowByOrderNo(db, orderNo);
+}
+
+async function grantPaidMembershipForOrder(db, orderRow, effectivePaidAt) {
+  if (!orderRow?.user_id || !orderRow.duration_days) {
+    return null;
+  }
+  const userQ = await db.query('SELECT * FROM auth_users WHERE id=$1 LIMIT 1', [orderRow.user_id]);
+  const userRow = userQ.rows[0];
+  if (!userRow) return null;
+
+  const paidAtDate = effectivePaidAt ? new Date(effectivePaidAt) : new Date();
+  const currentExpire = userRow.paid_expires_at ? new Date(userRow.paid_expires_at) : null;
+  const baseDate = currentExpire && currentExpire.getTime() > paidAtDate.getTime()
+    ? currentExpire
+    : paidAtDate;
+  const nextExpire = new Date(baseDate.getTime() + Number(orderRow.duration_days || 0) * 24 * 60 * 60 * 1000);
+  const startedAt = userRow.paid_expires_at && currentExpire && currentExpire.getTime() > paidAtDate.getTime()
+    ? (userRow.paid_started_at || paidAtDate.toISOString())
+    : paidAtDate.toISOString();
+
+  await db.query(
+    `UPDATE auth_users
+       SET member_type='gold',
+           paid_source='payment',
+           paid_started_at=$2,
+           paid_expires_at=$3,
+           paid_note=$4
+     WHERE id=$1`,
+    [
+      orderRow.user_id,
+      startedAt,
+      nextExpire.toISOString(),
+      `微信支付订单 ${orderRow.order_no}`,
+    ]
+  );
+  const updated = await findUserById(db, orderRow.user_id);
+  return updated;
+}
+
+async function markPaymentOrderPaid(db, orderRow, params) {
+  if (!orderRow) return null;
+  if (orderRow.status === 'paid') {
+    return orderRow;
+  }
+  const paidAt = params.paidAt || new Date().toISOString();
+  await db.query(
+    `UPDATE payment_orders
+       SET status='paid',
+           provider_order_id=COALESCE($2, provider_order_id),
+           paid_at=$3,
+           notify_payload=COALESCE($4, notify_payload),
+           provider_payload=COALESCE($5, provider_payload),
+           note=$6,
+           updated_at=now()
+     WHERE order_no=$1`,
+    [
+      orderRow.order_no,
+      params.providerOrderId || null,
+      paidAt,
+      params.notifyPayload ? JSON.stringify(params.notifyPayload) : null,
+      params.providerPayload ? JSON.stringify(params.providerPayload) : null,
+      '支付成功',
+    ]
+  );
+  const fresh = await getPaymentOrderRowByOrderNo(db, orderRow.order_no);
+  await grantPaidMembershipForOrder(db, fresh, paidAt);
+  return getPaymentOrderRowByOrderNo(db, orderRow.order_no);
+}
+
+async function syncPaymentOrderWithProvider(orderRow) {
+  if (!orderRow || !['pending'].includes(orderRow.status)) {
+    return orderRow;
+  }
+  const readiness = getPaymentReadiness();
+  if (!readiness.enabled) {
+    return orderRow;
+  }
+  const config = await loadWeChatPayConfig();
+  const data = await wechatRequest(
+    config,
+    'GET',
+    `/v3/pay/transactions/out-trade-no/${encodeURIComponent(orderRow.order_no)}?mchid=${encodeURIComponent(config.mchid)}`
+  );
+  const nextStatus = mapWechatTradeStateToOrderStatus(data?.trade_state);
+  if (nextStatus === 'paid') {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const locked = await getPaymentOrderRowByOrderNo(client, orderRow.order_no, { forUpdate: true });
+      const updated = await markPaymentOrderPaid(client, locked, {
+        providerOrderId: data?.transaction_id,
+        providerPayload: data,
+        paidAt: data?.success_time,
+      });
+      await client.query('COMMIT');
+      return updated;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  return updatePaymentOrderState(pool, orderRow.order_no, {
+    status: nextStatus,
+    provider_order_id: data?.transaction_id || null,
+    provider_payload: data ? JSON.stringify(data) : null,
+    note: nextStatus === 'closed' ? '订单已关闭' : nextStatus === 'failed' ? '支付失败' : '待支付',
+  });
+}
+
+async function createPaymentOrderRow(userRow, payload, req) {
+  const plan = PAYMENT_PLANS[payload.planId];
   if (!plan) throw new Error('无效的会员套餐');
   const readiness = getPaymentReadiness();
+  if (!readiness.enabled) {
+    const missing = readiness.items.filter((item) => !item.configured).map((item) => item.label);
+    const error = new Error(`支付配置未完成：${missing.join('、')}`);
+    error.statusCode = 503;
+    error.readiness = readiness;
+    throw error;
+  }
+
+  const buyerName = sanitizeBuyerField(payload.buyerName, 60);
+  const buyerOrg = sanitizeBuyerField(payload.buyerOrg, 120);
+  const buyerPhone = sanitizeBuyerField(payload.buyerPhone, 30);
+  const buyerEmail = sanitizeBuyerField(payload.buyerEmail, 120).toLowerCase();
+  const buyerNote = sanitizeBuyerField(payload.buyerNote, 500);
+
+  if (!buyerName || !buyerPhone || !buyerEmail) {
+    throw new Error('请完整填写姓名、手机号和邮箱');
+  }
+
+  const config = await loadWeChatPayConfig();
   const id = crypto.randomUUID();
   const orderNo = `YY${Date.now()}${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
-  const status = readiness.enabled ? 'awaiting_provider_integration' : 'awaiting_configuration';
-  const note = readiness.enabled
-    ? '支付链路预埋已完成，待正式接入微信支付下单与回调。'
-    : '支付通道配置未完成，订单已预创建用于后续接入验证。';
-  const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+  const timeExpire = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
   await pool.query(
     `INSERT INTO payment_orders(
        id, order_no, user_id, user_nickname, plan_id, plan_name, amount_fen, currency, duration_days,
-       member_type_target, channel, provider_name, status, note, expires_at, provider_payload
+       member_type_target, buyer_name, buyer_org, buyer_phone, buyer_email, buyer_note,
+       channel, provider_name, status, note, expires_at, time_expire
      )
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'gold','wechat_h5','wechatpay',$10,$11,$12,$13)`,
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'paid',$10,$11,$12,$13,$14,'wechat_h5','wechatpay','pending','等待支付',now() + interval '30 minutes',$15)`,
     [
       id,
       orderNo,
@@ -2444,15 +2767,68 @@ async function createPaymentOrderRow(userRow, planId) {
       plan.amountFen,
       plan.currency,
       plan.durationDays,
-      status,
-      note,
-      expiresAt,
-      JSON.stringify({ readiness, plan }),
+      buyerName,
+      buyerOrg || null,
+      buyerPhone,
+      buyerEmail,
+      buyerNote || null,
+      timeExpire,
     ]
   );
 
-  const q = await pool.query('SELECT * FROM payment_orders WHERE id=$1 LIMIT 1', [id]);
-  return { order: mapPaymentOrder(q.rows[0]), readiness };
+  try {
+    const description = `${plan.name} - 益语智库`.slice(0, 127);
+    const wechatPayload = {
+      appid: config.appid,
+      mchid: config.mchid,
+      description,
+      out_trade_no: orderNo,
+      notify_url: config.notifyUrl,
+      time_expire: timeExpire,
+      amount: {
+        total: plan.amountFen,
+        currency: plan.currency,
+      },
+      scene_info: {
+        payer_client_ip: getClientIp(req),
+        h5_info: {
+          type: 'Wap',
+        },
+      },
+      attach: JSON.stringify({
+        userId: userRow.id,
+        planId: plan.id,
+      }),
+    };
+
+    const providerData = await wechatRequest(config, 'POST', '/v3/pay/transactions/h5', wechatPayload);
+    if (!providerData?.h5_url) {
+      throw new Error('微信支付未返回可用的 H5 支付链接');
+    }
+
+    await updatePaymentOrderState(pool, orderNo, {
+      h5_url_snapshot: providerData.h5_url,
+      provider_payload: JSON.stringify(providerData),
+      note: '待支付',
+      time_expire: providerData?.time_expire || timeExpire,
+    });
+
+    const fresh = await getPaymentOrderRowByOrderNo(pool, orderNo);
+    return {
+      order: mapPaymentOrder(fresh),
+      readiness,
+      h5Url: providerData.h5_url,
+      timeExpire: fresh?.time_expire || timeExpire,
+    };
+  } catch (error) {
+    const message = paymentProviderError(error, '微信支付下单失败');
+    await updatePaymentOrderState(pool, orderNo, {
+      status: 'failed',
+      note: message,
+      provider_payload: error?.payload ? JSON.stringify(error.payload) : null,
+    });
+    throw error;
+  }
 }
 
 async function listPaymentOrders({ admin, userId, limit = 20 }) {
@@ -3622,7 +3998,7 @@ const server = http.createServer(async (req, res) => {
         `SELECT
            count(*)::int AS total,
            count(*) FILTER (WHERE status = 'paid')::int AS paid,
-           count(*) FILTER (WHERE status IN ('awaiting_configuration', 'awaiting_provider_integration', 'pending'))::int AS open
+           count(*) FILTER (WHERE status = 'pending')::int AS open
          FROM payment_orders`
       );
       return json(res, 200, {
@@ -3645,6 +4021,28 @@ const server = http.createServer(async (req, res) => {
       }
       const row = await requireSession(req);
       return json(res, 200, { ok: true, data: await listPaymentOrders({ admin: false, userId: row.id, limit }) });
+    }
+
+    const paymentOrderMatch = url.pathname.match(/^\/api\/auth\/payment\/orders\/([^/]+)$/);
+    if (paymentOrderMatch && req.method === 'GET') {
+      const orderNo = decodeURIComponent(paymentOrderMatch[1]);
+      const sessionRow = await requireSession(req);
+      const admin = isAdminRow(sessionRow);
+      let orderRow = await getPaymentOrderRowByOrderNo(pool, orderNo);
+      if (!orderRow) {
+        return json(res, 404, { ok: false, error: '订单不存在' });
+      }
+      if (!admin && orderRow.user_id !== sessionRow.id) {
+        return json(res, 403, { ok: false, error: '无权查看该订单' });
+      }
+      if (orderRow.status === 'pending') {
+        try {
+          orderRow = await syncPaymentOrderWithProvider(orderRow);
+        } catch {
+          // 订单查询页以本地状态兜底，不让三方查询失败阻断页面。
+        }
+      }
+      return json(res, 200, { ok: true, data: mapPaymentOrder(orderRow) });
     }
 
     const caseShowcaseMatch = url.pathname.match(/^\/api\/auth\/case-showcases\/([^/]+)$/);
@@ -3700,6 +4098,77 @@ const server = http.createServer(async (req, res) => {
         return json(res, 404, { ok: false, error: '机构项目不存在或未发布' });
       }
       return json(res, 200, { ok: true, data: snapshot });
+    }
+
+    if (url.pathname === '/api/auth/payment/wechat/notify' && req.method === 'POST') {
+      const signature = String(req.headers['wechatpay-signature'] || '').trim();
+      const timestamp = String(req.headers['wechatpay-timestamp'] || '').trim();
+      const nonce = String(req.headers['wechatpay-nonce'] || '').trim();
+      const bodyBuffer = await readRawBody(req, 2 * 1024 * 1024);
+      const bodyText = bodyBuffer.toString('utf8');
+      const config = await loadWeChatPayConfig();
+
+      if (!signature || !timestamp || !nonce || !config.platformCertPem || !config.apiV3Key) {
+        return json(res, 400, { code: 'FAIL', message: '回调验签参数缺失' });
+      }
+
+      const valid = verifyWithPlatformCert(
+        config.platformCertPem,
+        buildWechatNotifySignatureMessage(timestamp, nonce, bodyText),
+        signature
+      );
+      if (!valid) {
+        return json(res, 401, { code: 'FAIL', message: '回调验签失败' });
+      }
+
+      const payload = JSON.parse(bodyText || '{}');
+      const resource = payload?.resource;
+      if (!resource?.ciphertext) {
+        return json(res, 400, { code: 'FAIL', message: '回调内容无效' });
+      }
+
+      const notifyData = decryptWechatResource(config.apiV3Key, resource);
+      const orderNo = String(notifyData.out_trade_no || '').trim();
+      if (!orderNo) {
+        return json(res, 400, { code: 'FAIL', message: '订单号缺失' });
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const orderRow = await getPaymentOrderRowByOrderNo(client, orderNo, { forUpdate: true });
+        if (!orderRow) {
+          throw new Error('订单不存在');
+        }
+        if (Number(notifyData.amount?.total || 0) !== Number(orderRow.amount_fen || 0)) {
+          throw new Error('订单金额校验失败');
+        }
+        const tradeState = mapWechatTradeStateToOrderStatus(notifyData.trade_state);
+        if (tradeState === 'paid') {
+          await markPaymentOrderPaid(client, orderRow, {
+            providerOrderId: notifyData.transaction_id,
+            notifyPayload: payload,
+            providerPayload: notifyData,
+            paidAt: notifyData.success_time,
+          });
+        } else {
+          await updatePaymentOrderState(client, orderNo, {
+            status: tradeState,
+            provider_order_id: notifyData.transaction_id || null,
+            notify_payload: JSON.stringify(payload),
+            provider_payload: JSON.stringify(notifyData),
+            note: tradeState === 'closed' ? '订单已关闭' : tradeState === 'failed' ? '支付失败' : '待支付',
+          });
+        }
+        await client.query('COMMIT');
+      } catch (error) {
+        await client.query('ROLLBACK');
+        return json(res, 400, { code: 'FAIL', message: error.message || '回调处理失败' });
+      } finally {
+        client.release();
+      }
+
+      return json(res, 200, { code: 'SUCCESS', message: '成功' });
     }
 
     if (req.method !== 'POST' && req.method !== 'DELETE') {
@@ -4398,18 +4867,36 @@ const server = http.createServer(async (req, res) => {
       if (!planId) {
         return json(res, 400, { ok: false, error: '无效的会员套餐' });
       }
-      const { order, readiness } = await createPaymentOrderRow(sessionRow, planId);
-      return json(res, 200, {
-        ok: true,
-        message: readiness.enabled
-          ? '订单已创建，支付接口预埋已完成，待正式接入微信支付下单流程。'
-          : '订单已创建，当前仅完成支付预埋，待商户参数配置完成后再拉起支付。',
-        data: {
-          order,
-          readiness,
-          paymentUrl: null,
-        },
-      });
+      try {
+        const { order, readiness, h5Url, timeExpire } = await createPaymentOrderRow(sessionRow, {
+          planId,
+          buyerName: body.buyerName,
+          buyerOrg: body.buyerOrg,
+          buyerPhone: body.buyerPhone,
+          buyerEmail: body.buyerEmail,
+          buyerNote: body.buyerNote,
+        }, req);
+        return json(res, 200, {
+          ok: true,
+          message: '订单已创建，正在跳转微信支付。',
+          data: {
+            order,
+            readiness,
+            h5Url,
+            timeExpire,
+          },
+        });
+      } catch (error) {
+        const statusCode = Number(error?.statusCode || 500);
+        if (statusCode === 503) {
+          return json(res, 503, {
+            ok: false,
+            error: error.message || '支付配置未完成',
+            data: { readiness: error.readiness || getPaymentReadiness() },
+          });
+        }
+        return json(res, statusCode, { ok: false, error: paymentProviderError(error, '创建支付订单失败') });
+      }
     }
 
     const inviteDisableMatch = url.pathname.match(/^\/api\/auth\/invite-codes\/([^/]+)\/disable$/);

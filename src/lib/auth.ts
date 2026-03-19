@@ -299,7 +299,14 @@ export function logout() {
 
 // 创建付费订单
 export async function createPaymentOrder(
-  planId: keyof typeof MEMBERSHIP_PLANS
+  planId: keyof typeof MEMBERSHIP_PLANS,
+  buyerInfo: {
+    buyerName: string;
+    buyerPhone: string;
+    buyerEmail: string;
+    buyerOrg?: string;
+    buyerNote?: string;
+  }
 ): Promise<{ success: boolean; orderNo?: string; paymentUrl?: string; error?: string; message?: string }> {
   try {
     if (!currentUser) {
@@ -311,7 +318,14 @@ export async function createPaymentOrder(
       return { success: false, error: '无效的套餐' };
     }
     
-    const result = await createPaymentOrderApi(planId);
+    const result = await createPaymentOrderApi({
+      planId,
+      buyerName: buyerInfo.buyerName,
+      buyerPhone: buyerInfo.buyerPhone,
+      buyerEmail: buyerInfo.buyerEmail,
+      buyerOrg: buyerInfo.buyerOrg,
+      buyerNote: buyerInfo.buyerNote,
+    });
     if (!result.ok || !result.data?.order) {
       return { success: false, error: result.error || '创建订单失败，请稍后重试' };
     }
@@ -320,7 +334,7 @@ export async function createPaymentOrder(
     return {
       success: true,
       orderNo: result.data.order.orderNo,
-      paymentUrl: result.data.paymentUrl || undefined,
+      paymentUrl: result.data.h5Url || undefined,
       message: result.message,
     };
   } catch (error: any) {
@@ -394,39 +408,27 @@ export async function getUserInvitationCode(_userId: string): Promise<string> {
 export function getMembershipPlans(): MembershipPlan[] {
   return [
     {
-      id: 'monthly',
-      name: '月卡',
-      price: 99,
-      originalPrice: 99,
+      id: 'monthly_trial',
+      name: '月包试用',
+      price: 19.8,
+      originalPrice: 19.8,
       currency: 'CNY',
       duration: 30,
-      durationText: '月',
-      features: ['无限AI对话', '专业报告', '深度分析', '优先客服'],
+      durationText: '30天',
+      features: ['体验 30 天付费会员服务', '适合先熟悉平台内容', '支付成功后立即生效'],
       popular: false
     },
     {
       id: 'yearly',
-      name: '年卡',
-      price: 899,
-      originalPrice: 999,
+      name: '年包会员',
+      price: 198,
+      originalPrice: 198,
       currency: 'CNY',
       duration: 365,
       durationText: '年',
-      features: ['无限AI对话', '专业报告', '深度分析', '优先客服', '赠送30天'],
+      features: ['365 天付费会员有效期', '适合长期学习与持续使用', '支付成功后自动开通'],
       popular: true,
-      bonus: '额外赠送30天会员时长'
-    },
-    {
-      id: 'lifetime',
-      name: '终身会员',
-      price: 2999,
-      originalPrice: 2999,
-      currency: 'CNY',
-      duration: null,
-      durationText: '终身',
-      features: ['无限AI对话', '专业报告', '深度分析', '优先客服', '终身免费'],
-      popular: false,
-      bonus: '一次性付费，终身享用'
+      bonus: '适合长期陪伴与持续使用'
     }
   ];
 }
