@@ -94,36 +94,14 @@ export function CaseDetailPage({ caseId, onNavigate }: CaseDetailPageProps) {
               </div>
             ) : (
               <>
-                <div className="flex flex-wrap gap-2 mb-5">
-                  {caseData.industry ? (
-                    <span className="px-4 py-1.5 rounded-full bg-slate-100 text-slate-700 text-sm font-medium">
-                      {caseData.industry}
-                    </span>
-                  ) : null}
-                  {caseData.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
                 <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                   <div className="max-w-4xl">
                     <h1 className="text-3xl sm:text-4xl md:text-[44px] font-bold mb-4 leading-tight tracking-tight text-foreground">
-                      {caseData.title}
+                      {caseData.clientName}
                     </h1>
-                    <div className="flex items-center gap-3 mb-4">
-                      <span className="text-lg font-medium text-muted-foreground">客户：</span>
-                      <span className="text-xl font-bold text-primary">{caseData.clientName}</span>
-                    </div>
-                    {caseData.subtitle ? (
-                      <p className="text-lg text-muted-foreground leading-relaxed">
-                        {caseData.subtitle}
-                      </p>
-                    ) : null}
+                    <p className="text-lg text-muted-foreground leading-relaxed">
+                      客户介绍内容由后台上传的 PPT 自动转换而来，可直接在线查看或下载原始文件。
+                    </p>
                   </div>
 
                   {caseData.logoUrl ? (
@@ -190,10 +168,6 @@ export function CaseDetailPage({ caseId, onNavigate }: CaseDetailPageProps) {
                     <div>
                       <dt className="text-xs tracking-[0.18em] uppercase text-muted-foreground mb-1">客户</dt>
                       <dd className="text-sm text-foreground">{caseData.clientName}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs tracking-[0.18em] uppercase text-muted-foreground mb-1">行业</dt>
-                      <dd className="text-sm text-foreground">{caseData.industry || '待补充'}</dd>
                     </div>
                     <div>
                       <dt className="text-xs tracking-[0.18em] uppercase text-muted-foreground mb-1">PPT 图片</dt>

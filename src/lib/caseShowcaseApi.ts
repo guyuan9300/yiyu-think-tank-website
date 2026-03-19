@@ -26,7 +26,7 @@ export function fetchCaseShowcaseDetail(slugOrId: string, scope: 'admin' | 'publ
   return authRequest<CaseShowcase>(`/case-showcases/${encodeURIComponent(slugOrId)}?scope=${scope}`, undefined, { withAuth: scope === 'admin' });
 }
 
-export function saveCaseShowcase(payload: Partial<CaseShowcase> & { clientName: string; title: string }) {
+export function saveCaseShowcase(payload: Partial<CaseShowcase> & { clientName: string }) {
   return authRequest<CaseShowcase>(
     '/case-showcases/upsert',
     {

@@ -2539,15 +2539,15 @@ function mapCaseShowcase(row) {
 
 function sanitizeCaseShowcasePayload(payload, fallbackRow = null) {
   const clientName = safeText(payload?.clientName, fallbackRow?.client_name || '未命名机构');
-  const title = safeText(payload?.title, fallbackRow?.title || clientName);
+  const title = clientName;
   return {
     id: safeText(payload?.id, fallbackRow?.id || `case_${crypto.randomUUID()}`),
     slug: toCaseShowcaseSlug(payload?.slug || fallbackRow?.slug || clientName),
     clientName,
-    industry: safeText(payload?.industry, fallbackRow?.industry || ''),
+    industry: '',
     title,
-    subtitle: safeText(payload?.subtitle, fallbackRow?.subtitle || ''),
-    tags: textArray(payload?.tags || fallbackRow?.tags || []),
+    subtitle: '',
+    tags: [],
     logoUrl: safeText(payload?.logoUrl, fallbackRow?.logo_url || ''),
     pptFileUrl: safeText(payload?.pptFileUrl, fallbackRow?.ppt_file_url || ''),
     pptFileName: safeText(payload?.pptFileName, fallbackRow?.ppt_file_name || ''),

@@ -513,38 +513,38 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       )}
 
       {/* Cases Section */}
-      <section id="cases" className="pt-6 pb-14 px-4 sm:px-6 lg:px-8">
+      <section id="cases" className="pt-0 pb-14 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1200px] mx-auto">
-          <div className="rounded-[34px] border border-[rgba(15,23,42,0.05)] bg-[linear-gradient(180deg,rgba(246,248,252,0.96)_0%,rgba(251,252,254,0.98)_100%)] px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-7 shadow-[0_18px_45px_rgba(15,23,42,0.045)]">
-            <div className="mb-5 flex items-center justify-between">
+          <div className="rounded-[34px] border border-[rgba(15,23,42,0.05)] bg-[linear-gradient(180deg,rgba(235,242,250,0.98)_0%,rgba(244,247,251,0.98)_100%)] p-4 sm:p-5 lg:p-6 shadow-[0_22px_52px_rgba(15,23,42,0.055)]">
+            <div className="mb-5 flex items-center gap-4">
               <h2 className="text-[24px] sm:text-[26px] font-semibold tracking-tight text-[rgba(15,23,42,0.92)]">客户案例</h2>
-              <div className="h-px flex-1 ml-5 bg-[linear-gradient(90deg,rgba(15,23,42,0.12)_0%,rgba(15,23,42,0)_100%)]" />
+              <div className="h-px flex-1 bg-[linear-gradient(90deg,rgba(15,23,42,0.10)_0%,rgba(15,23,42,0)_100%)]" />
             </div>
 
-            <div className="flex flex-wrap justify-center gap-x-5 gap-y-7 lg:gap-x-6 lg:gap-y-8">
+            <div className="flex flex-wrap justify-center gap-2.5 sm:gap-3">
               {cases.map((caseItem) => (
                 <button
                   key={caseItem.slug}
                   type="button"
                   onClick={() => handleNavigateToCase(caseItem.slug)}
-                  className="group relative block w-full max-w-[360px] text-left sm:w-[calc(50%-10px)] lg:w-[calc(33.333%-16px)]"
+                  className="group relative block w-[calc(50%-5px)] text-left lg:w-[calc((100%-24px)/3)]"
                   aria-label={`查看 ${caseItem.clientName} 案例详情`}
                 >
-                  <div className="relative overflow-hidden rounded-[26px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(135deg,rgba(255,255,255,0.98)_0%,rgba(244,247,252,0.96)_100%)] px-8 py-8 sm:px-10 sm:py-9 min-h-[150px] shadow-[0_12px_26px_rgba(15,23,42,0.05)] transition-all duration-350 group-hover:-translate-y-1.5 group-hover:border-[rgba(59,130,246,0.22)] group-hover:shadow-[0_24px_45px_rgba(37,99,235,0.12)]">
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_58%)] opacity-0 transition-opacity duration-350 group-hover:opacity-100" />
+                  <div className="relative aspect-[1.34/1] overflow-hidden rounded-[28px] border border-[rgba(255,255,255,0.78)] bg-[linear-gradient(135deg,rgba(255,255,255,0.98)_0%,rgba(242,246,252,0.96)_100%)] shadow-[0_14px_30px_rgba(15,23,42,0.07)] transition-all duration-350 group-hover:-translate-y-1.5 group-hover:shadow-[0_24px_46px_rgba(37,99,235,0.14)]">
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.12),transparent_64%)] opacity-0 transition-opacity duration-350 group-hover:opacity-100" />
                     {caseItem.logoUrl ? (
                       <img
                         src={caseItem.logoUrl}
                         alt={caseItem.clientName}
-                        className="relative z-10 mx-auto max-h-[86px] w-full object-contain transition-transform duration-350 group-hover:scale-[1.08]"
+                        className="relative z-10 h-full w-full origin-center object-contain scale-[1.12] transition-transform duration-500 group-hover:scale-[1.24]"
                         loading="lazy"
                       />
                     ) : (
-                      <div className="relative z-10 mx-auto h-14 w-14 rounded-[20px] bg-gradient-to-br from-blue-500 to-indigo-600" />
+                      <div className="relative z-10 h-full w-full bg-gradient-to-br from-blue-500 to-indigo-600" />
                     )}
                   </div>
-                  <span className="pointer-events-none absolute left-1/2 top-full inline-flex h-9 w-9 -translate-x-1/2 -translate-y-5 items-center justify-center rounded-full border border-[rgba(59,130,246,0.18)] bg-white text-[rgba(37,99,235,0.82)] shadow-[0_10px_20px_rgba(15,23,42,0.08)] opacity-0 transition-all duration-300 group-hover:-translate-y-3 group-hover:opacity-100">
-                    <MoveRight className="h-4 w-4 rotate-90" />
+                  <span className="pointer-events-none absolute bottom-0 left-1/2 inline-flex h-10 w-10 -translate-x-1/2 translate-y-1/2 items-center justify-center rounded-full border border-[rgba(59,130,246,0.16)] bg-white text-[rgba(37,99,235,0.86)] shadow-[0_14px_28px_rgba(15,23,42,0.12)] opacity-0 transition-all duration-350 group-hover:translate-y-[38%] group-hover:opacity-100">
+                    <MoveRight className="h-4 w-4" />
                   </span>
                 </button>
               ))}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Download, FileImage, FileText, Plus, Save, Trash2, Upload } from 'lucide-react';
+import { ChevronDown, Download, FileImage, FileText, Plus, Save, Trash2, Upload } from 'lucide-react';
 import { deleteCaseShowcase, fetchCaseShowcaseDetail, fetchCaseShowcases, saveCaseShowcase, type CaseShowcase } from '../lib/caseShowcaseApi';
 import { uploadAdminAsset } from '../lib/authApi';
 
@@ -10,7 +10,7 @@ function createDraftCase(order: number): CaseShowcase {
     slug: `case-${stamp}`,
     clientName: '新机构案例',
     industry: '',
-    title: '请填写案例标题',
+    title: '新机构案例',
     subtitle: '',
     tags: [],
     logoUrl: '',
@@ -31,6 +31,7 @@ export function AdminCaseShowcaseManager() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingPpt, setUploadingPpt] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const pptInputRef = useRef<HTMLInputElement>(null);
 
@@ -61,6 +62,7 @@ export function AdminCaseShowcaseManager() {
       setCases(result.data);
       setSelectedId(result.data[0]?.id || '');
       setDraft(null);
+      setEditorOpen(false);
       setLoading(false);
     };
     void load();
@@ -79,6 +81,7 @@ export function AdminCaseShowcaseManager() {
   const handleSelect = async (id: string) => {
     setSelectedId(id);
     setDraft(null);
+    setEditorOpen(false);
     const result = await fetchCaseShowcaseDetail(id, 'admin');
     if (result.ok && result.data) {
       setDraft(result.data);
@@ -89,6 +92,7 @@ export function AdminCaseShowcaseManager() {
     const next = createDraftCase(cases.length + 1);
     setDraft(next);
     setSelectedId(next.id);
+    setEditorOpen(true);
     setMessage(null);
   };
 
@@ -111,6 +115,7 @@ export function AdminCaseShowcaseManager() {
     });
     setSelectedId(result.data.id);
     setDraft(result.data);
+    setEditorOpen(false);
     setMessage({ type: 'success', text: '案例展示已保存到腾讯云。' });
   };
 
@@ -205,9 +210,11 @@ export function AdminCaseShowcaseManager() {
                   className={`w-full text-left rounded-2xl border px-4 py-3 transition-colors ${active ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-800'}`}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-[14px] font-medium">{item.clientName}</p>
-                      <p className={`text-[12px] ${active ? 'text-white/70' : 'text-slate-500'}`}>{item.industry || '未设置行业'}</p>
+                      <p className={`text-[12px] ${active ? 'text-white/70' : 'text-slate-500'}`}>
+                        {item.slideImages.length ? `${item.slideImages.length} 张介绍图片` : '未上传客户介绍 PPT'}
+                      </p>
                     </div>
                     <span className={`px-2 py-1 rounded-full text-[11px] ${item.isPublished ? (active ? 'bg-white/15 text-white' : 'bg-emerald-50 text-emerald-700') : (active ? 'bg-white/10 text-white/80' : 'bg-slate-100 text-slate-500')}`}>
                       {item.isPublished ? '已发布' : '草稿'}
@@ -230,9 +237,17 @@ export function AdminCaseShowcaseManager() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h3 className="text-[20px] font-semibold text-slate-900">案例资料</h3>
-                  <p className="text-[13px] text-slate-500">Logo 用于前台点击入口，PPT 将自动转换成图片详情页。</p>
+                  <p className="text-[13px] text-slate-500">只维护客户名称、Logo 与客户介绍 PPT，保存后即可用于前台案例展示。</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditorOpen((prev) => !prev)}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-[13px] text-slate-700 hover:bg-slate-50"
+                  >
+                    <ChevronDown className={`w-4 h-4 transition-transform ${editorOpen ? 'rotate-180' : ''}`} />
+                    {editorOpen ? '收起编辑' : '展开编辑'}
+                  </button>
                   <button
                     type="button"
                     onClick={handleSave}
@@ -253,43 +268,36 @@ export function AdminCaseShowcaseManager() {
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="space-y-2">
-                  <span className="text-[12px] font-medium text-slate-500">客户名称</span>
-                  <input value={selectedCase.clientName} onChange={(e) => updateDraft({ clientName: e.target.value })} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[14px]" />
-                </label>
-                <label className="space-y-2">
-                  <span className="text-[12px] font-medium text-slate-500">行业</span>
-                  <input value={selectedCase.industry} onChange={(e) => updateDraft({ industry: e.target.value })} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[14px]" />
-                </label>
-                <label className="space-y-2 md:col-span-2">
-                  <span className="text-[12px] font-medium text-slate-500">案例标题</span>
-                  <input value={selectedCase.title} onChange={(e) => updateDraft({ title: e.target.value })} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[14px]" />
-                </label>
-                <label className="space-y-2 md:col-span-2">
-                  <span className="text-[12px] font-medium text-slate-500">一句话简介</span>
-                  <textarea value={selectedCase.subtitle} onChange={(e) => updateDraft({ subtitle: e.target.value })} className="w-full min-h-[96px] rounded-xl border border-slate-200 px-3 py-2.5 text-[14px]" />
-                </label>
-                <label className="space-y-2">
-                  <span className="text-[12px] font-medium text-slate-500">标签</span>
-                  <input
-                    value={selectedCase.tags.join(' / ')}
-                    onChange={(e) => updateDraft({ tags: e.target.value.split(/[\/,，]/).map((item) => item.trim()).filter(Boolean) })}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[14px]"
-                    placeholder="例如：公益 / 教育"
-                  />
-                </label>
-                <label className="space-y-2">
-                  <span className="text-[12px] font-medium text-slate-500">排序</span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={selectedCase.sortOrder}
-                    onChange={(e) => updateDraft({ sortOrder: Number(e.target.value) || 0 })}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[14px]"
-                  />
-                </label>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-[12px] font-medium text-slate-500 mb-1">当前客户</p>
+                    <p className="text-[22px] font-semibold text-slate-900">{selectedCase.clientName}</p>
+                  </div>
+                  <label className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[14px] text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={selectedCase.isPublished}
+                      onChange={(e) => updateDraft({ isPublished: e.target.checked })}
+                      className="w-4 h-4 rounded border-slate-300 text-slate-900"
+                    />
+                    发布到前台案例展示
+                  </label>
+                </div>
               </div>
+
+              {editorOpen ? (
+                <div className="space-y-4 rounded-[24px] border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
+                  <label className="space-y-2 block">
+                    <span className="text-[12px] font-medium text-slate-500">客户名称</span>
+                    <input
+                      value={selectedCase.clientName}
+                      onChange={(e) => updateDraft({ clientName: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[14px]"
+                    />
+                  </label>
+                </div>
+              ) : null}
 
               <div className="grid gap-4 lg:grid-cols-2">
                 <div className="rounded-2xl border border-slate-200 p-4">
@@ -361,16 +369,6 @@ export function AdminCaseShowcaseManager() {
                   </div>
                 </div>
               </div>
-
-              <label className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-[14px] text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={selectedCase.isPublished}
-                  onChange={(e) => updateDraft({ isPublished: e.target.checked })}
-                  className="w-4 h-4 rounded border-slate-300 text-slate-900"
-                />
-                发布到前台案例展示
-              </label>
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-200 px-6 py-16 text-center text-slate-500">
