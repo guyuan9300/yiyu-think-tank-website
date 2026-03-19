@@ -72,8 +72,9 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
   const withBase = (p: string) => `${import.meta.env.BASE_URL}${String(p || '').replace(/^\//, '')}`;
 
   // Cases data fallback
-  const fallbackCases = [
+  const fallbackCases: CaseShowcase[] = [
     {
+      id: 'fallback-blue-letter',
       industry: '公益/教育',
       clientName: '蓝信封',
       title: '专注于乡村儿童心理健康服务的公益机构',
@@ -81,8 +82,14 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       tags: ['公益', '教育'],
       logoUrl: withBase('/images/cases/blue-letter.png'),
       slug: 'blue-letter',
+      pptFileUrl: '',
+      pptFileName: '',
+      slideImages: [],
+      isPublished: true,
+      sortOrder: 1,
     },
     {
+      id: 'fallback-vision-capital',
       industry: '金融/投资',
       clientName: '愿景资本',
       title: '国家新兴产业创投基金管理公司',
@@ -90,8 +97,14 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       tags: ['投资', '创投'],
       logoUrl: withBase('/images/cases/vision-capital.png'),
       slug: 'vision-capital',
+      pptFileUrl: '',
+      pptFileName: '',
+      slideImages: [],
+      isPublished: true,
+      sortOrder: 2,
     },
     {
+      id: 'fallback-beike-foundation',
       industry: '公益/房地产',
       clientName: '贝壳公益基金会',
       title: '城市社区公益平台',
@@ -99,8 +112,14 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       tags: ['社区', '公益'],
       logoUrl: withBase('/images/cases/beike-foundation.png'),
       slug: 'beike-foundation',
+      pptFileUrl: '',
+      pptFileName: '',
+      slideImages: [],
+      isPublished: true,
+      sortOrder: 3,
     },
     {
+      id: 'fallback-rici-foundation',
       industry: '公益/教育',
       clientName: '日慈基金会',
       title: '青少年心智素养教育',
@@ -108,8 +127,14 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       tags: ['教育', '心理'],
       logoUrl: withBase('/images/cases/rici-foundation.png'),
       slug: 'rici-foundation',
+      pptFileUrl: '',
+      pptFileName: '',
+      slideImages: [],
+      isPublished: true,
+      sortOrder: 4,
     },
     {
+      id: 'fallback-tianzige',
       industry: '公益/教育',
       clientName: '田字格',
       title: '乡土人本教育探索',
@@ -117,8 +142,14 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       tags: ['乡村', '教育'],
       logoUrl: withBase('/images/cases/tianzige.png'),
       slug: 'tianzige',
+      pptFileUrl: '',
+      pptFileName: '',
+      slideImages: [],
+      isPublished: true,
+      sortOrder: 5,
     },
     {
+      id: 'fallback-abc-consulting',
       industry: '公益/咨询',
       clientName: 'ABC美好社会咨询社',
       title: '专业公益咨询服务',
@@ -126,8 +157,14 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       tags: ['咨询', 'NGO'],
       logoUrl: withBase('/images/cases/abc-consulting.png'),
       slug: 'abc-consulting',
+      pptFileUrl: '',
+      pptFileName: '',
+      slideImages: [],
+      isPublished: true,
+      sortOrder: 6,
     },
     {
+      id: 'fallback-lithium-sodium-krypton-strontium',
       industry: '教育/科技',
       clientName: '锂钠氪锶',
       title: '教育科技解决方案',
@@ -135,8 +172,14 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       tags: ['AI', '教育'],
       logoUrl: withBase('/images/cases/lithium-sodium-krypton-strontium.png'),
       slug: 'lithium-sodium-krypton-strontium',
+      pptFileUrl: '',
+      pptFileName: '',
+      slideImages: [],
+      isPublished: true,
+      sortOrder: 7,
     },
     {
+      id: 'fallback-china-rural-foundation',
       industry: '公益/乡村振兴',
       clientName: '中国乡村发展基金会',
       title: '乡村发展与扶贫事业',
@@ -144,8 +187,14 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       tags: ['乡村', '扶贫'],
       logoUrl: withBase('/images/cases/china-rural-foundation.png'),
       slug: 'china-rural-foundation',
+      pptFileUrl: '',
+      pptFileName: '',
+      slideImages: [],
+      isPublished: true,
+      sortOrder: 8,
     },
     {
+      id: 'fallback-nio',
       industry: '汽车/新能源',
       clientName: '蔚来汽车',
       title: '智能电动汽车与用户体验',
@@ -153,6 +202,11 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       tags: ['汽车', '新能源'],
       logoUrl: withBase('/images/cases/nio.png'),
       slug: 'nio',
+      pptFileUrl: '',
+      pptFileName: '',
+      slideImages: [],
+      isPublished: true,
+      sortOrder: 9,
     }
   ];
 
@@ -172,6 +226,12 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
   }, []);
 
   const cases = caseShowcases.length ? caseShowcases : fallbackCases;
+  const caseRows = cases.reduce<Array<CaseShowcase[]>>((rows, item, index) => {
+    const rowIndex = Math.floor(index / 3);
+    if (!rows[rowIndex]) rows[rowIndex] = [];
+    rows[rowIndex].push(item);
+    return rows;
+  }, []);
 
   // Insights data
   const insights = [
@@ -460,41 +520,52 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       {/* Cases Section */}
       <section id="cases" className="pt-0 pb-14 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1200px] mx-auto">
-          <div className="mb-6 text-center">
+          <div className="mb-8 text-center">
             <h2 className="text-[24px] sm:text-[28px] font-semibold tracking-tight text-[rgba(15,23,42,0.92)]">部分服务客户</h2>
+            <p className="mt-2 text-[13px] text-[rgba(15,23,42,0.54)]">点击logo可查看客户介绍</p>
           </div>
 
-          <div className="rounded-[32px] bg-[linear-gradient(180deg,rgba(237,243,248,0.9)_0%,rgba(232,239,246,0.96)_100%)] p-3 sm:p-4 md:p-5">
-            <div className="flex flex-wrap justify-center gap-3 md:gap-4">
-            {cases.map((caseItem) => (
-              <button
-                key={caseItem.slug}
-                type="button"
-                onClick={() => handleNavigateToCase(caseItem.slug)}
-                className="group relative block w-[calc((100%-12px)/2)] text-left md:w-[calc((100%-48px)/4)]"
-                aria-label={`查看 ${caseItem.clientName} 案例详情`}
-              >
-                <div className="relative aspect-[1.08/1] overflow-hidden rounded-[26px] bg-transparent transition-all duration-350 group-hover:-translate-y-1">
-                  <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.78),rgba(255,255,255,0.14)_72%,transparent_100%)] opacity-0 transition-opacity duration-350 group-hover:opacity-100" />
-                  {caseItem.logoUrl ? (
-                    <div className="relative z-10 flex h-full w-full items-center justify-center p-2 sm:p-3">
-                      <img
-                        src={caseItem.logoUrl}
-                        alt={caseItem.clientName}
-                        className="h-full w-full origin-center object-contain scale-[1.18] transition-transform duration-500 group-hover:scale-[1.3]"
-                        loading="lazy"
-                      />
-                    </div>
-                  ) : (
-                    <div className="relative z-10 h-full w-full rounded-[26px] bg-gradient-to-br from-blue-500 to-indigo-600" />
-                  )}
-                  <span className="pointer-events-none absolute bottom-3 left-1/2 inline-flex h-9 w-9 -translate-x-1/2 translate-y-4 items-center justify-center rounded-full bg-white text-[rgba(37,99,235,0.88)] shadow-[0_10px_24px_rgba(15,23,42,0.14)] opacity-0 transition-all duration-350 group-hover:translate-y-0 group-hover:opacity-100">
-                    <MoveRight className="h-4 w-4" />
-                  </span>
+          <div className="space-y-0.5">
+            {caseRows.map((row, rowIndex) => (
+              <div key={`case-row-${rowIndex}`} className="flex justify-center">
+                <div className="flex w-full justify-center">
+                  <div className="flex w-full flex-wrap justify-center md:flex-nowrap">
+                    {row.map((caseItem, colIndex) => (
+                      <button
+                        key={caseItem.slug}
+                        type="button"
+                        onClick={() => handleNavigateToCase(caseItem.slug)}
+                        className="group relative block w-1/2 border border-[rgba(15,23,42,0.12)] bg-white text-left md:w-1/3"
+                        style={{
+                          marginLeft: colIndex === 0 ? 0 : -1,
+                          marginTop: rowIndex === 0 ? 0 : -1,
+                        }}
+                        aria-label={`查看 ${caseItem.clientName} 案例详情`}
+                      >
+                        <div className="relative aspect-[1.08/1] overflow-hidden">
+                          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[rgba(15,23,42,0.06)] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                          {caseItem.logoUrl ? (
+                            <div className="relative z-10 flex h-full w-full items-center justify-center p-3 sm:p-4">
+                              <img
+                                src={caseItem.logoUrl}
+                                alt={caseItem.clientName}
+                                className="h-full w-full origin-center object-contain transition-transform duration-500 group-hover:scale-[1.12]"
+                                loading="lazy"
+                              />
+                            </div>
+                          ) : (
+                            <div className="relative z-10 h-full w-full bg-gradient-to-br from-blue-500 to-indigo-600" />
+                          )}
+                          <span className="pointer-events-none absolute bottom-2 left-1/2 inline-flex h-8 w-8 -translate-x-1/2 translate-y-3 items-center justify-center rounded-full bg-white text-[rgba(37,99,235,0.88)] shadow-[0_8px_20px_rgba(15,23,42,0.12)] opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                            <MoveRight className="h-4 w-4" />
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </button>
+              </div>
             ))}
-            </div>
           </div>
         </div>
       </section>
