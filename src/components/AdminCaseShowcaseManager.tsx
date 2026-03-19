@@ -34,10 +34,17 @@ export function AdminCaseShowcaseManager() {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const pptInputRef = useRef<HTMLInputElement>(null);
 
-  const selectedCase = useMemo(
-    () => cases.find((item) => item.id === selectedId) || draft,
-    [cases, selectedId, draft]
+  const persistedSelectedCase = useMemo(
+    () => cases.find((item) => item.id === selectedId) || null,
+    [cases, selectedId]
   );
+
+  const selectedCase = useMemo(() => {
+    if (draft && draft.id === selectedId) {
+      return draft;
+    }
+    return persistedSelectedCase;
+  }, [draft, persistedSelectedCase, selectedId]);
 
   useEffect(() => {
     let canceled = false;
@@ -63,7 +70,7 @@ export function AdminCaseShowcaseManager() {
   }, []);
 
   const updateDraft = (patch: Partial<CaseShowcase>) => {
-    const base = selectedCase || createDraftCase(cases.length + 1);
+    const base = (draft && draft.id === selectedId ? draft : persistedSelectedCase) || createDraftCase(cases.length + 1);
     const next = { ...base, ...patch };
     setDraft(next);
     setSelectedId(next.id);
@@ -120,8 +127,9 @@ export function AdminCaseShowcaseManager() {
       setMessage({ type: 'error', text: result.error || '案例展示删除失败。' });
       return;
     }
-    setCases((prev) => prev.filter((item) => item.id !== selectedCase.id));
-    const next = cases.filter((item) => item.id !== selectedCase.id)[0];
+    const remaining = cases.filter((item) => item.id !== selectedCase.id);
+    setCases(remaining);
+    const next = remaining[0];
     setSelectedId(next?.id || '');
     setDraft(next || null);
     setMessage({ type: 'success', text: '案例展示已删除。' });

@@ -2473,7 +2473,7 @@ function mapStrategyProjectSummary(row) {
     projectName: row.project_name || row.client_name,
     description: row.description || '',
     slug: row.slug || toProjectSlug(row.client_name || row.project_name || row.id),
-    logoUrl: row.logo_url || '',
+    logoUrl: resolveEffectiveLogoUrl(row.logo_url, row.case_logo_url),
     isPublished: Boolean(row.is_published),
     publishedAt: row.published_at || undefined,
     status: row.status || 'active',
@@ -2481,6 +2481,20 @@ function mapStrategyProjectSummary(row) {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function isLegacyCaseLogoUrl(input) {
+  return /^\/?images\/cases\//i.test(safeText(input));
+}
+
+function resolveEffectiveLogoUrl(primaryLogoUrl, caseLogoUrl) {
+  const primary = safeText(primaryLogoUrl);
+  const fallback = safeText(caseLogoUrl);
+  if (!fallback) return primary;
+  if (!primary || isLegacyCaseLogoUrl(primary)) {
+    return fallback;
+  }
+  return primary;
 }
 
 function mapStrategyLearningResource(row) {
@@ -2829,22 +2843,46 @@ function sanitizeProjectSnapshotPayload(payload, fallbackProject = null) {
 async function listStrategyProjects(scope = 'published') {
   const normalizedScope = normalizeStrategyScope(scope);
   const params = [];
-  const where = [`is_active = true`];
+  const where = [`cp.is_active = true`];
   if (normalizedScope !== 'admin') {
-    where.push(`is_published = true`);
+    where.push(`cp.is_published = true`);
   }
   const sql = `
-    SELECT *
-    FROM client_projects
+    SELECT cp.*, case_logo.logo_url AS case_logo_url
+    FROM client_projects cp
+    LEFT JOIN LATERAL (
+      SELECT cs.logo_url
+      FROM case_showcases cs
+      WHERE cs.slug = cp.slug
+        AND cs.is_active = true
+        AND COALESCE(cs.logo_url, '') <> ''
+      ORDER BY cs.is_published DESC, cs.updated_at DESC NULLS LAST, cs.created_at DESC
+      LIMIT 1
+    ) case_logo ON true
     WHERE ${where.join(' AND ')}
-    ORDER BY sort_order ASC NULLS LAST, created_at ASC
+    ORDER BY cp.sort_order ASC NULLS LAST, cp.created_at ASC
   `;
   const q = await pool.query(sql, params);
   return q.rows.map(mapStrategyProjectSummary);
 }
 
 async function findStrategyProjectById(db, projectId) {
-  const q = await db.query('SELECT * FROM client_projects WHERE id=$1 LIMIT 1', [projectId]);
+  const q = await db.query(
+    `SELECT cp.*, case_logo.logo_url AS case_logo_url
+     FROM client_projects cp
+     LEFT JOIN LATERAL (
+       SELECT cs.logo_url
+       FROM case_showcases cs
+       WHERE cs.slug = cp.slug
+         AND cs.is_active = true
+         AND COALESCE(cs.logo_url, '') <> ''
+       ORDER BY cs.is_published DESC, cs.updated_at DESC NULLS LAST, cs.created_at DESC
+       LIMIT 1
+     ) case_logo ON true
+     WHERE cp.id=$1
+     LIMIT 1`,
+    [projectId]
+  );
   return q.rows[0] || null;
 }
 
