@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { PdfCoverImage } from './PdfCoverImage';
-import { BookOpen, Eye, Wrench, ArrowRight } from 'lucide-react';
+import { BookOpen, Wrench, ArrowRight } from 'lucide-react';
+import { ContentResourceCard } from './ContentResourceCard';
 import { getBooks, getMethodologies, type Book as StoredBook, type Methodology as StoredMethodology } from '../lib/dataService';
 
 interface Book {
@@ -52,6 +53,10 @@ interface MethodologyCardData {
   excerpt: string;
   topics: string[];
   publishDate: string;
+  coverImage?: string;
+  views?: number;
+  likes?: number;
+  favoritesCount?: number;
 }
 
 export function LibraryPage({ onNavigate }: LibraryPageProps) {
@@ -90,6 +95,10 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
         excerpt: m.excerpt,
         topics: (m.topics || []) as any,
         publishDate: m.publishDate,
+        coverImage: m.coverImage,
+        views: m.views,
+        likes: m.likes,
+        favoritesCount: m.favoritesCount,
       }));
       setMethodologies(methodCards);
     };
@@ -103,16 +112,6 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
       window.removeEventListener('yiyu_data_change', onChange);
     };
   }, []);
-
-  const getCategoryColor = (topic: string) => {
-    const colors: Record<string, string> = {
-      '战略': 'bg-blue-100 text-blue-700',
-      '业务设计': 'bg-orange-100 text-orange-700',
-      '组织': 'bg-green-100 text-green-700',
-      'AI 技术': 'bg-purple-100 text-purple-700',
-    };
-    return colors[topic] || 'bg-gray-100 text-gray-700';
-  };
 
   const visibleBooks = useMemo(() => {
     const list = books;
@@ -185,11 +184,38 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
           {visibleBooks.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {visibleBooks.map((book) => (
-                <BookCard
+                <ContentResourceCard
                   key={book.id}
-                  book={book}
+                  cover={
+                    book.coverImage ? (
+                      <img
+                        src={book.coverImage}
+                        alt={book.title}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : book.pdfUrl ? (
+                      <PdfCoverImage
+                        pdfUrl={book.pdfUrl}
+                        alt={book.title}
+                        className="absolute inset-0"
+                        width={520}
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <BookOpen className="w-16 h-16 text-success/10" />
+                      </div>
+                    )
+                  }
+                  tags={book.topics || []}
+                  title={book.title}
+                  author={book.author}
+                  excerpt={book.description}
+                  views={book.views}
+                  likes={(book as any).likes}
+                  favorites={(book as any).favoritesCount}
+                  publishDate={book.date}
                   onClick={() => handleBookClick(book.id)}
-                  getCategoryColor={getCategoryColor}
                 />
               ))}
             </div>
@@ -224,9 +250,29 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
           {visibleMethodologies.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {visibleMethodologies.map((m) => (
-                <button
+                <ContentResourceCard
                   key={m.id}
-                  type="button"
+                  cover={
+                    m.coverImage ? (
+                      <img
+                        src={m.coverImage}
+                        alt={m.title}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Wrench className="w-16 h-16 text-primary/10" />
+                      </div>
+                    )
+                  }
+                  tags={m.topics || []}
+                  title={m.title}
+                  excerpt={m.excerpt}
+                  views={m.views}
+                  likes={m.likes}
+                  favorites={m.favoritesCount}
+                  publishDate={m.publishDate}
                   onClick={() => {
                     // open reader view
                     if (onNavigate) onNavigate('methodology-library', m.id);
@@ -235,31 +281,7 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
                         `${window.location.pathname}?page=methodology-library&id=${encodeURIComponent(m.id)}`
                       );
                   }}
-                  className="relative bg-white/80 backdrop-blur-sm rounded-[20px] border border-border/40 overflow-hidden text-left cursor-pointer group hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300"
-                >
-                  <div className="relative aspect-[16/10] bg-gradient-to-br from-primary/[0.03] to-accent/[0.03] overflow-hidden">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Wrench className="w-12 h-12 text-primary/10" />
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-
-                  <div className="p-6">
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      {(m.topics || []).slice(0, 2).map((t) => (
-                        <span
-                          key={t}
-                          className="px-2.5 py-1 rounded-full bg-primary/8 text-primary text-[11px] font-medium border border-primary/15"
-                        >
-                          {t}
-                        </span>
-                      ))}
-                      <span className="text-[12px] text-muted-foreground/50">{m.publishDate}</span>
-                    </div>
-                    <h3 className="text-[16px] font-semibold mb-2 line-clamp-2">{m.title}</h3>
-                    <p className="text-[13px] text-muted-foreground/70 line-clamp-3 leading-relaxed">{m.excerpt}</p>
-                  </div>
-                </button>
+                />
               ))}
             </div>
           ) : (
@@ -272,80 +294,6 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
       <Footer onNavigate={(p) => onNavigate?.(p)} />
 
 
-    </div>
-  );
-}
-
-function BookCard({ book, onClick, getCategoryColor }: { book: Book; onClick: () => void; getCategoryColor: (category: string) => string }) {
-  return (
-    <div
-      onClick={onClick}
-      className="relative bg-white/80 backdrop-blur-sm rounded-[20px] border border-border/40 overflow-hidden cursor-pointer group hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300"
-    >
-      {/* Cover */}
-      <div className={`h-36 bg-gradient-to-br ${book.coverColor || 'from-muted/50 to-muted/30'} flex items-center justify-center relative p-4 overflow-hidden`}>
-        {book.coverImage ? (
-          <img
-            src={book.coverImage}
-            alt={book.title}
-            className="absolute inset-0 w-full h-full object-cover"
-            loading="lazy"
-          />
-        ) : book.pdfUrl ? (
-          <PdfCoverImage
-            pdfUrl={book.pdfUrl}
-            alt={book.title}
-            className="absolute inset-0"
-            width={520}
-          />
-        ) : null}
-
-        {/* Icon */}
-        <div className={`w-14 h-14 rounded-[16px] bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center transform group-hover:scale-110 transition-transform duration-300 ${book.pdfUrl ? 'opacity-0' : ''}`}>
-          <BookOpen className="w-7 h-7 text-white" />
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="p-5">
-        {/* Category */}
-        <div className="flex items-center gap-2 mb-3">
-          <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium border ${getCategoryColor((book.topics || [])[0] || '')}`}>
-            {(book.topics || [])[0] || '—'}
-          </span>
-        </div>
-
-        {/* Title */}
-        <h3 className="font-medium text-[16px] text-foreground mb-2 group-hover:text-primary transition-colors line-clamp-1">
-          {book.title}
-        </h3>
-
-        <p className="text-[13px] text-muted-foreground/60 mb-3 line-clamp-1">
-          {book.author}
-        </p>
-
-        {/* Description */}
-        <p className="text-[13px] text-muted-foreground/70 mb-4 line-clamp-2 leading-relaxed">
-          {book.description}
-        </p>
-
-        {/* Meta */}
-        <div className="flex items-center justify-between text-[12px] text-muted-foreground/50 pt-4 border-t border-border/40">
-          <div className="flex items-center gap-2">
-            <Eye className="w-3.5 h-3.5" />
-            <span>{book.views.toLocaleString()}</span>
-          </div>
-          <span>{book.date}</span>
-        </div>
-      </div>
-
-      {/* Hover Overlay */}
-      <div className="absolute inset-0 bg-foreground/90 backdrop-blur-sm flex items-center justify-center transition-all duration-300 opacity-0 group-hover:opacity-100">
-        <button className="inline-flex items-center gap-2 px-6 py-3 bg-white rounded-full text-[14px] font-medium shadow-lg transform transition-all hover:scale-105">
-          <Eye className="w-4 h-4" />
-          <span>开始阅读</span>
-        </button>
-      </div>
     </div>
   );
 }

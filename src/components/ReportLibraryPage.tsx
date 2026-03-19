@@ -7,166 +7,15 @@ import {
   Filter,
   Grid3X3,
   List,
-  Eye,
   ChevronRight,
   ArrowRight
 } from 'lucide-react';
 import { getReports as getReportsLocal, type Report } from '../lib/dataService';
 import { PdfCoverImage } from './PdfCoverImage';
+import { ContentResourceCard } from './ContentResourceCard';
+import { PaginationControls } from './PaginationControls';
 
-// 报告卡片组件 - 网格视图
-function ReportCardGrid({ report, onClick }: { report: Report; onClick?: () => void }) {
-  return (
-    <article
-      className="group cursor-pointer"
-      onClick={onClick}
-    >
-      <div className="relative bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-white/80 hover:border-border/60 hover:shadow-2xl hover:shadow-black/[0.04] hover:-translate-y-1">
-        {/* 封面区域 */}
-        <div className="relative aspect-[16/10] bg-gradient-to-br from-success/[0.03] to-accent/[0.03] overflow-hidden">
-          {report.coverImage ? (
-            <img
-              src={report.coverImage}
-              alt={report.title}
-              className="absolute inset-0 w-full h-full object-cover"
-              loading="lazy"
-            />
-          ) : report.fileUrl ? (
-            <PdfCoverImage
-              pdfUrl={report.fileUrl}
-              alt={report.title}
-              className="absolute inset-0"
-              width={520}
-            />
-          ) : null}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <FileText className="w-16 h-16 text-success/10" />
-          </div>
-          {/* 热门标签已废弃 */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-            <span className="text-white text-[14px] font-medium">查看详情</span>
-          </div>
-        </div>
-
-        {/* 内容区域 */}
-        <div className="p-6">
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
-            {(report.topics || []).slice(0, 2).map((t, idx) => (
-              <span
-                key={idx}
-                className="px-3 py-1 rounded-full bg-success/8 text-success text-[11px] font-medium"
-              >
-                {t}
-              </span>
-            ))}
-          </div>
-
-          <h3 className="text-[18px] font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors leading-[1.4]">
-            {report.title}
-          </h3>
-
-          {report.publisher ? (
-            <p className="text-[12px] text-muted-foreground/55 mb-2 line-clamp-1">
-              {report.publisher}
-            </p>
-          ) : null}
-
-          <p className="text-[14px] text-muted-foreground/70 line-clamp-2 leading-[1.6] mb-4">
-            {report.summary}
-          </p>
-
-          <div className="flex items-center justify-between pt-4 border-t border-border/30 text-[12px] text-muted-foreground/50">
-            <div className="flex items-center gap-1">
-              <Eye className="w-3.5 h-3.5" />
-              <span>{report.views.toLocaleString()}</span>
-            </div>
-            <span>{report.publishDate}</span>
-          </div>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-// 报告列表项组件 - 列表视图
-function ReportListItem({ report, onClick }: { report: Report; onClick?: () => void }) {
-  return (
-    <div
-      className="group flex items-center gap-6 p-5 hover:bg-muted/20 transition-colors cursor-pointer rounded-2xl"
-      onClick={onClick}
-    >
-      {/* 封面 */}
-      <div className="w-32 h-20 rounded-[12px] overflow-hidden flex-shrink-0 bg-gradient-to-br from-success/[0.03] to-accent/[0.03] relative">
-        {report.coverImage ? (
-          <img
-            src={report.coverImage}
-            alt={report.title}
-            className="absolute inset-0 w-full h-full object-cover"
-            loading="lazy"
-          />
-        ) : report.fileUrl ? (
-          <PdfCoverImage
-            pdfUrl={report.fileUrl}
-            alt={report.title}
-            className="absolute inset-0"
-            width={320}
-          />
-        ) : null}
-        <div className="w-full h-full flex items-center justify-center">
-          <FileText className="w-8 h-8 text-success/20" />
-        </div>
-      </div>
-
-      {/* 内容 */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-2">
-          {(report.topics || []).slice(0, 2).map((t, idx) => (
-            <span
-              key={idx}
-              className="px-2.5 py-1 bg-success/8 text-success text-[11px] font-medium rounded-full"
-            >
-              {t}
-            </span>
-          ))}
-        </div>
-        <h3 className="font-medium text-[15px] text-foreground mb-1 truncate group-hover:text-primary transition-colors">
-          {report.title}
-        </h3>
-        {report.publisher ? (
-          <p className="text-[12px] text-muted-foreground/55 line-clamp-1 mb-1">
-            {report.publisher}
-          </p>
-        ) : null}
-        <p className="text-[13px] text-muted-foreground/70 line-clamp-1">
-          {report.summary}
-        </p>
-      </div>
-
-      {/* topics */}
-      <div className="flex flex-wrap gap-1.5 w-40">
-        {(report.topics || []).slice(0, 2).map((tag: string, index: number) => (
-          <span
-            key={index}
-            className="px-2 py-0.5 bg-muted/40 text-muted-foreground/60 text-[11px] rounded-full truncate"
-          >
-            {tag}
-          </span>
-        ))}
-      </div>
-
-      {/* 元数据 */}
-      <div className="flex flex-col items-end gap-1.5 text-[12px] text-muted-foreground/50 w-32">
-        <span>{report.publishDate}</span>
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1">
-            <Eye className="w-3 h-3" />
-            {report.views.toLocaleString()}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
+const PAGE_SIZE = 10;
 
 export function ReportLibraryPage({
   onNavigate,
@@ -181,6 +30,7 @@ export function ReportLibraryPage({
   const [selectedYear, setSelectedYear] = useState('all');
   const [reports, setReports] = useState<Report[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const topicOptions: Array<{ id: 'all' | '战略' | '业务设计' | '组织' | 'AI 技术'; label: string }> = [
     { id: 'all', label: '全部' },
@@ -238,6 +88,17 @@ export function ReportLibraryPage({
       return matchesSearch && matchesTopic && matchesYear;
     });
   }, [reports, searchQuery, selectedTopic, selectedYear]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedTopic, selectedYear]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredReports.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedReports = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredReports.slice(start, start + PAGE_SIZE);
+  }, [filteredReports, safePage]);
 
   // 刷新数据
   const handleRefresh = async () => {
@@ -386,28 +247,94 @@ export function ReportLibraryPage({
         ) : viewMode === 'grid' ? (
           /* 网格视图 */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredReports.map((report) => (
-              <ReportCardGrid
+            {paginatedReports.map((report) => (
+              <ContentResourceCard
                 key={report.id}
-                report={report}
+                cover={
+                  <>
+                    {report.coverImage ? (
+                      <img
+                        src={report.coverImage}
+                        alt={report.title}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : report.fileUrl ? (
+                      <PdfCoverImage
+                        pdfUrl={report.fileUrl}
+                        alt={report.title}
+                        className="absolute inset-0"
+                        width={520}
+                      />
+                    ) : null}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <FileText className="w-16 h-16 text-success/10" />
+                    </div>
+                  </>
+                }
+                tags={report.topics || []}
+                title={report.title}
+                author={report.publisher}
+                excerpt={report.summary}
+                views={report.views}
+                likes={report.likes}
+                favorites={report.favoritesCount}
+                publishDate={report.publishDate}
                 onClick={() => onNavigateToDetail?.('report', report.id)}
               />
             ))}
           </div>
         ) : (
           /* 列表视图 */
-          <div className="bg-white/60 backdrop-blur-sm rounded-[20px] border border-border/40 overflow-hidden">
-            <div className="divide-y divide-border/30">
-              {filteredReports.map((report) => (
-                <ReportListItem
+          <div className="space-y-3">
+            {paginatedReports.map((report) => (
+              <ContentResourceCard
                   key={report.id}
-                  report={report}
+                  variant="list"
+                  cover={
+                    <>
+                      {report.coverImage ? (
+                        <img
+                          src={report.coverImage}
+                          alt={report.title}
+                          className="absolute inset-0 w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : report.fileUrl ? (
+                        <PdfCoverImage
+                          pdfUrl={report.fileUrl}
+                          alt={report.title}
+                          className="absolute inset-0"
+                          width={320}
+                        />
+                      ) : null}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <FileText className="w-8 h-8 text-success/20" />
+                      </div>
+                    </>
+                  }
+                  tags={report.topics || []}
+                  title={report.title}
+                  author={report.publisher}
+                  excerpt={report.summary}
+                  views={report.views}
+                  likes={report.likes}
+                  favorites={report.favoritesCount}
+                  publishDate={report.publishDate}
                   onClick={() => onNavigateToDetail?.('report', report.id)}
                 />
-              ))}
-            </div>
+            ))}
           </div>
         )}
+
+        <div className="mt-8">
+          <PaginationControls
+            currentPage={safePage}
+            totalItems={filteredReports.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </div>
 
       <Footer onNavigate={(p) => onNavigate?.(p)} />

@@ -51,6 +51,7 @@ import { adminAiPrefill, uploadAdminAsset } from '../lib/authApi';
 import { getArticleTiptapExtensions } from '../lib/tiptapSchema';
 import { normalizeRichContentHtml } from '../lib/richContent';
 import { ArticleEditor, type ArticleEditorValue } from './ArticleEditor';
+import { PaginationControls } from './PaginationControls';
 
 const RESOURCE_TOPICS: ResourceTopic[] = ['战略', '业务设计', '组织', 'AI 技术'];
 type InsightCoverContentType = 'insight' | 'methodology';
@@ -62,6 +63,7 @@ const getDefaultCoverImage = (contentType: InsightCoverContentType) =>
 
 const MAX_ADMIN_UPLOAD_SIZE = 64 * 1024 * 1024;
 const RECOMMENDED_ADMIN_UPLOAD_SIZE = 50 * 1024 * 1024;
+const ADMIN_CONTENT_PAGE_SIZE = 10;
 const getAdminUploadHint = (extensions: string) =>
   `支持 ${extensions}；建议控制在 ${Math.round(RECOMMENDED_ADMIN_UPLOAD_SIZE / 1024 / 1024)}MB 以内，当前上传上限为 ${Math.round(MAX_ADMIN_UPLOAD_SIZE / 1024 / 1024)}MB。`;
 
@@ -236,6 +238,10 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const [methodologyFilterTopics, setMethodologyFilterTopics] = useState<ResourceTopic[]>([]);
   const [reportFilterTopics, setReportFilterTopics] = useState<ResourceTopic[]>([]);
   const [bookFilterTopics, setBookFilterTopics] = useState<ResourceTopic[]>([]);
+  const [insightPage, setInsightPage] = useState(1);
+  const [methodologyPage, setMethodologyPage] = useState(1);
+  const [reportPage, setReportPage] = useState(1);
+  const [bookPage, setBookPage] = useState(1);
   const [insightTopicFilterOpen, setInsightTopicFilterOpen] = useState(false);
   const [methodologyTopicFilterOpen, setMethodologyTopicFilterOpen] = useState(false);
   const [reportTopicFilterOpen, setReportTopicFilterOpen] = useState(false);
@@ -631,6 +637,49 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const filteredMethodologies = filterContent(methodologies, methodologySearchQuery, methodologyFilterTopics);
   const filteredReports = filterContent(reports, reportSearchQuery, reportFilterTopics);
   const filteredBooks = filterContent(books, bookSearchQuery, bookFilterTopics);
+
+  useEffect(() => {
+    setInsightPage(1);
+  }, [insightSearchQuery, insightFilterTopics]);
+
+  useEffect(() => {
+    setMethodologyPage(1);
+  }, [methodologySearchQuery, methodologyFilterTopics]);
+
+  useEffect(() => {
+    setReportPage(1);
+  }, [reportSearchQuery, reportFilterTopics]);
+
+  useEffect(() => {
+    setBookPage(1);
+  }, [bookSearchQuery, bookFilterTopics]);
+
+  const insightPageCount = Math.max(1, Math.ceil(filteredInsights.length / ADMIN_CONTENT_PAGE_SIZE));
+  const methodologyPageCount = Math.max(1, Math.ceil(filteredMethodologies.length / ADMIN_CONTENT_PAGE_SIZE));
+  const reportPageCount = Math.max(1, Math.ceil(filteredReports.length / ADMIN_CONTENT_PAGE_SIZE));
+  const bookPageCount = Math.max(1, Math.ceil(filteredBooks.length / ADMIN_CONTENT_PAGE_SIZE));
+
+  const safeInsightPage = Math.min(insightPage, insightPageCount);
+  const safeMethodologyPage = Math.min(methodologyPage, methodologyPageCount);
+  const safeReportPage = Math.min(reportPage, reportPageCount);
+  const safeBookPage = Math.min(bookPage, bookPageCount);
+
+  const paginatedInsights = filteredInsights.slice(
+    (safeInsightPage - 1) * ADMIN_CONTENT_PAGE_SIZE,
+    safeInsightPage * ADMIN_CONTENT_PAGE_SIZE
+  );
+  const paginatedMethodologies = filteredMethodologies.slice(
+    (safeMethodologyPage - 1) * ADMIN_CONTENT_PAGE_SIZE,
+    safeMethodologyPage * ADMIN_CONTENT_PAGE_SIZE
+  );
+  const paginatedReports = filteredReports.slice(
+    (safeReportPage - 1) * ADMIN_CONTENT_PAGE_SIZE,
+    safeReportPage * ADMIN_CONTENT_PAGE_SIZE
+  );
+  const paginatedBooks = filteredBooks.slice(
+    (safeBookPage - 1) * ADMIN_CONTENT_PAGE_SIZE,
+    safeBookPage * ADMIN_CONTENT_PAGE_SIZE
+  );
 
   const filteredComments = comments.filter((comment) => {
     const q = commentSearchQuery.trim().toLowerCase();
@@ -1582,7 +1631,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {filteredInsights.map((article) => (
+                      {paginatedInsights.map((article) => (
                         <tr key={article.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
@@ -1648,6 +1697,15 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       ))}
                     </tbody>
                   </table>
+                </div>
+
+                <div className="border-t border-gray-100 px-6 py-4">
+                  <PaginationControls
+                    currentPage={safeInsightPage}
+                    totalItems={filteredInsights.length}
+                    pageSize={ADMIN_CONTENT_PAGE_SIZE}
+                    onPageChange={setInsightPage}
+                  />
                 </div>
                 
                 {filteredInsights.length === 0 && (
@@ -1771,7 +1829,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {filteredMethodologies.map((item) => (
+                      {paginatedMethodologies.map((item) => (
                         <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4">
                             <p className="font-medium text-gray-900">{item.title}</p>
@@ -1821,6 +1879,15 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       ))}
                     </tbody>
                   </table>
+                </div>
+
+                <div className="border-t border-gray-100 px-6 py-4">
+                  <PaginationControls
+                    currentPage={safeMethodologyPage}
+                    totalItems={filteredMethodologies.length}
+                    pageSize={ADMIN_CONTENT_PAGE_SIZE}
+                    onPageChange={setMethodologyPage}
+                  />
                 </div>
 
                 {filteredMethodologies.length === 0 && (
@@ -1931,16 +1998,16 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                   <table className="w-full table-fixed">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="w-[34%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">报告信息</th>
-                        <th className="w-[22%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">发布机构</th>
-                        <th className="w-[16%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标签</th>
+                        <th className="w-[42%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">报告信息</th>
+                        <th className="w-[18%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">发布机构</th>
+                        <th className="w-[13%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标签</th>
                         <th className="w-[12%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最近修改</th>
-                        <th className="w-[8%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                        <th className="w-[7%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
                         <th className="w-[8%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {filteredReports.map((report) => (
+                      {paginatedReports.map((report) => (
                         <tr key={report.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
@@ -2014,6 +2081,15 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       ))}
                     </tbody>
                   </table>
+                </div>
+
+                <div className="border-t border-gray-100 px-6 py-4">
+                  <PaginationControls
+                    currentPage={safeReportPage}
+                    totalItems={filteredReports.length}
+                    pageSize={ADMIN_CONTENT_PAGE_SIZE}
+                    onPageChange={setReportPage}
+                  />
                 </div>
                 
                 {filteredReports.length === 0 && (
@@ -2119,37 +2195,36 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
 
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full table-fixed">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">书籍信息</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标签</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最近修改</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                        <th className="w-[38%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">书籍信息</th>
+                        <th className="w-[18%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
+                        <th className="w-[17%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标签</th>
+                        <th className="w-[12%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最近修改</th>
+                        <th className="w-[7%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                        <th className="w-[8%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {filteredBooks.map((book) => (
+                      {paginatedBooks.map((book) => (
                         <tr key={book.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-10 h-14 rounded-lg bg-gradient-to-br ${book.coverColor || 'from-blue-600 to-indigo-800'} flex items-center justify-center text-white font-bold text-lg`}>
-                                {book.title.charAt(1)}
-                              </div>
-                              <div>
-                                <p className="font-medium text-gray-900">{book.title}</p>
-                              </div>
+                            <div className="min-w-0">
+                              <p className="font-medium leading-7 text-gray-900 break-words">{book.title}</p>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                            {book.author}
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            <div className="break-words leading-6">{book.author}</div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
-                              {(book.topics || []).join(' / ')}
-                            </span>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-wrap gap-2">
+                              {(book.topics || []).map((topic: string, index: number) => (
+                                <span key={`${book.id}-${topic}-${index}`} className="px-3 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
+                                  {topic}
+                                </span>
+                              ))}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                             {formatModifiedDate(book.updatedAt, book.publishDate)}
@@ -2202,6 +2277,15 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       ))}
                     </tbody>
                   </table>
+                </div>
+
+                <div className="border-t border-gray-100 px-6 py-4">
+                  <PaginationControls
+                    currentPage={safeBookPage}
+                    totalItems={filteredBooks.length}
+                    pageSize={ADMIN_CONTENT_PAGE_SIZE}
+                    onPageChange={setBookPage}
+                  />
                 </div>
                 
                 {filteredBooks.length === 0 && (

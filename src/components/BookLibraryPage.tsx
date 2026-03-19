@@ -1,10 +1,13 @@
 import { Header } from './Header';
 import { Footer } from './Footer';
 import {
-  BookOpen, Search, Filter, Grid3X3, List, Eye, ChevronRight
+  BookOpen, Search, Filter, Grid3X3, List, ChevronRight
 } from 'lucide-react';
 import { getBooks, type Book } from '../lib/dataService';
 import { useState, useEffect, useMemo } from 'react';
+import { ContentResourceCard } from './ContentResourceCard';
+import { PaginationControls } from './PaginationControls';
+const PAGE_SIZE = 10;
 
 export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id?: string) => void }) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -15,6 +18,7 @@ export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id
   const [yearOpen, setYearOpen] = useState(false);
   const [books, setBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const tagOptions = useMemo(() => {
     const tags = Array.from(
@@ -96,6 +100,17 @@ const filteredBooks = useMemo(() => {
       return matchesSearch && matchesTag && matchesYear;
     });
   }, [books, searchQuery, selectedTag, selectedYear]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedTag, selectedYear]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredBooks.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedBooks = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredBooks.slice(start, start + PAGE_SIZE);
+  }, [filteredBooks, safePage]);
 
   const handleRefresh = () => {
     setIsLoading(true);
@@ -273,18 +288,11 @@ const filteredBooks = useMemo(() => {
         ) : viewMode === 'grid' ? (
           /* Grid View */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredBooks.map((book) => (
-              <article 
+            {paginatedBooks.map((book) => (
+              <ContentResourceCard
                 key={book.id} 
-                className="group cursor-pointer"
-                onClick={() => {
-                  if (onNavigate) onNavigate('book-reader', book.id);
-                  else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(book.id)}`);
-                }}
-              >
-                <div className="relative bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-white/80 hover:border-border/60 hover:shadow-2xl hover:shadow-black/[0.04] hover:-translate-y-1">
-                  <div className={`relative aspect-[16/10] bg-gradient-to-br ${book.coverColor || 'from-primary/[0.03] to-accent/[0.03]'} overflow-hidden`}>
-                  {book.coverImage ? (
+                cover={
+                  book.coverImage ? (
                     <img
                       src={book.coverImage}
                       alt={book.title}
@@ -292,64 +300,35 @@ const filteredBooks = useMemo(() => {
                       loading="lazy"
                     />
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-white opacity-20 text-6xl font-bold">
-                      {book.title.charAt(0)}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <BookOpen className="w-16 h-16 text-primary/10" />
                     </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                    <span className="text-white text-[14px] font-medium">查看详情</span>
-                  </div>
-                </div>
-
-                <div className="p-6">
-                  <h3 className="text-[18px] font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors leading-[1.4]">
-                    {book.title}
-                  </h3>
-
-                  <p className="text-[14px] text-muted-foreground/70 line-clamp-1 leading-[1.6] mb-4">{book.author}</p>
-
-                  <div className="flex flex-wrap gap-1.5 mb-4">
-                    {(book.topics || []).slice(0, 3).map((tag: string, index: number) => (
-                      <span
-                        key={index}
-                        className="px-2.5 py-1 rounded-full bg-muted/40 text-muted-foreground/60 text-[11px]"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  <p className="text-[14px] text-muted-foreground/70 line-clamp-2 leading-[1.6] mb-4">
-                    {book.description}
-                  </p>
-
-                  <div className="flex items-center justify-between pt-4 border-t border-border/30 text-[12px] text-muted-foreground/50">
-                    <span>{book.publishDate}</span>
-                    <span className="flex items-center gap-1">
-                      <Eye className="w-3.5 h-3.5" />
-                      {book.views?.toLocaleString?.() ? book.views.toLocaleString() : book.views}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </article>
-            ))}
-          </div>
-        ) : (
-          /* List View */
-          <div className="space-y-2">
-            {filteredBooks.map((book) => (
-              <div
-                key={book.id}
-                className="w-full group flex items-center gap-6 p-6 bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl hover:bg-white/80 hover:border-border/60 hover:shadow-lg hover:shadow-black/[0.04] transition-all cursor-pointer"
+                  )
+                }
+                tags={book.topics || []}
+                title={book.title}
+                author={book.author}
+                excerpt={book.description}
+                views={book.views}
+                likes={book.likes}
+                favorites={book.favoritesCount}
+                publishDate={book.publishDate}
                 onClick={() => {
                   if (onNavigate) onNavigate('book-reader', book.id);
                   else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(book.id)}`);
                 }}
-              >
-                {/* 封面 */}
-                <div className="w-32 h-20 rounded-[12px] overflow-hidden flex-shrink-0 bg-gradient-to-br from-primary/[0.03] to-accent/[0.03] relative">
-                  {book.coverImage ? (
+              />
+            ))}
+          </div>
+        ) : (
+          /* List View */
+          <div className="space-y-3">
+            {paginatedBooks.map((book) => (
+              <ContentResourceCard
+                key={book.id}
+                variant="list"
+                cover={
+                  book.coverImage ? (
                     <img
                       src={book.coverImage}
                       alt={book.title}
@@ -360,43 +339,33 @@ const filteredBooks = useMemo(() => {
                     <div className="absolute inset-0 flex items-center justify-center">
                       <BookOpen className="w-8 h-8 text-primary/20" />
                     </div>
-                  )}
-                </div>
-
-                {/* 内容 */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    {(book.topics || []).slice(0, 2).map((t, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2.5 py-1 bg-primary/8 text-primary text-[11px] font-medium rounded-full"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                  <h3 className="font-medium text-[15px] text-foreground mb-1 truncate group-hover:text-primary transition-colors">
-                    {book.title}
-                  </h3>
-                  <p className="text-[13px] text-muted-foreground/70 line-clamp-1">
-                    {book.description}
-                  </p>
-                </div>
-
-                {/* 元数据 */}
-                <div className="flex flex-col items-end gap-1.5 text-[12px] text-muted-foreground/50 w-32">
-                  <span>{book.publishDate}</span>
-                  <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1">
-                      <Eye className="w-3 h-3" />
-                      {book.views?.toLocaleString?.() ? book.views.toLocaleString() : book.views}
-                    </span>
-                  </div>
-                </div>
-              </div>
+                  )
+                }
+                tags={book.topics || []}
+                title={book.title}
+                author={book.author}
+                excerpt={book.description}
+                views={book.views}
+                likes={book.likes}
+                favorites={book.favoritesCount}
+                publishDate={book.publishDate}
+                onClick={() => {
+                  if (onNavigate) onNavigate('book-reader', book.id);
+                  else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(book.id)}`);
+                }}
+              />
             ))}
           </div>
         )}
+
+        <div className="mt-8">
+          <PaginationControls
+            currentPage={safePage}
+            totalItems={filteredBooks.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </div>
 
       <Footer onNavigate={(p) => onNavigate?.(p)} />

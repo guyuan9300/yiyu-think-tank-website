@@ -4,185 +4,12 @@ import { Footer } from './Footer';
 import {
   TrendingUp,
   FileText,
-  Eye,
   ChevronRight,
-  Sparkles,
   ArrowRight,
 } from 'lucide-react';
-import { getReports, getCategories, getInsights, type Report, type InsightArticle } from '../lib/dataService';
+import { getReports, getInsights, type Report, type InsightArticle } from '../lib/dataService';
 import { PdfCoverImage } from './PdfCoverImage';
-
-// 报告卡片组件
-function ReportCard({ report, onClick }: { report: Report; onClick?: () => void }) {
-  return (
-    <article
-      className="group cursor-pointer"
-      onClick={onClick}
-    >
-      <div className="relative bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-white/80 hover:border-border/60 hover:shadow-2xl hover:shadow-black/[0.04] hover:-translate-y-1">
-        {/* 封面区域 */}
-        <div className="relative aspect-[16/10] bg-gradient-to-br from-success/[0.03] to-accent/[0.03] overflow-hidden">
-          {/* 1) 优先使用已抓取/上传的封面图（更快、更稳定） */}
-          {report.coverImage ? (
-            <img
-              src={report.coverImage}
-              alt={report.title}
-              className="absolute inset-0 w-full h-full object-cover"
-              loading="lazy"
-            />
-          ) : report.fileUrl ? (
-            /* 2) 兜底：从 PDF 源文件渲染首页作为封面 */
-            <PdfCoverImage
-              pdfUrl={report.fileUrl}
-              alt={report.title}
-              className="absolute inset-0"
-              width={520}
-            />
-          ) : (
-            /* 3) 再兜底：占位 */
-            <div className="absolute inset-0 flex items-center justify-center">
-              <TrendingUp className="w-16 h-16 text-success/10" />
-            </div>
-          )}
-
-          {/* 热门标签已废弃 */}
-        </div>
-
-        {/* 内容区域 */}
-        <div className="p-6">
-          {/* topics */}
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
-            {(report.topics || []).slice(0, 2).map((t, idx) => (
-              <span
-                key={idx}
-                className="px-3 py-1 rounded-full bg-success/8 text-success text-[11px] font-medium"
-              >
-                {t}
-              </span>
-            ))}
-          </div>
-
-          {/* 标题 */}
-          <h3 className="text-[18px] font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors leading-[1.4]">
-            {report.title}
-          </h3>
-
-          {/* 摘要 */}
-          <p className="text-[14px] text-muted-foreground/70 line-clamp-2 leading-[1.6] mb-4">
-            {report.summary}
-          </p>
-
-          {/* topics（标签） */}
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {(report.topics || []).slice(0, 3).map((tag: string, index: number) => (
-              <span
-                key={index}
-                className="px-2.5 py-1 rounded-full bg-muted/40 text-muted-foreground/60 text-[11px]"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-
-          {/* 底部元数据 */}
-          <div className="flex items-center justify-between pt-4 border-t border-border/30 text-[12px] text-muted-foreground/50">
-            <div className="flex items-center gap-1">
-              <Eye className="w-3.5 h-3.5" />
-              <span>{report.views.toLocaleString()}</span>
-            </div>
-            <span>{report.publishDate}</span>
-          </div>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-// 文章卡片组件
-function ArticleCard({ article, onClick }: { article: InsightArticle; onClick?: () => void }) {
-  return (
-    <article
-      className="group cursor-pointer"
-      onClick={onClick}
-    >
-      <div className="relative bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-white/80 hover:border-border/60 hover:shadow-2xl hover:shadow-black/[0.04] hover:-translate-y-1">
-        {/* 封面区域 */}
-        <div className="relative aspect-[16/10] bg-gradient-to-br from-primary/[0.06] to-accent/[0.06] overflow-hidden">
-          {/* 默认封面（无封面图或加载失败时展示） */}
-          <div className="absolute inset-0 p-6 flex flex-col justify-between">
-            <div className="w-12 h-12 rounded-2xl bg-white/60 flex items-center justify-center">
-              <FileText className="w-6 h-6 text-primary/40" />
-            </div>
-            <div>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {(article.topics || []).slice(0, 2).map((t, idx) => (
-                  <span
-                    key={idx}
-                    className="text-white/90 text-[11px] font-medium bg-black/35 inline-block px-2 py-1 rounded-full"
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
-              <h4 className="text-[16px] font-semibold leading-snug text-foreground line-clamp-3">
-                {article.title}
-              </h4>
-              {/* 作者已废弃 */}
-            </div>
-          </div>
-
-          {article.coverImage && (
-            <img
-              src={article.coverImage}
-              alt={article.title}
-              className="absolute inset-0 w-full h-full object-cover"
-              loading="lazy"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = 'none';
-              }}
-            />
-          )}
-
-          {/* 推荐标签已废弃 */}
-        </div>
-
-        {/* 内容区域 */}
-        <div className="p-6">
-          {/* topics */}
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
-            {(article.topics || []).slice(0, 2).map((t, idx) => (
-              <span
-                key={idx}
-                className="px-3 py-1 rounded-full bg-primary/8 text-primary text-[11px] font-medium"
-              >
-                {t}
-              </span>
-            ))}
-          </div>
-
-          {/* 标题 */}
-          <h3 className="text-[18px] font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors leading-[1.4]">
-            {article.title}
-          </h3>
-
-          {/* 摘要 */}
-          <p className="text-[14px] text-muted-foreground/70 line-clamp-2 leading-[1.6] mb-4">
-            {article.excerpt}
-          </p>
-
-          {/* 底部元数据 */}
-          <div className="flex items-center justify-between pt-4 border-t border-border/30 text-[12px] text-muted-foreground/50">
-            <div className="flex items-center gap-1">
-              <Eye className="w-3.5 h-3.5" />
-              <span>{article.views}</span>
-            </div>
-            <span>{article.publishDate}</span>
-          </div>
-        </div>
-      </div>
-    </article>
-  );
-}
+import { ContentResourceCard } from './ContentResourceCard';
 
 interface InsightsPageProps {
   onNavigate?: (page: string, id?: string) => void;
@@ -337,9 +164,37 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
           {/* 报告网格 */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {latestReports.map((report) => (
-              <ReportCard
+              <ContentResourceCard
                 key={report.id}
-                report={report}
+                cover={
+                  report.coverImage ? (
+                    <img
+                      src={report.coverImage}
+                      alt={report.title}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : report.fileUrl ? (
+                    <PdfCoverImage
+                      pdfUrl={report.fileUrl}
+                      alt={report.title}
+                      className="absolute inset-0"
+                      width={520}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <TrendingUp className="w-16 h-16 text-success/10" />
+                    </div>
+                  )
+                }
+                tags={report.topics || []}
+                title={report.title}
+                author={report.publisher}
+                excerpt={report.summary}
+                views={report.views}
+                likes={report.likes}
+                favorites={report.favoritesCount}
+                publishDate={report.publishDate}
                 onClick={() => onNavigate?.('report', report.id)}
               />
             ))}
@@ -375,9 +230,29 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
           {/* 文章网格 */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {latestArticles.map((article) => (
-              <ArticleCard
+              <ContentResourceCard
                 key={article.id}
-                article={article}
+                cover={
+                  article.coverImage ? (
+                    <img
+                      src={article.coverImage}
+                      alt={article.title}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <FileText className="w-16 h-16 text-primary/10" />
+                    </div>
+                  )
+                }
+                tags={article.topics || []}
+                title={article.title}
+                excerpt={article.excerpt}
+                views={article.views}
+                likes={article.likes}
+                favorites={article.favoritesCount}
+                publishDate={article.publishDate}
                 onClick={() => onNavigate?.('article', article.id)}
               />
             ))}

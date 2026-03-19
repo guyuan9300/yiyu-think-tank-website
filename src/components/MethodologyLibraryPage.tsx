@@ -21,8 +21,11 @@ import { getArticleTiptapExtensions } from '../lib/tiptapSchema';
 import { useContentEngagement } from '../hooks/useContentEngagement';
 import { buildShareLandingUrl } from '../lib/shareLinks';
 import { normalizeRichContentHtml } from '../lib/richContent';
+import { ContentResourceCard } from './ContentResourceCard';
+import { PaginationControls } from './PaginationControls';
 
 type Topic = '战略' | '业务设计' | '组织' | 'AI 技术';
+const PAGE_SIZE = 10;
 
 export function MethodologyLibraryPage({
   onNavigate,
@@ -37,6 +40,7 @@ export function MethodologyLibraryPage({
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [items, setItems] = useState<Methodology[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [selected, setSelected] = useState<Methodology | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -116,6 +120,17 @@ export function MethodologyLibraryPage({
       return matchesSearch && matchesTopic && matchesYear;
     });
   }, [items, searchQuery, selectedTopic, selectedYear]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedTopic, selectedYear]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginated = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, safePage]);
 
   // Methodology reader view (match ArticleDetailPage grain)
   if (selected) {
@@ -405,69 +420,42 @@ export function MethodologyLibraryPage({
           <>
             {viewMode === 'grid' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filtered.map((m) => (
-                  <article
+                {paginated.map((m) => (
+                  <ContentResourceCard
                     key={m.id}
+                    cover={
+                      m.coverImage ? (
+                        <img
+                          src={m.coverImage}
+                          alt={m.title}
+                          className="absolute inset-0 w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <FileText className="w-16 h-16 text-primary/10" />
+                        </div>
+                      )
+                    }
+                    tags={m.topics || []}
+                    title={m.title}
+                    excerpt={m.excerpt}
+                    views={m.views}
+                    likes={m.likes}
+                    favorites={m.favoritesCount}
+                    publishDate={m.publishDate}
                     onClick={() => setSelected(m)}
-                    className="group cursor-pointer"
-                  >
-                    <div className="relative bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-white/80 hover:border-border/60 hover:shadow-2xl hover:shadow-black/[0.04] hover:-translate-y-1">
-                      {/* 封面区域 */}
-                      <div className="relative aspect-[16/10] bg-gradient-to-br from-primary/[0.03] to-accent/[0.03] overflow-hidden">
-                        {m.coverImage ? (
-                          <img
-                            src={m.coverImage}
-                            alt={m.title}
-                            className="absolute inset-0 w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <FileText className="w-16 h-16 text-primary/10" />
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                          <span className="text-white text-[14px] font-medium">查看详情</span>
-                        </div>
-                      </div>
-
-                      {/* 内容区域 */}
-                      <div className="p-6">
-                        <div className="flex items-center gap-2 mb-3 flex-wrap">
-                          {(m.topics || []).slice(0, 2).map((t, idx) => (
-                            <span
-                              key={idx}
-                              className="px-3 py-1 rounded-full bg-primary/8 text-primary text-[11px] font-medium"
-                            >
-                              {t}
-                            </span>
-                          ))}
-                          <span className="text-[12px] text-muted-foreground/50">{m.publishDate}</span>
-                        </div>
-
-                        <h3 className="text-[18px] font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors leading-[1.4]">
-                          {m.title}
-                        </h3>
-
-                        <p className="text-[14px] text-muted-foreground/70 line-clamp-2 leading-[1.6]">
-                          {m.excerpt}
-                        </p>
-                      </div>
-                    </div>
-                  </article>
+                  />
                 ))}
               </div>
             ) : (
-              <div className="space-y-2">
-                {filtered.map((m) => (
-                  <div
+              <div className="space-y-3">
+                {paginated.map((m) => (
+                  <ContentResourceCard
                     key={m.id}
-                    className="w-full group flex items-center gap-6 p-6 bg-white/60 backdrop-blur-sm border border-border/40 rounded-3xl hover:bg-white/80 hover:border-border/60 hover:shadow-lg hover:shadow-black/[0.04] transition-all cursor-pointer"
-                    onClick={() => setSelected(m)}
-                  >
-                    {/* 封面 */}
-                    <div className="w-32 h-20 rounded-[12px] overflow-hidden flex-shrink-0 bg-gradient-to-br from-primary/[0.03] to-accent/[0.03] relative">
-                      {m.coverImage ? (
+                    variant="list"
+                    cover={
+                      m.coverImage ? (
                         <img
                           src={m.coverImage}
                           alt={m.title}
@@ -478,39 +466,31 @@ export function MethodologyLibraryPage({
                         <div className="absolute inset-0 flex items-center justify-center">
                           <FileText className="w-8 h-8 text-primary/20" />
                         </div>
-                      )}
-                    </div>
-
-                    {/* 内容 */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        {(m.topics || []).slice(0, 2).map((t, idx) => (
-                          <span
-                            key={idx}
-                            className="px-2.5 py-1 bg-primary/8 text-primary text-[11px] font-medium rounded-full"
-                          >
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                      <h3 className="font-medium text-[15px] text-foreground mb-1 truncate group-hover:text-primary transition-colors">
-                        {m.title}
-                      </h3>
-                      <p className="text-[13px] text-muted-foreground/70 line-clamp-1">
-                        {m.excerpt}
-                      </p>
-                    </div>
-
-                    {/* 元数据 */}
-                    <div className="flex flex-col items-end gap-1.5 text-[12px] text-muted-foreground/50 w-32">
-                      <span>{m.publishDate}</span>
-                    </div>
-                  </div>
+                      )
+                    }
+                    tags={m.topics || []}
+                    title={m.title}
+                    excerpt={m.excerpt}
+                    views={m.views}
+                    likes={m.likes}
+                    favorites={m.favoritesCount}
+                    publishDate={m.publishDate}
+                    onClick={() => setSelected(m)}
+                  />
                 ))}
               </div>
             )}
           </>
         )}
+
+        <div className="mt-8">
+          <PaginationControls
+            currentPage={safePage}
+            totalItems={filtered.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </div>
 
       <Footer onNavigate={(p) => onNavigate?.(p)} />
