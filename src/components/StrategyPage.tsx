@@ -25,7 +25,6 @@ import {
   Zap,
   ArrowUpRight,
   ChevronLeft,
-  MoveRight
 } from 'lucide-react';
 
 // Strategy Page Props
@@ -525,7 +524,7 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
             <p className="mt-2 text-[13px] text-[rgba(15,23,42,0.54)]">点击logo可查看客户介绍</p>
           </div>
 
-          <div className="space-y-0.5">
+          <div className="mx-auto max-w-[920px] space-y-0">
             {caseRows.map((row, rowIndex) => (
               <div key={`case-row-${rowIndex}`} className="flex justify-center">
                 <div className="flex w-full justify-center">
@@ -543,22 +542,18 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
                         aria-label={`查看 ${caseItem.clientName} 案例详情`}
                       >
                         <div className="relative aspect-[1.08/1] overflow-hidden">
-                          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[rgba(15,23,42,0.06)] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                           {caseItem.logoUrl ? (
-                            <div className="relative z-10 flex h-full w-full items-center justify-center p-3 sm:p-4">
+                            <div className="relative z-10 flex h-full w-full items-center justify-center p-2 sm:p-3">
                               <img
                                 src={caseItem.logoUrl}
                                 alt={caseItem.clientName}
-                                className="h-full w-full origin-center object-contain transition-transform duration-500 group-hover:scale-[1.12]"
+                                className="h-full w-full object-contain"
                                 loading="lazy"
                               />
                             </div>
                           ) : (
                             <div className="relative z-10 h-full w-full bg-gradient-to-br from-blue-500 to-indigo-600" />
                           )}
-                          <span className="pointer-events-none absolute bottom-2 left-1/2 inline-flex h-8 w-8 -translate-x-1/2 translate-y-3 items-center justify-center rounded-full bg-white text-[rgba(37,99,235,0.88)] shadow-[0_8px_20px_rgba(15,23,42,0.12)] opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-                            <MoveRight className="h-4 w-4" />
-                          </span>
                         </div>
                       </button>
                     ))}
