@@ -163,8 +163,29 @@ function envConfigured(key) {
   if (key === 'WECHAT_PAY_PRIVATE_KEY') {
     return Boolean(readPemValue(process.env.WECHAT_PAY_PRIVATE_KEY) || String(process.env.WECHAT_PAY_PRIVATE_KEY_PATH || '').trim());
   }
+  if (key === 'WECHAT_PAY_MCH_SERIAL_NO') {
+    return Boolean(
+      String(process.env.WECHAT_PAY_MCH_SERIAL_NO || '').trim()
+      || readPemValue(process.env.WECHAT_PAY_MCH_CERT)
+      || String(process.env.WECHAT_PAY_MCH_CERT_PATH || '').trim()
+    );
+  }
   if (key === 'WECHAT_PAY_PLATFORM_CERT') {
-    return Boolean(readPemValue(process.env.WECHAT_PAY_PLATFORM_CERT) || String(process.env.WECHAT_PAY_PLATFORM_CERT_PATH || '').trim());
+    return Boolean(
+      readPemValue(process.env.WECHAT_PAY_PLATFORM_CERT)
+      || String(process.env.WECHAT_PAY_PLATFORM_CERT_PATH || '').trim()
+      || (
+        String(process.env.WECHAT_PAY_MCHID || '').trim()
+        && String(process.env.WECHAT_PAY_APPID || '').trim()
+        && (
+          String(process.env.WECHAT_PAY_MCH_SERIAL_NO || '').trim()
+          || readPemValue(process.env.WECHAT_PAY_MCH_CERT)
+          || String(process.env.WECHAT_PAY_MCH_CERT_PATH || '').trim()
+        )
+        && (readPemValue(process.env.WECHAT_PAY_PRIVATE_KEY) || String(process.env.WECHAT_PAY_PRIVATE_KEY_PATH || '').trim())
+        && String(process.env.WECHAT_PAY_API_V3_KEY || '').trim()
+      )
+    );
   }
   return Boolean(String(process.env[key] || '').trim());
 }
@@ -1807,14 +1828,25 @@ function getPaymentReadiness() {
 
 async function loadWeChatPayConfig() {
   const privateKeyPem = await readPemFromEnv('WECHAT_PAY_PRIVATE_KEY', 'WECHAT_PAY_PRIVATE_KEY_PATH');
+  const merchantCertPem = await readPemFromEnv('WECHAT_PAY_MCH_CERT', 'WECHAT_PAY_MCH_CERT_PATH');
   const platformCertPem = await readPemFromEnv('WECHAT_PAY_PLATFORM_CERT', 'WECHAT_PAY_PLATFORM_CERT_PATH');
+  let mchSerialNo = String(process.env.WECHAT_PAY_MCH_SERIAL_NO || '').trim();
+  if (!mchSerialNo && merchantCertPem) {
+    try {
+      mchSerialNo = new crypto.X509Certificate(merchantCertPem).serialNumber.replace(/:/g, '').toUpperCase();
+    } catch {
+      mchSerialNo = '';
+    }
+  }
   return {
     mchid: String(process.env.WECHAT_PAY_MCHID || '').trim(),
     appid: String(process.env.WECHAT_PAY_APPID || '').trim(),
-    mchSerialNo: String(process.env.WECHAT_PAY_MCH_SERIAL_NO || '').trim(),
+    mchSerialNo,
     privateKeyPem,
     apiV3Key: String(process.env.WECHAT_PAY_API_V3_KEY || '').trim(),
     platformCertPem,
+    platformCertPath: String(process.env.WECHAT_PAY_PLATFORM_CERT_PATH || '').trim(),
+    merchantCertPem,
     notifyUrl: String(process.env.WECHAT_PAY_NOTIFY_URL || '').trim(),
     h5Domain: String(process.env.WECHAT_PAY_H5_DOMAIN || '').trim(),
     returnUrl: String(process.env.WECHAT_PAY_RETURN_URL || '').trim(),
@@ -1896,6 +1928,34 @@ async function wechatRequest(config, method, pathnameWithQuery, payload) {
     throw err;
   }
   return data;
+}
+
+async function ensurePlatformCert(config) {
+  if (config.platformCertPem) {
+    return config.platformCertPem;
+  }
+  if (!config.mchid || !config.appid || !config.mchSerialNo || !config.privateKeyPem || !config.apiV3Key) {
+    return '';
+  }
+  const result = await wechatRequest(config, 'GET', '/v3/certificates');
+  const certificates = Array.isArray(result?.data) ? result.data : [];
+  const latest = certificates
+    .filter((item) => item?.encrypt_certificate?.ciphertext)
+    .sort((a, b) => new Date(b?.effective_time || 0).getTime() - new Date(a?.effective_time || 0).getTime())[0];
+  if (!latest?.encrypt_certificate) {
+    return '';
+  }
+  const pem = decryptWechatResource(config.apiV3Key, latest.encrypt_certificate);
+  if (config.platformCertPath) {
+    try {
+      await fs.mkdir(path.dirname(config.platformCertPath), { recursive: true });
+      await fs.writeFile(config.platformCertPath, pem, { mode: 0o600 });
+    } catch {
+      // 平台证书写文件失败时，仍以内存结果兜底。
+    }
+  }
+  config.platformCertPem = pem;
+  return pem;
 }
 
 function mapWechatTradeStateToOrderStatus(tradeState) {
@@ -2746,6 +2806,7 @@ async function createPaymentOrderRow(userRow, payload, req) {
   }
 
   const config = await loadWeChatPayConfig();
+  await ensurePlatformCert(config);
   const id = crypto.randomUUID();
   const orderNo = `YY${Date.now()}${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
   const timeExpire = new Date(Date.now() + 30 * 60 * 1000).toISOString();
@@ -4107,6 +4168,7 @@ const server = http.createServer(async (req, res) => {
       const bodyBuffer = await readRawBody(req, 2 * 1024 * 1024);
       const bodyText = bodyBuffer.toString('utf8');
       const config = await loadWeChatPayConfig();
+      await ensurePlatformCert(config);
 
       if (!signature || !timestamp || !nonce || !config.platformCertPem || !config.apiV3Key) {
         return json(res, 400, { code: 'FAIL', message: '回调验签参数缺失' });
