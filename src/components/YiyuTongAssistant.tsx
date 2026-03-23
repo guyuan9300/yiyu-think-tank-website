@@ -3,10 +3,9 @@ import {
   ArrowUpRight,
   Bot,
   ExternalLink,
-  FileText,
   Loader2,
   Send,
-  Sparkles,
+  Trash2,
   X,
 } from 'lucide-react';
 import { getSavedUserRaw } from '../lib/storage';
@@ -31,14 +30,6 @@ type AssistantMessage = {
 };
 
 const STORAGE_KEY = 'yiyu_tong_frontend_state_v1';
-
-const STARTER_PROMPTS = [
-  '最新有什么内容',
-  '推荐几本书',
-  '有哪些战略相关资料',
-  '我想了解战略陪伴',
-  '我想申请咨询',
-];
 
 function createSessionId() {
   return `yt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -184,7 +175,7 @@ function ConsultConfirmation({
 export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
   const initialState = useMemo(() => loadInitialState(), []);
   const [isOpen, setIsOpen] = useState(initialState.open);
-  const [sessionId] = useState(initialState.sessionId);
+  const [sessionId, setSessionId] = useState(initialState.sessionId);
   const [messages, setMessages] = useState<AssistantMessage[]>(initialState.messages);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -266,6 +257,12 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
   const showConsultCard = (message: AssistantMessage) =>
     message.mode === 'consult_intake' && (message.collectedFields || message.actions?.[0]);
 
+  const clearConversation = () => {
+    setMessages([]);
+    setInput('');
+    setSessionId(createSessionId());
+  };
+
   return (
     <>
       <button
@@ -278,51 +275,39 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
       </button>
 
       {isOpen ? (
-        <div className="fixed bottom-24 right-6 z-[69] flex h-[min(78vh,720px)] w-[min(92vw,420px)] flex-col overflow-hidden rounded-[28px] border border-border/60 bg-white/95 shadow-[0_30px_80px_-30px_rgba(15,23,42,0.35)] backdrop-blur-xl">
+        <div
+          className="fixed bottom-24 right-6 z-[69] flex h-[min(78vh,720px)] w-[min(92vw,420px)] resize overflow-hidden rounded-[28px] border border-border/60 bg-white/95 shadow-[0_30px_80px_-30px_rgba(15,23,42,0.35)] backdrop-blur-xl"
+          style={{ minWidth: '340px', minHeight: '420px', maxWidth: '92vw', maxHeight: '78vh' }}
+        >
           <div className="border-b border-border/50 bg-white/90 px-5 py-4">
             <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-primary/8 px-2.5 py-1 text-[11px] font-medium text-primary">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  官网智能助理
-                </div>
-                <h2 className="mt-2 text-lg font-semibold text-foreground">益语通</h2>
-                <p className="mt-1 text-[12px] leading-5 text-muted-foreground/70">
-                  我可以帮你查资料、打开页面，或整理咨询申请信息。
-                </p>
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full bg-primary/8 px-3 py-1 text-[11px] font-medium text-primary">普通问答</span>
+                <span className="rounded-full bg-primary/8 px-3 py-1 text-[11px] font-medium text-primary">直接跳转</span>
+                <span className="rounded-full bg-primary/8 px-3 py-1 text-[11px] font-medium text-primary">咨询代填</span>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="rounded-full p-2 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                aria-label="关闭益语通"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={clearConversation}
+                  className="rounded-full p-2 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  aria-label="清空对话记录"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="rounded-full p-2 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  aria-label="关闭益语通"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
 
           <div ref={listRef} className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
-            {messages.length === 0 ? (
-              <div className="space-y-4">
-                <div className="rounded-2xl border border-border/50 bg-muted/20 px-4 py-4 text-sm leading-6 text-muted-foreground/75">
-                  你可以直接问我官网里有哪些内容，也可以说“带我去图书馆”或“我想申请咨询”。
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {STARTER_PROMPTS.map((prompt) => (
-                    <button
-                      key={prompt}
-                      type="button"
-                      onClick={() => void submitQuestion(prompt)}
-                      className="rounded-full border border-border/60 bg-white px-3 py-2 text-xs font-medium text-foreground hover:border-primary/30 hover:text-primary"
-                    >
-                      {prompt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
             {messages.map((message) => (
               <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[88%] space-y-3 ${message.role === 'user' ? 'items-end' : ''}`}>
@@ -411,10 +396,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
                 className="min-h-[88px] w-full resize-none border-0 bg-transparent px-2 py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground/55"
               />
               <div className="flex items-center justify-between gap-3 px-2 pb-1">
-                <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground/65">
-                  <FileText className="h-3.5 w-3.5" />
-                  基于官网已发布内容回答
-                </div>
+                <div />
                 <button
                   type="button"
                   onClick={() => void submitQuestion(input)}

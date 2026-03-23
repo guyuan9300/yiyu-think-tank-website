@@ -3294,6 +3294,41 @@ function detectNavigationIntent(question) {
   return /(打开|进入|带我去|前往|跳到|去看|去到|看看|在哪|哪里|打开最新|打开.*案例|进入.*案例)/.test(safeText(question));
 }
 
+function cleanNavigationSubject(question) {
+  return safeText(question)
+    .replace(/(带我去|帮我去|帮我打开|打开|进入|前往|跳到|去看|去到|看看|定位到|给我看|我想看|我想去|帮我找|带我看|请)/g, ' ')
+    .replace(/(一下|页面|网页|介绍页|详情页|详情|案例|文章|报告|书籍|图书|方法论|工具|内容|最新|最近)/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function findDirectNavigationSource(question, sources) {
+  if (!detectNavigationIntent(question)) return null;
+  const normalizedQuestion = safeText(question);
+  const cleaned = cleanNavigationSubject(normalizedQuestion);
+  if (!cleaned || cleaned.length < 2) return null;
+
+  const scored = sources
+    .map((source) => {
+      const candidates = [safeText(source.title), safeText(source.clientName)].filter(Boolean);
+      let score = 0;
+      for (const candidate of candidates) {
+        if (candidate.includes(cleaned) || cleaned.includes(candidate)) {
+          score = Math.max(score, 240 + Math.min(candidate.length, cleaned.length));
+        } else if (normalizedQuestion.includes(candidate)) {
+          score = Math.max(score, 220 + candidate.length);
+        }
+      }
+      return { source, score };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  if (!scored.length) return null;
+  if (scored.length === 1) return scored[0].source;
+  return scored[0].score - scored[1].score >= 20 ? scored[0].source : null;
+}
+
 function resolvePageNavigation(question) {
   const q = safeText(question);
   if (/(最新|最近)/.test(q) && /(报告|文章|洞察|书|图书|书籍|方法论|工具|案例|客户)/.test(q)) {
@@ -3460,6 +3495,24 @@ async function buildAssistantResponse(payload) {
 
   const rankedSources = pickRelevantSources(question, sources);
   const topSources = rankedSources.slice(0, YIYU_TONG_SOURCE_LIMIT);
+  const directSource = findDirectNavigationSource(question, sources);
+
+  if (directSource) {
+    return {
+      mode: 'navigate',
+      answer: `已为你定位到《${directSource.title}》。`,
+      sourceCards: [mapAssistantSourceCard(directSource)],
+      actions: [
+        {
+          type: 'open_detail',
+          label: '打开对应页面',
+          target: directSource.publicUrl,
+        },
+      ],
+      collectedFields: null,
+      followups: [],
+    };
+  }
 
   if (detectNavigationIntent(question) && topSources.length === 1) {
     return {
