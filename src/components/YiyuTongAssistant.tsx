@@ -44,6 +44,13 @@ function createSessionId() {
   return `yt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function createMessageId() {
+  if (typeof globalThis !== 'undefined' && globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
 function loadKnownUserInfo() {
   const raw = getSavedUserRaw();
   if (!raw) return {};
@@ -203,7 +210,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
     if (!text || isLoading) return;
 
     const userMessage: AssistantMessage = {
-      id: crypto.randomUUID(),
+      id: createMessageId(),
       role: 'user',
       content: text,
     };
@@ -225,7 +232,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
       setMessages((prev) => [
         ...prev,
         {
-          id: crypto.randomUUID(),
+          id: createMessageId(),
           role: 'assistant',
           content: result.error || '益语通暂时没接上，请稍后再试。',
           sourceCards: [],
@@ -237,7 +244,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
 
     const response = result.data;
     const assistantMessage: AssistantMessage = {
-      id: crypto.randomUUID(),
+      id: createMessageId(),
       role: 'assistant',
       content: response.answer,
       mode: response.mode,
