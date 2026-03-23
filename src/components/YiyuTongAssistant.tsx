@@ -276,15 +276,13 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
 
       {isOpen ? (
         <div
-          className="fixed bottom-24 right-6 z-[69] flex h-[min(78vh,720px)] w-[min(92vw,420px)] resize overflow-hidden rounded-[28px] border border-border/60 bg-white/95 shadow-[0_30px_80px_-30px_rgba(15,23,42,0.35)] backdrop-blur-xl"
+          className="fixed bottom-24 right-6 z-[69] flex h-[min(78vh,720px)] w-[min(92vw,420px)] resize flex-col overflow-hidden rounded-[28px] border border-border/60 bg-white/95 shadow-[0_30px_80px_-30px_rgba(15,23,42,0.35)] backdrop-blur-xl"
           style={{ minWidth: '340px', minHeight: '420px', maxWidth: '92vw', maxHeight: '78vh' }}
         >
           <div className="border-b border-border/50 bg-white/90 px-5 py-4">
             <div className="flex items-start justify-between gap-4">
-              <div className="flex flex-wrap gap-2">
-                <span className="rounded-full bg-primary/8 px-3 py-1 text-[11px] font-medium text-primary">普通问答</span>
-                <span className="rounded-full bg-primary/8 px-3 py-1 text-[11px] font-medium text-primary">直接跳转</span>
-                <span className="rounded-full bg-primary/8 px-3 py-1 text-[11px] font-medium text-primary">咨询代填</span>
+              <div className="max-w-[270px] text-[12px] leading-5 text-muted-foreground/75">
+                可以直接问官网里有什么内容，也可以让我带你去某个页面，或先整理咨询信息再打开正式申请表。
               </div>
               <div className="flex items-center gap-2">
                 <button
