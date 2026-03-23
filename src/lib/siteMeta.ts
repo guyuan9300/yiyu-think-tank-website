@@ -1,3 +1,4 @@
+export const SITE_NAME = '益语智库';
 export const SITE_CONTACT_PHONE = '18027370767';
 export const SITE_CONTACT_EMAIL = 'guyuan@klngo.org';
 export const SITE_ICP_NUMBER = '粤ICP备16124646号';

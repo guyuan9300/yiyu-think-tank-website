@@ -1,7 +1,5 @@
-import { useEffect, useState } from 'react';
 import { Mail, Phone } from 'lucide-react';
-import { getSystemSettings, type SystemSettings } from '../lib/dataService';
-import { SITE_CONTACT_EMAIL, SITE_CONTACT_PHONE, SITE_ICP_NUMBER, SITE_ICP_URL } from '../lib/siteMeta';
+import { SITE_CONTACT_EMAIL, SITE_CONTACT_PHONE, SITE_ICP_NUMBER, SITE_ICP_URL, SITE_NAME } from '../lib/siteMeta';
 
 interface FooterProps {
   onNavigate?: (page: 'about' | 'home' | 'insights' | 'learning' | 'strategy' | 'report-library' | 'article-center' | 'book-library' | 'methodology-library') => void;
@@ -12,16 +10,6 @@ interface FooterProps {
  * 视觉：黑底白字；层级：标语最大 / 栏目次大 / 条目更小 / 版权&备案最小。
  */
 export function Footer({ onNavigate }: FooterProps) {
-  const [settings, setSettings] = useState<SystemSettings | null>(null);
-
-  useEffect(() => {
-    const load = () => setSettings(getSystemSettings());
-    load();
-    const onData = () => load();
-    window.addEventListener('yiyu_data_change', onData);
-    return () => window.removeEventListener('yiyu_data_change', onData);
-  }, []);
-
   const currentYear = new Date().getFullYear();
 
   const nav = (page: 'about' | 'home' | 'insights' | 'learning' | 'strategy' | 'report-library' | 'article-center' | 'book-library' | 'methodology-library') => {
@@ -35,7 +23,7 @@ export function Footer({ onNavigate }: FooterProps) {
           {/* Brand + Slogan (largest) */}
           <div className="md:col-span-1">
             <h4 className="font-semibold text-[18px] mb-3 text-white">
-              {settings?.siteName || '益语智库'}
+              {SITE_NAME}
             </h4>
             <p className="text-[16px] text-white/90 leading-relaxed">
               助力企业持续增长的战略陪伴者

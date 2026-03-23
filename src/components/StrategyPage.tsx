@@ -68,147 +68,6 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
     { title: '效果导向', desc: '用目标与指标衡量成果' }
   ];
 
-  const withBase = (p: string) => `${import.meta.env.BASE_URL}${String(p || '').replace(/^\//, '')}`;
-
-  // Cases data fallback
-  const fallbackCases: CaseShowcase[] = [
-    {
-      id: 'fallback-blue-letter',
-      industry: '公益/教育',
-      clientName: '蓝信封',
-      title: '专注于乡村儿童心理健康服务的公益机构',
-      subtitle: '通过书信交流建立长期陪伴关系',
-      tags: ['公益', '教育'],
-      logoUrl: withBase('/images/cases/blue-letter.png'),
-      slug: 'case-1',
-      pptFileUrl: '',
-      pptFileName: '',
-      slideImages: [],
-      isPublished: true,
-      sortOrder: 1,
-    },
-    {
-      id: 'fallback-vision-capital',
-      industry: '金融/投资',
-      clientName: '愿景资本',
-      title: '国家新兴产业创投基金管理公司',
-      subtitle: '聚焦早中期投资，陪伴创业者成长',
-      tags: ['投资', '创投'],
-      logoUrl: withBase('/images/cases/vision-capital.png'),
-      slug: 'case-2',
-      pptFileUrl: '',
-      pptFileName: '',
-      slideImages: [],
-      isPublished: true,
-      sortOrder: 2,
-    },
-    {
-      id: 'fallback-beike-foundation',
-      industry: '公益/房地产',
-      clientName: '贝壳公益基金会',
-      title: '城市社区公益平台',
-      subtitle: '打造互助互利的社区公益平台',
-      tags: ['社区', '公益'],
-      logoUrl: withBase('/images/cases/beike-foundation.png'),
-      slug: 'case-3',
-      pptFileUrl: '',
-      pptFileName: '',
-      slideImages: [],
-      isPublished: true,
-      sortOrder: 3,
-    },
-    {
-      id: 'fallback-rici-foundation',
-      industry: '公益/教育',
-      clientName: '日慈基金会',
-      title: '青少年心智素养教育',
-      subtitle: '专注心智素养教育项目设计与推广',
-      tags: ['教育', '心理'],
-      logoUrl: withBase('/images/cases/rici-foundation.png'),
-      slug: 'case-4',
-      pptFileUrl: '',
-      pptFileName: '',
-      slideImages: [],
-      isPublished: true,
-      sortOrder: 4,
-    },
-    {
-      id: 'fallback-tianzige',
-      industry: '公益/教育',
-      clientName: '田字格',
-      title: '乡土人本教育探索',
-      subtitle: '开展乡土人本教育模式探索',
-      tags: ['乡村', '教育'],
-      logoUrl: withBase('/images/cases/tianzige.png'),
-      slug: 'case-5',
-      pptFileUrl: '',
-      pptFileName: '',
-      slideImages: [],
-      isPublished: true,
-      sortOrder: 5,
-    },
-    {
-      id: 'fallback-abc-consulting',
-      industry: '公益/咨询',
-      clientName: 'ABC美好社会咨询社',
-      title: '专业公益咨询服务',
-      subtitle: '为 NGO 提供战略、运营等专业咨询',
-      tags: ['咨询', 'NGO'],
-      logoUrl: withBase('/images/cases/abc-consulting.png'),
-      slug: 'case-6',
-      pptFileUrl: '',
-      pptFileName: '',
-      slideImages: [],
-      isPublished: true,
-      sortOrder: 6,
-    },
-    {
-      id: 'fallback-lithium-sodium-krypton-strontium',
-      industry: '教育/科技',
-      clientName: '锂钠氪锶',
-      title: '教育科技解决方案',
-      subtitle: '通过 AI 和大数据提供个性化方案',
-      tags: ['AI', '教育'],
-      logoUrl: withBase('/images/cases/lithium-sodium-krypton-strontium.png'),
-      slug: 'case-7',
-      pptFileUrl: '',
-      pptFileName: '',
-      slideImages: [],
-      isPublished: true,
-      sortOrder: 7,
-    },
-    {
-      id: 'fallback-china-rural-foundation',
-      industry: '公益/乡村振兴',
-      clientName: '中国乡村发展基金会',
-      title: '乡村发展与扶贫事业',
-      subtitle: '实施扶贫开发、乡村振兴项目',
-      tags: ['乡村', '扶贫'],
-      logoUrl: withBase('/images/cases/china-rural-foundation.png'),
-      slug: 'case-8',
-      pptFileUrl: '',
-      pptFileName: '',
-      slideImages: [],
-      isPublished: true,
-      sortOrder: 8,
-    },
-    {
-      id: 'fallback-nio',
-      industry: '汽车/新能源',
-      clientName: '蔚来汽车',
-      title: '智能电动汽车与用户体验',
-      subtitle: '创造愉悦的用户生活方式',
-      tags: ['汽车', '新能源'],
-      logoUrl: withBase('/images/cases/nio.png'),
-      slug: 'case-9',
-      pptFileUrl: '',
-      pptFileName: '',
-      slideImages: [],
-      isPublished: true,
-      sortOrder: 9,
-    }
-  ];
-
   useEffect(() => {
     let canceled = false;
     const loadCases = async () => {
@@ -224,7 +83,7 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
     };
   }, []);
 
-  const cases = caseShowcases.length ? caseShowcases : fallbackCases;
+  const cases = caseShowcases;
   const caseRows = cases.reduce<Array<CaseShowcase[]>>((rows, item, index) => {
     const rowIndex = Math.floor(index / 3);
     if (!rows[rowIndex]) rows[rowIndex] = [];
@@ -516,54 +375,55 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
         </section>
       )}
 
-      {/* Cases Section */}
-      <section id="cases" className="pt-0 pb-14 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-[1200px] mx-auto">
-          <div className="mb-8 text-center">
-            <h2 className="text-[24px] sm:text-[28px] font-semibold tracking-tight text-[rgba(15,23,42,0.92)]">部分服务客户</h2>
-            <p className="mt-2 text-[13px] text-[rgba(15,23,42,0.54)]">点击logo可查看客户介绍</p>
-          </div>
+      {cases.length > 0 ? (
+        <section id="cases" className="pt-0 pb-14 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-[1200px] mx-auto">
+            <div className="mb-8 text-center">
+              <h2 className="text-[24px] sm:text-[28px] font-semibold tracking-tight text-[rgba(15,23,42,0.92)]">部分服务客户</h2>
+              <p className="mt-2 text-[13px] text-[rgba(15,23,42,0.54)]">点击logo可查看客户介绍</p>
+            </div>
 
-          <div className="mx-auto max-w-[736px] space-y-0">
-            {caseRows.map((row, rowIndex) => (
-              <div key={`case-row-${rowIndex}`} className="flex justify-center">
-                <div className="flex w-full justify-center">
-                  <div className="flex w-full flex-wrap justify-center md:flex-nowrap">
-                    {row.map((caseItem, colIndex) => (
-                      <button
-                        key={caseItem.slug}
-                        type="button"
-                        onClick={() => handleNavigateToCase(caseItem.slug)}
-                        className="group relative block w-1/2 border border-[rgba(15,23,42,0.12)] bg-white text-left md:w-1/3"
-                        style={{
-                          marginLeft: colIndex === 0 ? 0 : -1,
-                          marginTop: rowIndex === 0 ? 0 : -1,
-                        }}
-                        aria-label={`查看 ${caseItem.clientName} 案例详情`}
-                      >
-                        <div className="relative aspect-square overflow-hidden">
-                          {caseItem.logoUrl ? (
-                            <div className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden bg-white">
-                              <img
-                                src={caseItem.logoUrl}
-                                alt={caseItem.clientName}
-                                className="h-full w-full object-contain object-center"
-                                loading="lazy"
-                              />
-                            </div>
-                          ) : (
-                            <div className="relative z-10 h-full w-full bg-gradient-to-br from-blue-500 to-indigo-600" />
-                          )}
-                        </div>
-                      </button>
-                    ))}
+            <div className="mx-auto max-w-[736px] space-y-0">
+              {caseRows.map((row, rowIndex) => (
+                <div key={`case-row-${rowIndex}`} className="flex justify-center">
+                  <div className="flex w-full justify-center">
+                    <div className="flex w-full flex-wrap justify-center md:flex-nowrap">
+                      {row.map((caseItem, colIndex) => (
+                        <button
+                          key={caseItem.slug}
+                          type="button"
+                          onClick={() => handleNavigateToCase(caseItem.slug)}
+                          className="group relative block w-1/2 border border-[rgba(15,23,42,0.12)] bg-white text-left md:w-1/3"
+                          style={{
+                            marginLeft: colIndex === 0 ? 0 : -1,
+                            marginTop: rowIndex === 0 ? 0 : -1,
+                          }}
+                          aria-label={`查看 ${caseItem.clientName} 案例详情`}
+                        >
+                          <div className="relative aspect-square overflow-hidden">
+                            {caseItem.logoUrl ? (
+                              <div className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden bg-white">
+                                <img
+                                  src={caseItem.logoUrl}
+                                  alt={caseItem.clientName}
+                                  className="h-full w-full object-contain object-center"
+                                  loading="lazy"
+                                />
+                              </div>
+                            ) : (
+                              <div className="relative z-10 h-full w-full bg-gradient-to-br from-blue-500 to-indigo-600" />
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       {/* Insights Section - 4 Column Horizontal Layout */}
       <section id="insights" className="py-16 px-4 sm:px-6 lg:px-8">

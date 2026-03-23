@@ -10,7 +10,6 @@ import { ReportLibraryPage } from './components/ReportLibraryPage';
 import { ArticleCenterPage } from './components/ArticleCenterPage';
 import { BookReaderPage } from './components/BookReaderPage';
 import { ReportReaderPage } from './components/ReportReaderPage';
-import { MyLearningPage } from './components/MyLearningPage';
 import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
 import { ForgotPasswordPage } from './components/ForgotPasswordPage';
@@ -240,7 +239,7 @@ export default function App() {
   // Canonical URL: `?page=learning` (we keep internal page key as `library`).
   const initialPageRaw = initialParams.get('page') || 'home';
   // `learning` is an alias for `library`.
-  const normalized = initialPageRaw === 'learning' ? 'library' : initialPageRaw;
+  const normalized = initialPageRaw === 'learning' || initialPageRaw === 'my-learning' ? 'library' : initialPageRaw;
   const initialUnknown = ALLOWED_PAGES.has(normalized) ? null : normalized;
   const initialPage = initialUnknown ? '404' : normalized;
 
@@ -303,7 +302,7 @@ export default function App() {
     const parseUrl = () => {
       const params = new URLSearchParams(window.location.search);
       const pageRaw = params.get('page') || 'home';
-      const normalizedPage = (pageRaw === 'learning') ? 'library' : pageRaw;
+      const normalizedPage = pageRaw === 'learning' || pageRaw === 'my-learning' ? 'library' : pageRaw;
       const unknown = ALLOWED_PAGES.has(normalizedPage) ? null : normalizedPage;
       const page = unknown ? '404' : normalizedPage;
       const id = params.get('id') || '';
@@ -383,7 +382,7 @@ export default function App() {
       setSelectedDetailId(bookId || '');
       setCurrentPage(page);
     } else if (page === 'my-learning') {
-      setCurrentPage('my-learning');
+      setCurrentPage('library');
     } else if (page === 'report-library') {
       setCurrentPage('report-library');
     } else if (page === 'article-center') {
@@ -611,14 +610,6 @@ export default function App() {
     return (
       <>
         <BookReaderPage bookId={selectedBookId} onNavigate={(page) => handleNavigate(page as any)} />
-      </>
-    );
-  }
-
-  if (currentPage === 'my-learning') {
-    return (
-      <>
-        <MyLearningPage onNavigate={(page) => handleNavigate(page as any)} />
       </>
     );
   }
