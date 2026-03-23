@@ -3291,19 +3291,30 @@ function detectConsultIntent(question) {
 }
 
 function detectNavigationIntent(question) {
-  return /(打开|进入|带我去|前往|跳到|去看|去到|看看|在哪|哪里|打开最新|打开.*案例|进入.*案例)/.test(safeText(question));
+  return /(打开|进入|带我去|前往|跳到|去看|去到|看看|定位|跳转|在哪|哪里|哪儿|打开最新|打开.*案例|进入.*案例|去.*案例|案例在哪|案例在哪里|页面在哪|详情在哪)/.test(
+    safeText(question)
+  );
 }
 
 function cleanNavigationSubject(question) {
   return safeText(question)
-    .replace(/(带我去|帮我去|帮我打开|打开|进入|前往|跳到|去看|去到|看看|定位到|给我看|我想看|我想去|帮我找|带我看|请)/g, ' ')
+    .replace(/(带我去|帮我去|帮我打开|打开|进入|前往|跳到|去看|去到|看看|定位到|给我看|我想看|我想去|帮我找|带我看|请|请问|告诉我|我想知道)/g, ' ')
+    .replace(/^(去)\s*/g, ' ')
+    .replace(/(在哪里|在哪|哪里|哪儿|怎么去|怎么打开|怎么进入)/g, ' ')
+    .replace(/(^我|^那|^这个|^那个|\b我\b|\b那\b|\b这个\b|\b那个\b)/g, ' ')
     .replace(/(一下|页面|网页|介绍页|详情页|详情|案例|文章|报告|书籍|图书|方法论|工具|内容|最新|最近)/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
+function isDirectSourceNavigationQuery(question) {
+  const q = safeText(question);
+  if (!q) return false;
+  return detectNavigationIntent(q) || /(案例|页面|详情|介绍|图书馆|文章中心|前沿报告|方法论|工具|书籍|报告)/.test(q);
+}
+
 function findDirectNavigationSource(question, sources) {
-  if (!detectNavigationIntent(question)) return null;
+  if (!isDirectSourceNavigationQuery(question)) return null;
   const normalizedQuestion = safeText(question);
   const cleaned = cleanNavigationSubject(normalizedQuestion);
   if (!cleaned || cleaned.length < 2) return null;
@@ -3313,8 +3324,10 @@ function findDirectNavigationSource(question, sources) {
       const candidates = [safeText(source.title), safeText(source.clientName)].filter(Boolean);
       let score = 0;
       for (const candidate of candidates) {
-        if (candidate.includes(cleaned) || cleaned.includes(candidate)) {
-          score = Math.max(score, 240 + Math.min(candidate.length, cleaned.length));
+        if (candidate === cleaned) {
+          score = Math.max(score, 320 + candidate.length);
+        } else if (candidate.includes(cleaned) || cleaned.includes(candidate)) {
+          score = Math.max(score, 260 + Math.min(candidate.length, cleaned.length));
         } else if (normalizedQuestion.includes(candidate)) {
           score = Math.max(score, 220 + candidate.length);
         }
@@ -3327,6 +3340,15 @@ function findDirectNavigationSource(question, sources) {
   if (!scored.length) return null;
   if (scored.length === 1) return scored[0].source;
   return scored[0].score - scored[1].score >= 20 ? scored[0].source : null;
+}
+
+function normalizeAssistantTarget(target) {
+  if (!target) return '';
+  if (/^https?:\/\//.test(target)) {
+    const url = new URL(target);
+    return `${url.pathname}${url.search}`;
+  }
+  return target;
 }
 
 function resolvePageNavigation(question) {
@@ -3443,6 +3465,7 @@ async function extractConsultFields(question, knownUserInfo) {
 async function buildAssistantResponse(payload) {
   const question = safeText(payload?.question);
   const knownUserInfo = payload?.knownUserInfo && typeof payload.knownUserInfo === 'object' ? payload.knownUserInfo : {};
+  const currentUrl = normalizeAssistantTarget(payload?.currentUrl || '');
   if (!question) {
     return {
       mode: 'answer',
@@ -3450,7 +3473,7 @@ async function buildAssistantResponse(payload) {
       sourceCards: [],
       actions: [],
       collectedFields: null,
-      followups: ['最新有什么内容', '推荐几本书', '我想申请咨询'],
+      followups: [],
     };
   }
 
@@ -3471,12 +3494,23 @@ async function buildAssistantResponse(payload) {
         },
       ],
       collectedFields,
-      followups: ['我想了解战略陪伴', '我想先看看案例'],
+      followups: [],
     };
   }
 
   const pageNavigation = resolvePageNavigation(question);
   if (pageNavigation && detectNavigationIntent(question)) {
+    const normalizedTarget = normalizeAssistantTarget(pageNavigation.target);
+    if (currentUrl && normalizedTarget && currentUrl === normalizedTarget) {
+      return {
+        mode: 'answer',
+        answer: `当前就是${pageNavigation.label}。`,
+        sourceCards: [],
+        actions: [],
+        collectedFields: null,
+        followups: [],
+      };
+    }
     return {
       mode: 'navigate',
       answer: `已为你打开${pageNavigation.label}。`,
@@ -3498,10 +3532,21 @@ async function buildAssistantResponse(payload) {
   const directSource = findDirectNavigationSource(question, sources);
 
   if (directSource) {
+    const normalizedTarget = normalizeAssistantTarget(directSource.publicUrl);
+    if (currentUrl && normalizedTarget && currentUrl === normalizedTarget) {
+      return {
+        mode: 'answer',
+        answer: `当前就是《${directSource.title}》页面。`,
+        sourceCards: [],
+        actions: [],
+        collectedFields: null,
+        followups: [],
+      };
+    }
     return {
       mode: 'navigate',
       answer: `已为你定位到《${directSource.title}》。`,
-      sourceCards: [mapAssistantSourceCard(directSource)],
+      sourceCards: [],
       actions: [
         {
           type: 'open_detail',
@@ -3515,10 +3560,21 @@ async function buildAssistantResponse(payload) {
   }
 
   if (detectNavigationIntent(question) && topSources.length === 1) {
+    const normalizedTarget = normalizeAssistantTarget(topSources[0].publicUrl);
+    if (currentUrl && normalizedTarget && currentUrl === normalizedTarget) {
+      return {
+        mode: 'answer',
+        answer: `当前就是《${topSources[0].title}》页面。`,
+        sourceCards: [],
+        actions: [],
+        collectedFields: null,
+        followups: [],
+      };
+    }
     return {
       mode: 'navigate',
       answer: `已为你定位到《${topSources[0].title}》。`,
-      sourceCards: [mapAssistantSourceCard(topSources[0])],
+      sourceCards: [],
       actions: [
         {
           type: 'open_detail',
@@ -3537,21 +3593,9 @@ async function buildAssistantResponse(payload) {
     mode: 'answer',
     answer,
     sourceCards: noEvidence ? [] : topSources.map(mapAssistantSourceCard),
-    actions: !noEvidence && topSources.length === 1
-      ? [
-          {
-            type: 'open_detail',
-            label: '打开对应页面',
-            target: topSources[0].publicUrl,
-          },
-        ]
-      : [],
+    actions: [],
     collectedFields: null,
-    followups: noEvidence
-      ? ['最新有什么内容', '推荐几本书', '我想申请咨询']
-      : topSources.length
-        ? ['再推荐几篇相关文章', '还有别的相关内容吗']
-        : ['最新有什么内容', '推荐几本书'],
+    followups: [],
   };
 }
 

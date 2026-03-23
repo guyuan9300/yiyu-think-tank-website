@@ -335,7 +335,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
                     <ConsultConfirmation fields={message.collectedFields} action={message.actions?.[0]} />
                   ) : null}
 
-                  {!showConsultCard(message) && message.actions?.length ? (
+                  {!showConsultCard(message) && message.mode !== 'navigate' && message.actions?.length ? (
                     <div className="flex flex-wrap gap-2">
                       {message.actions.map((action) => (
                         <button
@@ -351,20 +351,6 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
                     </div>
                   ) : null}
 
-                  {message.followups?.length ? (
-                    <div className="flex flex-wrap gap-2">
-                      {message.followups.map((item) => (
-                        <button
-                          key={`${message.id}-${item}`}
-                          type="button"
-                          onClick={() => void submitQuestion(item)}
-                          className="rounded-full bg-primary/6 px-3 py-1.5 text-[11px] font-medium text-primary hover:bg-primary/10"
-                        >
-                          {item}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
                 </div>
               </div>
             ))}
