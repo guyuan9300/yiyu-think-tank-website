@@ -41,6 +41,7 @@ import { StrategyModuleIntroPage } from './components/StrategyModuleIntroPage';
 import { PaymentIntroPage } from './components/PaymentIntroPage';
 import { PaymentCheckoutPage } from './components/PaymentCheckoutPage';
 import { PaymentResultPage } from './components/PaymentResultPage';
+import { YiyuTongAssistant } from './components/YiyuTongAssistant';
 
 const ADMIN_SHELL_VERSION = '20260319-admin-shell-refresh';
 
@@ -248,6 +249,28 @@ export default function App() {
   const [selectedBookId, setSelectedBookId] = useState<string>(initialParams.get('id') || 'shimeshiquanli');
   const [selectedDetailId, setSelectedDetailId] = useState<string>(initialParams.get('id') || '');
   const [selectedCaseId, setSelectedCaseId] = useState<string>(initialParams.get('id') || 'case-1');
+  const shouldShowYiyuTong = ![
+    'admin',
+    'admin-legacy',
+    'admin-strategy-companion',
+    'login',
+    'register',
+    'forgot-password',
+    'reset-password',
+    'terms-of-service',
+    'privacy-policy',
+    'payment-checkout',
+    'payment-result',
+    'strategy-companion',
+    '404',
+  ].includes(currentPage);
+
+  const renderWithYiyuTong = (content: ReactNode, assistantPage = currentPage) => (
+    <>
+      {content}
+      {shouldShowYiyuTong ? <YiyuTongAssistant currentPage={assistantPage} /> : null}
+    </>
+  );
 
   const buildUrlForState = (page: string, detailId?: string, caseId?: string) => {
     const basePath = window.location.pathname;
@@ -410,16 +433,14 @@ export default function App() {
 
   // Not Found Page (unknown `?page=`)
   if (currentPage === '404') {
-    return (
-      <>
-        <NotFoundPage
-          unknownPage={unknownPage ?? undefined}
-          onGoHome={() => {
-            setUnknownPage(null);
-            handleNavigate('home');
-          }}
-        />
-      </>
+    return renderWithYiyuTong(
+      <NotFoundPage
+        unknownPage={unknownPage ?? undefined}
+        onGoHome={() => {
+          setUnknownPage(null);
+          handleNavigate('home');
+        }}
+      />
     );
   }
 
@@ -483,135 +504,101 @@ export default function App() {
 
   // Article Detail Page
   if (currentPage === 'article') {
-    return (
-      <>
-        <ArticleDetailPage 
-          articleId={selectedDetailId}
-          onNavigate={(page, id) => handleNavigateToDetail(page as any, id || '')}
-        />
-      </>
+    return renderWithYiyuTong(
+      <ArticleDetailPage
+        articleId={selectedDetailId}
+        onNavigate={(page, id) => handleNavigateToDetail(page as any, id || '')}
+      />
     );
   }
 
   // Report Reader Page - 报告阅读器（16:9 PDF + AI对话）
   if (currentPage === 'report') {
-    return (
-      <>
-        <ReportReaderPage reportId={selectedDetailId} />
-      </>
-    );
+    return renderWithYiyuTong(<ReportReaderPage reportId={selectedDetailId} />);
   }
 
   // Case Detail Page
   if (currentPage === 'case') {
-    return (
-      <>
-        <CaseDetailPage 
-          caseId={selectedCaseId}
-          onNavigate={(page, id) => {
-            if (page === 'case') {
-              handleNavigate('case', undefined, id);
-            } else {
-              handleNavigate(page as any);
-            }
-          }}
-        />
-      </>
+    return renderWithYiyuTong(
+      <CaseDetailPage
+        caseId={selectedCaseId}
+        onNavigate={(page, id) => {
+          if (page === 'case') {
+            handleNavigate('case', undefined, id);
+          } else {
+            handleNavigate(page as any);
+          }
+        }}
+      />
     );
   }
 
   if (currentPage === 'insights') {
-    return (
-      <>
-        <InsightsPage
-          onNavigate={(page, id) => {
-            if ((page === 'article' || page === 'report') && id) {
-              handleNavigateToDetail(page as any, id);
-              return;
-            }
-            handleNavigate(page as any, id);
-          }}
-        />
-      </>
+    return renderWithYiyuTong(
+      <InsightsPage
+        onNavigate={(page, id) => {
+          if ((page === 'article' || page === 'report') && id) {
+            handleNavigateToDetail(page as any, id);
+            return;
+          }
+          handleNavigate(page as any, id);
+        }}
+      />
     );
   }
 
   if (currentPage === 'strategy') {
-    return (
-      <>
-        <StrategyPage
-          onNavigate={(page, id) => {
-            if (page === 'case') {
-              handleNavigate('case', undefined, id);
-              return;
-            }
-            handleNavigate(page as any, id);
-          }}
-        />
-      </>
+    return renderWithYiyuTong(
+      <StrategyPage
+        onNavigate={(page, id) => {
+          if (page === 'case') {
+            handleNavigate('case', undefined, id);
+            return;
+          }
+          handleNavigate(page as any, id);
+        }}
+      />
     );
   }
 
   if (currentPage === 'about') {
-    return (
-      <>
-        <AboutPage onNavigate={handleNavigate} />
-      </>
-    );
+    return renderWithYiyuTong(<AboutPage onNavigate={handleNavigate} />);
   }
 
   if (currentPage === 'library') {
-    return (
-      <>
-        <LibraryPage onNavigate={handleNavigate} />
-      </>
-    );
+    return renderWithYiyuTong(<LibraryPage onNavigate={handleNavigate} />, 'learning');
   }
 
   if (currentPage === 'book-library') {
-    return (
-      <>
-        <BookLibraryPage onNavigate={(p, id) => handleNavigate(p as any, id)} />
-      </>
-    );
+    return renderWithYiyuTong(<BookLibraryPage onNavigate={(p, id) => handleNavigate(p as any, id)} />);
   }
 
   if (currentPage === 'methodology-library') {
-    return (
-      <>
-        <MethodologyLibraryPage
-          onNavigate={(p, id) => handleNavigate(p as any, id)}
-          methodologyId={selectedDetailId}
-        />
-      </>
+    return renderWithYiyuTong(
+      <MethodologyLibraryPage
+        onNavigate={(p, id) => handleNavigate(p as any, id)}
+        methodologyId={selectedDetailId}
+      />
     );
   }
 
   // book-library page is deprecated (redirected to library)
 
   if (currentPage === 'report-library') {
-    return (
-      <>
-        <ReportLibraryPage onNavigate={(page) => handleNavigate(page as any)} onNavigateToDetail={(type, id) => handleNavigateToDetail(type as any, id)} />
-      </>
+    return renderWithYiyuTong(
+      <ReportLibraryPage onNavigate={(page) => handleNavigate(page as any)} onNavigateToDetail={(type, id) => handleNavigateToDetail(type as any, id)} />
     );
   }
 
   // Article Center Page - 文章中心
   if (currentPage === 'article-center') {
-    return (
-      <>
-        <ArticleCenterPage onNavigate={(page) => handleNavigate(page as any)} onNavigateToDetail={(id) => handleNavigateToDetail('article', id)} />
-      </>
+    return renderWithYiyuTong(
+      <ArticleCenterPage onNavigate={(page) => handleNavigate(page as any)} onNavigateToDetail={(id) => handleNavigateToDetail('article', id)} />
     );
   }
 
   if (currentPage === 'book-reader') {
-    return (
-      <>
-        <BookReaderPage bookId={selectedBookId} onNavigate={(page) => handleNavigate(page as any)} />
-      </>
-    );
+    return renderWithYiyuTong(<BookReaderPage bookId={selectedBookId} onNavigate={(page) => handleNavigate(page as any)} />);
   }
 
   // Admin Dashboard - 需要登录验证
@@ -660,19 +647,11 @@ export default function App() {
 
   // User Center Page
   if (currentPage === 'user-center') {
-    return (
-      <>
-        <UserCenterPage onNavigate={(page) => handleNavigate(page as any)} />
-      </>
-    );
+    return renderWithYiyuTong(<UserCenterPage onNavigate={(page) => handleNavigate(page as any)} />, 'user-center');
   }
 
   if (currentPage === 'membership') {
-    return (
-      <>
-        <PaymentIntroPage onNavigate={(page, id) => handleNavigate(page as any, id)} />
-      </>
-    );
+    return renderWithYiyuTong(<PaymentIntroPage onNavigate={(page, id) => handleNavigate(page as any, id)} />, 'membership');
   }
 
   if (currentPage === 'payment-checkout') {
@@ -702,19 +681,13 @@ export default function App() {
 
   // Consult Apply Page - 申请战略咨询（高门槛表单）
   if (currentPage === 'consult-apply') {
-    return (
-      <>
-        <ConsultApplyPage onBack={() => handleNavigate('home')} />
-      </>
-    );
+    return renderWithYiyuTong(<ConsultApplyPage onBack={() => handleNavigate('home')} />, 'consult-apply');
   }
 
   // Strategy Module Intro Pages
   if (currentPage === 'strategy-path' || currentPage === 'business-design' || currentPage === 'org-effectiveness' || currentPage === 'digital-ai') {
-    return (
-      <>
-        <StrategyModuleIntroPage module={currentPage as any} onNavigate={(p: any) => handleNavigate(p)} />
-      </>
+    return renderWithYiyuTong(
+      <StrategyModuleIntroPage module={currentPage as any} onNavigate={(p: any) => handleNavigate(p)} />
     );
   }
 
@@ -730,9 +703,7 @@ export default function App() {
     );
   }
 
-  return (
-    <>
-      <HomePage onNavigate={handleNavigate} onNavigateToDetail={handleNavigateToDetail} />
-    </>
+  return renderWithYiyuTong(
+    <HomePage onNavigate={handleNavigate} onNavigateToDetail={handleNavigateToDetail} />
   );
 }

@@ -2963,6 +2963,545 @@ function mapStrategyLearningResource(row) {
   };
 }
 
+const YIYU_TONG_FORM_URL = process.env.YIYU_DIAGNOSIS_FORM_URL || 'https://hw7oabz548h.feishu.cn/share/base/form/shrcnOlk5n3pQdidooIVje76xUc';
+const YIYU_TONG_SOURCE_LIMIT = 3;
+const YIYU_TONG_SOURCE_TYPE_LABELS = {
+  insight: '洞察文章',
+  report: '前沿报告',
+  book: '推荐书籍',
+  methodology: '益语方法论',
+  case: '案例展示',
+};
+
+function getAssistantPublicUrl(type, idOrSlug) {
+  const value = encodeURIComponent(safeText(idOrSlug));
+  if (type === 'insight') return `/?page=article&id=${value}`;
+  if (type === 'report') return `/?page=report&id=${value}`;
+  if (type === 'book') return `/?page=book-reader&id=${value}`;
+  if (type === 'methodology') return `/?page=methodology-library&id=${value}`;
+  if (type === 'case') return `/?page=case&id=${value}`;
+  return '/';
+}
+
+function toAssistantDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return safeText(value);
+  }
+  return date.toISOString().slice(0, 10);
+}
+
+function buildAssistantSnippet(text, fallback = '') {
+  const normalized = normalizeExtractedText(text || fallback || '');
+  if (!normalized) return '';
+  return normalized.slice(0, 140);
+}
+
+function buildAssistantTags(topics) {
+  return safeTopicArray(topics);
+}
+
+function buildAssistantTitleMatches(query, title) {
+  const normalizedQuery = safeText(query).toLowerCase();
+  const normalizedTitle = safeText(title).toLowerCase();
+  if (!normalizedQuery || !normalizedTitle) return 0;
+  if (normalizedTitle.includes(normalizedQuery)) return 120;
+  if (normalizedQuery.includes(normalizedTitle) && normalizedTitle.length >= 4) return 80;
+  return 0;
+}
+
+function extractAssistantTokens(question) {
+  const raw = safeText(question)
+    .replace(/[，。！？、,.!?/|｜]+/g, ' ')
+    .trim();
+  const stopWords = new Set([
+    '我们', '你们', '一下', '一个', '一些', '这个', '那个', '哪些', '最新', '内容',
+    '看看', '一下子', '一下吧', '一下吗', '一下呢', '怎么', '如何', '是否', '可以',
+    '帮我', '带我', '进入', '打开', '跳到', '页面', '官网', '资料', '推荐', '什么',
+    '有关', '关于', '那里', '哪里', '想看', '想找', '想了解',
+  ]);
+  const matches = raw.match(/[\p{Script=Han}A-Za-z0-9]{2,}/gu) || [];
+  return Array.from(new Set(matches.filter((item) => !stopWords.has(item))));
+}
+
+function detectAssistantContentTypes(question) {
+  const q = safeText(question);
+  const types = new Set();
+  if (/文章|洞察/.test(q)) types.add('insight');
+  if (/报告/.test(q)) types.add('report');
+  if (/书|图书|书籍/.test(q)) types.add('book');
+  if (/方法论|工具/.test(q)) types.add('methodology');
+  if (/案例|客户/.test(q)) types.add('case');
+  return Array.from(types);
+}
+
+function scoreAssistantSource(source, question, tokens, typedFilters) {
+  const haystack = [
+    source.title,
+    source.summary,
+    source.authorOrPublisher,
+    (source.tags || []).join(' '),
+    source.plainText,
+    source.clientName,
+  ].join('\n').toLowerCase();
+
+  let score = buildAssistantTitleMatches(question, source.title);
+
+  if (typedFilters.length && typedFilters.includes(source.contentType)) {
+    score += 20;
+  }
+
+  for (const token of tokens) {
+    const normalized = token.toLowerCase();
+    if (!normalized) continue;
+    if (safeText(source.title).toLowerCase().includes(normalized)) score += 35;
+    if ((source.tags || []).some((tag) => safeText(tag).toLowerCase().includes(normalized))) score += 22;
+    if (safeText(source.authorOrPublisher).toLowerCase().includes(normalized)) score += 16;
+    if (safeText(source.clientName).toLowerCase().includes(normalized)) score += 26;
+    if (safeText(source.summary).toLowerCase().includes(normalized)) score += 12;
+    if (haystack.includes(normalized)) score += 4;
+  }
+
+  const publishDate = Date.parse(source.publishDate || source.updatedAt || source.createdAt || '');
+  if (Number.isFinite(publishDate)) {
+    score += Math.max(0, 6 - Math.floor((Date.now() - publishDate) / (1000 * 60 * 60 * 24 * 30)));
+  }
+
+  return score;
+}
+
+async function listAssistantSources() {
+  const [insightsQ, reportsQ, booksQ, methodsQ, casesQ] = await Promise.all([
+    pool.query(
+      `SELECT id, title, excerpt, content, content_html, content_text, topics, cover_image, publish_date, updated_at, created_at
+       FROM insights
+       WHERE status='published'
+       ORDER BY publish_date DESC NULLS LAST, updated_at DESC`
+    ),
+    pool.query(
+      `SELECT id, title, publisher, summary, topics, cover_image, publish_date, updated_at, created_at
+       FROM reports
+       WHERE status='published'
+       ORDER BY publish_date DESC NULLS LAST, updated_at DESC`
+    ),
+    pool.query(
+      `SELECT id, title, author, description, abstract, topics, cover_image, publish_date, updated_at, created_at
+       FROM books
+       WHERE status='published'
+       ORDER BY publish_date DESC NULLS LAST, updated_at DESC`
+    ),
+    pool.query(
+      `SELECT id, title, excerpt, content, content_html, content_text, topics, cover_image, publish_date, updated_at, created_at
+       FROM methodologies
+       WHERE status='published'
+       ORDER BY publish_date DESC NULLS LAST, updated_at DESC`
+    ),
+    pool.query(
+      `SELECT id, slug, client_name, logo_url, ppt_file_name, created_at, updated_at
+       FROM case_showcases
+       WHERE is_active = true AND is_published = true
+       ORDER BY sort_order ASC, created_at ASC`
+    ),
+  ]);
+
+  const sources = [];
+
+  for (const row of insightsQ.rows) {
+    const plainText = normalizeExtractedText(
+      row.content_text || stripHtmlTags(row.content_html || row.content || '')
+    );
+    sources.push({
+      contentType: 'insight',
+      contentId: row.id,
+      title: safeText(row.title),
+      summary: safeText(row.excerpt),
+      tags: buildAssistantTags(row.topics),
+      authorOrPublisher: '',
+      publishDate: toAssistantDate(row.publish_date),
+      updatedAt: row.updated_at,
+      createdAt: row.created_at,
+      publicUrl: getAssistantPublicUrl('insight', row.id),
+      coverUrl: safeText(row.cover_image),
+      plainText,
+      sourceSnippet: buildAssistantSnippet(row.excerpt, plainText),
+      clientName: '',
+    });
+  }
+
+  for (const row of reportsQ.rows) {
+    const plainText = normalizeExtractedText(row.summary || '');
+    sources.push({
+      contentType: 'report',
+      contentId: row.id,
+      title: safeText(row.title),
+      summary: safeText(row.summary),
+      tags: buildAssistantTags(row.topics),
+      authorOrPublisher: safeText(row.publisher),
+      publishDate: toAssistantDate(row.publish_date),
+      updatedAt: row.updated_at,
+      createdAt: row.created_at,
+      publicUrl: getAssistantPublicUrl('report', row.id),
+      coverUrl: safeText(row.cover_image),
+      plainText,
+      sourceSnippet: buildAssistantSnippet(row.summary, plainText),
+      clientName: '',
+    });
+  }
+
+  for (const row of booksQ.rows) {
+    const plainText = normalizeExtractedText([row.description, row.abstract, row.author].filter(Boolean).join('\n\n'));
+    sources.push({
+      contentType: 'book',
+      contentId: row.id,
+      title: safeText(row.title),
+      summary: safeText(row.description || row.abstract),
+      tags: buildAssistantTags(row.topics),
+      authorOrPublisher: safeText(row.author),
+      publishDate: toAssistantDate(row.publish_date),
+      updatedAt: row.updated_at,
+      createdAt: row.created_at,
+      publicUrl: getAssistantPublicUrl('book', row.id),
+      coverUrl: safeText(row.cover_image),
+      plainText,
+      sourceSnippet: buildAssistantSnippet(row.description || row.abstract, plainText),
+      clientName: '',
+    });
+  }
+
+  for (const row of methodsQ.rows) {
+    const plainText = normalizeExtractedText(
+      row.content_text || stripHtmlTags(row.content_html || row.content || '')
+    );
+    sources.push({
+      contentType: 'methodology',
+      contentId: row.id,
+      title: safeText(row.title),
+      summary: safeText(row.excerpt),
+      tags: buildAssistantTags(row.topics),
+      authorOrPublisher: '',
+      publishDate: toAssistantDate(row.publish_date),
+      updatedAt: row.updated_at,
+      createdAt: row.created_at,
+      publicUrl: getAssistantPublicUrl('methodology', row.id),
+      coverUrl: safeText(row.cover_image),
+      plainText,
+      sourceSnippet: buildAssistantSnippet(row.excerpt, plainText),
+      clientName: '',
+    });
+  }
+
+  for (const row of casesQ.rows) {
+    const title = safeText(row.client_name);
+    const snippet = buildAssistantSnippet(`${title}案例展示`);
+    sources.push({
+      contentType: 'case',
+      contentId: row.id,
+      title,
+      summary: snippet,
+      tags: [],
+      authorOrPublisher: '',
+      publishDate: toAssistantDate(row.updated_at || row.created_at),
+      updatedAt: row.updated_at,
+      createdAt: row.created_at,
+      publicUrl: getAssistantPublicUrl('case', row.slug || row.id),
+      coverUrl: resolveEffectiveLogoUrl(row.logo_url, ''),
+      plainText: normalizeExtractedText([title, row.ppt_file_name].filter(Boolean).join('\n')),
+      sourceSnippet: snippet,
+      clientName: title,
+    });
+  }
+
+  return sources;
+}
+
+function mapAssistantSourceCard(source) {
+  return {
+    contentType: source.contentType,
+    contentId: source.contentId,
+    title: source.title,
+    snippet: source.sourceSnippet || source.summary || '',
+    tags: source.tags || [],
+    publishDate: source.publishDate || '',
+    url: source.publicUrl,
+    coverUrl: source.coverUrl || '',
+    label: YIYU_TONG_SOURCE_TYPE_LABELS[source.contentType] || '内容',
+  };
+}
+
+function buildAssistantFallbackAnswer(question, sources) {
+  if (!sources.length) {
+    return '当前官网已发布内容中未找到相关信息。';
+  }
+  const leading = sources.slice(0, 3).map((item) => item.title).join('、');
+  if (/最新/.test(question)) {
+    return `目前官网最新可查看的内容包括：${leading}。`;
+  }
+  return `我先帮你定位到这些相关内容：${leading}。`;
+}
+
+async function buildAssistantAnswer(question, sources) {
+  if (!sources.length) {
+    return '当前官网已发布内容中未找到相关信息。';
+  }
+
+  if (!isArkReady()) {
+    return buildAssistantFallbackAnswer(question, sources);
+  }
+
+  try {
+    const content = await callArkChat([
+      {
+        role: 'system',
+        content: [
+          '你是益语智库官网前台助手“益语通”。',
+          '你只能依据提供的官网已发布内容回答。',
+          '请用简洁中文回答，控制在120字以内。',
+          '不要编造官网没有写明的事实。',
+          '找不到明确依据时，直接回答：当前官网已发布内容中未找到相关信息。',
+          '只返回 JSON，格式为 {"answer":"..."}。',
+        ].join(''),
+      },
+      {
+        role: 'user',
+        content: JSON.stringify({
+          question,
+          sources: sources.slice(0, 5).map((item) => ({
+            type: YIYU_TONG_SOURCE_TYPE_LABELS[item.contentType] || item.contentType,
+            title: item.title,
+            tags: item.tags,
+            summary: item.summary,
+            snippet: item.sourceSnippet,
+            authorOrPublisher: item.authorOrPublisher,
+            publishDate: item.publishDate,
+          })),
+        }),
+      },
+    ]);
+    const parsed = extractJsonObject(content);
+    const answer = safeText(parsed.answer);
+    return answer || buildAssistantFallbackAnswer(question, sources);
+  } catch {
+    return buildAssistantFallbackAnswer(question, sources);
+  }
+}
+
+function detectConsultIntent(question) {
+  return /(咨询|诊断|合作沟通|预约诊断|预约咨询|联系你们|怎么合作|申请咨询)/.test(safeText(question));
+}
+
+function detectNavigationIntent(question) {
+  return /(打开|进入|带我去|前往|跳到|去看|去到|看看|在哪|哪里|打开最新|打开.*案例|进入.*案例)/.test(safeText(question));
+}
+
+function resolvePageNavigation(question) {
+  const q = safeText(question);
+  if (/(最新|最近)/.test(q) && /(报告|文章|洞察|书|图书|书籍|方法论|工具|案例|客户)/.test(q)) {
+    return null;
+  }
+  if (/图书馆|书籍页|推荐书籍/.test(q)) {
+    return { label: '图书馆', target: '/?page=book-library' };
+  }
+  if (/学习中心/.test(q)) {
+    return { label: '学习中心', target: '/?page=learning' };
+  }
+  if (/文章中心|洞察文章/.test(q)) {
+    return { label: '文章中心', target: '/?page=article-center' };
+  }
+  if (/前沿报告|报告库/.test(q)) {
+    return { label: '前沿报告', target: '/?page=report-library' };
+  }
+  if (/前沿洞察|洞察页/.test(q)) {
+    return { label: '前沿洞察', target: '/?page=insights' };
+  }
+  if (/方法论|工具/.test(q)) {
+    return { label: '益语方法论', target: '/?page=methodology-library' };
+  }
+  if (/战略陪伴/.test(q)) {
+    return { label: '战略陪伴', target: '/?page=strategy' };
+  }
+  if (/关于我们/.test(q)) {
+    return { label: '关于我们', target: '/?page=about' };
+  }
+  if (/首页/.test(q)) {
+    return { label: '首页', target: '/' };
+  }
+  return null;
+}
+
+function pickLatestSourceByType(sources, type) {
+  return sources
+    .filter((item) => item.contentType === type)
+    .sort((a, b) => {
+      const aTime = Date.parse(a.publishDate || a.updatedAt || a.createdAt || '') || 0;
+      const bTime = Date.parse(b.publishDate || b.updatedAt || b.createdAt || '') || 0;
+      return bTime - aTime;
+    })[0];
+}
+
+function pickRelevantSources(question, sources) {
+  const tokens = extractAssistantTokens(question);
+  const typedFilters = detectAssistantContentTypes(question);
+  const latest = /最新|最近/.test(question);
+
+  if (latest && typedFilters.length === 1) {
+    const found = pickLatestSourceByType(sources, typedFilters[0]);
+    return found ? [found] : [];
+  }
+
+  return sources
+    .map((item) => ({
+      item,
+      score: scoreAssistantSource(item, question, tokens, typedFilters),
+    }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map((entry) => entry.item);
+}
+
+async function extractConsultFields(question, knownUserInfo) {
+  const fallback = {
+    name: safeText(knownUserInfo?.nickname || ''),
+    organization: safeText(knownUserInfo?.organization || ''),
+    phone: safeText(knownUserInfo?.phone || ''),
+    email: safeText(knownUserInfo?.email || ''),
+    note: safeText(question),
+  };
+
+  if (!isArkReady()) {
+    return fallback;
+  }
+
+  try {
+    const content = await callArkChat([
+      {
+        role: 'system',
+        content: [
+          '你是一个表单字段提取助手。',
+          '请根据用户输入和已有资料，提取咨询申请所需字段。',
+          '如果字段不确定就返回空字符串。',
+          '备注字段用一句话概括用户需求。',
+          '只返回 JSON，格式为 {"name":"","organization":"","phone":"","email":"","note":""}。',
+        ].join(''),
+      },
+      {
+        role: 'user',
+        content: JSON.stringify({
+          question,
+          knownUserInfo: fallback,
+        }),
+      },
+    ]);
+    const parsed = extractJsonObject(content);
+    return {
+      name: safeText(parsed.name, fallback.name),
+      organization: safeText(parsed.organization, fallback.organization),
+      phone: safeText(parsed.phone, fallback.phone),
+      email: safeText(parsed.email, fallback.email),
+      note: safeText(parsed.note, fallback.note),
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+async function buildAssistantResponse(payload) {
+  const question = safeText(payload?.question);
+  const knownUserInfo = payload?.knownUserInfo && typeof payload.knownUserInfo === 'object' ? payload.knownUserInfo : {};
+  if (!question) {
+    return {
+      mode: 'answer',
+      answer: '可以直接问我最新内容、某个主题的资料，或让我带你去某个页面。',
+      sourceCards: [],
+      actions: [],
+      collectedFields: null,
+      followups: ['最新有什么内容', '推荐几本书', '我想申请咨询'],
+    };
+  }
+
+  const sources = await listAssistantSources();
+
+  if (detectConsultIntent(question)) {
+    const collectedFields = await extractConsultFields(question, knownUserInfo);
+    return {
+      mode: 'consult_intake',
+      answer: '我先帮你整理了一下已有信息。确认后，我会带你打开正式的咨询申请表；如果暂时无法稳定预填，也不会影响你继续提交。',
+      sourceCards: [],
+      actions: [
+        {
+          type: 'open_consult_form',
+          label: '打开正式申请表',
+          target: YIYU_TONG_FORM_URL,
+          prefillPayload: collectedFields,
+        },
+      ],
+      collectedFields,
+      followups: ['我想了解战略陪伴', '我想先看看案例'],
+    };
+  }
+
+  const pageNavigation = resolvePageNavigation(question);
+  if (pageNavigation && detectNavigationIntent(question)) {
+    return {
+      mode: 'navigate',
+      answer: `已为你打开${pageNavigation.label}。`,
+      sourceCards: [],
+      actions: [
+        {
+          type: 'open_url',
+          label: `前往${pageNavigation.label}`,
+          target: pageNavigation.target,
+        },
+      ],
+      collectedFields: null,
+      followups: [],
+    };
+  }
+
+  const rankedSources = pickRelevantSources(question, sources);
+  const topSources = rankedSources.slice(0, YIYU_TONG_SOURCE_LIMIT);
+
+  if (detectNavigationIntent(question) && topSources.length === 1) {
+    return {
+      mode: 'navigate',
+      answer: `已为你定位到《${topSources[0].title}》。`,
+      sourceCards: [mapAssistantSourceCard(topSources[0])],
+      actions: [
+        {
+          type: 'open_detail',
+          label: '打开对应页面',
+          target: topSources[0].publicUrl,
+        },
+      ],
+      collectedFields: null,
+      followups: [],
+    };
+  }
+
+  const answer = await buildAssistantAnswer(question, topSources);
+  const noEvidence = answer.includes('当前官网已发布内容中未找到相关信息');
+  return {
+    mode: 'answer',
+    answer,
+    sourceCards: noEvidence ? [] : topSources.map(mapAssistantSourceCard),
+    actions: !noEvidence && topSources.length === 1
+      ? [
+          {
+            type: 'open_detail',
+            label: '打开对应页面',
+            target: topSources[0].publicUrl,
+          },
+        ]
+      : [],
+    collectedFields: null,
+    followups: noEvidence
+      ? ['最新有什么内容', '推荐几本书', '我想申请咨询']
+      : topSources.length
+        ? ['再推荐几篇相关文章', '还有别的相关内容吗']
+        : ['最新有什么内容', '推荐几本书'],
+  };
+}
+
 function mapCaseShowcase(row) {
   return {
     id: row.id,
@@ -3839,6 +4378,12 @@ const server = http.createServer(async (req, res) => {
 
     if (url.pathname === '/api/auth/bootstrap' && req.method === 'GET') {
       return json(res, 200, { ok: true, phase: 'pg-auth-api', authReady: true });
+    }
+
+    if (url.pathname === '/api/auth/assistant/query' && req.method === 'POST') {
+      const payload = await readJsonBody(req);
+      const data = await buildAssistantResponse(payload);
+      return json(res, 200, { ok: true, data });
     }
 
     if (url.pathname === '/api/auth/session' && req.method === 'GET') {
