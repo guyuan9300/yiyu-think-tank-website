@@ -431,6 +431,65 @@ export default function App() {
     setCurrentPage(type);
   };
 
+  useEffect(() => {
+    window.__YIYU_TONG_APP__ = {
+      getState: () => ({
+        currentPage,
+        currentUrl: window.location.pathname + window.location.search,
+        selectedDetailId,
+        selectedBookId,
+        selectedCaseId,
+      }),
+      openInternalUrl: (target: string) => {
+        const normalized = target.startsWith('?') ? target : target.replace(window.location.origin, '');
+        const params = new URLSearchParams(normalized.startsWith('?') ? normalized.slice(1) : normalized.split('?')[1] || '');
+        const page = params.get('page') || 'home';
+        const id = params.get('id') || '';
+
+        if (page === 'article' || page === 'report') {
+          handleNavigateToDetail(page as 'article' | 'report', id);
+          return;
+        }
+
+        if (page === 'case') {
+          handleNavigate('case', undefined, id);
+          return;
+        }
+
+        if (page === 'book-reader') {
+          handleNavigate('book-reader', id);
+          return;
+        }
+
+        if (page === 'payment-checkout' || page === 'payment-result' || page === 'methodology-library') {
+          handleNavigate(page as any, id);
+          return;
+        }
+
+        handleNavigate(page as any);
+      },
+      navigate: (page: string, id?: string) => {
+        if (page === 'article' || page === 'report') {
+          handleNavigateToDetail(page as 'article' | 'report', id || '');
+          return;
+        }
+        if (page === 'case') {
+          handleNavigate('case', undefined, id);
+          return;
+        }
+        if (page === 'book-reader') {
+          handleNavigate('book-reader', id);
+          return;
+        }
+        handleNavigate(page as any, id);
+      },
+    };
+
+    return () => {
+      delete window.__YIYU_TONG_APP__;
+    };
+  }, [currentPage, selectedBookId, selectedCaseId, selectedDetailId]);
+
   // Not Found Page (unknown `?page=`)
   if (currentPage === '404') {
     return renderWithYiyuTong(

@@ -269,7 +269,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
 
   if (!report) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div data-yiyu-page="report" className="min-h-screen bg-gray-50">
         <Header isLoggedIn={isLoggedIn} userType={isLoggedIn ? 'member' : 'visitor'} />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center max-w-md px-6">
@@ -299,7 +299,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div data-yiyu-page="report" className="min-h-screen bg-gray-50 flex flex-col">
       <Header isLoggedIn={isLoggedIn} userType={isLoggedIn ? 'member' : 'visitor'} />
 
       {/* 报告信息头部 */}

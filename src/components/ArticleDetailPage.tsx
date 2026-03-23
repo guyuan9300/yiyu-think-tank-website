@@ -67,7 +67,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
 
   if (!article) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
+      <div data-yiyu-page="article" className="min-h-screen bg-background flex flex-col">
         <Header
           isLoggedIn={isLoggedIn}
           userType={isLoggedIn ? 'member' : 'visitor'}
@@ -97,7 +97,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
   const displayArticle = article;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div data-yiyu-page="article" className="min-h-screen bg-background flex flex-col">
       <Header
         isLoggedIn={isLoggedIn}
         userType={isLoggedIn ? 'member' : 'visitor'}

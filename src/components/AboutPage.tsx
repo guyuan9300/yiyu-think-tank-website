@@ -79,7 +79,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div data-yiyu-page="about" className="min-h-screen bg-background">
       <Header isLoggedIn={false} userType="visitor" onNavigate={(page) => handleNavigate(page as any)} />
 
       <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">

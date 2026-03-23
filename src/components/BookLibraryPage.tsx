@@ -134,7 +134,7 @@ const filteredBooks = useMemo(() => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div data-yiyu-page="book-library" className="min-h-screen bg-background flex flex-col">
       <Header onNavigate={onNavigate} />
 
       {/* Page Header */}
@@ -168,6 +168,7 @@ const filteredBooks = useMemo(() => {
             <div className="flex-1 min-w-64 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
               <input
+                data-yiyu-search="content"
                 type="text"
                 placeholder="搜索书名、作者、标签..."
                 value={searchQuery}
@@ -183,6 +184,7 @@ const filteredBooks = useMemo(() => {
               {/* 标签 */}
               <div className="relative">
                 <button
+                  data-yiyu-filter-topic-trigger="content"
                   type="button"
                   onClick={() => {
                     setTagOpen((v) => !v);
@@ -200,6 +202,7 @@ const filteredBooks = useMemo(() => {
                   <div className="absolute right-0 mt-2 w-48 max-h-72 overflow-auto rounded-2xl border border-border/60 bg-white shadow-xl shadow-black/[0.06] p-1 z-20">
                     {tagOptions.map((opt) => (
                       <button
+                        data-yiyu-filter-topic-option={String(opt.id)}
                         key={String(opt.id)}
                         type="button"
                         onClick={() => {
@@ -218,6 +221,7 @@ const filteredBooks = useMemo(() => {
               {/* 年份 */}
               <div className="relative">
                 <button
+                  data-yiyu-filter-year-trigger="content"
                   type="button"
                   onClick={() => {
                     setYearOpen((v) => !v);
@@ -235,6 +239,7 @@ const filteredBooks = useMemo(() => {
                   <div className="absolute right-0 mt-2 w-40 max-h-72 overflow-auto rounded-2xl border border-border/60 bg-white shadow-xl shadow-black/[0.06] p-1 z-20">
                     {yearOptions.map((y) => (
                       <button
+                        data-yiyu-filter-year-option={String(y)}
                         key={String(y)}
                         type="button"
                         onClick={() => {

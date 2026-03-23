@@ -60,9 +60,17 @@ export function ContentResourceCard({
   onClick?: () => void;
   variant?: 'grid' | 'list';
 }) {
+  const cardDataAttributes = {
+    'data-yiyu-card': 'content',
+    'data-yiyu-card-title': title,
+    'data-yiyu-card-author': author || '',
+    'data-yiyu-card-tags': tags.join('|'),
+  } as const;
+
   if (variant === 'list') {
     return (
       <div
+        {...cardDataAttributes}
         className="group flex gap-6 rounded-[24px] border border-border/40 bg-white/70 p-5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-border/60 hover:bg-white/90 hover:shadow-[0_20px_60px_-45px_rgba(0,0,0,0.35)] cursor-pointer"
         onClick={onClick}
       >
@@ -104,7 +112,7 @@ export function ContentResourceCard({
   }
 
   return (
-    <article className="group h-full cursor-pointer" onClick={onClick}>
+    <article {...cardDataAttributes} className="group h-full cursor-pointer" onClick={onClick}>
       <div className="h-full overflow-hidden rounded-3xl border border-border/40 bg-white/70 transition-all duration-300 hover:-translate-y-1 hover:border-border/60 hover:bg-white/90 hover:shadow-[0_24px_70px_-45px_rgba(0,0,0,0.35)] flex flex-col">
         <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-primary/[0.03] to-accent/[0.03]">
           {cover}

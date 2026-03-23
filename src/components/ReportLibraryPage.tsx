@@ -127,7 +127,7 @@ export function ReportLibraryPage({
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div data-yiyu-page="report-library" className="min-h-screen bg-background flex flex-col">
       <Header onNavigate={onNavigate} />
 
       {/* Hero 区域 */}
@@ -173,6 +173,7 @@ export function ReportLibraryPage({
             <div className="flex-1 min-w-64 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
               <input
+                data-yiyu-search="content"
                 type="text"
                 placeholder="搜索报告、标签、机构..."
                 value={searchQuery}
@@ -185,6 +186,7 @@ export function ReportLibraryPage({
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-muted-foreground/50" />
               <select
+                data-yiyu-filter-topic="content"
                 value={selectedTopic}
                 onChange={(e) => setSelectedTopic(e.target.value as any)}
                 className="px-4 py-2.5 bg-muted/30 border border-border/40 rounded-full text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all cursor-pointer"
@@ -197,6 +199,7 @@ export function ReportLibraryPage({
               </select>
 
               <select
+                data-yiyu-filter-year="content"
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(e.target.value)}
                 className="px-4 py-2.5 bg-muted/30 border border-border/40 rounded-full text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all cursor-pointer"

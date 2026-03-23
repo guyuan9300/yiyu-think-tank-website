@@ -12,6 +12,7 @@
     "ark:proxy": "node scripts/ark-proxy-server.mjs"
   },
   "dependencies": {
+    "@page-agent/page-controller": "^1.6.1",
     "@supabase/supabase-js": "^2.93.3",
     "@tiptap/core": "^3.20.0",
     "@tiptap/extension-highlight": "^3.20.0",
@@ -24,10 +25,12 @@
     "@tiptap/starter-kit": "^3.20.0",
     "dompurify": "^3.3.1",
     "lucide-react": "^0.344.0",
+    "page-agent": "^1.6.1",
     "pdfjs-dist": "^5.4.530",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/dompurify": "^3.0.5",

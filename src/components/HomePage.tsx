@@ -393,7 +393,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div data-yiyu-page="home" className="min-h-screen bg-background">
       {/* Header */}
       <Header isLoggedIn={false} userType="visitor" onNavigate={handleNavigate} />
 

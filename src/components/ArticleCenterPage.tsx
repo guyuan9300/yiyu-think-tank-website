@@ -121,7 +121,7 @@ export function ArticleCenterPage({
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div data-yiyu-page="article-center" className="min-h-screen bg-background flex flex-col">
       <Header onNavigate={onNavigate} />
 
       {/* Hero 区域 */}
@@ -166,6 +166,7 @@ export function ArticleCenterPage({
             <div className="flex-1 min-w-64 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
               <input
+                data-yiyu-search="content"
                 type="text"
                 placeholder="搜索文章、标签..."
                 value={searchQuery}
@@ -178,6 +179,7 @@ export function ArticleCenterPage({
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-muted-foreground/50" />
               <select
+                data-yiyu-filter-topic="content"
                 value={selectedTopic}
                 onChange={(e) => setSelectedTopic(e.target.value as any)}
                 className="px-4 py-2.5 bg-muted/30 border border-border/40 rounded-full text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all cursor-pointer"

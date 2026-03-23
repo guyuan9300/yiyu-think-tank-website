@@ -265,7 +265,7 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div data-yiyu-page="strategy" className="min-h-screen bg-background">
       <Header isLoggedIn={isClientMode} userType={isClientMode ? 'client' : 'visitor'} onNavigate={handleNavigate} />
 
       {/* Client Mode: Organization Status Bar */}

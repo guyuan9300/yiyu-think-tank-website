@@ -48,6 +48,11 @@ export function runYiyuTongAction(action: YiyuTongAction) {
     ? `${window.location.pathname}${absoluteTarget}`
     : absoluteTarget;
 
+  if (window.__YIYU_TONG_APP__?.openInternalUrl) {
+    window.__YIYU_TONG_APP__.openInternalUrl(next);
+    return;
+  }
+
   if (window.location.pathname + window.location.search !== next) {
     window.history.pushState({}, '', absoluteTarget);
   }

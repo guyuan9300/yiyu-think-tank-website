@@ -1,8 +1,8 @@
-import { authRequest, type ApiResult } from './authHttp';
+import { authRequest, AUTH_BASE, type ApiResult } from './authHttp';
 
-export type YiyuTongMode = 'answer' | 'navigate' | 'consult_intake';
+export type YiyuTongMode = 'answer' | 'site_task' | 'consult_handoff';
 
-export interface YiyuTongSourceCard {
+export interface YiyuTongCitation {
   contentType: 'insight' | 'report' | 'book' | 'methodology' | 'case';
   contentId: string;
   title: string;
@@ -29,13 +29,37 @@ export interface YiyuTongCollectedFields {
   note?: string;
 }
 
+export interface YiyuTongSiteTaskSpec {
+  prompt: string;
+  bootstrapUrl?: string;
+  expectedUrl?: string;
+  pageId?: string;
+  filters?: {
+    searchQuery?: string;
+    topic?: string;
+    year?: string;
+  };
+  openTitle?: string;
+  openMode?: 'none' | 'exact' | 'first';
+  successMessage?: string;
+  fallbackAction?: YiyuTongAction | null;
+}
+
+export interface YiyuTongConsultHandoff {
+  ready: boolean;
+  formUrl: string;
+  missingFields: string[];
+}
+
 export interface YiyuTongResponse {
   mode: YiyuTongMode;
-  answer: string;
-  sourceCards: YiyuTongSourceCard[];
-  actions: YiyuTongAction[];
+  message: string;
+  citations: YiyuTongCitation[];
+  taskPlan: string[];
+  taskSpec: YiyuTongSiteTaskSpec | null;
+  fallbackAction: YiyuTongAction | null;
+  handoff: YiyuTongConsultHandoff | null;
   collectedFields: YiyuTongCollectedFields | null;
-  followups: string[];
 }
 
 export interface YiyuTongKnownUserInfo {
@@ -45,15 +69,33 @@ export interface YiyuTongKnownUserInfo {
   organization?: string;
 }
 
+export interface YiyuTongHistoryMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export function queryYiyuTong(payload: {
   question: string;
   sessionId: string;
   currentPage: string;
   currentUrl: string;
   knownUserInfo?: YiyuTongKnownUserInfo;
+  history?: YiyuTongHistoryMessage[];
 }): Promise<ApiResult<YiyuTongResponse>> {
   return authRequest<YiyuTongResponse>('/assistant/query', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+export async function proxyYiyuTongPageAgent(body: unknown, signal?: AbortSignal) {
+  const response = await fetch(`${AUTH_BASE}/assistant/page-agent`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+    signal,
+  });
+  return response;
 }

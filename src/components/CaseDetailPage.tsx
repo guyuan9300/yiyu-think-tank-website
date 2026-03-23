@@ -53,7 +53,7 @@ export function CaseDetailPage({ caseId, onNavigate }: CaseDetailPageProps) {
   }, [caseId]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div data-yiyu-page="case" className="min-h-screen bg-background">
       <Header
         isLoggedIn={isLoggedIn}
         userType={isLoggedIn ? 'member' : 'visitor'}

@@ -132,7 +132,7 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div data-yiyu-page="learning" className="min-h-screen bg-background">
       <Header isLoggedIn={false} userType="visitor" onNavigate={(p) => onNavigate?.(p as any)} />
 
       {/* Hero 区域：对齐「前沿洞察」样式 */}

@@ -1064,6 +1064,161 @@ function extractJsonObject(text) {
   return JSON.parse(candidate.slice(start, end + 1));
 }
 
+function tryExtractJsonObject(text) {
+  try {
+    return extractJsonObject(text);
+  } catch {
+    return null;
+  }
+}
+
+function escapeRegExp(text) {
+  return String(text || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function listPageAgentToolNames(payload) {
+  return Array.isArray(payload?.tools)
+    ? payload.tools
+        .map((item) => safeText(item?.function?.name))
+        .filter(Boolean)
+    : [];
+}
+
+function coercePageAgentValue(rawValue) {
+  const value = String(rawValue || '').trim().replace(/^['"]|['"]$/g, '');
+  if (!value) return '';
+  if (/^(true|false)$/i.test(value)) {
+    return value.toLowerCase() === 'true';
+  }
+  if (/^-?\d+(\.\d+)?$/.test(value)) {
+    return Number(value);
+  }
+  return value;
+}
+
+function extractMalformedActionParams(text) {
+  const keys = [
+    'index',
+    'seconds',
+    'target',
+    'title',
+    'mode',
+    'text',
+    'question',
+    'searchQuery',
+    'topic',
+    'year',
+    'success',
+    'down',
+    'num_pages',
+    'pixels',
+  ];
+  const params = {};
+
+  for (const key of keys) {
+    const patterns = [
+      new RegExp(`<parameter\\s+name=["']${escapeRegExp(key)}["'][^>]*>\\s*([^<\\n]+)`, 'i'),
+      new RegExp(`${escapeRegExp(key)}["']?\\s*[:=]\\s*"([^"]+)"`, 'i'),
+      new RegExp(`${escapeRegExp(key)}["']?\\s*[:=]\\s*'([^']+)'`, 'i'),
+      new RegExp(`${escapeRegExp(key)}["']?\\s*[:=]\\s*([^,}\\]\\n<>]+)`, 'i'),
+    ];
+    const matched = patterns
+      .map((pattern) => text.match(pattern))
+      .find((result) => result?.[1]);
+    if (matched?.[1]) {
+      params[key] = coercePageAgentValue(matched[1]);
+    }
+  }
+
+  return params;
+}
+
+function normalizePageAgentAction(rawAction, allowedToolNames) {
+  if (!rawAction || !allowedToolNames.length) return null;
+
+  if (typeof rawAction === 'string') {
+    const parsedJson = tryExtractJsonObject(rawAction);
+    if (parsedJson) {
+      return normalizePageAgentAction(parsedJson, allowedToolNames);
+    }
+
+    const matchedTool = allowedToolNames
+      .map((name) => ({ name, index: rawAction.indexOf(name) }))
+      .filter((item) => item.index >= 0)
+      .sort((a, b) => a.index - b.index)[0];
+
+    if (!matchedTool) return null;
+    return {
+      name: matchedTool.name,
+      arguments: extractMalformedActionParams(rawAction),
+    };
+  }
+
+  if (typeof rawAction !== 'object' || Array.isArray(rawAction)) {
+    return null;
+  }
+
+  if (typeof rawAction.action !== 'undefined') {
+    return normalizePageAgentAction(rawAction.action, allowedToolNames);
+  }
+
+  if (allowedToolNames.includes(safeText(rawAction.name))) {
+    return {
+      name: safeText(rawAction.name),
+      arguments:
+        rawAction.arguments && typeof rawAction.arguments === 'object' && !Array.isArray(rawAction.arguments)
+          ? rawAction.arguments
+          : {},
+    };
+  }
+
+  const toolKey = Object.keys(rawAction).find((key) => allowedToolNames.includes(key));
+  if (!toolKey) return null;
+  const toolArgs = rawAction[toolKey];
+  return {
+    name: toolKey,
+    arguments: toolArgs && typeof toolArgs === 'object' && !Array.isArray(toolArgs) ? toolArgs : {},
+  };
+}
+
+function normalizePageAgentProxyResponse(payload, responseData) {
+  const choice = responseData?.choices?.[0];
+  const message = choice?.message;
+  if (!choice || !message) return responseData;
+  if (Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
+    return responseData;
+  }
+
+  const allowedToolNames = listPageAgentToolNames(payload);
+  const normalizedAction = normalizePageAgentAction(message.content, allowedToolNames);
+  if (!normalizedAction) {
+    return responseData;
+  }
+
+  return {
+    ...responseData,
+    choices: [
+      {
+        ...choice,
+        message: {
+          ...message,
+          content: '',
+          tool_calls: [
+            {
+              id: `call_${crypto.randomUUID().replace(/-/g, '')}`,
+              type: 'function',
+              function: {
+                name: normalizedAction.name,
+                arguments: JSON.stringify(normalizedAction.arguments || {}),
+              },
+            },
+          ],
+        },
+      },
+    ],
+  };
+}
+
 function buildAiPrefillMessages(contentType, sourceData, filePath) {
   const isBook = contentType === 'book';
   const isArticleLike = contentType === 'insight' || contentType === 'methodology';
@@ -3071,6 +3226,33 @@ function scoreAssistantSource(source, question, tokens, typedFilters) {
   return score;
 }
 
+function matchesAssistantTopic(source, topic) {
+  const wanted = safeText(topic);
+  if (!wanted) return true;
+  const haystack = [
+    source.title,
+    source.summary,
+    source.authorOrPublisher,
+    source.clientName,
+    source.plainText,
+    ...(source.tags || []),
+  ]
+    .map((item) => safeText(item))
+    .join('\n');
+  return haystack.includes(wanted);
+}
+
+function pickLatestRelevantSource(sources, type, topic = '') {
+  return sources
+    .filter((item) => item.contentType === type)
+    .filter((item) => matchesAssistantTopic(item, topic))
+    .sort((a, b) => {
+      const aTime = Date.parse(a.publishDate || a.updatedAt || a.createdAt || '') || 0;
+      const bTime = Date.parse(b.publishDate || b.updatedAt || b.createdAt || '') || 0;
+      return bTime - aTime;
+    })[0];
+}
+
 async function listAssistantSources() {
   const [insightsQ, reportsQ, booksQ, methodsQ, casesQ] = await Promise.all([
     pool.query(
@@ -3296,6 +3478,18 @@ function detectNavigationIntent(question) {
   );
 }
 
+function detectContentQuestionIntent(question) {
+  return /(有哪些|有什么|推荐|总结|概述|介绍一下|做了什么|是什么|为什么|如何|怎么理解|内容|资料|区别|比较)/.test(
+    safeText(question)
+  );
+}
+
+function detectGuideIntent(question) {
+  return /(第一次来|第一次用|先看看|先看什么|从哪里开始|适合.*负责人|负责人.*看什么)/.test(
+    safeText(question)
+  );
+}
+
 function cleanNavigationSubject(question) {
   return safeText(question)
     .replace(/(带我去|帮我去|帮我打开|打开|进入|前往|跳到|去看|去到|看看|定位到|给我看|我想看|我想去|帮我找|带我看|请|请问|告诉我|我想知道)/g, ' ')
@@ -3351,6 +3545,19 @@ function normalizeAssistantTarget(target) {
   return target;
 }
 
+function buildAssistantTaskPlan(targetLabel) {
+  return [
+    '正在理解你的目标',
+    '正在规划操作步骤',
+    `正在定位${targetLabel || '相关页面'}`,
+    '正在操作页面',
+  ];
+}
+
+function buildAssistantAction(type, label, target, prefillPayload = undefined) {
+  return { type, label, target, prefillPayload };
+}
+
 function resolvePageNavigation(question) {
   const q = safeText(question);
   if (/(最新|最近)/.test(q) && /(报告|文章|洞察|书|图书|书籍|方法论|工具|案例|客户)/.test(q)) {
@@ -3386,6 +3593,187 @@ function resolvePageNavigation(question) {
   return null;
 }
 
+function detectAssistantTopic(question) {
+  const q = safeText(question);
+  if (/AI/.test(q)) return 'AI 技术';
+  if (/业务设计/.test(q)) return '业务设计';
+  if (/组织/.test(q)) return '组织';
+  if (/战略/.test(q)) return '战略';
+  return '';
+}
+
+function buildPageTaskResponse({ label, target, currentUrl, message }) {
+  const normalizedTarget = normalizeAssistantTarget(target);
+  if (currentUrl && normalizedTarget && currentUrl === normalizedTarget) {
+    return {
+      mode: 'answer',
+      message: `当前已经在${label}。`,
+      citations: [],
+      taskPlan: [],
+      taskSpec: null,
+      fallbackAction: null,
+      handoff: null,
+      collectedFields: null,
+    };
+  }
+
+  return {
+    mode: 'site_task',
+    message: message || `我来带你进入${label}。`,
+    citations: [],
+    taskPlan: buildAssistantTaskPlan(label),
+    taskSpec: {
+      prompt: [
+        `你的任务是在当前网站同一标签页内打开${label}。`,
+        `必须先使用 open_internal_url 打开 "${target}"。`,
+        '如果页面已经正确打开，立即调用 done。',
+      ].join(''),
+      bootstrapUrl: target,
+      expectedUrl: target,
+      pageId: (() => {
+        const params = new URLSearchParams(target.split('?')[1] || '');
+        return params.get('page') || 'home';
+      })(),
+      openMode: 'none',
+      successMessage: `已为你打开${label}。`,
+      fallbackAction: buildAssistantAction('open_url', `前往${label}`, target),
+    },
+    fallbackAction: buildAssistantAction('open_url', `前往${label}`, target),
+    handoff: null,
+    collectedFields: null,
+  };
+}
+
+function buildDirectSourceTaskResponse(source, currentUrl) {
+  const normalizedTarget = normalizeAssistantTarget(source.publicUrl);
+  if (currentUrl && normalizedTarget && currentUrl === normalizedTarget) {
+    return {
+      mode: 'answer',
+      message: `当前就是《${source.title}》页面。`,
+      citations: [],
+      taskPlan: [],
+      taskSpec: null,
+      fallbackAction: null,
+      handoff: null,
+      collectedFields: null,
+    };
+  }
+
+  return {
+    mode: 'site_task',
+    message: `我来带你打开《${source.title}》。`,
+    citations: [],
+    taskPlan: buildAssistantTaskPlan(source.title),
+    taskSpec: {
+      prompt: [
+        `你的任务是在当前网站同一标签页内打开《${source.title}》。`,
+        `必须先使用 open_internal_url 打开 "${source.publicUrl}"。`,
+        '页面正确打开后立即调用 done，不要额外解释。',
+      ].join(''),
+      bootstrapUrl: source.publicUrl,
+      expectedUrl: source.publicUrl,
+      pageId: (() => {
+        const params = new URLSearchParams(source.publicUrl.split('?')[1] || '');
+        return params.get('page') || 'home';
+      })(),
+      openMode: 'none',
+      successMessage: `已为你打开《${source.title}》。`,
+      fallbackAction: buildAssistantAction('open_detail', '打开对应页面', source.publicUrl),
+    },
+    fallbackAction: buildAssistantAction('open_detail', '打开对应页面', source.publicUrl),
+    handoff: null,
+    collectedFields: null,
+  };
+}
+
+function buildFilterTaskResponse({ question, contentType, pageLabel, pageTarget, pageId, topic, latestSource }) {
+  const targetText = topic ? `${topic}相关的${pageLabel}` : pageLabel;
+  const shouldOpenResult = /最新|最近|打开|进入|去看|看看|带我|帮我找|帮我看|定位|找/.test(question);
+  const promptParts = [
+    `你的任务是在当前网站同一标签页内帮用户找到${targetText}。`,
+    `如果当前不在${pageLabel}页面，先使用 open_internal_url 打开 "${pageTarget}"。`,
+  ];
+
+  if (topic) {
+    promptParts.push(`然后优先使用站内筛选工具，把标签切到“${topic}”。`);
+  }
+
+  if (shouldOpenResult) {
+    if (latestSource) {
+      promptParts.push(
+        `筛选完成后，优先打开标题为《${latestSource.title}》的内容。`
+      );
+    } else {
+      promptParts.push('如果筛选后只有一个明显匹配的结果，就直接打开它；否则停留在筛选后的结果页并调用 done。');
+    }
+  }
+
+  promptParts.push('任务完成后立即调用 done，用一句中文说明你已经完成了什么。');
+
+  return {
+    mode: 'site_task',
+    message: `我来帮你定位${targetText}。`,
+    citations: [],
+    taskPlan: buildAssistantTaskPlan(targetText),
+    taskSpec: {
+      prompt: promptParts.join(''),
+      bootstrapUrl: pageTarget,
+      expectedUrl: latestSource && shouldOpenResult ? latestSource.publicUrl : pageTarget,
+      pageId,
+      filters: {
+        topic: topic || '',
+      },
+      openTitle: latestSource && shouldOpenResult ? latestSource.title : '',
+      openMode: latestSource && shouldOpenResult ? 'exact' : 'none',
+      successMessage: latestSource && shouldOpenResult
+        ? `已帮你定位到《${latestSource.title}》。`
+        : `已帮你定位到${targetText}。`,
+      fallbackAction: buildAssistantAction(
+        latestSource && shouldOpenResult ? 'open_detail' : 'open_list',
+        latestSource && shouldOpenResult ? '打开对应页面' : `前往${pageLabel}`,
+        latestSource && shouldOpenResult ? latestSource.publicUrl : pageTarget
+      ),
+    },
+    fallbackAction: buildAssistantAction(
+      latestSource && shouldOpenResult ? 'open_detail' : 'open_list',
+      latestSource && shouldOpenResult ? '打开对应页面' : `前往${pageLabel}`,
+      latestSource && shouldOpenResult ? latestSource.publicUrl : pageTarget
+    ),
+    handoff: null,
+    collectedFields: null,
+  };
+}
+
+function buildGuideTaskResponse(question) {
+  const topic = detectAssistantTopic(question) || '组织';
+  return {
+    mode: 'site_task',
+    message: '我先带你去看更适合上手的内容入口。',
+    citations: [],
+    taskPlan: buildAssistantTaskPlan('适合上手的内容入口'),
+    taskSpec: {
+      prompt: [
+        '你的任务是为第一次来访的用户打开更适合入门的内容入口。',
+        '请先使用 open_internal_url 打开 "/?page=article-center"。',
+        `再优先使用站内筛选工具，将标签切换到“${topic}”。`,
+        '如果页面中出现最上方的内容列表，说明任务完成，立即调用 done。',
+      ].join(''),
+      bootstrapUrl: '/?page=article-center',
+      expectedUrl: '/?page=article-center',
+      pageId: 'article-center',
+      filters: {
+        topic,
+      },
+      openMode: 'none',
+      successMessage: '已为你打开更适合上手的内容入口。',
+      fallbackAction: buildAssistantAction('open_url', '前往文章中心', '/?page=article-center'),
+    },
+    fallbackAction: buildAssistantAction('open_url', '前往文章中心', '/?page=article-center'),
+    handoff: null,
+    collectedFields: null,
+  };
+}
+
 function pickLatestSourceByType(sources, type) {
   return sources
     .filter((item) => item.contentType === type)
@@ -3416,13 +3804,20 @@ function pickRelevantSources(question, sources) {
     .map((entry) => entry.item);
 }
 
-async function extractConsultFields(question, knownUserInfo) {
+async function extractConsultFields(question, knownUserInfo, history = []) {
+  const historyText = Array.isArray(history)
+    ? history
+        .filter((item) => item && item.role === 'user')
+        .map((item) => safeText(item.content))
+        .filter(Boolean)
+        .join('\n')
+    : '';
   const fallback = {
     name: safeText(knownUserInfo?.nickname || ''),
     organization: safeText(knownUserInfo?.organization || ''),
     phone: safeText(knownUserInfo?.phone || ''),
     email: safeText(knownUserInfo?.email || ''),
-    note: safeText(question),
+    note: safeText(question || historyText),
   };
 
   if (!isArkReady()) {
@@ -3445,6 +3840,7 @@ async function extractConsultFields(question, knownUserInfo) {
         role: 'user',
         content: JSON.stringify({
           question,
+          historyText,
           knownUserInfo: fallback,
         }),
       },
@@ -3465,137 +3861,130 @@ async function extractConsultFields(question, knownUserInfo) {
 async function buildAssistantResponse(payload) {
   const question = safeText(payload?.question);
   const knownUserInfo = payload?.knownUserInfo && typeof payload.knownUserInfo === 'object' ? payload.knownUserInfo : {};
+  const history = Array.isArray(payload?.history) ? payload.history : [];
   const currentUrl = normalizeAssistantTarget(payload?.currentUrl || '');
   if (!question) {
     return {
       mode: 'answer',
-      answer: '可以直接问我最新内容、某个主题的资料，或让我带你去某个页面。',
-      sourceCards: [],
-      actions: [],
+      message: '可以直接问我官网里的内容，也可以让我帮你进入页面、筛选资料或整理咨询信息。',
+      citations: [],
+      taskPlan: [],
+      taskSpec: null,
+      fallbackAction: null,
+      handoff: null,
       collectedFields: null,
-      followups: [],
     };
   }
 
   const sources = await listAssistantSources();
 
   if (detectConsultIntent(question)) {
-    const collectedFields = await extractConsultFields(question, knownUserInfo);
-    return {
-      mode: 'consult_intake',
-      answer: '我先帮你整理了一下已有信息。确认后，我会带你打开正式的咨询申请表；如果暂时无法稳定预填，也不会影响你继续提交。',
-      sourceCards: [],
-      actions: [
-        {
-          type: 'open_consult_form',
-          label: '打开正式申请表',
-          target: YIYU_TONG_FORM_URL,
-          prefillPayload: collectedFields,
+    const collectedFields = await extractConsultFields(question, knownUserInfo, history);
+    const missingFields = [];
+    if (!safeText(collectedFields.organization)) missingFields.push('机构');
+    if (!safeText(collectedFields.name)) missingFields.push('姓名');
+    if (!safeText(collectedFields.phone) && !safeText(collectedFields.email)) missingFields.push('手机号或邮箱');
+
+    if (missingFields.length) {
+      return {
+        mode: 'consult_handoff',
+        message: `为了帮你整理咨询申请，我还需要补充：${missingFields.join('、')}。你直接回复这些信息就行。`,
+        citations: [],
+        taskPlan: [],
+        taskSpec: null,
+        fallbackAction: null,
+        handoff: {
+          ready: false,
+          formUrl: YIYU_TONG_FORM_URL,
+          missingFields,
         },
-      ],
+        collectedFields,
+      };
+    }
+
+    return {
+      mode: 'consult_handoff',
+      message: '我先帮你整理好了咨询信息，你确认后就可以打开正式申请表继续提交。',
+      citations: [],
+      taskPlan: [],
+      taskSpec: null,
+      fallbackAction: buildAssistantAction('open_consult_form', '打开正式申请表', YIYU_TONG_FORM_URL, collectedFields),
+      handoff: {
+        ready: true,
+        formUrl: YIYU_TONG_FORM_URL,
+        missingFields: [],
+      },
       collectedFields,
-      followups: [],
     };
   }
 
   const pageNavigation = resolvePageNavigation(question);
-  if (pageNavigation && detectNavigationIntent(question)) {
-    const normalizedTarget = normalizeAssistantTarget(pageNavigation.target);
-    if (currentUrl && normalizedTarget && currentUrl === normalizedTarget) {
-      return {
-        mode: 'answer',
-        answer: `当前就是${pageNavigation.label}。`,
-        sourceCards: [],
-        actions: [],
-        collectedFields: null,
-        followups: [],
-      };
-    }
-    return {
-      mode: 'navigate',
-      answer: `已为你打开${pageNavigation.label}。`,
-      sourceCards: [],
-      actions: [
-        {
-          type: 'open_url',
-          label: `前往${pageNavigation.label}`,
-          target: pageNavigation.target,
-        },
-      ],
-      collectedFields: null,
-      followups: [],
-    };
-  }
-
   const rankedSources = pickRelevantSources(question, sources);
   const topSources = rankedSources.slice(0, YIYU_TONG_SOURCE_LIMIT);
   const directSource = findDirectNavigationSource(question, sources);
+  const topic = detectAssistantTopic(question);
+  const typedFilters = detectAssistantContentTypes(question);
+  const wantsLatest = /最新|最近/.test(question);
+  const hasActionIntent = detectNavigationIntent(question) || /(想找|想看|想去|帮我找|帮我看|看看|浏览|进入)/.test(question);
 
-  if (directSource) {
-    const normalizedTarget = normalizeAssistantTarget(directSource.publicUrl);
-    if (currentUrl && normalizedTarget && currentUrl === normalizedTarget) {
-      return {
-        mode: 'answer',
-        answer: `当前就是《${directSource.title}》页面。`,
-        sourceCards: [],
-        actions: [],
-        collectedFields: null,
-        followups: [],
-      };
-    }
-    return {
-      mode: 'navigate',
-      answer: `已为你定位到《${directSource.title}》。`,
-      sourceCards: [],
-      actions: [
-        {
-          type: 'open_detail',
-          label: '打开对应页面',
-          target: directSource.publicUrl,
-        },
-      ],
-      collectedFields: null,
-      followups: [],
-    };
+  if (pageNavigation && (hasActionIntent || !detectContentQuestionIntent(question))) {
+    return buildPageTaskResponse({
+      label: pageNavigation.label,
+      target: pageNavigation.target,
+      currentUrl,
+      message: `我来带你进入${pageNavigation.label}。`,
+    });
   }
 
-  if (detectNavigationIntent(question) && topSources.length === 1) {
-    const normalizedTarget = normalizeAssistantTarget(topSources[0].publicUrl);
-    if (currentUrl && normalizedTarget && currentUrl === normalizedTarget) {
-      return {
-        mode: 'answer',
-        answer: `当前就是《${topSources[0].title}》页面。`,
-        sourceCards: [],
-        actions: [],
-        collectedFields: null,
-        followups: [],
-      };
+  if (directSource && (hasActionIntent || /在哪|哪里|哪儿|案例/.test(safeText(question)) || !detectContentQuestionIntent(question))) {
+    return buildDirectSourceTaskResponse(directSource, currentUrl);
+  }
+
+  if (detectGuideIntent(question)) {
+    return buildGuideTaskResponse(question);
+  }
+
+  if (typedFilters.length === 1 && hasActionIntent) {
+    const type = typedFilters[0];
+    const latestSource = wantsLatest
+      ? pickLatestRelevantSource(sources, type, topic) || rankedSources.find((item) => item.contentType === type) || pickLatestSourceByType(sources, type)
+      : pickLatestRelevantSource(sources, type, topic) || rankedSources.find((item) => item.contentType === type) || null;
+
+    if (latestSource && wantsLatest) {
+      return buildDirectSourceTaskResponse(latestSource, currentUrl);
     }
-    return {
-      mode: 'navigate',
-      answer: `已为你定位到《${topSources[0].title}》。`,
-      sourceCards: [],
-      actions: [
-        {
-          type: 'open_detail',
-          label: '打开对应页面',
-          target: topSources[0].publicUrl,
-        },
-      ],
-      collectedFields: null,
-      followups: [],
-    };
+
+    const mapping = {
+      insight: { pageLabel: '文章中心', pageTarget: '/?page=article-center' },
+      report: { pageLabel: '前沿报告', pageTarget: '/?page=report-library' },
+      book: { pageLabel: '图书馆', pageTarget: '/?page=book-library' },
+      methodology: { pageLabel: '益语方法论', pageTarget: '/?page=methodology-library' },
+    }[type];
+
+    if (mapping) {
+      return buildFilterTaskResponse({
+        question,
+        contentType: type,
+        pageLabel: mapping.pageLabel,
+        pageTarget: mapping.pageTarget,
+        pageId: mapping.pageTarget.replace('/?page=', ''),
+        topic,
+        latestSource,
+      });
+    }
   }
 
   const answer = await buildAssistantAnswer(question, topSources);
   const noEvidence = answer.includes('当前官网已发布内容中未找到相关信息');
   return {
     mode: 'answer',
-    answer,
-    sourceCards: noEvidence ? [] : topSources.map(mapAssistantSourceCard),
-    actions: [],
+    message: answer,
+    citations: noEvidence ? [] : topSources.map(mapAssistantSourceCard),
+    taskPlan: [],
+    taskSpec: null,
+    fallbackAction: null,
+    handoff: null,
     collectedFields: null,
-    followups: [],
   };
 }
 
@@ -4481,6 +4870,40 @@ const server = http.createServer(async (req, res) => {
       const payload = await readJsonBody(req);
       const data = await buildAssistantResponse(payload);
       return json(res, 200, { ok: true, data });
+    }
+
+    if (url.pathname === '/api/auth/assistant/page-agent' && req.method === 'POST') {
+      if (!isArkReady()) {
+        return json(res, 503, { error: { message: '火山方舟模型尚未就绪' } });
+      }
+
+      const payload = await readJsonBody(req);
+      const response = await fetch(`${ARK_BASE_URL}/api/v3/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.ARK_API_KEY}`,
+        },
+        body: JSON.stringify({
+          ...payload,
+          model: safeText(payload?.model, ARK_MODEL),
+          temperature: typeof payload?.temperature === 'number' ? payload.temperature : 0.1,
+          reasoning_effort: undefined,
+        }),
+      });
+
+      const text = await response.text();
+      let normalizedText = text;
+      try {
+        const parsed = JSON.parse(text);
+        const normalized = normalizePageAgentProxyResponse(payload, parsed);
+        normalizedText = JSON.stringify(normalized);
+      } catch {
+        normalizedText = text;
+      }
+      res.writeHead(response.status, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(normalizedText);
+      return;
     }
 
     if (url.pathname === '/api/auth/session' && req.method === 'GET') {

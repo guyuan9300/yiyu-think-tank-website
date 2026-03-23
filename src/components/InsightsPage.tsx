@@ -89,7 +89,7 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
   // 加载状态
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div data-yiyu-page="insights" className="min-h-screen bg-background">
         <Header onNavigate={onNavigate} />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
@@ -102,7 +102,7 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div data-yiyu-page="insights" className="min-h-screen bg-background">
       {/* 头部 */}
       <Header onNavigate={onNavigate} />
 

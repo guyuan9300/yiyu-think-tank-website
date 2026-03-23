@@ -264,7 +264,7 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
   }, [chatMessages]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div data-yiyu-page="book" className="min-h-screen bg-gray-50 flex flex-col">
       <Header isLoggedIn={true} userType="member" onNavigate={onNavigate} />
 
       {/* 书籍信息头部 - 优化为紧凑布局 */}
