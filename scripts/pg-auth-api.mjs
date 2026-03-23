@@ -3634,6 +3634,12 @@ function buildPageTaskResponse({ label, target, currentUrl, message }) {
         const params = new URLSearchParams(target.split('?')[1] || '');
         return params.get('page') || 'home';
       })(),
+      phaseDetails: {
+        understanding: `识别到你想进入「${label}」。`,
+        planning: `计划在当前标签页直接打开${label}。`,
+        locating: `准备定位并进入${label}。`,
+        acting: `正在完成${label}的页面切换。`,
+      },
       openMode: 'none',
       successMessage: `已为你打开${label}。`,
       fallbackAction: buildAssistantAction('open_url', `前往${label}`, target),
@@ -3676,6 +3682,12 @@ function buildDirectSourceTaskResponse(source, currentUrl) {
         const params = new URLSearchParams(source.publicUrl.split('?')[1] || '');
         return params.get('page') || 'home';
       })(),
+      phaseDetails: {
+        understanding: `识别到你想查看《${source.title}》。`,
+        planning: `计划直接进入《${source.title}》对应的前台页面。`,
+        locating: `准备定位《${source.title}》页面。`,
+        acting: `正在打开《${source.title}》。`,
+      },
       openMode: 'none',
       successMessage: `已为你打开《${source.title}》。`,
       fallbackAction: buildAssistantAction('open_detail', '打开对应页面', source.publicUrl),
@@ -3689,6 +3701,12 @@ function buildDirectSourceTaskResponse(source, currentUrl) {
 function buildFilterTaskResponse({ question, contentType, pageLabel, pageTarget, pageId, topic, latestSource }) {
   const targetText = topic ? `${topic}相关的${pageLabel}` : pageLabel;
   const shouldOpenResult = /最新|最近|打开|进入|去看|看看|带我|帮我找|帮我看|定位|找/.test(question);
+  const contentTypeLabel = {
+    insight: '文章',
+    report: '报告',
+    book: '图书',
+    methodology: '方法论',
+  }[contentType] || pageLabel;
   const promptParts = [
     `你的任务是在当前网站同一标签页内帮用户找到${targetText}。`,
     `如果当前不在${pageLabel}页面，先使用 open_internal_url 打开 "${pageTarget}"。`,
@@ -3720,6 +3738,18 @@ function buildFilterTaskResponse({ question, contentType, pageLabel, pageTarget,
       bootstrapUrl: pageTarget,
       expectedUrl: latestSource && shouldOpenResult ? latestSource.publicUrl : pageTarget,
       pageId,
+      phaseDetails: {
+        understanding: topic
+          ? `识别到你想找和「${topic}」有关的${contentTypeLabel}。`
+          : `识别到你想找${pageLabel}里的相关内容。`,
+        planning: latestSource && shouldOpenResult
+          ? `计划先进入${pageLabel}，完成筛选后直接打开《${latestSource.title}》。`
+          : `计划先进入${pageLabel}，完成筛选后停留在更合适的结果页。`,
+        locating: `准备进入${pageLabel}并定位相关结果。`,
+        acting: latestSource && shouldOpenResult
+          ? `正在筛选并打开《${latestSource.title}》。`
+          : `正在筛选${targetText}。`,
+      },
       filters: {
         topic: topic || '',
       },
@@ -3761,6 +3791,12 @@ function buildGuideTaskResponse(question) {
       bootstrapUrl: '/?page=article-center',
       expectedUrl: '/?page=article-center',
       pageId: 'article-center',
+      phaseDetails: {
+        understanding: '识别到你是第一次来，希望先看更适合上手的内容。',
+        planning: `计划先进入文章中心，再按「${topic}」整理更适合的入口。`,
+        locating: '准备进入文章中心。',
+        acting: `正在切换到「${topic}」相关内容并整理入口。`,
+      },
       filters: {
         topic,
       },

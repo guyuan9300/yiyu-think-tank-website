@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowUpRight,
   Bot,
+  ChevronDown,
+  ChevronUp,
   ExternalLink,
   Loader2,
   Send,
@@ -25,6 +27,7 @@ import { runYiyuTongAction } from '../lib/yiyuTongActions';
 type TaskStepState = {
   label: string;
   status: 'pending' | 'active' | 'done' | 'error';
+  detail?: string;
 };
 
 type AssistantMessage = {
@@ -126,14 +129,35 @@ function loadInitialState() {
   }
 }
 
-function createTaskPlan(plan: string[]) {
-  return plan.map((label, index): TaskStepState => ({
-    label,
-    status: index === 0 ? 'active' : 'pending',
-  }));
+type TaskDetailPhase = 'understanding' | 'planning' | 'locating' | 'acting';
+
+function getTaskPhaseByIndex(index: number): TaskDetailPhase {
+  if (index === 0) return 'understanding';
+  if (index === 1) return 'planning';
+  if (index === 2) return 'locating';
+  return 'acting';
 }
 
-function applyPhaseToTaskPlan(plan: TaskStepState[] | undefined, phase: YiyuTongTaskPhase) {
+function createTaskPlan(
+  plan: string[],
+  phaseDetails?: YiyuTongSiteTaskSpec['phaseDetails']
+) {
+  return plan.map((label, index): TaskStepState => {
+    const phase = getTaskPhaseByIndex(index);
+    const phaseDetailKey = phase as keyof NonNullable<YiyuTongSiteTaskSpec['phaseDetails']>;
+    return {
+      label,
+      status: index === 0 ? 'active' : 'pending',
+      detail: phaseDetails?.[phaseDetailKey],
+    };
+  });
+}
+
+function applyPhaseToTaskPlan(
+  plan: TaskStepState[] | undefined,
+  phase: YiyuTongTaskPhase,
+  detail?: string
+) {
   if (!plan?.length) return plan || [];
   const next = plan.map(
     (step): TaskStepState => ({ ...step, status: step.status === 'error' ? 'error' : 'pending' })
@@ -163,6 +187,22 @@ function applyPhaseToTaskPlan(plan: TaskStepState[] | undefined, phase: YiyuTong
     );
     activate(activeIndex === -1 ? next.length - 1 : activeIndex);
     next[Math.min(activeIndex === -1 ? next.length - 1 : activeIndex, next.length - 1)].status = 'error';
+  }
+
+  const detailIndex = phase === 'understanding'
+    ? 0
+    : phase === 'planning'
+      ? 1
+      : phase === 'locating'
+        ? 2
+        : phase === 'acting'
+          ? 3
+          : phase === 'error'
+            ? Math.max(0, next.findIndex((step) => step.status === 'error'))
+            : -1;
+
+  if (detail && detailIndex >= 0 && next[detailIndex]) {
+    next[detailIndex].detail = detail;
   }
 
   return next;
@@ -255,36 +295,63 @@ function ConsultConfirmation({
 }
 
 function TaskPlanCard({ taskPlan }: { taskPlan: TaskStepState[] }) {
+  const [expanded, setExpanded] = useState(() => taskPlan.some((step) => Boolean(step.detail)));
+  const summaryDetail =
+    [...taskPlan].reverse().find((step) => (step.status === 'active' || step.status === 'error') && step.detail)?.detail
+    || [...taskPlan].reverse().find((step) => step.detail)?.detail;
+
   return (
     <div className="rounded-2xl border border-border/50 bg-white/80 p-3">
-      <div className="text-[12px] font-medium text-muted-foreground/70">执行进度</div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-[12px] font-medium text-muted-foreground/70">执行进度</div>
+        <button
+          type="button"
+          onClick={() => setExpanded((prev) => !prev)}
+          className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] text-muted-foreground/75 hover:bg-muted/60 hover:text-foreground"
+        >
+          {expanded ? '收起详情' : '展开详情'}
+          {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        </button>
+      </div>
+      {!expanded && summaryDetail ? (
+        <div className="mt-2 rounded-xl bg-muted/35 px-3 py-2 text-[11px] leading-5 text-muted-foreground/80">
+          {summaryDetail}
+        </div>
+      ) : null}
       <div className="mt-3 space-y-2">
         {taskPlan.map((step, index) => (
-          <div key={`${step.label}-${index}`} className="flex items-center gap-3 text-[12px]">
-            <span
-              className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-medium ${
-                step.status === 'done'
-                  ? 'bg-primary text-primary-foreground'
-                  : step.status === 'active'
-                    ? 'border border-primary/30 bg-primary/10 text-primary'
+          <div key={`${step.label}-${index}`} className="space-y-1.5">
+            <div className="flex items-center gap-3 text-[12px]">
+              <span
+                className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-medium ${
+                  step.status === 'done'
+                    ? 'bg-primary text-primary-foreground'
+                    : step.status === 'active'
+                      ? 'border border-primary/30 bg-primary/10 text-primary'
+                      : step.status === 'error'
+                        ? 'border border-destructive/30 bg-destructive/10 text-destructive'
+                        : 'border border-border/50 bg-muted/20 text-muted-foreground'
+                }`}
+              >
+                {step.status === 'done' ? '✓' : index + 1}
+              </span>
+              <span
+                className={
+                  step.status === 'active'
+                    ? 'font-medium text-foreground'
                     : step.status === 'error'
-                      ? 'border border-destructive/30 bg-destructive/10 text-destructive'
-                      : 'border border-border/50 bg-muted/20 text-muted-foreground'
-              }`}
-            >
-              {step.status === 'done' ? '✓' : index + 1}
-            </span>
-            <span
-              className={
-                step.status === 'active'
-                  ? 'font-medium text-foreground'
-                  : step.status === 'error'
-                    ? 'text-destructive'
-                    : 'text-muted-foreground/75'
-              }
-            >
-              {step.label}
-            </span>
+                      ? 'text-destructive'
+                      : 'text-muted-foreground/75'
+                }
+              >
+                {step.label}
+              </span>
+            </div>
+            {expanded && step.detail ? (
+              <div className="ml-8 rounded-xl bg-muted/35 px-3 py-2 text-[11px] leading-5 text-muted-foreground/80">
+                {step.detail}
+              </div>
+            ) : null}
           </div>
         ))}
       </div>
@@ -368,7 +435,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
           }
           updateMessage(messageId, (message) => ({
             ...message,
-            taskPlan: applyPhaseToTaskPlan(message.taskPlan, phase),
+            taskPlan: applyPhaseToTaskPlan(message.taskPlan, phase, detail),
             content:
               phase === 'done'
                 ? detail || taskSpec.successMessage || message.content
@@ -385,7 +452,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
         completed = true;
         updateMessage(messageId, (message) => ({
           ...message,
-          taskPlan: applyPhaseToTaskPlan(message.taskPlan, 'done'),
+          taskPlan: applyPhaseToTaskPlan(message.taskPlan, 'done', result.data || taskSpec.successMessage),
           content: result.data || taskSpec.successMessage || message.content,
         }));
         return;
@@ -396,7 +463,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
         runYiyuTongAction(response.fallbackAction);
         updateMessage(messageId, (message) => ({
           ...message,
-          taskPlan: applyPhaseToTaskPlan(message.taskPlan, 'done'),
+          taskPlan: applyPhaseToTaskPlan(message.taskPlan, 'done', taskSpec.successMessage || message.content),
           content: taskSpec.successMessage || message.content,
         }));
         return;
@@ -404,7 +471,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
 
       updateMessage(messageId, (message) => ({
         ...message,
-        taskPlan: applyPhaseToTaskPlan(message.taskPlan, 'error'),
+        taskPlan: applyPhaseToTaskPlan(message.taskPlan, 'error', result.error || '这次操作没有稳定完成。'),
         content: result.error || '这次操作没有稳定完成。',
       }));
     } finally {
@@ -469,7 +536,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
       citations: response.citations,
       collectedFields: response.collectedFields,
       handoff: response.handoff,
-      taskPlan: response.mode === 'site_task' ? createTaskPlan(response.taskPlan) : undefined,
+      taskPlan: response.mode === 'site_task' ? createTaskPlan(response.taskPlan, response.taskSpec?.phaseDetails) : undefined,
       taskSpec: response.taskSpec,
       fallbackAction: response.fallbackAction,
     };
@@ -602,6 +669,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
               <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[88%] space-y-3 ${message.role === 'user' ? 'items-end' : ''}`}>
                   <div
+                    data-yiyu-assistant-message={message.role}
                     className={`rounded-2xl px-4 py-3 text-sm leading-6 ${
                       message.role === 'user'
                         ? 'bg-foreground text-white'

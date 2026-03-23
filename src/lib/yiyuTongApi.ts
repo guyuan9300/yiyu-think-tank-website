@@ -34,6 +34,12 @@ export interface YiyuTongSiteTaskSpec {
   bootstrapUrl?: string;
   expectedUrl?: string;
   pageId?: string;
+  phaseDetails?: {
+    understanding?: string;
+    planning?: string;
+    locating?: string;
+    acting?: string;
+  };
   filters?: {
     searchQuery?: string;
     topic?: string;

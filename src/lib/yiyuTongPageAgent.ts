@@ -336,7 +336,7 @@ async function executeStructuredSiteSteps(
   taskSpec: YiyuTongSiteTaskSpec,
   onPhaseChange?: (phase: YiyuTongTaskPhase, detail?: string) => void
 ) {
-  onPhaseChange?.('locating');
+  onPhaseChange?.('locating', taskSpec.phaseDetails?.locating);
   if (taskSpec.bootstrapUrl) {
     await openInternalUrl(taskSpec.bootstrapUrl);
   }
@@ -344,7 +344,7 @@ async function executeStructuredSiteSteps(
     await waitForPage(taskSpec.pageId);
   }
 
-  onPhaseChange?.('acting');
+  onPhaseChange?.('acting', taskSpec.phaseDetails?.acting);
   if (taskSpec.filters && (taskSpec.filters.searchQuery || taskSpec.filters.topic || taskSpec.filters.year)) {
     await setSiteFilters(taskSpec.filters);
   }
@@ -387,7 +387,7 @@ export async function executeYiyuTongSiteTask({
   ignoredElements = [],
   onPhaseChange,
 }: ExecuteYiyuTongSiteTaskOptions) {
-  onPhaseChange?.('understanding');
+  onPhaseChange?.('understanding', taskSpec.phaseDetails?.understanding);
   const structuredTask = hasStructuredSiteSteps(taskSpec);
 
   const [{ PageAgentCore, tool }, controllerModule] = await Promise.all([
@@ -469,14 +469,14 @@ export async function executeYiyuTongSiteTask({
       }),
     },
     onBeforeTask: () => {
-      onPhaseChange?.('planning');
+      onPhaseChange?.('planning', taskSpec.phaseDetails?.planning);
     },
     onBeforeStep: async (_agent: unknown, stepCount: number) => {
       if (stepCount === 0) {
-        onPhaseChange?.('locating');
+        onPhaseChange?.('locating', taskSpec.phaseDetails?.locating);
         return;
       }
-      onPhaseChange?.('acting');
+      onPhaseChange?.('acting', taskSpec.phaseDetails?.acting);
     },
     onAfterTask: async (_agent: unknown, result: { success: boolean; data: string }) => {
       if (result.success) {
