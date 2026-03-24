@@ -24,6 +24,13 @@ type LocalFormFields = {
   note?: string;
 };
 
+const EXECUTION_MAX_STEPS = 120;
+const EXECUTION_HEARTBEAT_GRACE_MS = 12_000;
+const EXECUTION_PROGRESS_GRACE_MS = 18_000;
+const EXECUTION_GLOBAL_FUSE_MS = 240_000;
+const EXECUTION_WATCHDOG_INTERVAL_MS = 600;
+const EXECUTION_LOOP_REPEAT_LIMIT = 5;
+
 function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
@@ -90,7 +97,7 @@ async function openInternalUrl(target: string) {
   if (!ready) {
     throw new Error(`未能稳定打开 ${next}`);
   }
-  await sleep(250);
+  await sleep(120);
   return `已在当前标签页打开 ${next}`;
 }
 
@@ -100,7 +107,7 @@ async function waitForPage(pageId?: string) {
   if (!ready) {
     throw new Error(`未能进入 ${pageId} 页面`);
   }
-  await sleep(180);
+  await sleep(100);
   return true;
 }
 
@@ -267,7 +274,7 @@ async function setSiteFilters(filters: NonNullable<YiyuTongSameTabExecutionPlan[
       throw new Error('当前页面没有可用搜索框');
     }
     dispatchNativeInputValue(searchInput, filters.searchQuery);
-    await sleep(320);
+    await sleep(180);
   }
 
   if (filters.topic) {
@@ -292,7 +299,7 @@ async function setSiteFilters(filters: NonNullable<YiyuTongSameTabExecutionPlan[
     }
   }
 
-  await sleep(350);
+  await sleep(220);
   return '已完成当前页面筛选。';
 }
 
@@ -503,6 +510,59 @@ function confirmCurrentState() {
   });
 }
 
+function isElementVisible(element: Element | null) {
+  if (!(element instanceof HTMLElement)) return false;
+  const style = window.getComputedStyle(element);
+  if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity || '1') === 0) {
+    return false;
+  }
+  const rect = element.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
+}
+
+function getFilledFieldCount() {
+  return Array.from(document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea'))
+    .filter((field) => isElementVisible(field))
+    .filter((field) => {
+      const type = String(field.getAttribute('type') || '').toLowerCase();
+      if (['hidden', 'submit', 'button', 'reset', 'checkbox', 'radio'].includes(type)) {
+        return false;
+      }
+      return Boolean(String(field.value || '').trim());
+    }).length;
+}
+
+function getScrollBucket() {
+  const maxScrollTop = Math.max(
+    document.documentElement.scrollHeight,
+    document.body.scrollHeight
+  ) - window.innerHeight;
+  if (maxScrollTop <= 0) return 0;
+  const ratio = Math.max(0, Math.min(1, window.scrollY / maxScrollTop));
+  return Math.round(ratio * 12);
+}
+
+function getExecutionStateSignature() {
+  const cards = getVisibleContentCards();
+  const firstTitle = cards[0]?.dataset.yiyuCardTitle || '';
+  const lastTitle = cards[cards.length - 1]?.dataset.yiyuCardTitle || '';
+  const searchValue = findSearchInput()?.value.trim() || '';
+  return JSON.stringify({
+    currentUrl: getCurrentInternalUrl(),
+    currentPageId: getCurrentPageId(),
+    topic: readCurrentTopicValue(),
+    year: readCurrentYearValue(),
+    sortMode: readCurrentSortValue(),
+    searchValue,
+    cardCount: cards.length,
+    firstTitle,
+    lastTitle,
+    resultsTotal: document.querySelector<HTMLElement>('[data-yiyu-results-total]')?.dataset.yiyuResultsTotal || '',
+    scrollBucket: getScrollBucket(),
+    filledFieldCount: getFilledFieldCount(),
+  });
+}
+
 function hasStructuredSiteSteps(plan: YiyuTongSameTabExecutionPlan) {
   return Boolean(
     plan.bootstrapUrl ||
@@ -690,8 +750,8 @@ export async function executeYiyuTongSiteTask({
   const pageController = new PageController({
     enableMask: false,
     interactiveBlacklist: resolvedIgnored,
-    highlightOpacity: 0.06,
-    highlightLabelOpacity: 0.9,
+    highlightOpacity: 0,
+    highlightLabelOpacity: 0,
   });
 
   const expectedUrl = normalizeInternalUrl(plan.expectedUrl);
@@ -703,8 +763,8 @@ export async function executeYiyuTongSiteTask({
     model: 'doubao-seed-2-0-lite-260215',
     apiKey: 'browser-proxied',
     language: 'zh-CN',
-    maxSteps: plan.kind === 'site_tour' ? 40 : 22,
-    stepDelay: 0.12,
+    maxSteps: EXECUTION_MAX_STEPS,
+    stepDelay: 0.08,
     pageController,
     customFetch: async (_input: RequestInfo | URL, init?: RequestInit) => {
       const rawBody = typeof init?.body === 'string' ? init.body : '{}';
@@ -834,6 +894,10 @@ export async function executeYiyuTongSiteTask({
     }
   };
   agent.addEventListener('activity', activityListener as EventListener);
+  let stopDynamicWatchdog: (() => void) | null = null;
+  let activityProgressListener: EventListener | null = null;
+  let statusHeartbeatListener: EventListener | null = null;
+  let historyProgressListener: EventListener | null = null;
 
   try {
     let bootstrapped = false;
@@ -847,12 +911,131 @@ export async function executeYiyuTongSiteTask({
       return { ok: true as const, data: plan.successMessage || '已完成页面操作。' };
     }
 
+    let lastHeartbeatAt = Date.now();
+    let lastProgressAt = Date.now();
+    const executionStartedAt = Date.now();
+    let lastStateSignature = getExecutionStateSignature();
+    let lastExecutedToolKey = '';
+    let repeatedToolCount = 0;
+    let watchdogStopped = false;
+    let watchdogInterval: number | null = null;
+    let watchdogReject: ((reason?: any) => void) | null = null;
+
+    const markHeartbeat = () => {
+      lastHeartbeatAt = Date.now();
+    };
+
+    const markProgress = () => {
+      lastProgressAt = Date.now();
+      lastHeartbeatAt = Date.now();
+      repeatedToolCount = 0;
+    };
+
+    const syncExecutionState = () => {
+      const nextSignature = getExecutionStateSignature();
+      if (nextSignature !== lastStateSignature) {
+        lastStateSignature = nextSignature;
+        markProgress();
+        return true;
+      }
+      return false;
+    };
+
+    const stopExecutionWatchdog = () => {
+      if (watchdogStopped) return;
+      watchdogStopped = true;
+      if (watchdogInterval !== null) {
+        window.clearInterval(watchdogInterval);
+        watchdogInterval = null;
+      }
+      watchdogReject = null;
+    };
+    stopDynamicWatchdog = stopExecutionWatchdog;
+
+    const failExecutionWatchdog = (message: string) => {
+      if (watchdogStopped) return;
+      const reject = watchdogReject;
+      stopExecutionWatchdog();
+      try {
+        agent.stop();
+      } catch {
+        // ignore
+      }
+      reject?.(new Error(message));
+    };
+
+    activityProgressListener = (event: Event) => {
+      const detail = (event as CustomEvent<{ type: string; tool?: string; input?: unknown }>).detail;
+      if (!detail) return;
+      markHeartbeat();
+      if (detail.type === 'executed') {
+        const toolKey = `${detail.tool || 'unknown'}:${JSON.stringify(detail.input ?? null)}`;
+        const progressedNow = syncExecutionState();
+        if (!progressedNow) {
+          repeatedToolCount = toolKey === lastExecutedToolKey ? repeatedToolCount + 1 : 1;
+          window.setTimeout(() => {
+            if (!watchdogStopped) {
+              syncExecutionState();
+            }
+          }, 180);
+          window.setTimeout(() => {
+            if (!watchdogStopped) {
+              syncExecutionState();
+            }
+          }, 520);
+        } else {
+          repeatedToolCount = 0;
+        }
+        lastExecutedToolKey = toolKey;
+      }
+    };
+
+    statusHeartbeatListener = () => {
+      markHeartbeat();
+    };
+
+    historyProgressListener = () => {
+      markHeartbeat();
+      syncExecutionState();
+    };
+
+    agent.addEventListener('activity', activityProgressListener);
+    agent.addEventListener('statuschange', statusHeartbeatListener);
+    agent.addEventListener('historychange', historyProgressListener);
+
     const execution = agent.execute(buildRuntimePrompt(plan, { bootstrapped }));
-    const timeoutMs = plan.kind === 'site_tour' ? 60000 : 32000;
-    const timeout = new Promise<never>((_, reject) => {
-      window.setTimeout(() => reject(new Error('页面操作超时')), timeoutMs);
+    const watchdog = new Promise<never>((_, reject) => {
+      watchdogReject = reject;
+      watchdogInterval = window.setInterval(() => {
+        const now = Date.now();
+        syncExecutionState();
+
+        if (now - lastHeartbeatAt > EXECUTION_HEARTBEAT_GRACE_MS) {
+          failExecutionWatchdog('页面操作暂时卡住了，长时间没有新的动作。');
+          return;
+        }
+
+        if (now - lastProgressAt > EXECUTION_PROGRESS_GRACE_MS) {
+          failExecutionWatchdog('页面操作长时间没有新的进展，已自动停止。');
+          return;
+        }
+
+        if (repeatedToolCount >= EXECUTION_LOOP_REPEAT_LIMIT && now - lastProgressAt > 4_000) {
+          failExecutionWatchdog('页面操作出现了重复循环，已自动停止。');
+          return;
+        }
+
+        if (now - executionStartedAt > EXECUTION_GLOBAL_FUSE_MS) {
+          failExecutionWatchdog('页面操作已达到安全上限，已自动停止。');
+        }
+      }, EXECUTION_WATCHDOG_INTERVAL_MS);
     });
-    const result = await Promise.race([execution, timeout]);
+
+    const result = await Promise.race([execution, watchdog]);
+    stopExecutionWatchdog();
+    if (activityProgressListener) agent.removeEventListener('activity', activityProgressListener);
+    if (statusHeartbeatListener) agent.removeEventListener('statuschange', statusHeartbeatListener);
+    if (historyProgressListener) agent.removeEventListener('historychange', historyProgressListener);
     const landedUrl = getCurrentInternalUrl();
     const endsOnDifferentDetail = Boolean(expectedUrl && bootstrapUrl && expectedUrl !== bootstrapUrl);
     const urlSatisfied = !expectedUrl || landedUrl === expectedUrl;
@@ -890,6 +1073,10 @@ export async function executeYiyuTongSiteTask({
     return { ok: false, error: error?.message || '执行失败' };
   } finally {
     agent.removeEventListener('activity', activityListener as EventListener);
+    stopDynamicWatchdog?.();
+    if (activityProgressListener) agent.removeEventListener('activity', activityProgressListener);
+    if (statusHeartbeatListener) agent.removeEventListener('statuschange', statusHeartbeatListener);
+    if (historyProgressListener) agent.removeEventListener('historychange', historyProgressListener);
     try {
       await pageController.cleanUpHighlights();
     } catch {
