@@ -136,7 +136,7 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
       <Header isLoggedIn={false} userType="visitor" onNavigate={(p) => onNavigate?.(p as any)} />
 
       {/* Hero 区域：对齐「前沿洞察」样式 */}
-      <section className="relative pt-28 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <section data-yiyu-section="learning-hero" className="relative pt-28 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent" />
         <div className="relative max-w-[1200px] mx-auto">
           <div className="flex items-end justify-between gap-6">
@@ -159,7 +159,7 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
       {/* 内容区域 */}
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-32">
         {/* 图书馆 */}
-        <section className="mb-20">
+        <section data-yiyu-section="learning-books" data-yiyu-results-total={String(visibleBooks.length)} className="mb-20">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-success/10 to-accent/10 flex items-center justify-center">
@@ -225,7 +225,7 @@ export function LibraryPage({ onNavigate }: LibraryPageProps) {
         </section>
 
         {/* 工具/方法论 */}
-        <section>
+        <section data-yiyu-section="learning-methodologies" data-yiyu-results-total={String(visibleMethodologies.length)}>
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center">

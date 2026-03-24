@@ -107,7 +107,7 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
       <Header onNavigate={onNavigate} />
 
       {/* Hero 区域 - Apple 风格设计 */}
-      <section className="relative pt-28 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <section data-yiyu-section="insights-hero" className="relative pt-28 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* 微妙背景渐变 */}
         <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent" />
 
@@ -136,7 +136,7 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
       {/* 内容区域 */}
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-32">
         {/* 报告库板块 */}
-        <section className="mb-32">
+        <section data-yiyu-section="insights-reports" data-yiyu-results-total={String(latestReports.length)} className="mb-32">
           {/* 板块标题 */}
           <div className="flex items-end justify-between mb-12">
             <div className="flex items-center gap-4">
@@ -202,7 +202,7 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
         </section>
 
         {/* 文章中心板块 */}
-        <section>
+        <section data-yiyu-section="insights-articles" data-yiyu-results-total={String(latestArticles.length)}>
           {/* 板块标题 */}
           <div className="flex items-end justify-between mb-12">
             <div className="flex items-center gap-4">

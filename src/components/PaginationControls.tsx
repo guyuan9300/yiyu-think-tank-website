@@ -21,13 +21,19 @@ export function PaginationControls({
   const pages = Array.from({ length: windowEnd - windowStart + 1 }, (_, index) => windowStart + index);
 
   return (
-    <div className={`flex flex-wrap items-center justify-between gap-4 ${className}`}>
-      <div className="text-sm text-muted-foreground/70">
+    <div
+      data-yiyu-pagination="content"
+      data-yiyu-pagination-current={String(currentPage)}
+      data-yiyu-pagination-total={String(totalPages)}
+      className={`flex flex-wrap items-center justify-between gap-4 ${className}`}
+    >
+      <div data-yiyu-results-summary="content" className="text-sm text-muted-foreground/70">
         第 <span className="font-medium text-foreground">{currentPage}</span> / {totalPages} 页，共 {totalItems} 条
       </div>
 
       <div className="flex items-center gap-2">
         <button
+          data-yiyu-pagination-prev="content"
           type="button"
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage <= 1}
@@ -41,6 +47,8 @@ export function PaginationControls({
           {pages.map((page) => (
             <button
               key={page}
+              data-yiyu-pagination-page={String(page)}
+              data-yiyu-pagination-page-active={page === currentPage ? 'true' : 'false'}
               type="button"
               onClick={() => onPageChange(page)}
               className={`min-w-10 rounded-full px-3 py-2 text-sm transition-colors ${
@@ -55,6 +63,7 @@ export function PaginationControls({
         </div>
 
         <button
+          data-yiyu-pagination-next="content"
           type="button"
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage >= totalPages}

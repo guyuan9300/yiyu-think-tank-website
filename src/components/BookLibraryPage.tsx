@@ -138,7 +138,7 @@ const filteredBooks = useMemo(() => {
       <Header onNavigate={onNavigate} />
 
       {/* Page Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-border/40">
+      <div data-yiyu-section="book-library-hero" className="bg-white/80 backdrop-blur-sm border-b border-border/40">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="flex items-center gap-2 text-[13px] text-muted-foreground/60 mb-4">
             <button
@@ -161,7 +161,13 @@ const filteredBooks = useMemo(() => {
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-border/40 sticky top-0 z-10">
+      <div
+        data-yiyu-section="book-library-filters"
+        data-yiyu-results-total={String(filteredBooks.length)}
+        data-yiyu-active-topic={selectedTag}
+        data-yiyu-active-year={selectedYear}
+        className="bg-white/80 backdrop-blur-sm border-b border-border/40 sticky top-0 z-10"
+      >
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-wrap items-center gap-4">
             {/* Search */}
@@ -276,7 +282,11 @@ const filteredBooks = useMemo(() => {
       </div>
 
       {/* Content */}
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
+      <div
+        data-yiyu-section="book-library-results"
+        data-yiyu-results-total={String(filteredBooks.length)}
+        className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1"
+      >
         {/* Results Info */}
         <div className="flex items-center justify-between mb-8">
           <p className="text-[14px] text-muted-foreground/70">

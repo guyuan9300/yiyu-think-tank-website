@@ -1,6 +1,7 @@
 import { authRequest, AUTH_BASE, type ApiResult } from './authHttp';
 
-export type YiyuTongMode = 'answer' | 'site_task' | 'consult_handoff';
+export type YiyuTongMode = 'site_task' | 'site_tour' | 'form_task' | 'answer';
+export type YiyuTongExecutor = 'same_tab_page_agent' | 'multi_tab_extension' | 'none';
 
 export interface YiyuTongCitation {
   contentType: 'insight' | 'report' | 'book' | 'methodology' | 'case';
@@ -29,43 +30,94 @@ export interface YiyuTongCollectedFields {
   note?: string;
 }
 
-export interface YiyuTongSiteTaskSpec {
+export interface YiyuTongTaskStep {
+  id: string;
+  label: string;
+  detail?: string;
+}
+
+export interface YiyuTongTaskEntities {
+  contentTypes?: Array<'insight' | 'report' | 'book' | 'methodology' | 'case'>;
+  topic?: string;
+  pageTarget?: string;
+  targetTitle?: string;
+  targetId?: string;
+  wantsLatest?: boolean;
+  wantsFirst?: boolean;
+  wantsLast?: boolean;
+  wantsSummary?: boolean;
+  query?: string;
+}
+
+export interface YiyuTongFallbackPlan {
+  action?: YiyuTongAction | null;
+  message?: string | null;
+}
+
+export interface YiyuTongTourStop {
+  id: string;
+  label: string;
+  url: string;
+  pageId?: string;
+  summary?: string;
+  scrollPasses?: number;
+}
+
+export interface YiyuTongSameTabExecutionPlan {
+  executor: 'same_tab_page_agent';
   prompt: string;
+  kind: 'site_task' | 'site_tour';
   bootstrapUrl?: string;
   expectedUrl?: string;
   pageId?: string;
-  phaseDetails?: {
-    understanding?: string;
-    planning?: string;
-    locating?: string;
-    acting?: string;
-  };
   filters?: {
     searchQuery?: string;
     topic?: string;
     year?: string;
   };
+  sortMode?: string;
+  pageNumber?: number;
   openTitle?: string;
   openMode?: 'none' | 'exact' | 'first' | 'last';
   successMessage?: string;
-  fallbackAction?: YiyuTongAction | null;
+  tourStops?: YiyuTongTourStop[];
 }
 
-export interface YiyuTongConsultHandoff {
-  ready: boolean;
+export interface YiyuTongFormContext {
+  active: boolean;
   formUrl: string;
+  fields: YiyuTongCollectedFields;
+  missingFields: string[];
+  extensionRequired: boolean;
+}
+
+export interface YiyuTongMultiTabExecutionPlan {
+  executor: 'multi_tab_extension';
+  prompt: string;
+  formUrl: string;
+  fields: YiyuTongCollectedFields;
   missingFields: string[];
 }
 
+export interface YiyuTongNoopExecutionPlan {
+  executor: 'none';
+}
+
+export type YiyuTongExecutionPlan =
+  | YiyuTongSameTabExecutionPlan
+  | YiyuTongMultiTabExecutionPlan
+  | YiyuTongNoopExecutionPlan;
+
 export interface YiyuTongResponse {
   mode: YiyuTongMode;
+  goal: string;
+  entities: YiyuTongTaskEntities | null;
   message: string;
+  steps: YiyuTongTaskStep[];
   citations: YiyuTongCitation[];
-  taskPlan: string[];
-  taskSpec: YiyuTongSiteTaskSpec | null;
-  fallbackAction: YiyuTongAction | null;
-  handoff: YiyuTongConsultHandoff | null;
-  collectedFields: YiyuTongCollectedFields | null;
+  executionPlan: YiyuTongExecutionPlan;
+  fallbackPlan: YiyuTongFallbackPlan | null;
+  formContext: YiyuTongFormContext | null;
 }
 
 export interface YiyuTongKnownUserInfo {
@@ -87,6 +139,7 @@ export function queryYiyuTong(payload: {
   currentUrl: string;
   knownUserInfo?: YiyuTongKnownUserInfo;
   history?: YiyuTongHistoryMessage[];
+  activeFormContext?: YiyuTongFormContext | null;
 }): Promise<ApiResult<YiyuTongResponse>> {
   return authRequest<YiyuTongResponse>('/assistant/query', {
     method: 'POST',

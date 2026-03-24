@@ -398,7 +398,8 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
       <Header isLoggedIn={false} userType="visitor" onNavigate={handleNavigate} />
 
       {/* Hero Section - Apple Style with Depth */}
-      <section 
+      <section
+        data-yiyu-section="home-hero"
         ref={heroRef}
         className="relative pt-16 sm:pt-32 pb-14 sm:pb-28 px-4 sm:px-6 lg:px-8 overflow-hidden"
       >
@@ -452,7 +453,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
       {/* 首页：按需求隐藏「免费预约组织诊断」后到「战略陪伴」前的内容（3张跳转卡片 / 热门内容 / 战略前沿报告） */}
 
       {/* 最新内容 */}
-      <section className="py-14 sm:py-24 px-4 sm:px-6 lg:px-8">
+      <section data-yiyu-section="home-latest-content" className="py-14 sm:py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center max-w-3xl mx-auto">
             <h2 className="text-[32px] font-semibold tracking-tight mb-3 text-foreground">最新内容</h2>
@@ -556,7 +557,13 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
           </div>
 
           {/* 资源长条卡片（最多 6 条） */}
-          <div key={latestTopic} className="mt-10 space-y-3 animate-fade-in-up">
+          <div
+            key={latestTopic}
+            data-yiyu-section="home-latest-resource-list"
+            data-yiyu-active-topic={latestTopic}
+            data-yiyu-results-total={String(latestResources.length)}
+            className="mt-10 space-y-3 animate-fade-in-up"
+          >
             {latestResources.length === 0 ? (
               <div className="text-center text-[14px] text-muted-foreground/70 py-10">
                 暂无内容
@@ -625,7 +632,8 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
       </section>
 
       {/* Strategy Companion - Apple Liquid Glass */}
-      <section 
+      <section
+        data-yiyu-section="home-strategy-companion"
         className="py-14 sm:py-24 px-4 sm:px-6 lg:px-8"
       >
         <div className="max-w-[1200px] mx-auto">
@@ -703,7 +711,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
       </section>
 
       {/* Trust Indicators - Minimal */}
-      <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-transparent to-muted/8">
+      <section data-yiyu-section="home-trust-indicators" className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-transparent to-muted/8">
         <div className="max-w-[1200px] mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <TrustItem number="200+" label="服务企业" />

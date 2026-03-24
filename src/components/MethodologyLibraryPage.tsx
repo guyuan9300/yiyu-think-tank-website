@@ -154,7 +154,7 @@ export function MethodologyLibraryPage({
     <div data-yiyu-page="methodology-library" className="min-h-screen bg-background flex flex-col">
         <Header onNavigate={onNavigate} />
 
-        <section className="relative pt-28 pb-14 px-6 overflow-hidden">
+        <section data-yiyu-section="methodology-detail-hero" className="relative pt-28 pb-14 px-6 overflow-hidden">
           <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-primary/[0.035] via-background to-background" />
           <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-background/55 via-background/85 to-background" />
 
@@ -228,7 +228,7 @@ export function MethodologyLibraryPage({
         </section>
 
         {/* Body */}
-        <section className="px-6 pb-8">
+        <section data-yiyu-section="methodology-detail-body" className="px-6 pb-8">
           <div className="max-w-4xl mx-auto">
             <article className="prose prose-lg max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-muted-foreground/80 prose-p:leading-relaxed prose-a:text-primary hover:prose-a:text-primary/80">
               {html ? (
@@ -319,7 +319,10 @@ export function MethodologyLibraryPage({
       <Header onNavigate={onNavigate} />
 
       {/* Hero */}
-      <section className="relative pt-28 sm:pt-32 pb-10 sm:pb-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <section
+        data-yiyu-section="methodology-library-hero"
+        className="relative pt-28 sm:pt-32 pb-10 sm:pb-12 px-4 sm:px-6 lg:px-8 overflow-hidden"
+      >
         <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent" />
         <div className="relative max-w-[1200px] mx-auto">
           <div className="flex items-center gap-2 mb-6 text-[13px] text-muted-foreground/60">
@@ -349,7 +352,13 @@ export function MethodologyLibraryPage({
       </section>
 
       {/* Filter bar */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-border/40 sticky top-0 z-10">
+      <div
+        data-yiyu-section="methodology-library-filters"
+        data-yiyu-results-total={String(filtered.length)}
+        data-yiyu-active-topic={selectedTopic}
+        data-yiyu-active-year={selectedYear}
+        className="bg-white/80 backdrop-blur-sm border-b border-border/40 sticky top-0 z-10"
+      >
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex-1 min-w-64 relative">
@@ -414,7 +423,11 @@ export function MethodologyLibraryPage({
       </div>
 
       {/* Content */}
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div
+        data-yiyu-section="methodology-library-results"
+        data-yiyu-results-total={String(filtered.length)}
+        className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-10"
+      >
         {isLoading ? (
           <div className="py-20 text-center text-muted-foreground/70">加载中...</div>
         ) : filtered.length === 0 ? (

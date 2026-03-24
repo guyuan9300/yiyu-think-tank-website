@@ -1077,11 +1077,48 @@ function escapeRegExp(text) {
 }
 
 function listPageAgentToolNames(payload) {
-  return Array.isArray(payload?.tools)
+  const builtinTools = [
+    'done',
+    'wait',
+    'click_element_by_index',
+    'input_text',
+    'select_dropdown_option',
+    'scroll',
+    'scroll_horizontally',
+  ];
+  const requestedTools = Array.isArray(payload?.tools)
     ? payload.tools
         .map((item) => safeText(item?.function?.name))
-        .filter(Boolean)
+        .filter((name) => Boolean(name) && name !== 'AgentOutput')
     : [];
+  return Array.from(new Set([...requestedTools, ...builtinTools]));
+}
+
+function canonicalizePageAgentToolName(rawName, allowedToolNames) {
+  const name = safeText(rawName).trim();
+  if (!name) return '';
+  if (allowedToolNames.includes(name)) return name;
+
+  const normalized = name.toLowerCase().replace(/[\s-]+/g, '_');
+  const aliasMap = {
+    click: 'click_element_by_index',
+    click_element: 'click_element_by_index',
+    tap: 'click_element_by_index',
+    press: 'click_element_by_index',
+    input: 'input_text',
+    type: 'input_text',
+    fill: 'input_text',
+    enter_text: 'input_text',
+    set_text: 'input_text',
+    select: 'select_dropdown_option',
+    choose: 'select_dropdown_option',
+    pick_option: 'select_dropdown_option',
+    open_url: 'open_internal_url',
+    goto: 'open_internal_url',
+    navigate: 'open_internal_url',
+  };
+  const canonical = aliasMap[normalized] || '';
+  return canonical && allowedToolNames.includes(canonical) ? canonical : '';
 }
 
 function coercePageAgentValue(rawValue) {
@@ -1092,6 +1129,21 @@ function coercePageAgentValue(rawValue) {
   }
   if (/^-?\d+(\.\d+)?$/.test(value)) {
     return Number(value);
+  }
+  return value;
+}
+
+function coerceStructuredPageAgentValue(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => coerceStructuredPageAgentValue(item));
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, coerceStructuredPageAgentValue(item)])
+    );
+  }
+  if (typeof value === 'string') {
+    return coercePageAgentValue(value);
   }
   return value;
 }
@@ -1112,6 +1164,8 @@ function extractMalformedActionParams(text) {
     'down',
     'num_pages',
     'pixels',
+    'left',
+    'script',
   ];
   const params = {};
 
@@ -1137,15 +1191,20 @@ function normalizePageAgentAction(rawAction, allowedToolNames) {
   if (!rawAction || !allowedToolNames.length) return null;
 
   if (typeof rawAction === 'string') {
-    const parsedJson = tryExtractJsonObject(rawAction);
-    if (parsedJson) {
-      return normalizePageAgentAction(parsedJson, allowedToolNames);
-    }
-
     const matchedTool = allowedToolNames
       .map((name) => ({ name, index: rawAction.indexOf(name) }))
       .filter((item) => item.index >= 0)
       .sort((a, b) => a.index - b.index)[0];
+
+    const parsedJson = tryExtractJsonObject(rawAction);
+    if (parsedJson && typeof parsedJson === 'object' && !Array.isArray(parsedJson)) {
+      if (matchedTool && typeof parsedJson.action === 'undefined') {
+        const copied = { ...parsedJson };
+        copied.action = matchedTool.name;
+        return normalizePageAgentAction(copied, allowedToolNames);
+      }
+      return normalizePageAgentAction(parsedJson, allowedToolNames);
+    }
 
     if (!matchedTool) return null;
     return {
@@ -1159,16 +1218,30 @@ function normalizePageAgentAction(rawAction, allowedToolNames) {
   }
 
   if (typeof rawAction.action !== 'undefined') {
+    if (typeof rawAction.action === 'string') {
+      const siblingArgs = { ...rawAction };
+      delete siblingArgs.action;
+      return normalizePageAgentAction(
+        {
+          name: canonicalizePageAgentToolName(rawAction.action, allowedToolNames) || safeText(rawAction.action),
+          arguments: siblingArgs,
+        },
+        allowedToolNames
+      );
+    }
     return normalizePageAgentAction(rawAction.action, allowedToolNames);
   }
 
-  if (allowedToolNames.includes(safeText(rawAction.name))) {
+  const canonicalName = canonicalizePageAgentToolName(rawAction.name, allowedToolNames);
+  if (canonicalName) {
     return {
-      name: safeText(rawAction.name),
-      arguments:
+      name: canonicalName,
+      arguments: normalizePageAgentToolArguments(
+        canonicalName,
         rawAction.arguments && typeof rawAction.arguments === 'object' && !Array.isArray(rawAction.arguments)
-          ? rawAction.arguments
-          : {},
+          ? coerceStructuredPageAgentValue(rawAction.arguments)
+          : {}
+      ),
     };
   }
 
@@ -1177,24 +1250,228 @@ function normalizePageAgentAction(rawAction, allowedToolNames) {
   const toolArgs = rawAction[toolKey];
   return {
     name: toolKey,
-    arguments: toolArgs && typeof toolArgs === 'object' && !Array.isArray(toolArgs) ? toolArgs : {},
+    arguments: normalizePageAgentToolArguments(
+      toolKey,
+      toolArgs && typeof toolArgs === 'object' && !Array.isArray(toolArgs)
+        ? coerceStructuredPageAgentValue(toolArgs)
+        : {}
+    ),
   };
 }
 
-function normalizePageAgentProxyResponse(payload, responseData) {
-  const choice = responseData?.choices?.[0];
-  const message = choice?.message;
-  if (!choice || !message) return responseData;
-  if (Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
-    return responseData;
+function firstNonEmptyToolValue(args, keys) {
+  for (const key of keys) {
+    const value = args?.[key];
+    if (typeof value === 'string' && safeText(value)) return safeText(value);
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'boolean') return value;
+  }
+  return undefined;
+}
+
+function normalizePageAgentToolArguments(toolName, rawArgs) {
+  const args = rawArgs && typeof rawArgs === 'object' && !Array.isArray(rawArgs)
+    ? { ...rawArgs }
+    : {};
+
+  if (toolName === 'click_element_by_index') {
+    const rawIndex = firstNonEmptyToolValue(args, ['index', 'elementIndex', 'element_index', 'targetIndex', 'target_index']);
+    return {
+      index: rawIndex === undefined || rawIndex === null || rawIndex === ''
+        ? undefined
+        : Number(rawIndex),
+    };
   }
 
-  const allowedToolNames = listPageAgentToolNames(payload);
-  const normalizedAction = normalizePageAgentAction(message.content, allowedToolNames);
-  if (!normalizedAction) {
-    return responseData;
+  if (toolName === 'input_text') {
+    const rawIndex = firstNonEmptyToolValue(args, ['index', 'elementIndex', 'element_index', 'targetIndex', 'target_index']);
+    return {
+      index: rawIndex === undefined || rawIndex === null || rawIndex === ''
+        ? undefined
+        : Number(rawIndex),
+      text: safeText(firstNonEmptyToolValue(args, ['text', 'value', 'content', 'input'])),
+    };
   }
 
+  if (toolName === 'select_dropdown_option') {
+    const rawIndex = firstNonEmptyToolValue(args, ['index', 'elementIndex', 'element_index', 'targetIndex', 'target_index']);
+    return {
+      index: rawIndex === undefined || rawIndex === null || rawIndex === ''
+        ? undefined
+        : Number(rawIndex),
+      text: safeText(firstNonEmptyToolValue(args, ['text', 'value', 'option', 'label'])),
+    };
+  }
+
+  if (toolName === 'scroll') {
+    return {
+      down: firstNonEmptyToolValue(args, ['down', 'forward']) !== false,
+      num_pages: (() => {
+        const rawPages = firstNonEmptyToolValue(args, ['num_pages', 'pages', 'pageCount', 'page_count']);
+        return rawPages === undefined || rawPages === null || rawPages === ''
+          ? undefined
+          : Number(rawPages);
+      })(),
+      pixels: (() => {
+        const rawPixels = firstNonEmptyToolValue(args, ['pixels', 'distance', 'offset']);
+        return rawPixels === undefined || rawPixels === null || rawPixels === ''
+          ? undefined
+          : Number(rawPixels);
+      })(),
+      index: (() => {
+        const rawIndex = firstNonEmptyToolValue(args, ['index', 'elementIndex', 'element_index', 'targetIndex', 'target_index']);
+        return rawIndex === undefined || rawIndex === null || rawIndex === ''
+          ? undefined
+          : Number(rawIndex);
+      })(),
+    };
+  }
+
+  if (toolName === 'scroll_horizontally') {
+    return {
+      left: firstNonEmptyToolValue(args, ['left', 'backward']) === true,
+      num_pages: (() => {
+        const rawPages = firstNonEmptyToolValue(args, ['num_pages', 'pages', 'pageCount', 'page_count']);
+        return rawPages === undefined || rawPages === null || rawPages === ''
+          ? undefined
+          : Number(rawPages);
+      })(),
+      pixels: (() => {
+        const rawPixels = firstNonEmptyToolValue(args, ['pixels', 'distance', 'offset']);
+        return rawPixels === undefined || rawPixels === null || rawPixels === ''
+          ? undefined
+          : Number(rawPixels);
+      })(),
+      index: (() => {
+        const rawIndex = firstNonEmptyToolValue(args, ['index', 'elementIndex', 'element_index', 'targetIndex', 'target_index']);
+        return rawIndex === undefined || rawIndex === null || rawIndex === ''
+          ? undefined
+          : Number(rawIndex);
+      })(),
+    };
+  }
+
+  if (toolName === 'open_internal_url') {
+    return {
+      target: safeText(
+        firstNonEmptyToolValue(args, ['target', 'url', 'path', 'href', 'page', 'pageUrl', 'targetUrl'])
+      ),
+    };
+  }
+
+  if (toolName === 'set_site_filters') {
+    return {
+      searchQuery: safeText(firstNonEmptyToolValue(args, ['searchQuery', 'query', 'search', 'keyword', 'keywords', 'text'])),
+      topic: safeText(firstNonEmptyToolValue(args, ['topic', 'tag', 'label', 'category'])),
+      year: safeText(firstNonEmptyToolValue(args, ['year', 'publishYear', 'dateYear'])),
+    };
+  }
+
+  if (toolName === 'set_sort_mode') {
+    return {
+      sortMode: safeText(firstNonEmptyToolValue(args, ['sortMode', 'sort', 'mode', 'order'])),
+    };
+  }
+
+  if (toolName === 'go_to_page') {
+    const rawPage = firstNonEmptyToolValue(args, ['pageNumber', 'page', 'pageIndex', 'index']);
+    return {
+      pageNumber: rawPage === undefined || rawPage === null || rawPage === ''
+        ? undefined
+        : Number(rawPage),
+    };
+  }
+
+  if (toolName === 'open_content_card') {
+    const rawMode = safeText(firstNonEmptyToolValue(args, ['mode', 'openMode', 'position']));
+    const normalizedMode = rawMode === 'latest'
+      ? 'first'
+      : rawMode === 'oldest'
+        ? 'last'
+        : rawMode;
+    return {
+      title: safeText(firstNonEmptyToolValue(args, ['title', 'name', 'text', 'target'])),
+      mode: safeText(normalizedMode),
+    };
+  }
+
+  if (toolName === 'scroll_section') {
+    const rawPasses = firstNonEmptyToolValue(args, ['passes', 'num_pages', 'pages', 'pageCount']);
+    return {
+      sectionId: safeText(firstNonEmptyToolValue(args, ['sectionId', 'section', 'target', 'anchor'])),
+      passes: rawPasses === undefined || rawPasses === null || rawPasses === ''
+        ? undefined
+        : Math.max(1, Number(rawPasses)),
+    };
+  }
+
+  if (toolName === 'expand_section') {
+    return {
+      sectionId: safeText(firstNonEmptyToolValue(args, ['sectionId', 'section', 'target', 'anchor'])),
+    };
+  }
+
+  if (toolName === 'fill_local_form_fields') {
+    return {
+      name: safeText(firstNonEmptyToolValue(args, ['name', 'fullName'])),
+      organization: safeText(firstNonEmptyToolValue(args, ['organization', 'org', 'company', 'institution'])),
+      phone: safeText(firstNonEmptyToolValue(args, ['phone', 'mobile', 'tel'])),
+      email: safeText(firstNonEmptyToolValue(args, ['email', 'mail'])),
+      note: safeText(firstNonEmptyToolValue(args, ['note', 'summary', 'description', 'requirement', 'request'])),
+    };
+  }
+
+  return args;
+}
+
+function normalizeAgentOutputArguments(rawArguments, allowedToolNames) {
+  const parsed = safeJsonParse(rawArguments);
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    const coerced = coerceStructuredPageAgentValue(parsed);
+    if (coerced.action && typeof coerced.action === 'object' && !Array.isArray(coerced.action)) {
+      const normalizedAction = normalizePageAgentAction(coerced.action, allowedToolNames);
+      if (normalizedAction) {
+        return wrapPageAgentAgentOutput(
+          { [normalizedAction.name]: normalizedAction.arguments || {} },
+          {
+            evaluation_previous_goal: safeText(coerced.evaluation_previous_goal),
+            memory: safeText(coerced.memory),
+            next_goal: safeText(coerced.next_goal || coerced.thinking),
+          }
+        );
+      }
+    }
+  }
+
+  const normalizedAction = normalizePageAgentAction(rawArguments, allowedToolNames);
+  if (!normalizedAction) return null;
+  return wrapPageAgentAgentOutput({ [normalizedAction.name]: normalizedAction.arguments || {} });
+}
+
+function wrapPageAgentAgentOutput(action, overrides = {}) {
+  return {
+    evaluation_previous_goal:
+      safeText(overrides.evaluation_previous_goal)
+      || 'Proxy normalized model output into a valid AgentOutput action.',
+    memory: safeText(overrides.memory),
+    next_goal: safeText(overrides.next_goal),
+    action,
+  };
+}
+
+function buildPageAgentToolCallFromAction(action, existingToolCall) {
+  return {
+    id: safeText(existingToolCall?.id) || `call_${crypto.randomUUID().replace(/-/g, '')}`,
+    type: 'function',
+    function: {
+      ...(existingToolCall?.function || {}),
+      name: 'AgentOutput',
+      arguments: JSON.stringify(wrapPageAgentAgentOutput(action)),
+    },
+  };
+}
+
+function buildPageAgentContentResponse(responseData, choice, message, agentOutput) {
   return {
     ...responseData,
     choices: [
@@ -1202,20 +1479,165 @@ function normalizePageAgentProxyResponse(payload, responseData) {
         ...choice,
         message: {
           ...message,
-          content: '',
-          tool_calls: [
-            {
-              id: `call_${crypto.randomUUID().replace(/-/g, '')}`,
-              type: 'function',
-              function: {
-                name: normalizedAction.name,
-                arguments: JSON.stringify(normalizedAction.arguments || {}),
-              },
-            },
-          ],
+          content: JSON.stringify(agentOutput),
+          tool_calls: [],
         },
       },
     ],
+  };
+}
+
+function buildPageAgentWaitResponse(responseData, choice, message, reason = '') {
+  const waitAction = { wait: { seconds: 1 } };
+  return buildPageAgentContentResponse(
+    responseData,
+    choice,
+    message,
+    wrapPageAgentAgentOutput(waitAction, {
+      evaluation_previous_goal: reason || 'Model returned no usable action; proxy injected a wait step.',
+      next_goal: 'Wait briefly, then continue the task.',
+    })
+  );
+}
+
+function normalizePageAgentProxyResponse(payload, responseData) {
+  const choice = responseData?.choices?.[0];
+  const message = choice?.message;
+  if (!choice || !message) return responseData;
+  const allowedToolNames = listPageAgentToolNames(payload);
+  const rawContent = typeof message.content === 'string' ? message.content : '';
+  const contentLooksLikeAction = Boolean(
+    rawContent
+    && (
+      /<parameter\s+name=/i.test(rawContent)
+      || /"action"\s*:/i.test(rawContent)
+      || /\b(click|click_element_by_index|input|type|fill|input_text|select|select_dropdown_option|scroll|scroll_horizontally|wait|done|open_internal_url|open_url|goto|navigate|set_site_filters|set_sort_mode|go_to_page|open_content_card|scroll_section|expand_section|confirm_current_state|fill_local_form_fields)\b/i.test(rawContent)
+    )
+  );
+  if (Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
+    const existingToolCall = message.tool_calls[0];
+    const existingToolName = safeText(existingToolCall?.function?.name);
+    if (existingToolName === 'AgentOutput') {
+      const normalizedAgentOutput = normalizeAgentOutputArguments(existingToolCall?.function?.arguments || '', allowedToolNames);
+      if (!normalizedAgentOutput) {
+        return buildPageAgentWaitResponse(
+          responseData,
+          choice,
+          message,
+          'AgentOutput arguments were malformed and could not be normalized.'
+        );
+      }
+      return buildPageAgentContentResponse(responseData, choice, message, normalizedAgentOutput);
+    }
+    if (allowedToolNames.includes(existingToolName)) {
+      const parsedArgs = coerceStructuredPageAgentValue(safeJsonParse(existingToolCall?.function?.arguments || '{}') || {});
+      return buildPageAgentContentResponse(
+        responseData,
+        choice,
+        message,
+        wrapPageAgentAgentOutput({
+          [existingToolName]:
+            parsedArgs && typeof parsedArgs === 'object' && !Array.isArray(parsedArgs)
+              ? parsedArgs
+              : {},
+        })
+      );
+    }
+    if (contentLooksLikeAction) {
+      const normalizedFromContent = normalizePageAgentAction(rawContent, allowedToolNames);
+      if (normalizedFromContent) {
+        return buildPageAgentContentResponse(
+          responseData,
+          choice,
+          message,
+          wrapPageAgentAgentOutput({
+            [normalizedFromContent.name]: normalizedFromContent.arguments || {},
+          })
+        );
+      }
+    }
+  }
+
+  const normalizedAction = normalizePageAgentAction(rawContent, allowedToolNames);
+  if (!normalizedAction) {
+    const reasoningContent = safeText(message.reasoning_content || message.reasoning || '');
+    if (!rawContent && !Array.isArray(message.tool_calls) && reasoningContent) {
+      return buildPageAgentWaitResponse(
+        responseData,
+        choice,
+        message,
+        'Model returned reasoning-only content without an executable action.'
+      );
+    }
+    if (!rawContent && (!Array.isArray(message.tool_calls) || message.tool_calls.length === 0)) {
+      return buildPageAgentWaitResponse(
+        responseData,
+        choice,
+        message,
+        'Model returned an empty message without tool calls.'
+      );
+    }
+    return responseData;
+  }
+
+  return {
+    ...buildPageAgentContentResponse(
+      responseData,
+      choice,
+      message,
+      wrapPageAgentAgentOutput({
+        [normalizedAction.name]: normalizedAction.arguments || {},
+      }, {
+        evaluation_previous_goal: 'Proxy normalized malformed tool response from model output.',
+      })
+    ),
+  };
+}
+
+function buildPageAgentToolSpecText(payload) {
+  const tools = Array.isArray(payload?.tools) ? payload.tools : [];
+  if (!tools.length) return '';
+  return tools
+    .map((tool) => {
+      const name = safeText(tool?.function?.name);
+      if (!name || name === 'AgentOutput') {
+        return '';
+      }
+      const description = safeText(tool?.function?.description);
+      const parameters = tool?.function?.parameters && typeof tool.function.parameters === 'object'
+        ? JSON.stringify(tool.function.parameters)
+        : '';
+      return `- ${name}${description ? `：${description}` : ''}${parameters ? `\n  参数模式：${parameters}` : ''}`;
+    })
+    .filter(Boolean)
+    .join('\n');
+}
+
+function buildArkPageAgentPayload(payload) {
+  const toolSpec = buildPageAgentToolSpecText(payload);
+  const originalMessages = Array.isArray(payload?.messages) ? payload.messages : [];
+  const systemPrelude = {
+    role: 'system',
+    content: [
+      '你是益语通的 Page Agent 模型代理输出层。',
+      '你必须只返回一个 JSON 对象，不要返回 Markdown，不要返回 XML，不要返回 <parameter> 标签。',
+      '不要使用 OpenAI 原生 tool_calls；请把动作严格放进 JSON 的 action 字段中。',
+      '不要把 AgentOutput 当成动作名返回；AgentOutput 只是前端框架的包装层，不是实际可执行工具。',
+      '返回格式必须是：{"evaluation_previous_goal":"","memory":"","next_goal":"","action":{"工具名":{"参数":值}}}。',
+      'action 内只能出现一个工具名，参数必须是合法 JSON，布尔值必须是 true/false，数字必须是数字，不能写成字符串。',
+      '如果要点击元素，必须使用 click_element_by_index；如果要输入文本，必须使用 input_text；如果要选择下拉项，必须使用 select_dropdown_option。',
+      '不要返回 click、type、fill、input、select 这类别名；请使用工具清单里的正式动作名。',
+      toolSpec ? `当前可用工具如下：\n${toolSpec}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+  };
+
+  return {
+    model: safeText(payload?.model, ARK_MODEL),
+    temperature: typeof payload?.temperature === 'number' ? payload.temperature : 0.1,
+    reasoning_effort: undefined,
+    messages: [systemPrelude, ...originalMessages],
   };
 }
 
@@ -3497,6 +3919,22 @@ function detectConsultIntent(question) {
   return /(咨询|诊断|合作沟通|预约诊断|预约咨询|联系你们|怎么合作|申请咨询)/.test(safeText(question));
 }
 
+function detectFormFieldFollowupIntent(question) {
+  return /(姓名|机构|单位|组织|手机号|手机|电话|邮箱|email|需求|备注|补充一下|继续填写|继续补充|再补充|更新一下|改成|是|来自)/i.test(
+    safeText(question)
+  );
+}
+
+function shouldContinueActiveFormTask(question, activeFormContext) {
+  if (!activeFormContext?.active) return false;
+  const q = safeText(question);
+  if (!q) return false;
+  if (detectConsultIntent(q)) return true;
+  if (detectFormFieldFollowupIntent(q)) return true;
+  if (/继续|接着|补填|补充|填写|填一下|写进去/.test(q)) return true;
+  return false;
+}
+
 function detectNavigationIntent(question) {
   return /(打开|进入|带我去|前往|跳到|去看|去到|看看|定位|跳转|在哪|哪里|哪儿|打开最新|打开.*案例|进入.*案例|去.*案例|案例在哪|案例在哪里|页面在哪|详情在哪)/.test(
     safeText(question)
@@ -3881,6 +4319,429 @@ function buildGuideTaskResponse(question) {
   };
 }
 
+const YIYU_TONG_PAGE_TARGETS = {
+  home: { label: '首页', target: '/' },
+  insights: { label: '前沿洞察', target: '/?page=insights' },
+  learning: { label: '学习中心', target: '/?page=learning' },
+  'article-center': { label: '文章中心', target: '/?page=article-center' },
+  'report-library': { label: '前沿报告', target: '/?page=report-library' },
+  'book-library': { label: '图书馆', target: '/?page=book-library' },
+  'methodology-library': { label: '益语方法论', target: '/?page=methodology-library' },
+  strategy: { label: '战略陪伴', target: '/?page=strategy' },
+  about: { label: '关于我们', target: '/?page=about' },
+};
+
+function resolvePlannerPageTarget(key) {
+  const normalized = safeText(key).toLowerCase();
+  if (!normalized) return null;
+  return YIYU_TONG_PAGE_TARGETS[normalized] || null;
+}
+
+function detectSiteTourIntent(question) {
+  return /(带我逛|逛一下|滑动一下|滑动看个大概|看个大概|带我浏览|逐页看看|从头到尾滑动|从头到尾看|每个板块|整个网站)/.test(
+    safeText(question)
+  );
+}
+
+function buildAssistantStep(id, label, detail = '') {
+  return { id, label, detail };
+}
+
+function buildAssistantSteps(...steps) {
+  return steps.filter(Boolean);
+}
+
+function getAssistantPageConfigByType(type) {
+  return {
+    insight: { pageId: 'article-center', ...YIYU_TONG_PAGE_TARGETS['article-center'] },
+    report: { pageId: 'report-library', ...YIYU_TONG_PAGE_TARGETS['report-library'] },
+    book: { pageId: 'book-library', ...YIYU_TONG_PAGE_TARGETS['book-library'] },
+    methodology: { pageId: 'methodology-library', ...YIYU_TONG_PAGE_TARGETS['methodology-library'] },
+    case: { pageId: 'strategy', ...YIYU_TONG_PAGE_TARGETS.strategy },
+  }[type] || null;
+}
+
+function getAssistantMissingFields(fields) {
+  const missing = [];
+  if (!safeText(fields.organization)) missing.push('机构');
+  if (!safeText(fields.name)) missing.push('姓名');
+  if (!safeText(fields.phone) && !safeText(fields.email)) missing.push('手机号或邮箱');
+  if (!safeText(fields.note)) missing.push('需求摘要');
+  return missing;
+}
+
+function buildSameTabExecutionPlan(input) {
+  return {
+    executor: 'same_tab_page_agent',
+    ...input,
+  };
+}
+
+function buildMultiTabExecutionPlan(input) {
+  return {
+    executor: 'multi_tab_extension',
+    ...input,
+  };
+}
+
+function buildNoopExecutionPlan() {
+  return { executor: 'none' };
+}
+
+function buildAssistantResponseEnvelope({
+  mode,
+  goal,
+  entities = null,
+  message,
+  steps = [],
+  citations = [],
+  executionPlan = buildNoopExecutionPlan(),
+  fallbackPlan = null,
+  formContext = null,
+}) {
+  return {
+    mode,
+    goal,
+    entities,
+    message,
+    steps,
+    citations,
+    executionPlan,
+    fallbackPlan,
+    formContext,
+  };
+}
+
+function buildCurrentPageResponse(message, goal = '当前页面已满足目标') {
+  return buildAssistantResponseEnvelope({
+    mode: 'answer',
+    goal,
+    message,
+  });
+}
+
+function buildPageTargetTaskResponse({ label, target, currentUrl, goal, detail }) {
+  const normalizedTarget = normalizeAssistantTarget(target);
+  if (currentUrl && normalizedTarget && currentUrl === normalizedTarget) {
+    return buildCurrentPageResponse(`当前已经在${label}。`, goal || `当前已在${label}`);
+  }
+
+  return buildAssistantResponseEnvelope({
+    mode: 'site_task',
+    goal: goal || `进入${label}`,
+    entities: {
+      pageTarget: target,
+    },
+    message: `我来带你进入${label}。`,
+    steps: buildAssistantSteps(
+      buildAssistantStep('understanding', '正在理解你的目标', `识别到你想进入「${label}」。`),
+      buildAssistantStep('planning', '正在规划操作步骤', `计划在当前标签页直接打开${label}。`),
+      buildAssistantStep('locating', '正在定位相关页面', `准备进入${label}。`),
+      buildAssistantStep('acting', '正在操作页面', `正在完成${label}的页面切换。`)
+    ),
+    executionPlan: buildSameTabExecutionPlan({
+      kind: 'site_task',
+      prompt: [
+        `你的任务是在当前网站同一标签页内打开${label}。`,
+        `先使用 open_internal_url 打开 "${target}"。`,
+        '如果页面正确打开，立即调用 done。',
+      ].join(' '),
+      bootstrapUrl: target,
+      expectedUrl: target,
+      pageId: (() => {
+        const params = new URLSearchParams(target.split('?')[1] || '');
+        return params.get('page') || 'home';
+      })(),
+      successMessage: detail || `已为你打开${label}。`,
+    }),
+    fallbackPlan: {
+      action: buildAssistantAction('open_url', `前往${label}`, target),
+    },
+  });
+}
+
+function buildDirectSourceTaskResponseV2(source, currentUrl, wantsSummary = false) {
+  const normalizedTarget = normalizeAssistantTarget(source.publicUrl);
+  if (currentUrl && normalizedTarget && currentUrl === normalizedTarget) {
+    return buildCurrentPageResponse(`当前就是《${source.title}》页面。`, `查看《${source.title}》`);
+  }
+
+  return buildAssistantResponseEnvelope({
+    mode: 'site_task',
+    goal: `查看《${source.title}》`,
+    entities: {
+      contentTypes: [source.contentType],
+      targetId: source.contentId,
+      targetTitle: source.title,
+    },
+    message: `我来带你打开《${source.title}》。`,
+    citations: wantsSummary ? [mapAssistantSourceCard(source)] : [],
+    steps: buildAssistantSteps(
+      buildAssistantStep('understanding', '正在理解你的目标', `识别到你想查看《${source.title}》。`),
+      buildAssistantStep('planning', '正在规划操作步骤', `计划直接进入《${source.title}》对应的前台页面。`),
+      buildAssistantStep('locating', '正在定位相关页面', `准备定位《${source.title}》页面。`),
+      buildAssistantStep('acting', '正在操作页面', `正在打开《${source.title}》。`)
+    ),
+    executionPlan: buildSameTabExecutionPlan({
+      kind: 'site_task',
+      prompt: [
+        `你的任务是在当前网站同一标签页内打开《${source.title}》。`,
+        `先使用 open_internal_url 打开 "${source.publicUrl}"。`,
+        '页面正确打开后立即调用 done，不要额外解释。',
+      ].join(' '),
+      bootstrapUrl: source.publicUrl,
+      expectedUrl: source.publicUrl,
+      pageId: (() => {
+        const params = new URLSearchParams(source.publicUrl.split('?')[1] || '');
+        return params.get('page') || 'home';
+      })(),
+      successMessage: wantsSummary ? summarizeAssistantSource(source) : `已为你打开《${source.title}》。`,
+    }),
+    fallbackPlan: {
+      action: buildAssistantAction('open_detail', '打开对应页面', source.publicUrl),
+    },
+  });
+}
+
+function buildFilterTaskResponseV2({
+  question,
+  contentType,
+  pageLabel,
+  pageTarget,
+  pageId,
+  topic,
+  searchQuery,
+  targetSource,
+  openMode = 'none',
+  wantsSummary = false,
+}) {
+  const targetText = topic ? `${topic}相关的${pageLabel}` : pageLabel;
+  const shouldOpenResult = true;
+  const typeEntities = contentType ? [contentType] : [];
+  const finalOpenMode = targetSource?.title ? 'exact' : openMode;
+  const finalOpenTitle = targetSource?.title || '';
+
+  const promptParts = [
+    `你的任务是在当前网站同一标签页内帮用户定位${targetText}。`,
+    `如果当前不在${pageLabel}页面，先使用 open_internal_url 打开 "${pageTarget}"。`,
+  ];
+
+  if (topic) {
+    promptParts.push(`然后优先使用站内筛选工具，将标签切到“${topic}”。`);
+  }
+
+  if (searchQuery) {
+    promptParts.push(`然后在当前列表页中搜索“${searchQuery}”。`);
+  }
+
+  if (targetSource?.title) {
+    promptParts.push(`筛选完成后，打开标题为《${targetSource.title}》的内容。`);
+  } else if (openMode === 'last') {
+    promptParts.push('筛选完成后，直接打开当前结果列表中的最后一项。');
+  } else if (openMode === 'first') {
+    promptParts.push('筛选完成后，直接打开当前结果列表中的第一项。');
+  } else if (!shouldOpenResult) {
+    promptParts.push('筛选完成后停留在当前结果页并调用 done。');
+  }
+
+  promptParts.push('任务完成后立即调用 done，并用一句中文简要汇报结果。');
+
+  return buildAssistantResponseEnvelope({
+    mode: 'site_task',
+    goal: `定位${targetText}`,
+    entities: {
+      contentTypes: typeEntities,
+      topic: topic || '',
+      targetTitle: targetSource?.title || '',
+      targetId: targetSource?.contentId || '',
+      query: safeText(searchQuery || question),
+      wantsSummary,
+      wantsFirst: openMode === 'first',
+      wantsLast: openMode === 'last',
+    },
+    message: `我来帮你定位${targetText}。`,
+    citations: targetSource && wantsSummary ? [mapAssistantSourceCard(targetSource)] : [],
+    steps: buildAssistantSteps(
+      buildAssistantStep('understanding', '正在理解你的目标', topic
+        ? `识别到你想找和「${topic}」有关的${pageLabel}。`
+        : searchQuery
+          ? `识别到你想在${pageLabel}里搜索「${searchQuery}」。`
+          : `识别到你想找${pageLabel}里的相关内容。`),
+      buildAssistantStep('planning', '正在规划操作步骤', targetSource?.title
+        ? `计划先进入${pageLabel}，完成筛选后打开《${targetSource.title}》。`
+        : openMode === 'last'
+          ? `计划先进入${pageLabel}，完成筛选后打开最后一个结果。`
+          : openMode === 'first'
+            ? `计划先进入${pageLabel}，完成筛选后打开第一个结果。`
+            : `计划先进入${pageLabel}，完成筛选后停留在更合适的结果页。`),
+      buildAssistantStep('locating', '正在定位相关页面', `准备进入${pageLabel}并定位相关结果。`),
+      buildAssistantStep('acting', '正在操作页面', targetSource?.title
+        ? `正在筛选并打开《${targetSource.title}》。`
+        : openMode === 'last'
+          ? '正在筛选并打开最后一个结果。'
+          : openMode === 'first'
+            ? '正在筛选并打开第一个结果。'
+            : `正在筛选${targetText}。`),
+    ),
+    executionPlan: buildSameTabExecutionPlan({
+      kind: 'site_task',
+      prompt: promptParts.join(' '),
+      bootstrapUrl: pageTarget,
+      expectedUrl: targetSource && shouldOpenResult ? targetSource.publicUrl : pageTarget,
+      pageId,
+      filters: {
+        searchQuery: searchQuery || '',
+        topic: topic || '',
+      },
+      openTitle: finalOpenTitle,
+      openMode: finalOpenMode,
+      successMessage: targetSource && wantsSummary
+        ? summarizeAssistantSource(targetSource)
+        : targetSource
+          ? `已帮你打开《${targetSource.title}》。`
+          : `已帮你定位到${targetText}。`,
+    }),
+    fallbackPlan: {
+      action: buildAssistantAction(
+        targetSource ? 'open_detail' : 'open_list',
+        targetSource ? '打开对应页面' : `前往${pageLabel}`,
+        targetSource ? targetSource.publicUrl : pageTarget
+      ),
+    },
+  });
+}
+
+function buildGuideTaskResponseV2(question) {
+  const topic = detectAssistantTopic(question) || '组织';
+  return buildAssistantResponseEnvelope({
+    mode: 'site_task',
+    goal: '带用户进入更适合上手的内容入口',
+    entities: {
+      contentTypes: ['insight'],
+      topic,
+    },
+    message: '我先带你去看更适合上手的内容入口。',
+    steps: buildAssistantSteps(
+      buildAssistantStep('understanding', '正在理解你的目标', '识别到你是第一次来，希望先看更适合上手的内容。'),
+      buildAssistantStep('planning', '正在规划操作步骤', `计划先进入文章中心，再按「${topic}」整理更适合的入口。`),
+      buildAssistantStep('locating', '正在定位相关页面', '准备进入文章中心。'),
+      buildAssistantStep('acting', '正在操作页面', `正在切换到「${topic}」相关内容并整理入口。`),
+    ),
+    executionPlan: buildSameTabExecutionPlan({
+      kind: 'site_task',
+      prompt: [
+        '你的任务是为第一次来访的用户打开更适合入门的内容入口。',
+        '先使用 open_internal_url 打开 "/?page=article-center"。',
+        `再优先使用站内筛选工具，将标签切换到“${topic}”。`,
+        '如果页面中出现最上方的内容列表，说明任务完成，立即调用 done。',
+      ].join(' '),
+      bootstrapUrl: '/?page=article-center',
+      expectedUrl: '/?page=article-center',
+      pageId: 'article-center',
+      filters: {
+        topic,
+      },
+      successMessage: '已为你打开更适合上手的内容入口。',
+    }),
+    fallbackPlan: {
+      action: buildAssistantAction('open_url', '前往文章中心', '/?page=article-center'),
+    },
+  });
+}
+
+function buildSiteTourResponse(question) {
+  const tourStops = [
+    { id: 'home', label: '首页', url: '/', pageId: 'home', summary: '先快速看品牌主张和核心入口。', scrollPasses: 2 },
+    { id: 'insights', label: '前沿洞察', url: '/?page=insights', pageId: 'insights', summary: '再看最新内容与洞察入口。', scrollPasses: 2 },
+    { id: 'learning', label: '学习中心', url: '/?page=learning', pageId: 'learning', summary: '然后浏览图书、方法论等内容聚合入口。', scrollPasses: 2 },
+    { id: 'strategy', label: '战略陪伴', url: '/?page=strategy', pageId: 'strategy', summary: '继续看战略陪伴与客户案例。', scrollPasses: 2 },
+    { id: 'about', label: '关于我们', url: '/?page=about', pageId: 'about', summary: '最后看机构介绍和正式联系方式。', scrollPasses: 1 },
+  ];
+
+  return buildAssistantResponseEnvelope({
+    mode: 'site_tour',
+    goal: '带用户快速浏览整个网站',
+    entities: {
+      pageTarget: '/?page=home',
+      query: safeText(question),
+    },
+    message: '我来带你快速逛一下整个网站。',
+    steps: buildAssistantSteps(
+      buildAssistantStep('understanding', '正在理解你的目标', '识别到你想快速浏览整个网站，看个整体概览。'),
+      buildAssistantStep('planning', '正在规划操作步骤', '计划依次带你看首页、前沿洞察、学习中心、战略陪伴和关于我们。'),
+      buildAssistantStep('locating', '正在定位相关页面', '准备按顺序进入各个主要板块。'),
+      buildAssistantStep('acting', '正在操作页面', '正在逐页滚动浏览，并在关键区域停留。'),
+    ),
+    executionPlan: buildSameTabExecutionPlan({
+      kind: 'site_tour',
+      prompt: [
+        '你的任务是带用户快速逛一下当前网站。',
+        '请按顺序浏览首页、前沿洞察、学习中心、战略陪伴、关于我们。',
+        '每到一个页面都先进入该页面，再从上到下滚动浏览，让用户能看到主要内容区。',
+        '浏览完成后用一句中文说明已经带用户看完主要板块。',
+      ].join(' '),
+      bootstrapUrl: '/',
+      expectedUrl: '/?page=about',
+      pageId: 'about',
+      successMessage: '已带你快速浏览完网站的主要板块。',
+      tourStops,
+    }),
+  });
+}
+
+function buildAnswerResponse(question, sources) {
+  return buildAssistantResponseEnvelope({
+    mode: 'answer',
+    goal: '回答用户关于官网内容的问题',
+    entities: {
+      contentTypes: Array.from(new Set(sources.map((item) => item.contentType))),
+      query: safeText(question),
+    },
+    message: '',
+    citations: sources.map(mapAssistantSourceCard),
+  });
+}
+
+async function planAssistantTaskWithArk(question, sources, currentUrl) {
+  if (!isArkReady()) return null;
+  const preview = sources.slice(0, 12).map((item) => ({
+    id: item.contentId,
+    type: item.contentType,
+    title: item.title,
+    clientName: item.clientName,
+    tags: item.tags,
+    url: item.publicUrl,
+  }));
+
+  try {
+    const content = await callArkChat([
+      {
+        role: 'system',
+        content: [
+          '你是益语通的前台任务编排器。',
+          '你的目标不是先回答，而是先判断这句话更适合：站内任务、网站导览、表单任务，还是最后兜底的问答。',
+          '如果用户明显想找、跳、筛、开、看、比较、浏览网站，请优先返回 site_task 或 site_tour。',
+          '如果用户要咨询、预约、合作、报名，请返回 form_task。',
+          '只有真正是内容问答、或不适合自动执行时，才返回 answer。',
+          '只返回 JSON，格式为 {"mode":"site_task|site_tour|form_task|answer","goal":"","contentType":"","targetSourceId":"","targetPage":"","topic":"","openMode":"none|exact|first|last","wantsSummary":false,"query":"","notes":""}。',
+        ].join(' '),
+      },
+      {
+        role: 'user',
+        content: JSON.stringify({
+          question,
+          currentUrl,
+          availablePages: Object.entries(YIYU_TONG_PAGE_TARGETS).map(([key, value]) => ({ key, ...value })),
+          candidateSources: preview,
+        }),
+      },
+    ]);
+    return extractJsonObject(content);
+  } catch {
+    return null;
+  }
+}
+
 function pickLatestSourceByType(sources, type) {
   return sources
     .filter((item) => item.contentType === type)
@@ -3911,7 +4772,21 @@ function pickRelevantSources(question, sources) {
     .map((entry) => entry.item);
 }
 
-async function extractConsultFields(question, knownUserInfo, history = []) {
+function mergeCollectedFields(...items) {
+  const merged = {};
+  for (const item of items) {
+    if (!item || typeof item !== 'object') continue;
+    for (const [key, value] of Object.entries(item)) {
+      const normalized = safeText(value);
+      if (normalized) {
+        merged[key] = normalized;
+      }
+    }
+  }
+  return merged;
+}
+
+async function extractConsultFields(question, knownUserInfo, history = [], existingFields = {}) {
   const historyText = Array.isArray(history)
     ? history
         .filter((item) => item && item.role === 'user')
@@ -3919,13 +4794,13 @@ async function extractConsultFields(question, knownUserInfo, history = []) {
         .filter(Boolean)
         .join('\n')
     : '';
-  const fallback = {
+  const fallback = mergeCollectedFields({
     name: safeText(knownUserInfo?.nickname || ''),
     organization: safeText(knownUserInfo?.organization || ''),
     phone: safeText(knownUserInfo?.phone || ''),
     email: safeText(knownUserInfo?.email || ''),
     note: safeText(question || historyText),
-  };
+  }, existingFields);
 
   if (!isArkReady()) {
     return fallback;
@@ -3953,13 +4828,13 @@ async function extractConsultFields(question, knownUserInfo, history = []) {
       },
     ]);
     const parsed = extractJsonObject(content);
-    return {
+    return mergeCollectedFields(fallback, {
       name: safeText(parsed.name, fallback.name),
       organization: safeText(parsed.organization, fallback.organization),
       phone: safeText(parsed.phone, fallback.phone),
       email: safeText(parsed.email, fallback.email),
       note: safeText(parsed.note, fallback.note),
-    };
+    });
   } catch {
     return fallback;
   }
@@ -3969,66 +4844,25 @@ async function buildAssistantResponse(payload) {
   const question = safeText(payload?.question);
   const knownUserInfo = payload?.knownUserInfo && typeof payload.knownUserInfo === 'object' ? payload.knownUserInfo : {};
   const history = Array.isArray(payload?.history) ? payload.history : [];
+  const activeFormContext = payload?.activeFormContext && typeof payload.activeFormContext === 'object'
+    ? payload.activeFormContext
+    : null;
   const currentUrl = normalizeAssistantTarget(payload?.currentUrl || '');
   if (!question) {
-    return {
+    return buildAssistantResponseEnvelope({
       mode: 'answer',
-      message: '可以直接问我官网里的内容，也可以让我帮你进入页面、筛选资料或整理咨询信息。',
+      goal: '等待用户发起任务',
+      message: '你可以直接让我找内容、带你逛网站，或帮你打开并填写咨询表单。',
       citations: [],
-      taskPlan: [],
-      taskSpec: null,
-      fallbackAction: null,
-      handoff: null,
-      collectedFields: null,
-    };
+    });
   }
 
   const sources = await listAssistantSources();
-
-  if (detectConsultIntent(question)) {
-    const collectedFields = await extractConsultFields(question, knownUserInfo, history);
-    const missingFields = [];
-    if (!safeText(collectedFields.organization)) missingFields.push('机构');
-    if (!safeText(collectedFields.name)) missingFields.push('姓名');
-    if (!safeText(collectedFields.phone) && !safeText(collectedFields.email)) missingFields.push('手机号或邮箱');
-
-    if (missingFields.length) {
-      return {
-        mode: 'consult_handoff',
-        message: `为了帮你整理咨询申请，我还需要补充：${missingFields.join('、')}。你直接回复这些信息就行。`,
-        citations: [],
-        taskPlan: [],
-        taskSpec: null,
-        fallbackAction: null,
-        handoff: {
-          ready: false,
-          formUrl: YIYU_TONG_FORM_URL,
-          missingFields,
-        },
-        collectedFields,
-      };
-    }
-
-    return {
-      mode: 'consult_handoff',
-      message: '我先帮你整理好了咨询信息，你确认后就可以打开正式申请表继续提交。',
-      citations: [],
-      taskPlan: [],
-      taskSpec: null,
-      fallbackAction: buildAssistantAction('open_consult_form', '打开正式申请表', YIYU_TONG_FORM_URL, collectedFields),
-      handoff: {
-        ready: true,
-        formUrl: YIYU_TONG_FORM_URL,
-        missingFields: [],
-      },
-      collectedFields,
-    };
-  }
-
-  const pageNavigation = resolvePageNavigation(question);
   const rankedSources = pickRelevantSources(question, sources);
   const topSources = rankedSources.slice(0, YIYU_TONG_SOURCE_LIMIT);
-  const directSource = findDirectNavigationSource(question, sources);
+  const plannerOutput = await planAssistantTaskWithArk(question, rankedSources, currentUrl);
+  const pageNavigation = resolvePageNavigation(question);
+  const directSource = findDirectNavigationSource(question, rankedSources);
   const topic = detectAssistantTopic(question);
   const typedFilters = detectAssistantContentTypes(question);
   const wantsLatest = /最新|最近/.test(question);
@@ -4036,76 +4870,163 @@ async function buildAssistantResponse(payload) {
   const wantsLast = detectLastIntent(question);
   const wantsSummary = detectSummaryIntent(question);
   const hasActionIntent = detectActionIntent(question);
+  const plannerMode = safeText(plannerOutput?.mode);
+  const plannerType = safeText(plannerOutput?.contentType);
+  const plannerTargetPage = safeText(plannerOutput?.targetPage);
+  const plannerTopic = safeText(plannerOutput?.topic);
+  const plannerOpenMode = safeText(plannerOutput?.openMode);
+  const plannerWantsSummary = Boolean(plannerOutput?.wantsSummary);
+  const plannerQuery = safeText(plannerOutput?.query);
+  const plannerSourceId = safeText(plannerOutput?.targetSourceId);
+  const plannerGoal = safeText(plannerOutput?.goal);
+  const plannerPageTarget = resolvePlannerPageTarget(plannerTargetPage);
+  const plannerMatchedSource = plannerSourceId
+    ? rankedSources.find((item) => item.contentId === plannerSourceId) || sources.find((item) => item.contentId === plannerSourceId)
+    : null;
 
-  if (pageNavigation && (hasActionIntent || !detectContentQuestionIntent(question))) {
-    return buildPageTaskResponse({
-      label: pageNavigation.label,
-      target: pageNavigation.target,
-      currentUrl,
-      message: `我来带你进入${pageNavigation.label}。`,
+  if (shouldContinueActiveFormTask(question, activeFormContext) || detectConsultIntent(question) || plannerMode === 'form_task') {
+    const collectedFields = await extractConsultFields(
+      question,
+      knownUserInfo,
+      history,
+      activeFormContext?.fields || {}
+    );
+    const missingFields = getAssistantMissingFields(collectedFields);
+
+    return buildAssistantResponseEnvelope({
+      mode: 'form_task',
+      goal: plannerGoal || '帮用户推进咨询申请并自动填写正式表单',
+      entities: {
+        query: safeText(question),
+      },
+      message: missingFields.length
+        ? `我已经先把你提供的信息写进正式申请表了，还缺：${missingFields.join('、')}。你可以继续直接告诉我，我会继续帮你补填。`
+        : '我已经打开正式申请表，并先填好了你刚才提供的信息。你可以继续补充需求，我会继续帮你写入表单。',
+      steps: buildAssistantSteps(
+        buildAssistantStep('understanding', '正在理解你的目标', '识别到你想发起咨询或合作申请。'),
+        buildAssistantStep('planning', '正在规划操作步骤', '计划直接打开正式申请表，并把你已提供的信息先写进去。'),
+        buildAssistantStep('locating', '正在定位相关页面', '准备在新标签页中定位飞书正式申请表。'),
+        buildAssistantStep('acting', '正在操作页面', missingFields.length ? `正在填写已知字段，稍后继续补填：${missingFields.join('、')}。` : '正在把已知信息写入正式申请表。'),
+      ),
+      executionPlan: buildMultiTabExecutionPlan({
+        prompt: [
+          `在新标签页打开这个飞书表单：${YIYU_TONG_FORM_URL}`,
+          '如果已经存在对应的飞书表单标签页，就切换过去继续填写，不要重复新开多个相同标签页。',
+          '请填写以下已经明确给出的信息，不要编造，也不要点击最终提交按钮。',
+          ...[
+            ['姓名', collectedFields.name],
+            ['机构', collectedFields.organization],
+            ['手机号', collectedFields.phone],
+            ['邮箱', collectedFields.email],
+            ['需求摘要', collectedFields.note],
+          ]
+            .filter(([, value]) => safeText(value))
+            .map(([label, value]) => `${label}：${safeText(value)}`),
+        ].join('\n'),
+        formUrl: YIYU_TONG_FORM_URL,
+        fields: collectedFields,
+        missingFields,
+      }),
+      formContext: {
+        active: true,
+        formUrl: YIYU_TONG_FORM_URL,
+        fields: collectedFields,
+        missingFields,
+        extensionRequired: true,
+      },
+      fallbackPlan: {
+        action: buildAssistantAction('open_consult_form', '打开正式申请表', YIYU_TONG_FORM_URL, collectedFields),
+      },
     });
   }
 
-  if (directSource && (hasActionIntent || /在哪|哪里|哪儿|案例/.test(safeText(question)) || !detectContentQuestionIntent(question))) {
-    return buildDirectSourceTaskResponse(directSource, currentUrl);
+  if (detectSiteTourIntent(question) || plannerMode === 'site_tour') {
+    return buildSiteTourResponse(question);
+  }
+
+  if (plannerMode === 'site_task' && plannerPageTarget) {
+    return buildPageTargetTaskResponse({
+      label: plannerPageTarget.label,
+      target: plannerPageTarget.target,
+      currentUrl,
+      goal: plannerGoal || `进入${plannerPageTarget.label}`,
+    });
+  }
+
+  if (plannerMode === 'site_task' && plannerMatchedSource) {
+    return buildDirectSourceTaskResponseV2(
+      plannerMatchedSource,
+      currentUrl,
+      wantsSummary || plannerWantsSummary
+    );
+  }
+
+  if (pageNavigation && (hasActionIntent || plannerMode === 'site_task' || !detectContentQuestionIntent(question))) {
+    return buildPageTargetTaskResponse({
+      label: pageNavigation.label,
+      target: pageNavigation.target,
+      currentUrl,
+      goal: plannerGoal || `进入${pageNavigation.label}`,
+    });
+  }
+
+  if (directSource && (hasActionIntent || /在哪|哪里|哪儿|案例|看看|看一下/.test(safeText(question)) || plannerMode === 'site_task')) {
+    return buildDirectSourceTaskResponseV2(directSource, currentUrl, wantsSummary || plannerWantsSummary);
   }
 
   if (detectGuideIntent(question)) {
-    return buildGuideTaskResponse(question);
+    return buildGuideTaskResponseV2(question);
   }
 
-  if (typedFilters.length === 1 && hasActionIntent) {
-    const type = typedFilters[0];
-    const relevantByType = listRelevantSourcesByType(sources, type, topic);
-    const latestSource = relevantByType[0] || rankedSources.find((item) => item.contentType === type) || pickLatestSourceByType(sources, type);
-    const firstSource = relevantByType[0] || null;
-    const lastSource = relevantByType[relevantByType.length - 1] || null;
-    const targetSource = wantsLatest
-      ? latestSource || null
-      : wantsLast
-        ? lastSource
-        : wantsFirst
-          ? firstSource
-          : null;
+  const normalizedType = ['insight', 'report', 'book', 'methodology', 'case'].includes(plannerType)
+    ? plannerType
+    : typedFilters[0] || '';
+  const relevantByType = normalizedType
+    ? listRelevantSourcesByType(rankedSources, normalizedType, plannerTopic || topic)
+    : [];
+  const latestSource = normalizedType
+    ? relevantByType[0] || rankedSources.find((item) => item.contentType === normalizedType) || pickLatestRelevantSource(sources, normalizedType, plannerTopic || topic)
+    : null;
+  const firstSource = relevantByType[0] || null;
+  const lastSource = relevantByType[relevantByType.length - 1] || null;
+  const resolvedOpenMode = plannerOpenMode || (wantsLast ? 'last' : wantsFirst ? 'first' : wantsLatest ? 'first' : 'none');
+  const targetSource = plannerMatchedSource
+    || (wantsLatest ? latestSource : null)
+    || (resolvedOpenMode === 'last' ? lastSource : null)
+    || (resolvedOpenMode === 'first' ? firstSource : null);
 
-    if (targetSource && wantsLatest && /^(打开|进入|带我去|前往|跳到|去看|去到|看看|定位|跳转|搜索|筛选|找到|找出|点开|点进去|给我看|帮我开|帮我打开|帮我进入|帮我定位|帮我筛|帮我找|帮我看|浏览|查看)/.test(safeText(question))) {
-      return buildDirectSourceTaskResponse(targetSource, currentUrl);
-    }
-
-    const mapping = {
-      insight: { pageLabel: '文章中心', pageTarget: '/?page=article-center' },
-      report: { pageLabel: '前沿报告', pageTarget: '/?page=report-library' },
-      book: { pageLabel: '图书馆', pageTarget: '/?page=book-library' },
-      methodology: { pageLabel: '益语方法论', pageTarget: '/?page=methodology-library' },
-    }[type];
-
+  if (normalizedType && (hasActionIntent || plannerMode === 'site_task')) {
+    const mapping = getAssistantPageConfigByType(normalizedType);
     if (mapping) {
-      return buildFilterTaskResponse({
+      return buildFilterTaskResponseV2({
         question,
-        contentType: type,
-        pageLabel: mapping.pageLabel,
-        pageTarget: mapping.pageTarget,
-        pageId: mapping.pageTarget.replace('/?page=', ''),
-        topic,
+        contentType: normalizedType,
+        pageLabel: mapping.label,
+        pageTarget: mapping.target,
+        pageId: mapping.pageId,
+        topic: plannerTopic || topic,
+        searchQuery: plannerQuery,
         targetSource,
-        openMode: wantsLast ? 'last' : wantsFirst || wantsLatest ? 'first' : 'none',
-        wantsSummary,
+        openMode: targetSource ? 'exact' : resolvedOpenMode,
+        wantsSummary: wantsSummary || plannerWantsSummary,
       });
     }
   }
 
   const answer = await buildAssistantAnswer(question, topSources);
   const noEvidence = answer.includes('当前官网已发布内容中未找到相关信息');
-  return {
+  return buildAssistantResponseEnvelope({
     mode: 'answer',
+    goal: plannerGoal || '回答用户关于官网内容的问题',
+    entities: {
+      contentTypes: Array.from(new Set(topSources.map((item) => item.contentType))),
+      topic: plannerTopic || topic,
+      query: plannerQuery || safeText(question),
+      wantsSummary: false,
+    },
     message: answer,
     citations: noEvidence ? [] : topSources.map(mapAssistantSourceCard),
-    taskPlan: [],
-    taskSpec: null,
-    fallbackAction: null,
-    handoff: null,
-    collectedFields: null,
-  };
+  });
 }
 
 function mapCaseShowcase(row) {
@@ -4998,18 +5919,14 @@ const server = http.createServer(async (req, res) => {
       }
 
       const payload = await readJsonBody(req);
+      const arkPayload = buildArkPageAgentPayload(payload);
       const response = await fetch(`${ARK_BASE_URL}/api/v3/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${process.env.ARK_API_KEY}`,
         },
-        body: JSON.stringify({
-          ...payload,
-          model: safeText(payload?.model, ARK_MODEL),
-          temperature: typeof payload?.temperature === 'number' ? payload.temperature : 0.1,
-          reasoning_effort: undefined,
-        }),
+        body: JSON.stringify(arkPayload),
       });
 
       const text = await response.text();
@@ -5022,6 +5939,59 @@ const server = http.createServer(async (req, res) => {
         normalizedText = text;
       }
       res.writeHead(response.status, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(normalizedText);
+      return;
+    }
+
+    if (url.pathname === '/api/auth/assistant/page-agent-openai/chat/completions' && req.method === 'OPTIONS') {
+      res.writeHead(204, {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      });
+      res.end();
+      return;
+    }
+
+    if (url.pathname === '/api/auth/assistant/page-agent-openai/chat/completions' && req.method === 'POST') {
+      if (!isArkReady()) {
+        res.writeHead(503, {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        });
+        res.end(JSON.stringify({ error: { message: '火山方舟模型尚未就绪' } }));
+        return;
+      }
+
+      const payload = await readJsonBody(req);
+      const arkPayload = buildArkPageAgentPayload(payload);
+      const response = await fetch(`${ARK_BASE_URL}/api/v3/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.ARK_API_KEY}`,
+        },
+        body: JSON.stringify(arkPayload),
+      });
+
+      const text = await response.text();
+      let normalizedText = text;
+      try {
+        const parsed = JSON.parse(text);
+        const normalized = normalizePageAgentProxyResponse(payload, parsed);
+        normalizedText = JSON.stringify(normalized);
+      } catch {
+        normalizedText = text;
+      }
+
+      res.writeHead(response.status, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      });
       res.end(normalizedText);
       return;
     }

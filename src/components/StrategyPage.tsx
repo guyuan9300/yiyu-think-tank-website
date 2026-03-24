@@ -290,7 +290,11 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       )}
 
       {/* Results Section - Value Proposition - Apple Style */}
-      <section id="results" className={`pt-32 pb-16 px-4 sm:px-6 lg:px-8 ${isClientMode ? 'pt-48' : ''}`}>
+      <section
+        id="results"
+        data-yiyu-section="strategy-hero"
+        className={`pt-32 pb-16 px-4 sm:px-6 lg:px-8 ${isClientMode ? 'pt-48' : ''}`}
+      >
         <div className="max-w-[1200px] mx-auto">
           {/* Value Proposition Card - Apple Style */}
           <div className="bg-white rounded-[24px] border border-[rgba(15,23,42,0.06)] p-8 mb-12">
@@ -352,7 +356,7 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
 
       {/* Client Mode: Quarterly Overview Cards */}
       {isClientMode && clientInfo && (
-        <section className="px-4 sm:px-6 lg:px-8 pb-12">
+        <section data-yiyu-section="strategy-client-status" className="px-4 sm:px-6 lg:px-8 pb-12">
           <div className="max-w-[1200px] mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {/* Card 1 */}
@@ -376,7 +380,12 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       )}
 
       {cases.length > 0 ? (
-        <section id="cases" className="pt-0 pb-14 px-4 sm:px-6 lg:px-8">
+        <section
+          id="cases"
+          data-yiyu-section="strategy-cases"
+          data-yiyu-results-total={String(cases.length)}
+          className="pt-0 pb-14 px-4 sm:px-6 lg:px-8"
+        >
           <div className="max-w-[1200px] mx-auto">
             <div className="mb-8 text-center">
               <h2 className="text-[24px] sm:text-[28px] font-semibold tracking-tight text-[rgba(15,23,42,0.92)]">部分服务客户</h2>
@@ -426,7 +435,7 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       ) : null}
 
       {/* Insights Section - 4 Column Horizontal Layout */}
-      <section id="insights" className="py-16 px-4 sm:px-6 lg:px-8">
+      <section id="insights" data-yiyu-section="strategy-insights" className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1200px] mx-auto">
           {/* Section Header */}
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
@@ -499,7 +508,7 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       </section>
 
       {/* Tools Section - 4 Column Grid */}
-      <section id="tools" className="py-16 px-4 sm:px-6 lg:px-8">
+      <section id="tools" data-yiyu-section="strategy-tools" className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1200px] mx-auto">
           {/* Section Header */}
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
@@ -589,7 +598,7 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       </section>
 
       {/* Cooperation Section - Process Flow */}
-      <section id="cooperation" className="py-16 px-4 sm:px-6 lg:px-8">
+      <section id="cooperation" data-yiyu-section="strategy-cooperation" className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1200px] mx-auto">
           {/* Section Header */}
           <div className="text-center mb-12">
@@ -651,7 +660,7 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
 
       {/* FAQ Section */}
       {/* FAQ Section - Apple Style */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
+      <section data-yiyu-section="strategy-faq" className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[800px] mx-auto">
           {/* Section Header */}
           <div className="text-center mb-12">

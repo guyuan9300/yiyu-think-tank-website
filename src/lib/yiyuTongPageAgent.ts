@@ -1,14 +1,28 @@
 import { z } from 'zod';
-import type { YiyuTongSiteTaskSpec } from './yiyuTongApi';
+import type { YiyuTongSameTabExecutionPlan } from './yiyuTongApi';
 import { proxyYiyuTongPageAgent } from './yiyuTongApi';
 
-export type YiyuTongTaskPhase = 'understanding' | 'planning' | 'locating' | 'acting' | 'done' | 'error';
+export type YiyuTongTaskPhase =
+  | 'understanding'
+  | 'planning'
+  | 'locating'
+  | 'acting'
+  | 'done'
+  | 'error';
 
 export interface ExecuteYiyuTongSiteTaskOptions {
-  taskSpec: YiyuTongSiteTaskSpec;
+  plan: YiyuTongSameTabExecutionPlan;
   ignoredElements?: Array<Element | null | (() => Element | null)>;
   onPhaseChange?: (phase: YiyuTongTaskPhase, detail?: string) => void;
 }
+
+type LocalFormFields = {
+  name?: string;
+  organization?: string;
+  phone?: string;
+  email?: string;
+  note?: string;
+};
 
 function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -36,8 +50,8 @@ function getCurrentPageId() {
 
 async function waitFor(
   predicate: () => boolean,
-  timeoutMs = 4500,
-  intervalMs = 80
+  timeoutMs = 8000,
+  intervalMs = 100
 ) {
   const start = Date.now();
   while (Date.now() - start <= timeoutMs) {
@@ -72,7 +86,7 @@ async function openInternalUrl(target: string) {
     window.dispatchEvent(new PopStateEvent('popstate'));
   }
 
-  const ready = await waitFor(() => getCurrentInternalUrl() === next, 5000);
+  const ready = await waitFor(() => getCurrentInternalUrl() === next, 8000);
   if (!ready) {
     throw new Error(`未能稳定打开 ${next}`);
   }
@@ -82,7 +96,7 @@ async function openInternalUrl(target: string) {
 
 async function waitForPage(pageId?: string) {
   if (!pageId) return true;
-  const ready = await waitFor(() => getCurrentPageId() === pageId, 5000);
+  const ready = await waitFor(() => getCurrentPageId() === pageId, 8000);
   if (!ready) {
     throw new Error(`未能进入 ${pageId} 页面`);
   }
@@ -133,7 +147,20 @@ function readCurrentYearValue() {
   return '';
 }
 
-function areStructuredFiltersSatisfied(filters?: NonNullable<YiyuTongSiteTaskSpec['filters']>) {
+function readCurrentSortValue() {
+  const select = document.querySelector<HTMLSelectElement>('select[data-yiyu-sort="content"]');
+  if (select) {
+    return select.options[select.selectedIndex]?.text.trim() || select.value.trim();
+  }
+  const trigger = document.querySelector<HTMLElement>('[data-yiyu-sort-trigger="content"]');
+  if (trigger) {
+    return readTriggerText('[data-yiyu-sort-trigger="content"]');
+  }
+  return '';
+}
+
+function areStructuredFiltersSatisfied(plan: YiyuTongSameTabExecutionPlan) {
+  const filters = plan.filters;
   if (!filters) return true;
 
   if (filters.searchQuery) {
@@ -157,17 +184,24 @@ function areStructuredFiltersSatisfied(filters?: NonNullable<YiyuTongSiteTaskSpe
     }
   }
 
+  if (plan.sortMode) {
+    const currentSort = readCurrentSortValue();
+    if (currentSort && currentSort !== plan.sortMode) {
+      return false;
+    }
+  }
+
   return true;
 }
 
-function isStructuredSiteStateSatisfied(taskSpec: YiyuTongSiteTaskSpec) {
-  const expectedUrl = normalizeInternalUrl(taskSpec.expectedUrl);
-  const bootstrapUrl = normalizeInternalUrl(taskSpec.bootstrapUrl);
-  const expectedPageId = taskSpec.pageId || '';
+function isStructuredSiteStateSatisfied(plan: YiyuTongSameTabExecutionPlan) {
+  const expectedUrl = normalizeInternalUrl(plan.expectedUrl);
+  const bootstrapUrl = normalizeInternalUrl(plan.bootstrapUrl);
+  const expectedPageId = plan.pageId || '';
   const endsOnDifferentDetail = Boolean(expectedUrl && bootstrapUrl && expectedUrl !== bootstrapUrl);
   const urlSatisfied = !expectedUrl || getCurrentInternalUrl() === expectedUrl;
   const pageSatisfied = endsOnDifferentDetail ? true : !expectedPageId || getCurrentPageId() === expectedPageId;
-  const filtersSatisfied = endsOnDifferentDetail ? true : areStructuredFiltersSatisfied(taskSpec.filters);
+  const filtersSatisfied = endsOnDifferentDetail ? true : areStructuredFiltersSatisfied(plan);
   return urlSatisfied && pageSatisfied && filtersSatisfied;
 }
 
@@ -226,14 +260,14 @@ async function setBookLibraryYear(year: string) {
   await clickElement(option);
 }
 
-async function setSiteFilters(filters: NonNullable<YiyuTongSiteTaskSpec['filters']>) {
+async function setSiteFilters(filters: NonNullable<YiyuTongSameTabExecutionPlan['filters']>) {
   if (filters.searchQuery) {
     const searchInput = findSearchInput();
     if (!searchInput) {
       throw new Error('当前页面没有可用搜索框');
     }
     dispatchNativeInputValue(searchInput, filters.searchQuery);
-    await sleep(300);
+    await sleep(320);
   }
 
   if (filters.topic) {
@@ -260,6 +294,38 @@ async function setSiteFilters(filters: NonNullable<YiyuTongSiteTaskSpec['filters
 
   await sleep(350);
   return '已完成当前页面筛选。';
+}
+
+async function setSortMode(sortMode: string) {
+  const select = document.querySelector<HTMLSelectElement>('select[data-yiyu-sort="content"]');
+  if (select) {
+    await setSelectByVisibleText(select, sortMode);
+    return `已切换排序为${sortMode}`;
+  }
+
+  const trigger = document.querySelector<HTMLElement>('[data-yiyu-sort-trigger="content"]');
+  if (trigger) {
+    await clickElement(trigger);
+    await sleep(150);
+    const option = document.querySelector<HTMLElement>(`[data-yiyu-sort-option="${CSS.escape(sortMode)}"]`);
+    if (!option) {
+      throw new Error(`未找到排序选项：${sortMode}`);
+    }
+    await clickElement(option);
+    return `已切换排序为${sortMode}`;
+  }
+
+  throw new Error('当前页面没有可用排序器');
+}
+
+async function goToPage(pageNumber: number) {
+  const directButton = document.querySelector<HTMLElement>(`[data-yiyu-pagination-page="${pageNumber}"]`);
+  if (directButton) {
+    await clickElement(directButton);
+    return `已切换到第 ${pageNumber} 页`;
+  }
+
+  throw new Error(`当前页面无法直接切换到第 ${pageNumber} 页`);
 }
 
 function getVisibleContentCards() {
@@ -306,7 +372,7 @@ async function openContentCard({
 
   const beforeUrl = getCurrentInternalUrl();
   await clickElement(targetCard);
-  const moved = await waitFor(() => getCurrentInternalUrl() !== beforeUrl, 4500);
+  const moved = await waitFor(() => getCurrentInternalUrl() !== beforeUrl, 6000);
   if (!moved) {
     throw new Error('卡片点击后页面没有发生变化');
   }
@@ -315,86 +381,301 @@ async function openContentCard({
   return `已打开《${nextTitle}》。`;
 }
 
-function hasStructuredSiteSteps(taskSpec: YiyuTongSiteTaskSpec) {
+async function scrollPagePasses(passes = 1) {
+  const maxScrollTop = Math.max(
+    document.documentElement.scrollHeight,
+    document.body.scrollHeight
+  ) - window.innerHeight;
+  if (maxScrollTop <= 0) {
+    return '当前页面无需滚动。';
+  }
+
+  for (let pass = 0; pass < Math.max(1, passes); pass += 1) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    await sleep(350);
+    window.scrollTo({ top: maxScrollTop * 0.45, behavior: 'smooth' });
+    await sleep(500);
+    window.scrollTo({ top: maxScrollTop, behavior: 'smooth' });
+    await sleep(650);
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  await sleep(300);
+  return '已完成当前页面滚动浏览。';
+}
+
+async function scrollSection(sectionId?: string, passes = 1) {
+  if (sectionId) {
+    const section = document.querySelector<HTMLElement>(`[data-yiyu-section="${CSS.escape(sectionId)}"]`);
+    if (section) {
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      await sleep(500);
+      return `已定位到 ${sectionId} 区域。`;
+    }
+  }
+  return scrollPagePasses(passes);
+}
+
+async function expandSection(sectionId: string) {
+  const direct = document.querySelector<HTMLElement>(`[data-yiyu-expandable="${CSS.escape(sectionId)}"]`);
+  if (direct) {
+    await clickElement(direct);
+    return `已展开 ${sectionId}。`;
+  }
+
+  const candidates = Array.from(document.querySelectorAll<HTMLElement>('button,[role="button"]'));
+  const normalized = sectionId.replace(/\s+/g, '');
+  const hit = candidates.find((item) => String(item.textContent || '').replace(/\s+/g, '').includes(normalized));
+  if (!hit) {
+    throw new Error(`未找到可展开区域：${sectionId}`);
+  }
+  await clickElement(hit);
+  return `已展开 ${sectionId}。`;
+}
+
+function findFieldByLabel(labels: string[]) {
+  const normalizedLabels = labels.map((item) => item.replace(/\s+/g, ''));
+  const labelElements = Array.from(document.querySelectorAll('label'));
+  for (const labelEl of labelElements) {
+    const text = String(labelEl.textContent || '').replace(/\s+/g, '');
+    if (!normalizedLabels.some((item) => text.includes(item))) continue;
+    const htmlFor = (labelEl as HTMLLabelElement).htmlFor;
+    if (htmlFor) {
+      const control = document.getElementById(htmlFor) as HTMLInputElement | HTMLTextAreaElement | null;
+      if (control) return control;
+    }
+    const nested = labelEl.querySelector<HTMLInputElement | HTMLTextAreaElement>('input, textarea');
+    if (nested) return nested;
+  }
+
+  const candidates = Array.from(
+    document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea')
+  );
+  return candidates.find((field) => {
+    const placeholder = String(field.placeholder || '').replace(/\s+/g, '');
+    return normalizedLabels.some((label) => placeholder.includes(label));
+  }) || null;
+}
+
+async function fillLocalFormFields(fields: LocalFormFields) {
+  const mapping: Array<[string[], string | undefined]> = [
+    [['姓名', '联系人', '称呼'], fields.name],
+    [['机构', '单位', '组织'], fields.organization],
+    [['手机号', '手机', '电话'], fields.phone],
+    [['邮箱', 'Email', 'email'], fields.email],
+    [['需求', '备注', '描述'], fields.note],
+  ];
+
+  let filledCount = 0;
+  for (const [labels, value] of mapping) {
+    if (!value) continue;
+    const field = findFieldByLabel(labels);
+    if (!field) continue;
+    dispatchNativeInputValue(field, value);
+    await sleep(120);
+    filledCount += 1;
+  }
+
+  if (!filledCount) {
+    throw new Error('当前页面未找到可填写的表单字段');
+  }
+  return `已填写 ${filledCount} 个表单字段。`;
+}
+
+function confirmCurrentState() {
+  const resultsTotal = document.querySelector<HTMLElement>('[data-yiyu-results-total]')?.dataset.yiyuResultsTotal || '';
+  const activeTopic = document.querySelector<HTMLElement>('[data-yiyu-active-topic]')?.dataset.yiyuActiveTopic || '';
+  const activeYear = document.querySelector<HTMLElement>('[data-yiyu-active-year]')?.dataset.yiyuActiveYear || '';
+  const activeSections = Array.from(document.querySelectorAll<HTMLElement>('[data-yiyu-section]'))
+    .map((item) => item.dataset.yiyuSection || '')
+    .filter(Boolean)
+    .slice(0, 16);
+  return JSON.stringify({
+    currentUrl: getCurrentInternalUrl(),
+    currentPageId: getCurrentPageId(),
+    topic: readCurrentTopicValue(),
+    year: readCurrentYearValue(),
+    sortMode: readCurrentSortValue(),
+    cardCount: getVisibleContentCards().length,
+    resultsTotal,
+    activeTopic,
+    activeYear,
+    activeSections,
+  });
+}
+
+function hasStructuredSiteSteps(plan: YiyuTongSameTabExecutionPlan) {
   return Boolean(
-    taskSpec.bootstrapUrl ||
-      taskSpec.filters?.searchQuery ||
-      taskSpec.filters?.topic ||
-      taskSpec.filters?.year ||
-      (taskSpec.openMode && taskSpec.openMode !== 'none')
+    plan.bootstrapUrl ||
+      plan.filters?.searchQuery ||
+      plan.filters?.topic ||
+      plan.filters?.year ||
+      plan.sortMode ||
+      plan.pageNumber ||
+      (plan.openMode && plan.openMode !== 'none')
   );
 }
 
-function isDirectOpenTask(taskSpec: YiyuTongSiteTaskSpec) {
+function isDirectOpenTask(plan: YiyuTongSameTabExecutionPlan) {
   const hasFilters = Boolean(
-    taskSpec.filters?.searchQuery ||
-      taskSpec.filters?.topic ||
-      taskSpec.filters?.year
+    plan.filters?.searchQuery ||
+      plan.filters?.topic ||
+      plan.filters?.year ||
+      plan.sortMode ||
+      plan.pageNumber
   );
-  return !hasFilters && (!taskSpec.openMode || taskSpec.openMode === 'none');
+  return !hasFilters && (!plan.openMode || plan.openMode === 'none');
 }
 
-async function executeStructuredSiteSteps(
-  taskSpec: YiyuTongSiteTaskSpec,
-  onPhaseChange?: (phase: YiyuTongTaskPhase, detail?: string) => void
+async function preBootstrapPlan(plan: YiyuTongSameTabExecutionPlan) {
+  const bootstrapUrl = normalizeInternalUrl(plan.bootstrapUrl);
+  if (!bootstrapUrl) {
+    return false;
+  }
+
+  if (getCurrentInternalUrl() !== bootstrapUrl) {
+    await openInternalUrl(bootstrapUrl);
+  }
+
+  if (plan.pageId) {
+    await waitForPage(plan.pageId);
+  }
+
+  return true;
+}
+
+function buildRuntimePrompt(
+  plan: YiyuTongSameTabExecutionPlan,
+  options: {
+    bootstrapped: boolean;
+  }
 ) {
-  onPhaseChange?.('locating', taskSpec.phaseDetails?.locating);
-  if (taskSpec.bootstrapUrl) {
-    await openInternalUrl(taskSpec.bootstrapUrl);
-  }
-  if (taskSpec.pageId) {
-    await waitForPage(taskSpec.pageId);
+  if (plan.kind === 'site_tour') {
+    return buildPrompt(plan);
   }
 
-  onPhaseChange?.('acting', taskSpec.phaseDetails?.acting);
-  if (taskSpec.filters && (taskSpec.filters.searchQuery || taskSpec.filters.topic || taskSpec.filters.year)) {
-    await setSiteFilters(taskSpec.filters);
+  const promptParts = [
+    '你是益语通在益语官网中的页面执行器。',
+    '你的任务是在当前网站同一标签页内连续完成页面操作，让网站真正动起来。',
+    options.bootstrapped
+      ? '当前已经进入了正确的站内页面，请优先在当前页继续完成筛选、滚动、切换和打开详情，不要重复打开同一个页面。'
+      : '如果还不在目标页，可以先合理打开目标页，再继续执行后续操作。',
+    '优先使用站内专用工具；如果当前页确实需要进一步探索，可合理使用页面中已可见的控件。',
+    '只在同站同标签页内操作，不要打开外站，不要新建标签页，不要操作益语通悬浮窗。',
+    '如果需要点击页面元素，请使用 click_element_by_index；如果需要输入文本，请使用 input_text；如果需要选择下拉，请使用 select_dropdown_option。',
+    '任务完成后立即调用 done，不要额外闲聊。',
+  ];
+
+  if (plan.filters?.searchQuery) {
+    promptParts.push(`当前任务包含搜索词：${plan.filters.searchQuery}。`);
+  }
+  if (plan.filters?.topic) {
+    promptParts.push(`当前任务需要筛选标签：${plan.filters.topic}。`);
+  }
+  if (plan.filters?.year) {
+    promptParts.push(`当前任务需要筛选年份：${plan.filters.year}。`);
+  }
+  if (plan.sortMode) {
+    promptParts.push(`当前任务需要切换排序：${plan.sortMode}。`);
+  }
+  if (plan.openTitle) {
+    promptParts.push(`当前任务的目标标题是《${plan.openTitle}》。`);
+  } else if (plan.openMode === 'last') {
+    promptParts.push('当前任务需要打开筛选结果中的最后一项。');
+  } else if (plan.openMode === 'first') {
+    promptParts.push('当前任务需要打开筛选结果中的第一项。');
   }
 
-  if (taskSpec.openMode === 'exact' && taskSpec.openTitle) {
-    await openContentCard({ title: taskSpec.openTitle, mode: 'exact' });
-  } else if (taskSpec.openMode === 'first') {
-    await openContentCard({ mode: 'first' });
-  } else if (taskSpec.openMode === 'last') {
-    await openContentCard({ mode: 'last' });
-  }
-
-  onPhaseChange?.('done', taskSpec.successMessage || '已完成页面操作。');
-  return { ok: true as const, data: taskSpec.successMessage || '已完成页面操作。' };
-}
-
-function buildPrompt(taskSpec: YiyuTongSiteTaskSpec) {
-  const promptParts: string[] = [];
-
-  if (taskSpec.bootstrapUrl) {
-    promptParts.push(`先进入站内页面 "${taskSpec.bootstrapUrl}"。`);
-  }
-  if (taskSpec.filters?.topic || taskSpec.filters?.searchQuery || taskSpec.filters?.year) {
-    promptParts.push('然后使用站内筛选工具完成搜索或筛选。');
-  }
-  if (taskSpec.openMode === 'exact' && taskSpec.openTitle) {
-    promptParts.push(`筛选完成后，打开标题为《${taskSpec.openTitle}》的内容。`);
-  } else if (taskSpec.openMode === 'first') {
-    promptParts.push('筛选完成后，打开当前结果列表中的第一项。');
-  } else if (taskSpec.openMode === 'last') {
-    promptParts.push('筛选完成后，打开当前结果列表中的最后一项。');
-  }
-
-  promptParts.push('完成后立即调用 done，只用一句中文汇报结果。');
-  if (taskSpec.prompt) {
-    promptParts.push(`补充要求：${taskSpec.prompt}`);
+  if (plan.prompt) {
+    promptParts.push(`用户原始任务要求：${plan.prompt}`);
   }
 
   return promptParts.join(' ');
 }
 
+async function executeStructuredSiteSteps(
+  plan: YiyuTongSameTabExecutionPlan,
+  onPhaseChange?: (phase: YiyuTongTaskPhase, detail?: string) => void
+) {
+  onPhaseChange?.('locating', '正在定位相关页面');
+  if (plan.bootstrapUrl) {
+    await openInternalUrl(plan.bootstrapUrl);
+  }
+  if (plan.pageId) {
+    await waitForPage(plan.pageId);
+  }
+
+  onPhaseChange?.('acting', '正在操作页面');
+  if (plan.filters && (plan.filters.searchQuery || plan.filters.topic || plan.filters.year)) {
+    await setSiteFilters(plan.filters);
+  }
+  if (plan.sortMode) {
+    await setSortMode(plan.sortMode);
+  }
+  if (typeof plan.pageNumber === 'number' && plan.pageNumber > 1) {
+    await goToPage(plan.pageNumber);
+  }
+
+  if (plan.openMode === 'exact' && plan.openTitle) {
+    await openContentCard({ title: plan.openTitle, mode: 'exact' });
+  } else if (plan.openMode === 'first') {
+    await openContentCard({ mode: 'first' });
+  } else if (plan.openMode === 'last') {
+    await openContentCard({ mode: 'last' });
+  }
+
+  onPhaseChange?.('done', plan.successMessage || '已完成页面操作。');
+  return { ok: true as const, data: plan.successMessage || '已完成页面操作。' };
+}
+
+async function executeStructuredTourSteps(
+  plan: YiyuTongSameTabExecutionPlan,
+  onPhaseChange?: (phase: YiyuTongTaskPhase, detail?: string) => void
+) {
+  const stops = plan.tourStops || [];
+  onPhaseChange?.('locating', '正在依次定位网站主要板块');
+  for (const stop of stops) {
+    await openInternalUrl(stop.url);
+    if (stop.pageId) {
+      await waitForPage(stop.pageId);
+    }
+    onPhaseChange?.('acting', `正在浏览${stop.label}${stop.summary ? `：${stop.summary}` : ''}`);
+    await scrollPagePasses(stop.scrollPasses || 1);
+  }
+  onPhaseChange?.('done', plan.successMessage || '已带你浏览网站主要板块。');
+  return { ok: true as const, data: plan.successMessage || '已带你浏览网站主要板块。' };
+}
+
+function buildPrompt(plan: YiyuTongSameTabExecutionPlan) {
+  if (plan.kind === 'site_tour') {
+    return [
+      '你是益语通在益语官网中的页面执行器。',
+      '现在要带用户在当前标签页内浏览整个网站。',
+      '请优先使用 open_internal_url、scroll_section、confirm_current_state 等工具完成多页导览。',
+      '不要打开外站，不要新建标签页，不要操作益语通悬浮窗。',
+      '如果需要点击页面元素，请使用 click_element_by_index，不要返回 click 这种别名。',
+      plan.prompt,
+      '完成整个导览后再调用 done，并用一句中文说明已完成。',
+    ].join(' ');
+  }
+
+  return [
+    '你是益语通在益语官网中的页面执行器。',
+    '你的目标是在当前网站同一标签页内尽快完成找、跳、筛、开、滚动、展开等页面操作。',
+    '优先使用站内专用工具，但如果当前页确实需要进一步探索，可以合理使用页面已有控件完成任务。',
+    '不要打开外站，不要新建标签页，不要操作益语通悬浮窗。',
+    '如果需要点击页面元素，请使用 click_element_by_index；如果需要输入文本，请使用 input_text；如果需要选择下拉，请使用 select_dropdown_option。',
+    '如果已经到达目标状态，请尽快调用 done，不要继续做无关尝试。',
+    plan.prompt,
+  ].join(' ');
+}
+
 export async function executeYiyuTongSiteTask({
-  taskSpec,
+  plan,
   ignoredElements = [],
   onPhaseChange,
 }: ExecuteYiyuTongSiteTaskOptions) {
-  onPhaseChange?.('understanding', taskSpec.phaseDetails?.understanding);
-  const structuredTask = hasStructuredSiteSteps(taskSpec);
+  onPhaseChange?.('understanding', plan.kind === 'site_tour' ? '识别到你想浏览网站主要板块。' : '识别到你想让我直接在官网里完成操作。');
+  const structuredTask = plan.kind === 'site_tour' || hasStructuredSiteSteps(plan);
 
   const [{ PageAgentCore, tool }, controllerModule] = await Promise.all([
     import('page-agent'),
@@ -409,21 +690,21 @@ export async function executeYiyuTongSiteTask({
   const pageController = new PageController({
     enableMask: false,
     interactiveBlacklist: resolvedIgnored,
-    highlightOpacity: 0,
-    highlightLabelOpacity: 0,
+    highlightOpacity: 0.06,
+    highlightLabelOpacity: 0.9,
   });
 
-  const expectedUrl = normalizeInternalUrl(taskSpec.expectedUrl);
-  const bootstrapUrl = normalizeInternalUrl(taskSpec.bootstrapUrl);
-  const expectedPageId = taskSpec.pageId || '';
+  const expectedUrl = normalizeInternalUrl(plan.expectedUrl);
+  const bootstrapUrl = normalizeInternalUrl(plan.bootstrapUrl);
+  const expectedPageId = plan.pageId || '';
 
   const agent = new PageAgentCore({
     baseURL: '/api/auth/assistant/page-agent',
     model: 'doubao-seed-2-0-lite-260215',
     apiKey: 'browser-proxied',
     language: 'zh-CN',
-    maxSteps: structuredTask ? 6 : 10,
-    stepDelay: 0.1,
+    maxSteps: plan.kind === 'site_tour' ? 40 : 22,
+    stepDelay: 0.12,
     pageController,
     customFetch: async (_input: RequestInfo | URL, init?: RequestInit) => {
       const rawBody = typeof init?.body === 'string' ? init.body : '{}';
@@ -431,14 +712,12 @@ export async function executeYiyuTongSiteTask({
     },
     instructions: {
       system: [
-        '你是益语通在益语官网中的同标签页页面操作执行器。',
-        '你的目标是尽快完成站内页面跳转、筛选和打开详情，不要解释原理。',
-        '优先使用站内专用工具，不要尝试操作益语通悬浮窗。',
-        '不要打开外站，不要新建标签页。',
-        '如果任务里已经给了明确站内地址、筛选条件或标题，必须优先使用 open_internal_url、set_site_filters、open_content_card。',
-        '除非站内专用工具确实做不到，否则不要使用通用 click_element_by_index 去猜测页面元素。',
-        '对于结构化任务，宁可尽快完成明确步骤，也不要多做无关尝试。',
-        '只在任务真正完成时调用 done。',
+        '你是益语通在益语官网中的同标签页页面执行器。',
+        '你的首要目标是替用户完成页面操作，而不是解释原理。',
+        '优先使用站内专用工具，但允许在当前页面合理探索可见控件来完成任务。',
+        '不要打开外站，不要新建标签页，不要操作益语通悬浮窗。',
+        '如果页面已经达到目标状态，应立即调用 done。',
+        '如果你需要点击页面元素，请使用 click_element_by_index；如果需要输入，请使用 input_text；如果需要选择下拉，请使用 select_dropdown_option。',
       ].join(''),
     },
     customTools: {
@@ -448,9 +727,7 @@ export async function executeYiyuTongSiteTask({
         inputSchema: z.object({
           target: z.string().min(1),
         }),
-        execute: async ({ target }: { target: string }) => {
-          return openInternalUrl(target);
-        },
+        execute: async ({ target }: { target: string }) => openInternalUrl(target),
       }),
       set_site_filters: tool({
         description: '在当前列表页中设置搜索关键词、标签或年份筛选。',
@@ -459,9 +736,21 @@ export async function executeYiyuTongSiteTask({
           topic: z.string().optional(),
           year: z.string().optional(),
         }),
-        execute: async (payload: { searchQuery?: string; topic?: string; year?: string }) => {
-          return setSiteFilters(payload);
-        },
+        execute: async (payload: { searchQuery?: string; topic?: string; year?: string }) => setSiteFilters(payload),
+      }),
+      set_sort_mode: tool({
+        description: '切换当前列表页的排序方式。',
+        inputSchema: z.object({
+          sortMode: z.string().min(1),
+        }),
+        execute: async ({ sortMode }: { sortMode: string }) => setSortMode(sortMode),
+      }),
+      go_to_page: tool({
+        description: '切换到列表页中的指定页码。',
+        inputSchema: z.object({
+          pageNumber: z.number().int().positive(),
+        }),
+        execute: async ({ pageNumber }: { pageNumber: number }) => goToPage(pageNumber),
       }),
       open_content_card: tool({
         description: '打开当前列表中某个内容卡片，支持按标题精确打开、打开第一项或最后一项。',
@@ -469,20 +758,51 @@ export async function executeYiyuTongSiteTask({
           title: z.string().optional(),
           mode: z.enum(['exact', 'first', 'last']).default('exact'),
         }),
-        execute: async ({ title, mode }: { title?: string; mode?: 'exact' | 'first' | 'last' }) => {
-          return openContentCard({ title, mode });
-        },
+        execute: async ({ title, mode }: { title?: string; mode?: 'exact' | 'first' | 'last' }) =>
+          openContentCard({ title, mode }),
+      }),
+      scroll_section: tool({
+        description: '滚动当前页面或定位到某个内容区，适合导览任务。',
+        inputSchema: z.object({
+          sectionId: z.string().optional(),
+          passes: z.number().int().positive().optional(),
+        }),
+        execute: async ({ sectionId, passes }: { sectionId?: string; passes?: number }) =>
+          scrollSection(sectionId, passes || 1),
+      }),
+      expand_section: tool({
+        description: '展开当前页面中的某个可折叠区域。',
+        inputSchema: z.object({
+          sectionId: z.string().min(1),
+        }),
+        execute: async ({ sectionId }: { sectionId: string }) => expandSection(sectionId),
+      }),
+      confirm_current_state: tool({
+        description: '读取当前页面、URL、筛选和卡片状态，确认是否已经达到目标。',
+        inputSchema: z.object({}),
+        execute: async () => confirmCurrentState(),
+      }),
+      fill_local_form_fields: tool({
+        description: '在当前标签页内填写已经识别出的本地表单字段。',
+        inputSchema: z.object({
+          name: z.string().optional(),
+          organization: z.string().optional(),
+          phone: z.string().optional(),
+          email: z.string().optional(),
+          note: z.string().optional(),
+        }),
+        execute: async (fields: LocalFormFields) => fillLocalFormFields(fields),
       }),
     },
     onBeforeTask: () => {
-      onPhaseChange?.('planning', taskSpec.phaseDetails?.planning);
+      onPhaseChange?.('planning', plan.kind === 'site_tour' ? '正在规划整站导览路径。' : '正在规划页面操作步骤。');
     },
     onBeforeStep: async (_agent: unknown, stepCount: number) => {
       if (stepCount === 0) {
-        onPhaseChange?.('locating', taskSpec.phaseDetails?.locating);
+        onPhaseChange?.('locating', plan.kind === 'site_tour' ? '正在定位第一个要浏览的板块。' : '正在定位相关页面和内容。');
         return;
       }
-      onPhaseChange?.('acting', taskSpec.phaseDetails?.acting);
+      onPhaseChange?.('acting', plan.kind === 'site_tour' ? '正在逐页滚动浏览网站。' : '正在操作页面。');
     },
     onAfterTask: async (_agent: unknown, result: { success: boolean; data: string }) => {
       if (result.success) {
@@ -493,29 +813,60 @@ export async function executeYiyuTongSiteTask({
     },
   });
 
+  const activityListener = (event: Event) => {
+    const detail = (event as CustomEvent<{ type: string; tool?: string; message?: string }>).detail;
+    if (!detail) return;
+    if (detail.type === 'thinking') {
+      onPhaseChange?.('planning', '正在继续思考下一步操作。');
+      return;
+    }
+    if (detail.type === 'executing') {
+      const toolName = detail.tool ? `正在执行 ${detail.tool}` : '正在执行页面操作';
+      onPhaseChange?.('acting', toolName);
+      return;
+    }
+    if (detail.type === 'retrying') {
+      onPhaseChange?.('acting', '当前步骤需要重试，我会继续完成。');
+      return;
+    }
+    if (detail.type === 'error' && detail.message) {
+      onPhaseChange?.('acting', detail.message);
+    }
+  };
+  agent.addEventListener('activity', activityListener as EventListener);
+
   try {
-    if (isDirectOpenTask(taskSpec) && isStructuredSiteStateSatisfied(taskSpec)) {
-      onPhaseChange?.('done', taskSpec.successMessage || '已完成页面操作。');
-      return { ok: true as const, data: taskSpec.successMessage || '已完成页面操作。' };
+    let bootstrapped = false;
+    if (plan.kind === 'site_task' && plan.bootstrapUrl) {
+      onPhaseChange?.('locating', '正在进入任务起始页面。');
+      bootstrapped = await preBootstrapPlan(plan);
     }
 
-    const execution = agent.execute(buildPrompt(taskSpec));
+    if (plan.kind === 'site_task' && isDirectOpenTask(plan) && isStructuredSiteStateSatisfied(plan)) {
+      onPhaseChange?.('done', plan.successMessage || '已完成页面操作。');
+      return { ok: true as const, data: plan.successMessage || '已完成页面操作。' };
+    }
+
+    const execution = agent.execute(buildRuntimePrompt(plan, { bootstrapped }));
+    const timeoutMs = plan.kind === 'site_tour' ? 60000 : 32000;
     const timeout = new Promise<never>((_, reject) => {
-      window.setTimeout(() => reject(new Error('页面操作超时')), structuredTask ? 4500 : 12000);
+      window.setTimeout(() => reject(new Error('页面操作超时')), timeoutMs);
     });
     const result = await Promise.race([execution, timeout]);
     const landedUrl = getCurrentInternalUrl();
     const endsOnDifferentDetail = Boolean(expectedUrl && bootstrapUrl && expectedUrl !== bootstrapUrl);
     const urlSatisfied = !expectedUrl || landedUrl === expectedUrl;
     const pageSatisfied = endsOnDifferentDetail ? true : !expectedPageId || getCurrentPageId() === expectedPageId;
-    const structuredSatisfied = !structuredTask || isStructuredSiteStateSatisfied(taskSpec);
+    const structuredSatisfied = plan.kind === 'site_tour' ? true : !structuredTask || isStructuredSiteStateSatisfied(plan);
 
     if (result.success && urlSatisfied && pageSatisfied && structuredSatisfied) {
-      return { ok: true, data: taskSpec.successMessage || result.data || '已完成页面操作。' };
+      return { ok: true, data: plan.successMessage || result.data || '已完成页面操作。' };
     }
 
     if (structuredTask) {
-      return executeStructuredSiteSteps(taskSpec, onPhaseChange);
+      return plan.kind === 'site_tour'
+        ? executeStructuredTourSteps(plan, onPhaseChange)
+        : executeStructuredSiteSteps(plan, onPhaseChange);
     }
 
     return {
@@ -527,7 +878,9 @@ export async function executeYiyuTongSiteTask({
   } catch (error: any) {
     if (structuredTask) {
       try {
-        return await executeStructuredSiteSteps(taskSpec, onPhaseChange);
+        return plan.kind === 'site_tour'
+          ? await executeStructuredTourSteps(plan, onPhaseChange)
+          : await executeStructuredSiteSteps(plan, onPhaseChange);
       } catch (structuredError: any) {
         onPhaseChange?.('error', structuredError?.message || error?.message || '执行失败');
         return { ok: false, error: structuredError?.message || error?.message || '执行失败' };
@@ -536,6 +889,7 @@ export async function executeYiyuTongSiteTask({
     onPhaseChange?.('error', error?.message || '执行失败');
     return { ok: false, error: error?.message || '执行失败' };
   } finally {
+    agent.removeEventListener('activity', activityListener as EventListener);
     try {
       await pageController.cleanUpHighlights();
     } catch {

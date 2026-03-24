@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import {
   ArrowUpRight,
   Bot,
@@ -6,6 +6,7 @@ import {
   ChevronUp,
   ExternalLink,
   Loader2,
+  PlugZap,
   Send,
   Trash2,
   X,
@@ -13,18 +14,26 @@ import {
 import { getSavedUserRaw } from '../lib/storage';
 import {
   queryYiyuTong,
-  type YiyuTongAction,
   type YiyuTongCitation,
-  type YiyuTongCollectedFields,
-  type YiyuTongConsultHandoff,
+  type YiyuTongExecutionPlan,
+  type YiyuTongFallbackPlan,
+  type YiyuTongFormContext,
   type YiyuTongHistoryMessage,
   type YiyuTongResponse,
-  type YiyuTongSiteTaskSpec,
+  type YiyuTongTaskStep,
 } from '../lib/yiyuTongApi';
 import { executeYiyuTongSiteTask, type YiyuTongTaskPhase } from '../lib/yiyuTongPageAgent';
 import { runYiyuTongAction } from '../lib/yiyuTongActions';
+import {
+  executeYiyuTongExtensionTask,
+  getPageAgentExtInstallUrl,
+  getPageAgentExtStatus,
+  promptAndSavePageAgentExtToken,
+  type YiyuTongExtensionStatus,
+} from '../lib/yiyuTongPageAgentExt';
 
 type TaskStepState = {
+  id: string;
   label: string;
   status: 'pending' | 'active' | 'done' | 'error';
   detail?: string;
@@ -36,11 +45,12 @@ type AssistantMessage = {
   content: string;
   mode?: YiyuTongResponse['mode'];
   citations?: YiyuTongCitation[];
-  collectedFields?: YiyuTongCollectedFields | null;
-  handoff?: YiyuTongConsultHandoff | null;
   taskPlan?: TaskStepState[];
-  taskSpec?: YiyuTongSiteTaskSpec | null;
-  fallbackAction?: YiyuTongAction | null;
+  executionPlan?: YiyuTongExecutionPlan;
+  fallbackPlan?: YiyuTongFallbackPlan | null;
+  formContext?: YiyuTongFormContext | null;
+  needsExtensionSetup?: boolean;
+  extensionError?: string | null;
 };
 
 type PanelRect = {
@@ -52,7 +62,7 @@ type PanelRect = {
 
 type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 
-const STORAGE_KEY = 'yiyu_tong_frontend_state_v2';
+const STORAGE_KEY = 'yiyu_tong_frontend_state_v3';
 const MIN_WIDTH = 340;
 const MIN_HEIGHT = 420;
 
@@ -129,28 +139,13 @@ function loadInitialState() {
   }
 }
 
-type TaskDetailPhase = 'understanding' | 'planning' | 'locating' | 'acting';
-
-function getTaskPhaseByIndex(index: number): TaskDetailPhase {
-  if (index === 0) return 'understanding';
-  if (index === 1) return 'planning';
-  if (index === 2) return 'locating';
-  return 'acting';
-}
-
-function createTaskPlan(
-  plan: string[],
-  phaseDetails?: YiyuTongSiteTaskSpec['phaseDetails']
-) {
-  return plan.map((label, index): TaskStepState => {
-    const phase = getTaskPhaseByIndex(index);
-    const phaseDetailKey = phase as keyof NonNullable<YiyuTongSiteTaskSpec['phaseDetails']>;
-    return {
-      label,
-      status: index === 0 ? 'active' : 'pending',
-      detail: phaseDetails?.[phaseDetailKey],
-    };
-  });
+function createTaskPlan(steps: YiyuTongTaskStep[]) {
+  return steps.map((step, index): TaskStepState => ({
+    id: step.id,
+    label: step.label,
+    detail: step.detail,
+    status: (index === 0 ? 'active' : 'pending') as TaskStepState['status'],
+  }));
 }
 
 function applyPhaseToTaskPlan(
@@ -159,47 +154,36 @@ function applyPhaseToTaskPlan(
   detail?: string
 ) {
   if (!plan?.length) return plan || [];
-  const next = plan.map(
-    (step): TaskStepState => ({ ...step, status: step.status === 'error' ? 'error' : 'pending' })
-  );
-  const activate = (index: number) => {
-    next.forEach((step, stepIndex) => {
-      step.status = stepIndex < index ? 'done' : stepIndex === index ? 'active' : 'pending';
+  const next = plan.map((step): TaskStepState => ({ ...step, status: 'pending' }));
+  const setStatusById = (id: string) => {
+    const activeIndex = next.findIndex((step) => step.id === id);
+    const safeIndex = activeIndex === -1 ? next.length - 1 : activeIndex;
+    next.forEach((step, index) => {
+      step.status = index < safeIndex ? 'done' : index === safeIndex ? 'active' : 'pending';
     });
+    return safeIndex;
   };
 
-  if (phase === 'understanding') {
-    activate(0);
-  } else if (phase === 'planning') {
-    activate(Math.min(1, next.length - 1));
-  } else if (phase === 'locating') {
-    activate(Math.min(2, next.length - 1));
-  } else if (phase === 'acting') {
-    activate(Math.min(3, next.length - 1));
-  } else if (phase === 'done') {
+  let detailIndex = -1;
+  if (phase === 'understanding') detailIndex = setStatusById('understanding');
+  else if (phase === 'planning') detailIndex = setStatusById('planning');
+  else if (phase === 'locating') detailIndex = setStatusById('locating');
+  else if (phase === 'acting') detailIndex = setStatusById('acting');
+  else if (phase === 'done') {
     next.forEach((step) => {
       step.status = 'done';
+      if (typeof step.detail === 'string' && /^(InvokeError:|Task failed|页面操作超时|执行失败)/.test(step.detail.trim())) {
+        step.detail = '';
+      }
     });
+    detailIndex = next.length - 1;
   } else if (phase === 'error') {
-    const activeIndex = Math.max(
-      0,
-      next.findIndex((step) => step.status === 'active')
-    );
-    activate(activeIndex === -1 ? next.length - 1 : activeIndex);
-    next[Math.min(activeIndex === -1 ? next.length - 1 : activeIndex, next.length - 1)].status = 'error';
+    detailIndex = Math.max(0, next.findIndex((step) => step.status === 'active'));
+    if (detailIndex === -1) detailIndex = next.length - 1;
+    next.forEach((step, index) => {
+      step.status = index < detailIndex ? 'done' : index === detailIndex ? 'error' : 'pending';
+    });
   }
-
-  const detailIndex = phase === 'understanding'
-    ? 0
-    : phase === 'planning'
-      ? 1
-      : phase === 'locating'
-        ? 2
-        : phase === 'acting'
-          ? 3
-          : phase === 'error'
-            ? Math.max(0, next.findIndex((step) => step.status === 'error'))
-            : -1;
 
   if (detail && detailIndex >= 0 && next[detailIndex]) {
     next[detailIndex].detail = detail;
@@ -274,46 +258,6 @@ function SourceCard({ card, onOpen }: { card: YiyuTongCitation; onOpen: () => vo
   );
 }
 
-function ConsultConfirmation({
-  fields,
-  action,
-}: {
-  fields: YiyuTongCollectedFields | null | undefined;
-  action?: YiyuTongAction | null;
-}) {
-  const rows = [
-    { label: '姓名', value: fields?.name },
-    { label: '机构', value: fields?.organization },
-    { label: '手机号', value: fields?.phone },
-    { label: '邮箱', value: fields?.email },
-    { label: '需求摘要', value: fields?.note },
-  ].filter((item) => item.value);
-
-  return (
-    <div className="rounded-2xl border border-primary/15 bg-primary/5 p-3">
-      <div className="text-sm font-medium text-foreground">咨询信息确认</div>
-      <div className="mt-3 space-y-2">
-        {rows.map((row) => (
-          <div key={row.label} className="flex gap-3 text-[12px] leading-5">
-            <div className="w-16 shrink-0 text-muted-foreground/65">{row.label}</div>
-            <div className="min-w-0 flex-1 text-foreground">{row.value}</div>
-          </div>
-        ))}
-      </div>
-      {action ? (
-        <button
-          type="button"
-          onClick={() => runYiyuTongAction(action)}
-          className="mt-3 inline-flex items-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          打开正式申请表
-          <ExternalLink className="h-3.5 w-3.5" />
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
 function TaskPlanCard({ taskPlan }: { taskPlan: TaskStepState[] }) {
   const [expanded, setExpanded] = useState(() => taskPlan.some((step) => Boolean(step.detail)));
   const summaryDetail =
@@ -340,7 +284,7 @@ function TaskPlanCard({ taskPlan }: { taskPlan: TaskStepState[] }) {
       ) : null}
       <div className="mt-3 space-y-2">
         {taskPlan.map((step, index) => (
-          <div key={`${step.label}-${index}`} className="space-y-1.5">
+          <div key={`${step.id}-${index}`} className="space-y-1.5">
             <div className="flex items-center gap-3 text-[12px]">
               <span
                 className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-medium ${
@@ -379,6 +323,81 @@ function TaskPlanCard({ taskPlan }: { taskPlan: TaskStepState[] }) {
   );
 }
 
+function ExtensionGuideCard({
+  status,
+  onInstall,
+  onConnect,
+  onRetry,
+  error,
+}: {
+  status: YiyuTongExtensionStatus;
+  onInstall: () => void;
+  onConnect: () => void;
+  onRetry: () => void;
+  error?: string | null;
+}) {
+  const needsInstall = !status.available;
+  const needsToken = status.available && !status.tokenSet;
+  const title = needsInstall
+    ? '要继续自动填写表单，需要先安装 Page Agent 扩展。'
+    : needsToken
+      ? '要继续自动填写表单，需要先连接 Page Agent 扩展。'
+      : '扩展已连接，可以继续自动填写。';
+
+  return (
+    <div className="rounded-2xl border border-primary/15 bg-primary/5 p-3">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 rounded-full bg-primary/10 p-2 text-primary">
+          <PlugZap className="h-4 w-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium text-foreground">{title}</div>
+          <div className="mt-1 text-[12px] leading-5 text-muted-foreground/75">
+            {needsInstall
+              ? '安装后回到当前页面，输入扩展授权令牌，益语通就会继续把你提供的信息直接填到飞书表单里。'
+              : needsToken
+                ? '扩展安装后，请输入扩展里的授权令牌。连接成功后，当前任务会继续执行，不需要重新描述。'
+                : '如果刚刚还没自动填成功，可以重新执行当前任务。'}
+          </div>
+          {error ? (
+            <div className="mt-2 rounded-xl bg-white/80 px-3 py-2 text-[12px] leading-5 text-destructive">
+              {error}
+            </div>
+          ) : null}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {needsInstall ? (
+              <button
+                type="button"
+                onClick={onInstall}
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                安装扩展
+                <ExternalLink className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+            {needsToken || !status.ready ? (
+              <button
+                type="button"
+                onClick={onConnect}
+                className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-white px-3.5 py-2 text-xs font-medium text-foreground hover:bg-muted/40"
+              >
+                输入授权令牌
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={onRetry}
+              className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-white px-3.5 py-2 text-xs font-medium text-foreground hover:bg-muted/40"
+            >
+              重新检测并继续
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
   const initialState = useMemo(() => loadInitialState(), []);
   const [isOpen, setIsOpen] = useState(initialState.open);
@@ -387,11 +406,13 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [panelRect, setPanelRect] = useState<PanelRect | null>(null);
+  const [activeFormContext, setActiveFormContext] = useState<YiyuTongFormContext | null>(null);
+  const [extensionStatus, setExtensionStatus] = useState<YiyuTongExtensionStatus>(() => getPageAgentExtStatus());
   const listRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
-  const pendingSiteTasksRef = useRef(new Map<string, YiyuTongResponse>());
-  const runningSiteTasksRef = useRef(new Set<string>());
+  const pendingExtensionTasksRef = useRef(new Map<string, YiyuTongResponse>());
+  const runningTasksRef = useRef(new Set<string>());
 
   useEffect(() => {
     try {
@@ -417,9 +438,14 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
     if (!isOpen) return;
     const handleResize = () => {
       setPanelRect((current) => (current ? clampPanelRect(current) : getInitialPanelRect()));
+      setExtensionStatus(getPageAgentExtStatus());
     };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener('focus', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('focus', handleResize);
+    };
   }, [isOpen]);
 
   const updateMessage = (id: string, updater: (message: AssistantMessage) => AssistantMessage) => {
@@ -428,86 +454,138 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
 
   const historyForBackend: YiyuTongHistoryMessage[] = useMemo(
     () =>
-      messages.slice(-8).map((message) => ({
+      messages.slice(-12).map((message) => ({
         role: message.role,
         content: message.content,
       })),
     [messages]
   );
 
-  const runSiteTask = async (messageId: string, response: YiyuTongResponse) => {
-    if (!response.taskSpec) return;
-    if (runningSiteTasksRef.current.has(messageId)) return;
-    runningSiteTasksRef.current.add(messageId);
+  const runExecutionPlan = async (messageId: string, response: YiyuTongResponse) => {
+    if (runningTasksRef.current.has(messageId)) return;
+    runningTasksRef.current.add(messageId);
 
     try {
-      const taskSpec = response.taskSpec;
-      let completed = false;
-      const result = await executeYiyuTongSiteTask({
-        taskSpec,
-        ignoredElements: [() => panelRef.current, () => toggleButtonRef.current],
-        onPhaseChange: (phase, detail) => {
-          if (completed && phase !== 'done') {
-            return;
-          }
-          if (phase === 'done') {
-            completed = true;
-          }
+      const plan = response.executionPlan;
+      if (!plan || plan.executor === 'none') {
+        return;
+      }
+
+      if (plan.executor === 'same_tab_page_agent') {
+        let completed = false;
+        const result = await executeYiyuTongSiteTask({
+          plan,
+          ignoredElements: [() => panelRef.current, () => toggleButtonRef.current],
+          onPhaseChange: (phase, detail) => {
+            if (completed && phase !== 'done') return;
+            if (phase === 'done') completed = true;
+            updateMessage(messageId, (message) => ({
+              ...message,
+              taskPlan: applyPhaseToTaskPlan(message.taskPlan, phase, detail),
+              content:
+                phase === 'done'
+                  ? detail || response.message
+                  : phase === 'error'
+                    ? detail || '这次页面操作没有稳定完成。'
+                    : message.content,
+            }));
+          },
+        });
+
+        if (result.ok) {
           updateMessage(messageId, (message) => ({
             ...message,
-            taskPlan: applyPhaseToTaskPlan(message.taskPlan, phase, detail),
-            content:
-              phase === 'done'
-                ? detail || taskSpec.successMessage || message.content
-                : phase === 'error'
-                  ? message.fallbackAction
-                    ? message.content
-                    : detail || '这次操作没有稳定完成。'
-                  : message.content,
+            taskPlan: applyPhaseToTaskPlan(message.taskPlan, 'done', result.data || response.message),
+            content: result.data || response.message,
           }));
-        },
-      });
+          return;
+        }
 
-      if (result.ok) {
-        completed = true;
+        if (response.fallbackPlan?.action) {
+          runYiyuTongAction(response.fallbackPlan.action);
+          updateMessage(messageId, (message) => ({
+            ...message,
+            taskPlan: applyPhaseToTaskPlan(message.taskPlan, 'done', response.fallbackPlan?.message || response.message),
+            content: response.fallbackPlan?.message || response.message,
+          }));
+          return;
+        }
+
         updateMessage(messageId, (message) => ({
           ...message,
-          taskPlan: applyPhaseToTaskPlan(message.taskPlan, 'done', result.data || taskSpec.successMessage),
-          content: result.data || taskSpec.successMessage || message.content,
+          taskPlan: applyPhaseToTaskPlan(message.taskPlan, 'error', result.error || '这次页面操作没有稳定完成。'),
+          content: result.error || '这次页面操作没有稳定完成。',
         }));
         return;
       }
 
-      if (response.fallbackAction) {
-        completed = true;
-        runYiyuTongAction(response.fallbackAction);
+      const latestExtensionStatus = getPageAgentExtStatus();
+      setExtensionStatus(latestExtensionStatus);
+      if (!latestExtensionStatus.ready) {
+        pendingExtensionTasksRef.current.set(messageId, response);
         updateMessage(messageId, (message) => ({
           ...message,
-          taskPlan: applyPhaseToTaskPlan(message.taskPlan, 'done', taskSpec.successMessage || message.content),
-          content: taskSpec.successMessage || message.content,
+          needsExtensionSetup: true,
+          extensionError: latestExtensionStatus.available
+            ? '尚未完成扩展授权，当前无法继续自动填写。'
+            : '当前浏览器里还没有可用的 Page Agent 扩展。',
         }));
+        return;
+      }
+
+      const result = await executeYiyuTongExtensionTask({
+        plan,
+        onPhaseChange: (phase, detail) => {
+      const mappedPhase: YiyuTongTaskPhase =
+        phase === 'checking' || phase === 'opening'
+          ? 'locating'
+          : phase === 'filling' || phase === 'waiting'
+            ? 'acting'
+            : phase;
+      updateMessage(messageId, (message) => ({
+        ...message,
+        taskPlan: applyPhaseToTaskPlan(message.taskPlan, mappedPhase, detail),
+        needsExtensionSetup: false,
+        extensionError: null,
+        content:
+          mappedPhase === 'done'
+            ? detail || response.message
+            : mappedPhase === 'error'
+              ? detail || '这次跨标签页自动填写没有稳定完成。'
+              : message.content,
+      }));
+    },
+  });
+
+      if (result.ok) {
+        updateMessage(messageId, (message) => ({
+          ...message,
+          taskPlan: applyPhaseToTaskPlan(message.taskPlan, 'done', result.data || response.message),
+          content: result.data || response.message,
+          needsExtensionSetup: false,
+          extensionError: null,
+        }));
+        pendingExtensionTasksRef.current.delete(messageId);
         return;
       }
 
       updateMessage(messageId, (message) => ({
         ...message,
-        taskPlan: applyPhaseToTaskPlan(message.taskPlan, 'error', result.error || '这次操作没有稳定完成。'),
-        content: result.error || '这次操作没有稳定完成。',
+        taskPlan: applyPhaseToTaskPlan(message.taskPlan, 'error', result.error || '这次跨标签页自动填写没有稳定完成。'),
+        content: result.error || '这次跨标签页自动填写没有稳定完成。',
+        needsExtensionSetup: false,
+        extensionError: result.error || '跨标签页执行失败',
       }));
     } finally {
-      runningSiteTasksRef.current.delete(messageId);
-      pendingSiteTasksRef.current.delete(messageId);
+      runningTasksRef.current.delete(messageId);
     }
   };
 
-  useEffect(() => {
-    pendingSiteTasksRef.current.forEach((response, messageId) => {
-      if (runningSiteTasksRef.current.has(messageId)) return;
-      const exists = messages.some((message) => message.id === messageId);
-      if (!exists) return;
-      void runSiteTask(messageId, response);
-    });
-  }, [messages]);
+  const enqueueExecution = (messageId: string, response: YiyuTongResponse) => {
+    window.setTimeout(() => {
+      void runExecutionPlan(messageId, response);
+    }, 0);
+  };
 
   const submitQuestion = async (question: string) => {
     const text = question.trim();
@@ -529,6 +607,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
       currentUrl: window.location.pathname + window.location.search,
       knownUserInfo: loadKnownUserInfo(),
       history: historyForBackend,
+      activeFormContext,
     });
 
     setIsLoading(false);
@@ -554,30 +633,64 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
       content: response.message,
       mode: response.mode,
       citations: response.citations,
-      collectedFields: response.collectedFields,
-      handoff: response.handoff,
-      taskPlan: response.mode === 'site_task' ? createTaskPlan(response.taskPlan, response.taskSpec?.phaseDetails) : undefined,
-      taskSpec: response.taskSpec,
-      fallbackAction: response.fallbackAction,
+      taskPlan: response.steps.length ? createTaskPlan(response.steps) : undefined,
+      executionPlan: response.executionPlan,
+      fallbackPlan: response.fallbackPlan,
+      formContext: response.formContext,
     };
 
     setMessages((prev) => [...prev, assistantMessage]);
+    setActiveFormContext(response.formContext?.active ? response.formContext : null);
 
-    if (response.mode === 'site_task' && response.taskSpec) {
-      pendingSiteTasksRef.current.set(assistantMessageId, response);
+    if (response.executionPlan.executor !== 'none') {
+      enqueueExecution(assistantMessageId, response);
     }
   };
 
   const clearConversation = () => {
+    pendingExtensionTasksRef.current.clear();
+    runningTasksRef.current.clear();
     setMessages([]);
     setInput('');
     setSessionId(createSessionId());
+    setActiveFormContext(null);
   };
 
-  const showConsultCard = (message: AssistantMessage) =>
-    message.mode === 'consult_handoff' && Boolean(message.handoff?.ready && message.collectedFields);
+  const retryExtensionTask = async (messageId: string) => {
+    const response = pendingExtensionTasksRef.current.get(messageId);
+    if (!response) {
+      setExtensionStatus(getPageAgentExtStatus());
+      return;
+    }
+    const status = getPageAgentExtStatus();
+    setExtensionStatus(status);
+    if (!status.ready) {
+      updateMessage(messageId, (message) => ({
+        ...message,
+        needsExtensionSetup: true,
+        extensionError: status.available ? '扩展仍未完成授权。' : '当前浏览器仍未检测到可用扩展。',
+      }));
+      return;
+    }
+    updateMessage(messageId, (message) => ({
+      ...message,
+      needsExtensionSetup: false,
+      extensionError: null,
+    }));
+    pendingExtensionTasksRef.current.delete(messageId);
+    await runExecutionPlan(messageId, response);
+  };
 
-  const startResize = (direction: ResizeDirection, event: React.MouseEvent<HTMLDivElement>) => {
+  const connectExtension = async (messageId: string) => {
+    promptAndSavePageAgentExtToken();
+    const status = getPageAgentExtStatus();
+    setExtensionStatus(status);
+    if (status.ready) {
+      await retryExtensionTask(messageId);
+    }
+  };
+
+  const startResize = (direction: ResizeDirection, event: ReactMouseEvent<HTMLDivElement>) => {
     if (!panelRect) return;
     event.preventDefault();
     event.stopPropagation();
@@ -589,7 +702,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
     const onMouseMove = (moveEvent: MouseEvent) => {
       const deltaX = moveEvent.clientX - startX;
       const deltaY = moveEvent.clientY - startY;
-      let next: PanelRect = { ...startRect };
+      const next: PanelRect = { ...startRect };
 
       if (direction.includes('e')) {
         next.width = startRect.width + deltaX;
@@ -661,7 +774,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
           <div className="border-b border-border/50 bg-white/90 px-5 py-4">
             <div className="flex items-start justify-between gap-4">
               <div className="max-w-[270px] text-[12px] leading-5 text-muted-foreground/75">
-                你可以直接问官网里有什么内容，也可以让我帮你进入页面、筛选资料，或整理咨询信息后打开申请表。
+                你可以直接让我找内容、带你逛网站，或让我在官网里自动完成查找、筛选、打开和填写表单。
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -701,6 +814,22 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
 
                   {message.taskPlan?.length ? <TaskPlanCard taskPlan={message.taskPlan} /> : null}
 
+                  {message.needsExtensionSetup && message.formContext?.active ? (
+                    <ExtensionGuideCard
+                      status={extensionStatus}
+                      error={message.extensionError}
+                      onInstall={() => {
+                        window.open(getPageAgentExtInstallUrl(), '_blank', 'noopener,noreferrer');
+                      }}
+                      onConnect={() => {
+                        void connectExtension(message.id);
+                      }}
+                      onRetry={() => {
+                        void retryExtensionTask(message.id);
+                      }}
+                    />
+                  ) : null}
+
                   {message.citations?.length ? (
                     <div className="space-y-2">
                       {message.citations.map((card) => (
@@ -718,24 +847,6 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
                       ))}
                     </div>
                   ) : null}
-
-                  {showConsultCard(message) ? (
-                    <ConsultConfirmation
-                      fields={message.collectedFields}
-                      action={
-                        message.handoff?.ready
-                          ? {
-                              type: 'open_consult_form',
-                              label: '打开正式申请表',
-                              target: message.handoff.formUrl,
-                              prefillPayload: Object.fromEntries(
-                                Object.entries(message.collectedFields || {}).filter(([, value]) => Boolean(value))
-                              ) as Record<string, string>,
-                            }
-                          : null
-                      }
-                    />
-                  ) : null}
                 </div>
               </div>
             ))}
@@ -744,7 +855,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
               <div className="flex justify-start">
                 <div className="inline-flex items-center gap-2 rounded-2xl border border-border/50 bg-white px-4 py-3 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  益语通正在整理信息…
+                  益语通正在规划并执行任务…
                 </div>
               </div>
             ) : null}
@@ -761,7 +872,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
                     void submitQuestion(input);
                   }
                 }}
-                placeholder="比如：帮我找组织相关的书，或带我去蓝信封案例"
+                placeholder="比如：帮我找组织相关的书，或带我逛一下这个网站"
                 className="min-h-[88px] w-full resize-none border-0 bg-transparent px-2 py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground/55"
               />
               <div className="flex items-center justify-between gap-3 px-2 pb-1">

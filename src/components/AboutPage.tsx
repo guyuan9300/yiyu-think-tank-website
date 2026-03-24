@@ -82,7 +82,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
     <div data-yiyu-page="about" className="min-h-screen bg-background">
       <Header isLoggedIn={false} userType="visitor" onNavigate={(page) => handleNavigate(page as any)} />
 
-      <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <section data-yiyu-section="about-hero" className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/4 via-transparent to-accent/4" />
         <div className="absolute top-0 right-0 w-[560px] h-[560px] bg-primary/5 rounded-full blur-3xl" />
 
@@ -124,7 +124,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
         </div>
       </section>
 
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-muted/5">
+      <section data-yiyu-section="about-values" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-muted/5">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-12">
             <h2 className="text-[28px] font-semibold tracking-tight mb-3 text-foreground">核心价值观</h2>
@@ -148,7 +148,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
         </div>
       </section>
 
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section data-yiyu-section="about-services" className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-12">
             <h2 className="text-[28px] font-semibold tracking-tight mb-3 text-foreground">服务内容</h2>
@@ -166,7 +166,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
         </div>
       </section>
 
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-muted/5">
+      <section data-yiyu-section="about-milestones" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-muted/5">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-12">
             <h2 className="text-[28px] font-semibold tracking-tight mb-3 text-foreground">发展历程</h2>
@@ -187,7 +187,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
         </div>
       </section>
 
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section data-yiyu-section="about-contact" className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-12">
             <h2 className="text-[28px] font-semibold tracking-tight mb-3 text-foreground">联系我们</h2>

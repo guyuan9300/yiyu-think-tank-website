@@ -125,7 +125,7 @@ export function ArticleCenterPage({
       <Header onNavigate={onNavigate} />
 
       {/* Hero 区域 */}
-      <section className="relative pt-24 sm:pt-32 pb-8 px-4 sm:px-6 overflow-hidden">
+      <section data-yiyu-section="article-center-hero" className="relative pt-24 sm:pt-32 pb-8 px-4 sm:px-6 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent" />
 
         <div className="relative max-w-7xl mx-auto">
@@ -159,7 +159,12 @@ export function ArticleCenterPage({
       </section>
 
       {/* 筛选栏 - 固定定位 */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-border/40 sticky top-0 z-10">
+      <div
+        data-yiyu-section="article-center-filters"
+        data-yiyu-results-total={String(filteredArticles.length)}
+        data-yiyu-active-topic={selectedTopic}
+        className="bg-white/80 backdrop-blur-sm border-b border-border/40 sticky top-0 z-10"
+      >
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex flex-wrap items-center gap-4">
             {/* 搜索框 */}
@@ -212,7 +217,11 @@ export function ArticleCenterPage({
       </div>
 
       {/* 内容区域 */}
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      <div
+        data-yiyu-section="article-center-results"
+        data-yiyu-results-total={String(filteredArticles.length)}
+        className="max-w-4xl mx-auto px-6 py-8"
+      >
         {/* 结果统计 */}
         <div className="flex items-center justify-between mb-8">
           <p className="text-[14px] text-muted-foreground/70">

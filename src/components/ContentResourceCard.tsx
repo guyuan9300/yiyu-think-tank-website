@@ -65,6 +65,10 @@ export function ContentResourceCard({
     'data-yiyu-card-title': title,
     'data-yiyu-card-author': author || '',
     'data-yiyu-card-tags': tags.join('|'),
+    'data-yiyu-card-publish-date': publishDate || '',
+    'data-yiyu-card-views': String(views ?? 0),
+    'data-yiyu-card-likes': String(likes ?? 0),
+    'data-yiyu-card-favorites': String(favorites ?? 0),
   } as const;
 
   if (variant === 'list') {
