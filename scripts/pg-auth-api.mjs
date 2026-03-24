@@ -3185,7 +3185,11 @@ function detectAssistantContentTypes(question) {
   const types = new Set();
   if (/文章|洞察/.test(q)) types.add('insight');
   if (/报告/.test(q)) types.add('report');
-  if (/书|图书|书籍/.test(q)) types.add('book');
+  if (
+    /图书馆|图书|书籍|书单|书目|读物|本书|这本书|那本书|哪些书|什么书|推荐书|找书|看书|有关的书|相关的书/.test(q)
+  ) {
+    types.add('book');
+  }
   if (/方法论|工具/.test(q)) types.add('methodology');
   if (/案例|客户/.test(q)) types.add('case');
   return Array.from(types);
@@ -3251,6 +3255,17 @@ function pickLatestRelevantSource(sources, type, topic = '') {
       const bTime = Date.parse(b.publishDate || b.updatedAt || b.createdAt || '') || 0;
       return bTime - aTime;
     })[0];
+}
+
+function listRelevantSourcesByType(sources, type, topic = '') {
+  return sources
+    .filter((item) => item.contentType === type)
+    .filter((item) => matchesAssistantTopic(item, topic))
+    .sort((a, b) => {
+      const aTime = Date.parse(a.publishDate || a.updatedAt || a.createdAt || '') || 0;
+      const bTime = Date.parse(b.publishDate || b.updatedAt || b.createdAt || '') || 0;
+      return bTime - aTime;
+    });
 }
 
 async function listAssistantSources() {
@@ -3411,6 +3426,16 @@ function mapAssistantSourceCard(source) {
   };
 }
 
+function summarizeAssistantSource(source) {
+  const raw = safeText(source.summary || source.sourceSnippet || source.plainText || '');
+  if (!raw) {
+    return `已为你打开《${source.title}》。`;
+  }
+  const compact = raw.replace(/\s+/g, ' ').trim();
+  const snippet = compact.length > 96 ? `${compact.slice(0, 96)}…` : compact;
+  return `已为你打开《${source.title}》。主要内容：${snippet}`;
+}
+
 function buildAssistantFallbackAnswer(question, sources) {
   if (!sources.length) {
     return '当前官网已发布内容中未找到相关信息。';
@@ -3486,6 +3511,30 @@ function detectContentQuestionIntent(question) {
 
 function detectGuideIntent(question) {
   return /(第一次来|第一次用|先看看|先看什么|从哪里开始|适合.*负责人|负责人.*看什么)/.test(
+    safeText(question)
+  );
+}
+
+function detectActionIntent(question) {
+  return /(打开|进入|带我去|前往|跳到|去看|去到|看看|定位|跳转|在哪|哪里|哪儿|搜索|筛选|找到|找出|点开|点进去|给我看|帮我开|帮我打开|帮我进入|帮我定位|帮我筛|帮我找|帮我看|浏览|查看|切到|切换到)/.test(
+    safeText(question)
+  );
+}
+
+function detectSummaryIntent(question) {
+  return /(总结|概括|概述|主要内容|主要讲了什么|核心内容|说说内容|帮我总结|总结一下|概括一下)/.test(
+    safeText(question)
+  );
+}
+
+function detectLastIntent(question) {
+  return /(最后一[本篇份个条项家]?|最后那个|最后一个|最末|排在最后|最后的)/.test(
+    safeText(question)
+  );
+}
+
+function detectFirstIntent(question) {
+  return /(第一[本篇份个条项家]?|最前面|排在最前|第一个|第一个结果)/.test(
     safeText(question)
   );
 }
@@ -3698,9 +3747,19 @@ function buildDirectSourceTaskResponse(source, currentUrl) {
   };
 }
 
-function buildFilterTaskResponse({ question, contentType, pageLabel, pageTarget, pageId, topic, latestSource }) {
+function buildFilterTaskResponse({
+  question,
+  contentType,
+  pageLabel,
+  pageTarget,
+  pageId,
+  topic,
+  targetSource,
+  openMode = 'none',
+  wantsSummary = false,
+}) {
   const targetText = topic ? `${topic}相关的${pageLabel}` : pageLabel;
-  const shouldOpenResult = /最新|最近|打开|进入|去看|看看|带我|帮我找|帮我看|定位|找/.test(question);
+  const shouldOpenResult = detectActionIntent(question);
   const contentTypeLabel = {
     insight: '文章',
     report: '报告',
@@ -3717,10 +3776,14 @@ function buildFilterTaskResponse({ question, contentType, pageLabel, pageTarget,
   }
 
   if (shouldOpenResult) {
-    if (latestSource) {
+    if (targetSource?.title) {
       promptParts.push(
-        `筛选完成后，优先打开标题为《${latestSource.title}》的内容。`
+        `筛选完成后，优先打开标题为《${targetSource.title}》的内容。`
       );
+    } else if (openMode === 'last') {
+      promptParts.push('筛选完成后，直接打开当前结果列表中的最后一项。');
+    } else if (openMode === 'first') {
+      promptParts.push('筛选完成后，直接打开当前结果列表中的第一项。');
     } else {
       promptParts.push('如果筛选后只有一个明显匹配的结果，就直接打开它；否则停留在筛选后的结果页并调用 done。');
     }
@@ -3736,38 +3799,46 @@ function buildFilterTaskResponse({ question, contentType, pageLabel, pageTarget,
     taskSpec: {
       prompt: promptParts.join(''),
       bootstrapUrl: pageTarget,
-      expectedUrl: latestSource && shouldOpenResult ? latestSource.publicUrl : pageTarget,
+      expectedUrl: targetSource && shouldOpenResult ? targetSource.publicUrl : pageTarget,
       pageId,
       phaseDetails: {
         understanding: topic
           ? `识别到你想找和「${topic}」有关的${contentTypeLabel}。`
           : `识别到你想找${pageLabel}里的相关内容。`,
-        planning: latestSource && shouldOpenResult
-          ? `计划先进入${pageLabel}，完成筛选后直接打开《${latestSource.title}》。`
+        planning: targetSource && shouldOpenResult
+          ? `计划先进入${pageLabel}，完成筛选后直接打开《${targetSource.title}》。`
+          : openMode === 'last' && shouldOpenResult
+            ? `计划先进入${pageLabel}，完成筛选后打开最后一个结果。`
+            : openMode === 'first' && shouldOpenResult
+              ? `计划先进入${pageLabel}，完成筛选后打开第一个结果。`
           : `计划先进入${pageLabel}，完成筛选后停留在更合适的结果页。`,
         locating: `准备进入${pageLabel}并定位相关结果。`,
-        acting: latestSource && shouldOpenResult
-          ? `正在筛选并打开《${latestSource.title}》。`
+        acting: targetSource && shouldOpenResult
+          ? `正在筛选并打开《${targetSource.title}》。`
+          : openMode === 'last' && shouldOpenResult
+            ? `正在筛选并打开最后一个结果。`
+            : openMode === 'first' && shouldOpenResult
+              ? `正在筛选并打开第一个结果。`
           : `正在筛选${targetText}。`,
       },
       filters: {
         topic: topic || '',
       },
-      openTitle: latestSource && shouldOpenResult ? latestSource.title : '',
-      openMode: latestSource && shouldOpenResult ? 'exact' : 'none',
-      successMessage: latestSource && shouldOpenResult
-        ? `已帮你定位到《${latestSource.title}》。`
+      openTitle: targetSource && shouldOpenResult ? targetSource.title : '',
+      openMode: targetSource && shouldOpenResult ? 'exact' : shouldOpenResult ? openMode : 'none',
+      successMessage: targetSource && shouldOpenResult
+        ? wantsSummary ? summarizeAssistantSource(targetSource) : `已帮你定位到《${targetSource.title}》。`
         : `已帮你定位到${targetText}。`,
       fallbackAction: buildAssistantAction(
-        latestSource && shouldOpenResult ? 'open_detail' : 'open_list',
-        latestSource && shouldOpenResult ? '打开对应页面' : `前往${pageLabel}`,
-        latestSource && shouldOpenResult ? latestSource.publicUrl : pageTarget
+        targetSource && shouldOpenResult ? 'open_detail' : 'open_list',
+        targetSource && shouldOpenResult ? '打开对应页面' : `前往${pageLabel}`,
+        targetSource && shouldOpenResult ? targetSource.publicUrl : pageTarget
       ),
     },
     fallbackAction: buildAssistantAction(
-      latestSource && shouldOpenResult ? 'open_detail' : 'open_list',
-      latestSource && shouldOpenResult ? '打开对应页面' : `前往${pageLabel}`,
-      latestSource && shouldOpenResult ? latestSource.publicUrl : pageTarget
+      targetSource && shouldOpenResult ? 'open_detail' : 'open_list',
+      targetSource && shouldOpenResult ? '打开对应页面' : `前往${pageLabel}`,
+      targetSource && shouldOpenResult ? targetSource.publicUrl : pageTarget
     ),
     handoff: null,
     collectedFields: null,
@@ -3961,7 +4032,10 @@ async function buildAssistantResponse(payload) {
   const topic = detectAssistantTopic(question);
   const typedFilters = detectAssistantContentTypes(question);
   const wantsLatest = /最新|最近/.test(question);
-  const hasActionIntent = detectNavigationIntent(question) || /(想找|想看|想去|帮我找|帮我看|看看|浏览|进入)/.test(question);
+  const wantsFirst = detectFirstIntent(question);
+  const wantsLast = detectLastIntent(question);
+  const wantsSummary = detectSummaryIntent(question);
+  const hasActionIntent = detectActionIntent(question);
 
   if (pageNavigation && (hasActionIntent || !detectContentQuestionIntent(question))) {
     return buildPageTaskResponse({
@@ -3982,12 +4056,20 @@ async function buildAssistantResponse(payload) {
 
   if (typedFilters.length === 1 && hasActionIntent) {
     const type = typedFilters[0];
-    const latestSource = wantsLatest
-      ? pickLatestRelevantSource(sources, type, topic) || rankedSources.find((item) => item.contentType === type) || pickLatestSourceByType(sources, type)
-      : pickLatestRelevantSource(sources, type, topic) || rankedSources.find((item) => item.contentType === type) || null;
+    const relevantByType = listRelevantSourcesByType(sources, type, topic);
+    const latestSource = relevantByType[0] || rankedSources.find((item) => item.contentType === type) || pickLatestSourceByType(sources, type);
+    const firstSource = relevantByType[0] || null;
+    const lastSource = relevantByType[relevantByType.length - 1] || null;
+    const targetSource = wantsLatest
+      ? latestSource || null
+      : wantsLast
+        ? lastSource
+        : wantsFirst
+          ? firstSource
+          : null;
 
-    if (latestSource && wantsLatest) {
-      return buildDirectSourceTaskResponse(latestSource, currentUrl);
+    if (targetSource && wantsLatest && /^(打开|进入|带我去|前往|跳到|去看|去到|看看|定位|跳转|搜索|筛选|找到|找出|点开|点进去|给我看|帮我开|帮我打开|帮我进入|帮我定位|帮我筛|帮我找|帮我看|浏览|查看)/.test(safeText(question))) {
+      return buildDirectSourceTaskResponse(targetSource, currentUrl);
     }
 
     const mapping = {
@@ -4005,7 +4087,9 @@ async function buildAssistantResponse(payload) {
         pageTarget: mapping.pageTarget,
         pageId: mapping.pageTarget.replace('/?page=', ''),
         topic,
-        latestSource,
+        targetSource,
+        openMode: wantsLast ? 'last' : wantsFirst || wantsLatest ? 'first' : 'none',
+        wantsSummary,
       });
     }
   }

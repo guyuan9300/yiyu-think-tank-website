@@ -46,7 +46,7 @@ export interface YiyuTongSiteTaskSpec {
     year?: string;
   };
   openTitle?: string;
-  openMode?: 'none' | 'exact' | 'first';
+  openMode?: 'none' | 'exact' | 'first' | 'last';
   successMessage?: string;
   fallbackAction?: YiyuTongAction | null;
 }

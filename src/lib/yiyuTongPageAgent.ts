@@ -279,7 +279,7 @@ async function openContentCard({
   mode = 'exact',
 }: {
   title?: string;
-  mode?: 'exact' | 'first';
+  mode?: 'exact' | 'first' | 'last';
 }) {
   const cards = getVisibleContentCards();
   if (!cards.length) {
@@ -290,6 +290,8 @@ async function openContentCard({
 
   if (mode === 'first' || !title) {
     targetCard = cards[0] || null;
+  } else if (mode === 'last') {
+    targetCard = cards[cards.length - 1] || null;
   } else {
     const ranked = cards
       .map((card) => ({ card, score: scoreCard(card, title) }))
@@ -353,6 +355,8 @@ async function executeStructuredSiteSteps(
     await openContentCard({ title: taskSpec.openTitle, mode: 'exact' });
   } else if (taskSpec.openMode === 'first') {
     await openContentCard({ mode: 'first' });
+  } else if (taskSpec.openMode === 'last') {
+    await openContentCard({ mode: 'last' });
   }
 
   onPhaseChange?.('done', taskSpec.successMessage || '已完成页面操作。');
@@ -372,6 +376,8 @@ function buildPrompt(taskSpec: YiyuTongSiteTaskSpec) {
     promptParts.push(`筛选完成后，打开标题为《${taskSpec.openTitle}》的内容。`);
   } else if (taskSpec.openMode === 'first') {
     promptParts.push('筛选完成后，打开当前结果列表中的第一项。');
+  } else if (taskSpec.openMode === 'last') {
+    promptParts.push('筛选完成后，打开当前结果列表中的最后一项。');
   }
 
   promptParts.push('完成后立即调用 done，只用一句中文汇报结果。');
@@ -458,12 +464,12 @@ export async function executeYiyuTongSiteTask({
         },
       }),
       open_content_card: tool({
-        description: '打开当前列表中某个内容卡片，支持按标题精确打开或打开第一项。',
+        description: '打开当前列表中某个内容卡片，支持按标题精确打开、打开第一项或最后一项。',
         inputSchema: z.object({
           title: z.string().optional(),
-          mode: z.enum(['exact', 'first']).default('exact'),
+          mode: z.enum(['exact', 'first', 'last']).default('exact'),
         }),
-        execute: async ({ title, mode }: { title?: string; mode?: 'exact' | 'first' }) => {
+        execute: async ({ title, mode }: { title?: string; mode?: 'exact' | 'first' | 'last' }) => {
           return openContentCard({ title, mode });
         },
       }),
@@ -488,15 +494,6 @@ export async function executeYiyuTongSiteTask({
   });
 
   try {
-    if (bootstrapUrl && getCurrentInternalUrl() !== bootstrapUrl) {
-      onPhaseChange?.('locating');
-      await openInternalUrl(bootstrapUrl);
-    }
-
-    if (expectedPageId) {
-      await waitForPage(expectedPageId);
-    }
-
     if (isDirectOpenTask(taskSpec) && isStructuredSiteStateSatisfied(taskSpec)) {
       onPhaseChange?.('done', taskSpec.successMessage || '已完成页面操作。');
       return { ok: true as const, data: taskSpec.successMessage || '已完成页面操作。' };
@@ -514,7 +511,7 @@ export async function executeYiyuTongSiteTask({
     const structuredSatisfied = !structuredTask || isStructuredSiteStateSatisfied(taskSpec);
 
     if (result.success && urlSatisfied && pageSatisfied && structuredSatisfied) {
-      return { ok: true, data: result.data || taskSpec.successMessage || '已完成页面操作。' };
+      return { ok: true, data: taskSpec.successMessage || result.data || '已完成页面操作。' };
     }
 
     if (structuredTask) {

@@ -209,6 +209,22 @@ function applyPhaseToTaskPlan(
 }
 
 function SourceCard({ card, onOpen }: { card: YiyuTongCitation; onOpen: () => void }) {
+  const currentInternalUrl = typeof window === 'undefined'
+    ? ''
+    : `${window.location.pathname}${window.location.search}`;
+  const cardInternalUrl = (() => {
+    if (!card.url) return '';
+    if (/^https?:\/\//.test(card.url)) {
+      const parsed = new URL(card.url, window.location.origin);
+      return `${parsed.pathname}${parsed.search}`;
+    }
+    if (card.url.startsWith('?')) {
+      return `${window.location.pathname}${card.url}`;
+    }
+    return card.url;
+  })();
+  const isCurrentPage = Boolean(cardInternalUrl && currentInternalUrl === cardInternalUrl);
+
   return (
     <div className="rounded-2xl border border-border/50 bg-white/85 p-3">
       <div className="flex gap-3">
@@ -242,14 +258,18 @@ function SourceCard({ card, onOpen }: { card: YiyuTongCitation; onOpen: () => vo
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={onOpen}
-        className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80"
-      >
-        打开页面
-        <ArrowUpRight className="h-3.5 w-3.5" />
-      </button>
+      {isCurrentPage ? (
+        <div className="mt-3 text-xs font-medium text-muted-foreground/60">当前页面</div>
+      ) : (
+        <button
+          type="button"
+          onClick={onOpen}
+          className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80"
+        >
+          打开页面
+          <ArrowUpRight className="h-3.5 w-3.5" />
+        </button>
+      )}
     </div>
   );
 }
