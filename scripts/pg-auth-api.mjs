@@ -3977,6 +3977,77 @@ function detectFirstIntent(question) {
   );
 }
 
+function detectCommentIntent(question) {
+  return /(评论|留言|评价)/.test(safeText(question));
+}
+
+function detectSubmitIntent(question) {
+  return /(提交|发表|发布|发送)/.test(safeText(question));
+}
+
+function extractCommentText(question) {
+  const safe = safeText(question);
+  if (!safe) return '';
+  const patterns = [
+    /写(?:一条|一个|个|一句)?\s*([^，。；！？]+?)(?=并?(?:提交|发表|发布|发送|保存)|[，。；！？]|$)/,
+    /评论(?:内容)?(?:是|写成|写为)?[:：]?\s*[“"「]?([^”"」]+?)[”"」]?(?=并?(?:提交|发表|发布|发送|保存)|[，。；！？]|$)/,
+    /留言(?:内容)?(?:是|写成|写为)?[:：]?\s*[“"「]?([^”"」]+?)[”"」]?(?=并?(?:提交|发表|发布|发送|保存)|[，。；！？]|$)/,
+    /评价(?:内容)?(?:是|写成|写为)?[:：]?\s*[“"「]?([^”"」]+?)[”"」]?(?=并?(?:提交|发表|发布|发送|保存)|[，。；！？]|$)/,
+    /[“"「]([^”"」]{2,})[”"」]/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = safe.match(pattern);
+    if (match?.[1]) {
+      return safeText(match[1])
+        .replace(/并?(提交|发表|发布|发送|保存).*$/, '')
+        .replace(/^(在)?《[^》]+》(?:这本书|这篇文章|这个案例)?/,'')
+        .trim();
+    }
+  }
+
+  const genericMatch = safe.match(/评论(?:内容)?(?:是|写成|写为)?[:：]?\s*([^，。；！？]+)/);
+  if (genericMatch?.[1]) {
+    const text = safeText(genericMatch[1])
+      .replace(/并?(提交|发表|发布|发送|保存).*$/, '')
+      .trim();
+    return text.includes('评论') ? text : `${text}评论`;
+  }
+  return '';
+}
+
+function splitSequentialClauses(question) {
+  const safe = safeText(question);
+  if (!safe) return [];
+  const normalized = safe
+    .replace(/[，,]\s*(然后|接着|随后)/g, '|||')
+    .replace(/[，,]\s*再/g, '|||')
+    .replace(/\s+(然后|接着|随后)\s+/g, '|||')
+    .replace(/\s+再(?=给我|帮我|带我|看|去|打开|进入)/g, '|||');
+  return normalized
+    .split('|||')
+    .map((item) => safeText(item))
+    .filter(Boolean);
+}
+
+function getAssistantPageIdFromTarget(target) {
+  const normalized = normalizeAssistantTarget(target);
+  const params = new URLSearchParams(normalized.split('?')[1] || '');
+  return params.get('page') || (normalized === '/' ? 'home' : '');
+}
+
+function buildGraphStep(id, type, payload = {}) {
+  return { id, type, ...payload };
+}
+
+function findQuotedTitleSource(question, sources) {
+  const safe = safeText(question);
+  const match = safe.match(/《([^》]+)》/);
+  if (!match?.[1]) return null;
+  const quoted = safeText(match[1]);
+  return sources.find((item) => safeText(item.title) === quoted) || null;
+}
+
 function cleanNavigationSubject(question) {
   return safeText(question)
     .replace(/(带我去|帮我去|帮我打开|打开|进入|前往|跳到|去看|去到|看看|定位到|给我看|我想看|我想去|帮我找|带我看|请|请问|告诉我|我想知道)/g, ' ')
@@ -4412,6 +4483,64 @@ function buildAssistantResponseEnvelope({
   };
 }
 
+function buildSiteTaskGraphResponse({
+  goal,
+  message,
+  entities = null,
+  steps = [],
+  citations = [],
+  graphSteps = [],
+  successMessage = '',
+  expectedUrl = '',
+  pageId = '',
+  fallbackPlan = null,
+}) {
+  const graphPrompt = graphSteps.map((step, index) => {
+    switch (step.type) {
+      case 'open_url':
+        return `${index + 1}. 打开站内页面 ${step.target}`;
+      case 'set_filters':
+        return `${index + 1}. 设置页面筛选`;
+      case 'set_sort_mode':
+        return `${index + 1}. 切换排序为 ${step.sortMode}`;
+      case 'go_to_page':
+        return `${index + 1}. 切到第 ${step.pageNumber} 页`;
+      case 'open_content_card':
+        return `${index + 1}. 打开目标内容卡片`;
+      case 'fill_local_form_fields':
+        return `${index + 1}. 填写当前页面表单字段`;
+      case 'fill_comment':
+        return `${index + 1}. 写入评论内容`;
+      case 'submit_comment':
+        return `${index + 1}. 提交评论`;
+      case 'scroll_section':
+        return `${index + 1}. 滚动浏览页面`;
+      case 'expand_section':
+        return `${index + 1}. 展开页面区域`;
+      default:
+        return `${index + 1}. 执行页面动作`;
+    }
+  }).join('；');
+
+  return buildAssistantResponseEnvelope({
+    mode: 'site_task',
+    goal,
+    entities,
+    message,
+    steps,
+    citations,
+    executionPlan: buildSameTabExecutionPlan({
+      kind: 'site_task',
+      prompt: graphPrompt || message,
+      graphSteps,
+      expectedUrl: expectedUrl || '',
+      pageId: pageId || '',
+      successMessage,
+    }),
+    fallbackPlan,
+  });
+}
+
 function buildCurrentPageResponse(message, goal = '当前页面已满足目标') {
   return buildAssistantResponseEnvelope({
     mode: 'answer',
@@ -4689,6 +4818,159 @@ function buildSiteTourResponse(question) {
   });
 }
 
+function resolveClauseToGraphTarget(clause, rankedSources, allSources) {
+  const pageNavigation = resolvePageNavigation(clause);
+  if (pageNavigation) {
+    return {
+      label: pageNavigation.label,
+      target: pageNavigation.target,
+      pageId: getAssistantPageIdFromTarget(pageNavigation.target),
+      source: null,
+    };
+  }
+
+  const directSource = findDirectNavigationSource(clause, rankedSources);
+  if (directSource) {
+    return {
+      label: directSource.title,
+      target: directSource.publicUrl,
+      pageId: getAssistantPageIdFromTarget(directSource.publicUrl),
+      source: directSource,
+    };
+  }
+
+  const typedFilters = detectAssistantContentTypes(clause);
+  if (typedFilters.length === 1 && /最新|最近/.test(clause)) {
+    const latestSource = pickLatestRelevantSource(allSources, typedFilters[0], detectAssistantTopic(clause));
+    if (latestSource) {
+      return {
+        label: latestSource.title,
+        target: latestSource.publicUrl,
+        pageId: getAssistantPageIdFromTarget(latestSource.publicUrl),
+        source: latestSource,
+      };
+    }
+  }
+
+  return null;
+}
+
+function buildSequentialSiteTaskResponse(question, currentUrl, rankedSources, allSources) {
+  const clauses = splitSequentialClauses(question);
+  if (clauses.length < 2) return null;
+
+  const targets = clauses
+    .map((clause) => resolveClauseToGraphTarget(clause, rankedSources, allSources))
+    .filter(Boolean);
+
+  if (targets.length < 2 || targets.length !== clauses.length) return null;
+
+  const graphSteps = [];
+  targets.forEach((target, index) => {
+    const normalizedCurrentUrl = normalizeAssistantTarget(currentUrl);
+    const isFirstAndAlreadyThere = index === 0 && normalizedCurrentUrl && normalizedCurrentUrl === normalizeAssistantTarget(target.target);
+    if (isFirstAndAlreadyThere) {
+      return;
+    }
+    graphSteps.push(
+      buildGraphStep(`open_${index + 1}`, 'open_url', {
+        target: target.target,
+        pageId: target.pageId,
+        detail: `正在打开${target.label}。`,
+      })
+    );
+  });
+
+  if (!graphSteps.length) {
+    return buildCurrentPageResponse('当前已经在这条连续任务的第一个目标页面。');
+  }
+
+  const lastTarget = targets[targets.length - 1];
+  const message = `我先${targets.map((target) => `带你看${target.label}`).join('，再')}。`;
+
+  return buildSiteTaskGraphResponse({
+    goal: '按顺序完成多个站内查看目标',
+    entities: {
+      targetTitle: lastTarget.source?.title || '',
+      targetId: lastTarget.source?.contentId || '',
+      query: safeText(question),
+    },
+    message,
+    steps: buildAssistantSteps(
+      buildAssistantStep('understanding', '正在理解你的目标', '识别到你给了一个按顺序完成的连续任务。'),
+      buildAssistantStep('planning', '正在规划操作步骤', `计划依次完成：${targets.map((target) => target.label).join(' -> ')}。`),
+      buildAssistantStep('locating', '正在定位相关页面', '准备按顺序进入每个目标页面。'),
+      buildAssistantStep('acting', '正在操作页面', `正在依次完成：${targets.map((target) => target.label).join(' -> ')}。`),
+    ),
+    citations: [],
+    graphSteps,
+    successMessage: `已按顺序完成：${targets.map((target) => target.label).join(' -> ')}。`,
+    expectedUrl: lastTarget.target,
+    pageId: lastTarget.pageId,
+    fallbackPlan: {
+      action: buildAssistantAction('open_url', `前往${lastTarget.label}`, lastTarget.target),
+    },
+  });
+}
+
+function buildCommentSiteTaskResponse({ question, currentUrl, targetSource, commentText, wantsSummary = false }) {
+  if (!targetSource || !commentText) return null;
+
+  const graphSteps = [];
+  const normalizedCurrentUrl = normalizeAssistantTarget(currentUrl);
+  const normalizedTarget = normalizeAssistantTarget(targetSource.publicUrl);
+
+  if (!normalizedCurrentUrl || normalizedCurrentUrl !== normalizedTarget) {
+    graphSteps.push(
+      buildGraphStep('open_target', 'open_url', {
+        target: targetSource.publicUrl,
+        pageId: getAssistantPageIdFromTarget(targetSource.publicUrl),
+        detail: `正在打开《${targetSource.title}》。`,
+      })
+    );
+  }
+
+  graphSteps.push(
+    buildGraphStep('fill_comment', 'fill_comment', {
+      text: commentText,
+      detail: `正在写入评论：${commentText}`,
+    }),
+    buildGraphStep('submit_comment', 'submit_comment', {
+      detail: '正在提交评论。',
+    })
+  );
+
+  const successMessage = wantsSummary
+    ? `已为你在《${targetSource.title}》提交评论。${summarizeAssistantSource(targetSource).replace(/^已为你打开《.*?》。/, '')}`
+    : `已为你在《${targetSource.title}》提交评论。`;
+
+  return buildSiteTaskGraphResponse({
+    goal: `打开《${targetSource.title}》并发表评论`,
+    entities: {
+      contentTypes: [targetSource.contentType],
+      targetId: targetSource.contentId,
+      targetTitle: targetSource.title,
+      query: safeText(question),
+      wantsSummary,
+    },
+    message: `我来帮你打开《${targetSource.title}》，写好评论并提交。`,
+    steps: buildAssistantSteps(
+      buildAssistantStep('understanding', '正在理解你的目标', `识别到你想在《${targetSource.title}》页面完成评论提交。`),
+      buildAssistantStep('planning', '正在规划操作步骤', `计划先打开《${targetSource.title}》，再写入评论并提交。`),
+      buildAssistantStep('locating', '正在定位相关页面', `准备进入《${targetSource.title}》详情页。`),
+      buildAssistantStep('acting', '正在操作页面', '正在写入评论并提交。'),
+    ),
+    citations: wantsSummary ? [mapAssistantSourceCard(targetSource)] : [],
+    graphSteps,
+    successMessage,
+    expectedUrl: targetSource.publicUrl,
+    pageId: getAssistantPageIdFromTarget(targetSource.publicUrl),
+    fallbackPlan: {
+      action: buildAssistantAction('open_detail', '打开对应页面', targetSource.publicUrl),
+    },
+  });
+}
+
 function buildAnswerResponse(question, sources) {
   return buildAssistantResponseEnvelope({
     mode: 'answer',
@@ -4883,6 +5165,8 @@ async function buildAssistantResponse(payload) {
   const plannerMatchedSource = plannerSourceId
     ? rankedSources.find((item) => item.contentId === plannerSourceId) || sources.find((item) => item.contentId === plannerSourceId)
     : null;
+  const quotedSource = findQuotedTitleSource(question, sources);
+  const currentPageSource = sources.find((item) => normalizeAssistantTarget(item.publicUrl) === currentUrl) || null;
 
   if (shouldContinueActiveFormTask(question, activeFormContext) || detectConsultIntent(question) || plannerMode === 'form_task') {
     const collectedFields = await extractConsultFields(
@@ -4942,6 +5226,26 @@ async function buildAssistantResponse(payload) {
 
   if (detectSiteTourIntent(question) || plannerMode === 'site_tour') {
     return buildSiteTourResponse(question);
+  }
+
+  const sequentialTaskResponse = buildSequentialSiteTaskResponse(question, currentUrl, rankedSources, sources);
+  if (sequentialTaskResponse) {
+    return sequentialTaskResponse;
+  }
+
+  const commentTargetSource = plannerMatchedSource || directSource || quotedSource || currentPageSource;
+  const commentText = extractCommentText(question);
+  if (detectCommentIntent(question) && detectSubmitIntent(question) && commentTargetSource) {
+    const commentTaskResponse = buildCommentSiteTaskResponse({
+      question,
+      currentUrl,
+      targetSource: commentTargetSource,
+      commentText,
+      wantsSummary: wantsSummary || plannerWantsSummary,
+    });
+    if (commentTaskResponse) {
+      return commentTaskResponse;
+    }
   }
 
   if (plannerMode === 'site_task' && plannerPageTarget) {

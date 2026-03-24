@@ -36,6 +36,74 @@ export interface YiyuTongTaskStep {
   detail?: string;
 }
 
+export type YiyuTongSameTabGraphStep =
+  | {
+      id: string;
+      type: 'open_url';
+      target: string;
+      pageId?: string;
+      detail?: string;
+    }
+  | {
+      id: string;
+      type: 'set_filters';
+      filters: {
+        searchQuery?: string;
+        topic?: string;
+        year?: string;
+      };
+      detail?: string;
+    }
+  | {
+      id: string;
+      type: 'set_sort_mode';
+      sortMode: string;
+      detail?: string;
+    }
+  | {
+      id: string;
+      type: 'go_to_page';
+      pageNumber: number;
+      detail?: string;
+    }
+  | {
+      id: string;
+      type: 'open_content_card';
+      title?: string;
+      mode?: 'exact' | 'first' | 'last';
+      detail?: string;
+    }
+  | {
+      id: string;
+      type: 'scroll_section';
+      sectionId?: string;
+      passes?: number;
+      detail?: string;
+    }
+  | {
+      id: string;
+      type: 'expand_section';
+      sectionId: string;
+      detail?: string;
+    }
+  | {
+      id: string;
+      type: 'fill_local_form_fields';
+      fields: YiyuTongCollectedFields;
+      detail?: string;
+    }
+  | {
+      id: string;
+      type: 'fill_comment';
+      text: string;
+      detail?: string;
+    }
+  | {
+      id: string;
+      type: 'submit_comment';
+      detail?: string;
+    };
+
 export interface YiyuTongTaskEntities {
   contentTypes?: Array<'insight' | 'report' | 'book' | 'methodology' | 'case'>;
   topic?: string;
@@ -81,6 +149,7 @@ export interface YiyuTongSameTabExecutionPlan {
   openMode?: 'none' | 'exact' | 'first' | 'last';
   successMessage?: string;
   tourStops?: YiyuTongTourStop[];
+  graphSteps?: YiyuTongSameTabGraphStep[];
 }
 
 export interface YiyuTongFormContext {

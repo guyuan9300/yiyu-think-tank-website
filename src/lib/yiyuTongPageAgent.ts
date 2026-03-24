@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { YiyuTongSameTabExecutionPlan } from './yiyuTongApi';
+import type { YiyuTongSameTabExecutionPlan, YiyuTongSameTabGraphStep } from './yiyuTongApi';
 import { proxyYiyuTongPageAgent } from './yiyuTongApi';
 
 export type YiyuTongTaskPhase =
@@ -303,6 +303,58 @@ async function setSiteFilters(filters: NonNullable<YiyuTongSameTabExecutionPlan[
   return '已完成当前页面筛选。';
 }
 
+function findCommentTextarea() {
+  return document.querySelector<HTMLTextAreaElement>('textarea[placeholder*="评论"]');
+}
+
+function findCommentSubmitButton() {
+  return Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find((button) =>
+    /发表评论|提交评论|发送评论/.test(String(button.textContent || '').trim())
+  ) || null;
+}
+
+async function fillComment(text: string) {
+  const textarea = findCommentTextarea();
+  if (!textarea) {
+    throw new Error('当前页面未找到评论输入框');
+  }
+  dispatchNativeInputValue(textarea, text);
+  textarea.focus();
+  await sleep(160);
+  return `已写入评论内容：${text}`;
+}
+
+async function submitComment() {
+  const button = findCommentSubmitButton();
+  if (!button) {
+    throw new Error('当前页面未找到发表评论按钮');
+  }
+  if (button.disabled) {
+    throw new Error('发表评论按钮当前不可用');
+  }
+
+  const textarea = findCommentTextarea();
+  const beforeValue = textarea?.value.trim() || '';
+  const successText = '评论已提交，待管理员审核后将显示在评论列表中';
+  const beforeSuccessVisible = String(document.body.textContent || '').includes(successText);
+  button.click();
+
+  const submitted = await waitFor(() => {
+    const messageNode = Array.from(document.querySelectorAll<HTMLElement>('div,span,p')).find((node) =>
+      String(node.textContent || '').includes(successText)
+    );
+    if (messageNode && !beforeSuccessVisible) return true;
+    const currentValue = textarea?.value.trim() || '';
+    return Boolean(beforeValue && currentValue === '');
+  }, 8000, 120);
+
+  if (!submitted) {
+    throw new Error('评论提交后页面没有出现成功反馈');
+  }
+
+  return '评论已提交。';
+}
+
 async function setSortMode(sortMode: string) {
   const select = document.querySelector<HTMLSelectElement>('select[data-yiyu-sort="content"]');
   if (select) {
@@ -560,11 +612,14 @@ function getExecutionStateSignature() {
     resultsTotal: document.querySelector<HTMLElement>('[data-yiyu-results-total]')?.dataset.yiyuResultsTotal || '',
     scrollBucket: getScrollBucket(),
     filledFieldCount: getFilledFieldCount(),
+    commentValue: findCommentTextarea()?.value.trim() || '',
+    commentButtonDisabled: findCommentSubmitButton()?.disabled || false,
   });
 }
 
 function hasStructuredSiteSteps(plan: YiyuTongSameTabExecutionPlan) {
   return Boolean(
+    plan.graphSteps?.length ||
     plan.bootstrapUrl ||
       plan.filters?.searchQuery ||
       plan.filters?.topic ||
@@ -576,6 +631,7 @@ function hasStructuredSiteSteps(plan: YiyuTongSameTabExecutionPlan) {
 }
 
 function isDirectOpenTask(plan: YiyuTongSameTabExecutionPlan) {
+  if (plan.graphSteps?.length) return false;
   const hasFilters = Boolean(
     plan.filters?.searchQuery ||
       plan.filters?.topic ||
@@ -584,6 +640,45 @@ function isDirectOpenTask(plan: YiyuTongSameTabExecutionPlan) {
       plan.pageNumber
   );
   return !hasFilters && (!plan.openMode || plan.openMode === 'none');
+}
+
+function renderGraphStepPrompt(step: YiyuTongSameTabGraphStep) {
+  switch (step.type) {
+    case 'open_url':
+      return `先使用 open_internal_url 打开 "${step.target}"。`;
+    case 'set_filters': {
+      const parts = [];
+      if (step.filters.searchQuery) parts.push(`搜索词“${step.filters.searchQuery}”`);
+      if (step.filters.topic) parts.push(`标签“${step.filters.topic}”`);
+      if (step.filters.year) parts.push(`年份“${step.filters.year}”`);
+      return `然后设置当前列表页筛选：${parts.join('、')}。`;
+    }
+    case 'set_sort_mode':
+      return `然后把当前列表排序切换为“${step.sortMode}”。`;
+    case 'go_to_page':
+      return `然后切换到第 ${step.pageNumber} 页。`;
+    case 'open_content_card':
+      if (step.title) {
+        return `然后打开标题为《${step.title}》的内容卡片。`;
+      }
+      if (step.mode === 'last') return '然后打开当前结果列表里的最后一项。';
+      if (step.mode === 'first') return '然后打开当前结果列表里的第一项。';
+      return '然后打开目标内容卡片。';
+    case 'scroll_section':
+      return step.sectionId
+        ? `然后滚动到 ${step.sectionId} 区域。`
+        : '然后从上到下滚动浏览当前页面。';
+    case 'expand_section':
+      return `然后展开 ${step.sectionId} 区域。`;
+    case 'fill_local_form_fields':
+      return '然后把当前已知表单字段填写进页面。';
+    case 'fill_comment':
+      return `然后在评论框里写入“${step.text}”。`;
+    case 'submit_comment':
+      return '最后点击发表评论按钮，但不要做额外无关操作。';
+    default:
+      return '';
+  }
 }
 
 async function preBootstrapPlan(plan: YiyuTongSameTabExecutionPlan) {
@@ -625,6 +720,13 @@ function buildRuntimePrompt(
     '任务完成后立即调用 done，不要额外闲聊。',
   ];
 
+  if (plan.graphSteps?.length) {
+    promptParts.push('请严格按照下面的顺序步骤依次完成，不要跳步，不要提前结束：');
+    for (const [index, step] of plan.graphSteps.entries()) {
+      promptParts.push(`${index + 1}. ${renderGraphStepPrompt(step)}`);
+    }
+  }
+
   if (plan.filters?.searchQuery) {
     promptParts.push(`当前任务包含搜索词：${plan.filters.searchQuery}。`);
   }
@@ -652,10 +754,61 @@ function buildRuntimePrompt(
   return promptParts.join(' ');
 }
 
+async function executeGraphStep(step: YiyuTongSameTabGraphStep) {
+  switch (step.type) {
+    case 'open_url':
+      await openInternalUrl(step.target);
+      if (step.pageId) {
+        await waitForPage(step.pageId);
+      }
+      return `已打开 ${step.target}`;
+    case 'set_filters':
+      return setSiteFilters(step.filters);
+    case 'set_sort_mode':
+      return setSortMode(step.sortMode);
+    case 'go_to_page':
+      return goToPage(step.pageNumber);
+    case 'open_content_card':
+      return openContentCard({ title: step.title, mode: step.mode || (step.title ? 'exact' : 'first') });
+    case 'scroll_section':
+      return scrollSection(step.sectionId, step.passes || 1);
+    case 'expand_section':
+      return expandSection(step.sectionId);
+    case 'fill_local_form_fields':
+      return fillLocalFormFields(step.fields);
+    case 'fill_comment':
+      return fillComment(step.text);
+    case 'submit_comment':
+      return submitComment();
+    default:
+      throw new Error('未支持的任务步骤');
+  }
+}
+
+async function executeStructuredGraphSteps(
+  plan: YiyuTongSameTabExecutionPlan,
+  onPhaseChange?: (phase: YiyuTongTaskPhase, detail?: string) => void
+) {
+  const graphSteps = plan.graphSteps || [];
+  for (const step of graphSteps) {
+    if (step.type === 'open_url') {
+      onPhaseChange?.('locating', step.detail || `正在进入 ${step.target}`);
+    } else {
+      onPhaseChange?.('acting', step.detail || '正在执行页面操作');
+    }
+    await executeGraphStep(step);
+  }
+  onPhaseChange?.('done', plan.successMessage || '已完成页面操作。');
+  return { ok: true as const, data: plan.successMessage || '已完成页面操作。' };
+}
+
 async function executeStructuredSiteSteps(
   plan: YiyuTongSameTabExecutionPlan,
   onPhaseChange?: (phase: YiyuTongTaskPhase, detail?: string) => void
 ) {
+  if (plan.graphSteps?.length) {
+    return executeStructuredGraphSteps(plan, onPhaseChange);
+  }
   onPhaseChange?.('locating', '正在定位相关页面');
   if (plan.bootstrapUrl) {
     await openInternalUrl(plan.bootstrapUrl);
@@ -735,7 +888,17 @@ export async function executeYiyuTongSiteTask({
   onPhaseChange,
 }: ExecuteYiyuTongSiteTaskOptions) {
   onPhaseChange?.('understanding', plan.kind === 'site_tour' ? '识别到你想浏览网站主要板块。' : '识别到你想让我直接在官网里完成操作。');
+  const hasGraphSteps = Boolean(plan.graphSteps?.length);
   const structuredTask = plan.kind === 'site_tour' || hasStructuredSiteSteps(plan);
+
+  if (hasGraphSteps) {
+    try {
+      return await executeStructuredGraphSteps(plan, onPhaseChange);
+    } catch (error: any) {
+      onPhaseChange?.('error', error?.message || '执行失败');
+      return { ok: false as const, error: error?.message || '执行失败' };
+    }
+  }
 
   const [{ PageAgentCore, tool }, controllerModule] = await Promise.all([
     import('page-agent'),
@@ -852,6 +1015,18 @@ export async function executeYiyuTongSiteTask({
           note: z.string().optional(),
         }),
         execute: async (fields: LocalFormFields) => fillLocalFormFields(fields),
+      }),
+      fill_comment: tool({
+        description: '在当前详情页的评论输入框中写入评论内容。',
+        inputSchema: z.object({
+          text: z.string().min(1),
+        }),
+        execute: async ({ text }: { text: string }) => fillComment(text),
+      }),
+      submit_comment: tool({
+        description: '点击当前页面中的发表评论按钮，提交已经写好的评论。',
+        inputSchema: z.object({}),
+        execute: async () => submitComment(),
       }),
     },
     onBeforeTask: () => {

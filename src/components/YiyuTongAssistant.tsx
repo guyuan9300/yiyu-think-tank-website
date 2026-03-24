@@ -576,6 +576,15 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
         needsExtensionSetup: false,
         extensionError: result.error || '跨标签页执行失败',
       }));
+    } catch (error: any) {
+      const message = error?.message || '这次任务执行中断了。';
+      updateMessage(messageId, (current) => ({
+        ...current,
+        taskPlan: applyPhaseToTaskPlan(current.taskPlan, 'error', message),
+        content: message,
+        needsExtensionSetup: false,
+        extensionError: current.needsExtensionSetup ? message : current.extensionError,
+      }));
     } finally {
       runningTasksRef.current.delete(messageId);
     }
