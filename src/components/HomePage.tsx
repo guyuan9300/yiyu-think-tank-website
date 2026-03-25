@@ -4,6 +4,7 @@ import { Footer } from './Footer';
 import { ArrowRight, Brain, Target, Users, TrendingUp, BookOpen, FileText, Lightbulb, ChevronRight, Star, Zap, ChevronDown, Wrench, Layers } from 'lucide-react';
 import { getInsights, getReports, getBooks, getMethodologies, type InsightArticle, type Report, type Book, type Methodology } from '../lib/dataService';
 import { DIAGNOSIS_FORM_URL } from '../lib/siteMeta';
+import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 
 // Quick Entry Card - Apple Style
 function QuickEntryCard({ 
@@ -393,13 +394,13 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
   };
 
   return (
-    <div data-yiyu-page="home" className="min-h-screen bg-background">
+    <div {...getYiyuPageAttrs('home')} className="min-h-screen bg-background">
       {/* Header */}
       <Header isLoggedIn={false} userType="visitor" onNavigate={handleNavigate} />
 
       {/* Hero Section - Apple Style with Depth */}
       <section
-        data-yiyu-section="home-hero"
+        {...getYiyuSectionAttrs('home', 'home-hero')}
         ref={heroRef}
         className="relative pt-16 sm:pt-32 pb-14 sm:pb-28 px-4 sm:px-6 lg:px-8 overflow-hidden"
       >
@@ -453,7 +454,10 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
       {/* 首页：按需求隐藏「免费预约组织诊断」后到「战略陪伴」前的内容（3张跳转卡片 / 热门内容 / 战略前沿报告） */}
 
       {/* 最新内容 */}
-      <section data-yiyu-section="home-latest-content" className="py-14 sm:py-24 px-4 sm:px-6 lg:px-8">
+      <section
+        {...getYiyuSectionAttrs('home', 'home-latest-content')}
+        className="py-14 sm:py-24 px-4 sm:px-6 lg:px-8"
+      >
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center max-w-3xl mx-auto">
             <h2 className="text-[32px] font-semibold tracking-tight mb-3 text-foreground">最新内容</h2>
@@ -584,7 +588,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
                     }
                     if (r.kind === 'book') {
                       if (onNavigate) onNavigate('book-reader' as any, r.id);
-                      else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(r.id)}`);
+                      else window.location.assign(`${window.location.pathname}?page=book-reader&id=${encodeURIComponent(r.id)}`);
                       return;
                     }
                     // methodology
@@ -633,7 +637,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
 
       {/* Strategy Companion - Apple Liquid Glass */}
       <section
-        data-yiyu-section="home-strategy-companion"
+        {...getYiyuSectionAttrs('home', 'home-strategy-companion')}
         className="py-14 sm:py-24 px-4 sm:px-6 lg:px-8"
       >
         <div className="max-w-[1200px] mx-auto">
@@ -711,7 +715,10 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
       </section>
 
       {/* Trust Indicators - Minimal */}
-      <section data-yiyu-section="home-trust-indicators" className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-transparent to-muted/8">
+      <section
+        {...getYiyuSectionAttrs('home', 'home-trust-indicators')}
+        className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-transparent to-muted/8"
+      >
         <div className="max-w-[1200px] mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <TrustItem number="200+" label="服务企业" />

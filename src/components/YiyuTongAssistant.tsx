@@ -604,7 +604,21 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
       role: 'user',
       content: text,
     };
-    setMessages((prev) => [...prev, userMessage]);
+    const assistantMessageId = createMessageId();
+    const placeholderAssistantMessage: AssistantMessage = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '我先理解你的目标并开始执行。',
+      taskPlan: [
+        {
+          id: 'live-intake',
+          label: '正在理解任务',
+          detail: '正在结合官网结构和当前页面状态规划执行路径。',
+          status: 'active',
+        },
+      ],
+    };
+    setMessages((prev) => [...prev, userMessage, placeholderAssistantMessage]);
     setInput('');
     setIsLoading(true);
 
@@ -621,20 +635,24 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
     setIsLoading(false);
 
     if (!result.ok || !result.data) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: createMessageId(),
-          role: 'assistant',
-          content: result.error || '益语通暂时没接上，请稍后再试。',
-          citations: [],
-        },
-      ]);
+      updateMessage(assistantMessageId, () => ({
+        id: assistantMessageId,
+        role: 'assistant',
+        content: result.error || '益语通暂时没接上，请稍后再试。',
+        citations: [],
+        taskPlan: [
+          {
+            id: 'live-intake',
+            label: '执行出现问题',
+            detail: result.error || '益语通暂时没接上，请稍后再试。',
+            status: 'error',
+          },
+        ],
+      }));
       return;
     }
 
     const response = result.data;
-    const assistantMessageId = createMessageId();
     const assistantMessage: AssistantMessage = {
       id: assistantMessageId,
       role: 'assistant',
@@ -652,7 +670,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
       formContext: response.formContext,
     };
 
-    setMessages((prev) => [...prev, assistantMessage]);
+    updateMessage(assistantMessageId, () => assistantMessage);
     setActiveFormContext(response.formContext?.active ? response.formContext : null);
 
     if (response.executionPlan.executor !== 'none') {
@@ -702,6 +720,36 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
     if (status.ready) {
       await retryExtensionTask(messageId);
     }
+  };
+
+  const startDrag = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (!panelRect) return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('[data-yiyu-resize-handle]')) return;
+    if (target?.closest('button,a,input,textarea')) return;
+    event.preventDefault();
+
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startRect = panelRect;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+      setPanelRect(clampPanelRect({
+        ...startRect,
+        left: startRect.left + deltaX,
+        top: startRect.top + deltaY,
+      }));
+    };
+
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
   };
 
   const startResize = (direction: ResizeDirection, event: ReactMouseEvent<HTMLDivElement>) => {
@@ -785,7 +833,10 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
             height: `${currentRect.height}px`,
           }}
         >
-          <div className="border-b border-border/50 bg-white/90 px-5 py-4">
+          <div
+            className="border-b border-border/50 bg-white/90 px-5 py-4 cursor-move"
+            onMouseDown={startDrag}
+          >
             <div className="flex items-start justify-between gap-4">
               <div className="max-w-[270px] text-[12px] leading-5 text-muted-foreground/75">
                 你可以直接让我找内容、带你逛网站，或让我在官网里自动完成查找、筛选、打开和填写表单。

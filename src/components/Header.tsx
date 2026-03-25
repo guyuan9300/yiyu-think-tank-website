@@ -203,7 +203,14 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
   const memberInfo = currentUser ? getMemberTypeInfo(currentUser.memberType) : null;
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/20">
+    <header
+      data-yiyu-section="shared-header"
+      data-yiyu-section-type="nav"
+      data-yiyu-section-title="顶部栏"
+      data-yiyu-section-order="0"
+      data-yiyu-section-enterable="true"
+      className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/20"
+    >
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo / Brand (clickable -> Home) */}

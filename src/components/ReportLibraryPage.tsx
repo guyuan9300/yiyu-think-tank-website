@@ -14,6 +14,7 @@ import { getReports as getReportsLocal, type Report } from '../lib/dataService';
 import { PdfCoverImage } from './PdfCoverImage';
 import { ContentResourceCard } from './ContentResourceCard';
 import { PaginationControls } from './PaginationControls';
+import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 
 const PAGE_SIZE = 6;
 
@@ -127,11 +128,14 @@ export function ReportLibraryPage({
   }
 
   return (
-    <div data-yiyu-page="report-library" className="min-h-screen bg-background flex flex-col">
+    <div {...getYiyuPageAttrs('report-library')} className="min-h-screen bg-background flex flex-col">
       <Header onNavigate={onNavigate} />
 
       {/* Hero 区域 */}
-      <section data-yiyu-section="report-library-hero" className="relative pt-24 sm:pt-32 pb-8 px-4 sm:px-6 overflow-hidden">
+      <section
+        {...getYiyuSectionAttrs('report-library', 'report-library-hero')}
+        className="relative pt-24 sm:pt-32 pb-8 px-4 sm:px-6 overflow-hidden"
+      >
         <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent" />
 
         <div className="relative max-w-4xl mx-auto">
@@ -167,10 +171,14 @@ export function ReportLibraryPage({
 
       {/* 筛选栏 - 固定定位 */}
       <div
-        data-yiyu-section="report-library-filters"
+        {...getYiyuSectionAttrs('report-library', 'report-library-filters')}
         data-yiyu-results-total={String(filteredReports.length)}
         data-yiyu-active-topic={selectedTopic}
         data-yiyu-active-year={selectedYear}
+        data-yiyu-search-query={searchQuery}
+        data-yiyu-current-page={String(safePage)}
+        data-yiyu-total-pages={String(totalPages)}
+        data-yiyu-sort="latest"
         className="bg-white/80 backdrop-blur-sm border-b border-border/40 sticky top-0 z-10"
       >
         <div className="max-w-4xl mx-auto px-6 py-4">
@@ -238,8 +246,11 @@ export function ReportLibraryPage({
 
       {/* 内容区域 */}
       <div
-        data-yiyu-section="report-library-results"
+        {...getYiyuSectionAttrs('report-library', 'report-library-results')}
         data-yiyu-results-total={String(filteredReports.length)}
+        data-yiyu-current-page={String(safePage)}
+        data-yiyu-total-pages={String(totalPages)}
+        data-yiyu-sort="latest"
         className="max-w-4xl mx-auto px-6 py-8"
       >
         {/* 结果统计 */}
@@ -263,6 +274,8 @@ export function ReportLibraryPage({
             {paginatedReports.map((report) => (
               <ContentResourceCard
                 key={report.id}
+                contentId={report.id}
+                contentType="report"
                 cover={
                   <>
                     {report.coverImage ? (
@@ -302,8 +315,10 @@ export function ReportLibraryPage({
           <div className="space-y-3">
             {paginatedReports.map((report) => (
               <ContentResourceCard
-                  key={report.id}
-                  variant="list"
+                key={report.id}
+                contentId={report.id}
+                contentType="report"
+                variant="list"
                   cover={
                     <>
                       {report.coverImage ? (

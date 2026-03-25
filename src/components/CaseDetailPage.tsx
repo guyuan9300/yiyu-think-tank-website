@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, FileImage } from 'lucide-react';
 import { Header } from './Header';
 import { fetchCaseShowcaseDetail, fetchCaseShowcases, type CaseShowcase } from '../lib/caseShowcaseApi';
+import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 
 interface CaseDetailPageProps {
   caseId: string;
@@ -53,7 +54,7 @@ export function CaseDetailPage({ caseId, onNavigate }: CaseDetailPageProps) {
   }, [caseId]);
 
   return (
-    <div data-yiyu-page="case" className="min-h-screen bg-background">
+    <div {...getYiyuPageAttrs('case')} className="min-h-screen bg-background">
       <Header
         isLoggedIn={isLoggedIn}
         userType={isLoggedIn ? 'member' : 'visitor'}
@@ -89,7 +90,7 @@ export function CaseDetailPage({ caseId, onNavigate }: CaseDetailPageProps) {
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr),280px]">
               <div className="space-y-6">
                 <div
-                  data-yiyu-section="case-detail-hero"
+                  {...getYiyuSectionAttrs('case', 'case-detail-hero')}
                   className="flex items-center gap-5 rounded-3xl border border-border/60 bg-white p-6 sm:p-7"
                 >
                   {caseData.logoUrl ? (
@@ -103,7 +104,10 @@ export function CaseDetailPage({ caseId, onNavigate }: CaseDetailPageProps) {
                 </div>
 
                 {caseData.slideImages.length ? (
-                  <div data-yiyu-section="case-detail-slides" className="space-y-4">
+                  <div
+                    {...getYiyuSectionAttrs('case', 'case-detail-slides')}
+                    className="space-y-4"
+                  >
                     {caseData.slideImages.map((slide, index) => (
                       <div key={slide} className="rounded-3xl border border-slate-200 bg-white p-3">
                         <img
@@ -116,7 +120,14 @@ export function CaseDetailPage({ caseId, onNavigate }: CaseDetailPageProps) {
                     ))}
                   </div>
                 ) : (
-                  <div data-yiyu-section="case-detail-empty" className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/70 px-6 py-14 text-center text-slate-500">
+                  <div
+                    data-yiyu-section="case-detail-empty"
+                    data-yiyu-section-type="empty"
+                    data-yiyu-section-title="案例详情空状态"
+                    data-yiyu-section-order="2"
+                    data-yiyu-section-enterable="false"
+                    className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/70 px-6 py-14 text-center text-slate-500"
+                  >
                     <FileImage className="w-8 h-8 mx-auto mb-3" />
                     暂无客户介绍图片
                   </div>
@@ -125,7 +136,10 @@ export function CaseDetailPage({ caseId, onNavigate }: CaseDetailPageProps) {
 
               <aside>
                 {relatedCases.length ? (
-                  <div data-yiyu-section="case-detail-related" className="rounded-3xl border border-border/60 bg-white p-6">
+                  <div
+                    {...getYiyuSectionAttrs('case', 'case-detail-related')}
+                    className="rounded-3xl border border-border/60 bg-white p-6"
+                  >
                     <h3 className="font-semibold text-foreground mb-4">更多案例</h3>
                     <div className="space-y-3">
                       {relatedCases.map((item) => (

@@ -20,6 +20,7 @@ import { getArticleTiptapExtensions } from '../lib/tiptapSchema';
 import { useContentEngagement } from '../hooks/useContentEngagement';
 import { buildShareLandingUrl } from '../lib/shareLinks';
 import { normalizeRichContentHtml } from '../lib/richContent';
+import { getYiyuPageAttrs } from '../lib/yiyuTongSiteMap';
 
 interface ArticleDetailPageProps {
   articleId: string;
@@ -67,7 +68,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
 
   if (!article) {
     return (
-      <div data-yiyu-page="article" className="min-h-screen bg-background flex flex-col">
+      <div {...getYiyuPageAttrs('article')} className="min-h-screen bg-background flex flex-col">
         <Header
           isLoggedIn={isLoggedIn}
           userType={isLoggedIn ? 'member' : 'visitor'}
@@ -97,7 +98,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
   const displayArticle = article;
 
   return (
-    <div data-yiyu-page="article" className="min-h-screen bg-background flex flex-col">
+    <div {...getYiyuPageAttrs('article')} className="min-h-screen bg-background flex flex-col">
       <Header
         isLoggedIn={isLoggedIn}
         userType={isLoggedIn ? 'member' : 'visitor'}
@@ -113,7 +114,14 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
       />
 
       {/* Hero Section (Editorial cover + calm meta; no meaningless primary CTA) */}
-      <section className="relative pt-28 pb-14 px-6 overflow-hidden">
+      <section
+        data-yiyu-section="article-detail-hero"
+        data-yiyu-section-type="hero"
+        data-yiyu-section-title="文章详情头图"
+        data-yiyu-section-order="1"
+        data-yiyu-section-enterable="false"
+        className="relative pt-28 pb-14 px-6 overflow-hidden"
+      >
         {/* Ambient background */}
         <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-primary/[0.035] via-background to-background" />
         {displayArticle.coverImage ? (
@@ -205,7 +213,15 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
       </section>
 
       {/* Content Section */}
-      <section id="article-content" className="relative py-16 px-6">
+      <section
+        id="article-content"
+        data-yiyu-section="article-detail-content"
+        data-yiyu-section-type="detail"
+        data-yiyu-section-title="文章正文"
+        data-yiyu-section-order="2"
+        data-yiyu-section-enterable="false"
+        className="relative py-16 px-6"
+      >
         <div className="relative max-w-4xl mx-auto">
           {/* Article Content */}
           <article className="prose prose-lg max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-muted-foreground/80 prose-p:leading-relaxed prose-a:text-primary hover:prose-a:text-primary/80">
@@ -366,7 +382,14 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
           </div>
 
           {/* Comment Section */}
-          <div className="mt-12">
+          <div
+            data-yiyu-section="article-detail-comments"
+            data-yiyu-section-type="comments"
+            data-yiyu-section-title="文章评论区"
+            data-yiyu-section-order="3"
+            data-yiyu-section-enterable="true"
+            className="mt-12"
+          >
             <CommentSection
               contentId={articleId}
               contentType="insight"

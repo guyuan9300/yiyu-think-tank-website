@@ -7,6 +7,7 @@ import {
   SITE_CONTACT_PHONE,
   SITE_WECHAT_OFFICIAL,
 } from '../lib/siteMeta';
+import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 
 interface AboutPageProps {
   onNavigate?: (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'login' | 'register') => void;
@@ -79,10 +80,13 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
   };
 
   return (
-    <div data-yiyu-page="about" className="min-h-screen bg-background">
+    <div {...getYiyuPageAttrs('about')} className="min-h-screen bg-background">
       <Header isLoggedIn={false} userType="visitor" onNavigate={(page) => handleNavigate(page as any)} />
 
-      <section data-yiyu-section="about-hero" className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <section
+        {...getYiyuSectionAttrs('about', 'about-hero')}
+        className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden"
+      >
         <div className="absolute inset-0 bg-gradient-to-br from-primary/4 via-transparent to-accent/4" />
         <div className="absolute top-0 right-0 w-[560px] h-[560px] bg-primary/5 rounded-full blur-3xl" />
 
@@ -124,7 +128,10 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
         </div>
       </section>
 
-      <section data-yiyu-section="about-values" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-muted/5">
+      <section
+        {...getYiyuSectionAttrs('about', 'about-values')}
+        className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-muted/5"
+      >
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-12">
             <h2 className="text-[28px] font-semibold tracking-tight mb-3 text-foreground">核心价值观</h2>
@@ -148,7 +155,10 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
         </div>
       </section>
 
-      <section data-yiyu-section="about-services" className="py-20 px-4 sm:px-6 lg:px-8">
+      <section
+        {...getYiyuSectionAttrs('about', 'about-services')}
+        className="py-20 px-4 sm:px-6 lg:px-8"
+      >
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-12">
             <h2 className="text-[28px] font-semibold tracking-tight mb-3 text-foreground">服务内容</h2>
@@ -166,7 +176,10 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
         </div>
       </section>
 
-      <section data-yiyu-section="about-milestones" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-muted/5">
+      <section
+        {...getYiyuSectionAttrs('about', 'about-milestones')}
+        className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-muted/5"
+      >
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-12">
             <h2 className="text-[28px] font-semibold tracking-tight mb-3 text-foreground">发展历程</h2>
@@ -187,7 +200,10 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
         </div>
       </section>
 
-      <section data-yiyu-section="about-contact" className="py-20 px-4 sm:px-6 lg:px-8">
+      <section
+        {...getYiyuSectionAttrs('about', 'about-contact')}
+        className="py-20 px-4 sm:px-6 lg:px-8"
+      >
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-12">
             <h2 className="text-[28px] font-semibold tracking-tight mb-3 text-foreground">联系我们</h2>
@@ -198,6 +214,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
             <div className="space-y-4">
               <a
                 href={`tel:${SITE_CONTACT_PHONE}`}
+                data-yiyu-contact="phone"
                 className="flex items-center gap-4 p-5 bg-white/80 backdrop-blur-sm rounded-[18px] border border-border/40 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group"
               >
                 <div className="w-11 h-11 rounded-[12px] bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
@@ -211,6 +228,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
 
               <a
                 href={`mailto:${SITE_CONTACT_EMAIL}`}
+                data-yiyu-contact="email"
                 className="flex items-center gap-4 p-5 bg-white/80 backdrop-blur-sm rounded-[18px] border border-border/40 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group"
               >
                 <div className="w-11 h-11 rounded-[12px] bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
@@ -222,7 +240,10 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
                 </div>
               </a>
 
-              <div className="flex items-center gap-4 p-5 bg-white/80 backdrop-blur-sm rounded-[18px] border border-border/40">
+              <div
+                data-yiyu-contact="wechat"
+                className="flex items-center gap-4 p-5 bg-white/80 backdrop-blur-sm rounded-[18px] border border-border/40"
+              >
                 <div className="w-11 h-11 rounded-[12px] bg-primary/10 flex items-center justify-center">
                   <QrCode className="w-5 h-5 text-primary" />
                 </div>
@@ -242,6 +263,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
               </div>
 
               <button
+                data-yiyu-cta="consult-diagnosis"
                 onClick={() => window.open(DIAGNOSIS_FORM_URL, '_blank')}
                 className="mt-8 inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/25"
               >

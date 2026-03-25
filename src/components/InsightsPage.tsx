@@ -10,6 +10,7 @@ import {
 import { getReports, getInsights, type Report, type InsightArticle } from '../lib/dataService';
 import { PdfCoverImage } from './PdfCoverImage';
 import { ContentResourceCard } from './ContentResourceCard';
+import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 
 interface InsightsPageProps {
   onNavigate?: (page: string, id?: string) => void;
@@ -89,7 +90,7 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
   // 加载状态
   if (isLoading) {
     return (
-      <div data-yiyu-page="insights" className="min-h-screen bg-background">
+      <div {...getYiyuPageAttrs('insights')} className="min-h-screen bg-background">
         <Header onNavigate={onNavigate} />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
@@ -102,12 +103,15 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
   }
 
   return (
-    <div data-yiyu-page="insights" className="min-h-screen bg-background">
+    <div {...getYiyuPageAttrs('insights')} className="min-h-screen bg-background">
       {/* 头部 */}
       <Header onNavigate={onNavigate} />
 
       {/* Hero 区域 - Apple 风格设计 */}
-      <section data-yiyu-section="insights-hero" className="relative pt-28 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <section
+        {...getYiyuSectionAttrs('insights', 'insights-hero')}
+        className="relative pt-28 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden"
+      >
         {/* 微妙背景渐变 */}
         <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent" />
 
@@ -136,7 +140,11 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
       {/* 内容区域 */}
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-32">
         {/* 报告库板块 */}
-        <section data-yiyu-section="insights-reports" data-yiyu-results-total={String(latestReports.length)} className="mb-32">
+        <section
+          {...getYiyuSectionAttrs('insights', 'insights-reports')}
+          data-yiyu-results-total={String(latestReports.length)}
+          className="mb-32"
+        >
           {/* 板块标题 */}
           <div className="flex items-end justify-between mb-12">
             <div className="flex items-center gap-4">
@@ -166,6 +174,8 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
             {latestReports.map((report) => (
               <ContentResourceCard
                 key={report.id}
+                contentId={report.id}
+                contentType="report"
                 cover={
                   report.coverImage ? (
                     <img
@@ -202,7 +212,10 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
         </section>
 
         {/* 文章中心板块 */}
-        <section data-yiyu-section="insights-articles" data-yiyu-results-total={String(latestArticles.length)}>
+        <section
+          {...getYiyuSectionAttrs('insights', 'insights-articles')}
+          data-yiyu-results-total={String(latestArticles.length)}
+        >
           {/* 板块标题 */}
           <div className="flex items-end justify-between mb-12">
             <div className="flex items-center gap-4">
@@ -232,6 +245,8 @@ export function InsightsPage({ onNavigate }: InsightsPageProps) {
             {latestArticles.map((article) => (
               <ContentResourceCard
                 key={article.id}
+                contentId={article.id}
+                contentType="insight"
                 cover={
                   article.coverImage ? (
                     <img

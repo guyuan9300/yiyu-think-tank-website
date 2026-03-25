@@ -39,6 +39,8 @@ export function ContentResourceCard({
   cover,
   tags,
   title,
+  contentId,
+  contentType,
   author,
   excerpt,
   views,
@@ -51,6 +53,8 @@ export function ContentResourceCard({
   cover: ReactNode;
   tags: string[];
   title: string;
+  contentId?: string;
+  contentType?: string;
   author?: string | null;
   excerpt?: string | null;
   views?: MetricValue;
@@ -62,6 +66,9 @@ export function ContentResourceCard({
 }) {
   const cardDataAttributes = {
     'data-yiyu-card': 'content',
+    'data-yiyu-card-id': contentId || '',
+    'data-yiyu-card-type': contentType || '',
+    'data-yiyu-card-enterable': onClick ? 'true' : 'false',
     'data-yiyu-card-title': title,
     'data-yiyu-card-author': author || '',
     'data-yiyu-card-tags': tags.join('|'),

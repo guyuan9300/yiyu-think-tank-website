@@ -22,6 +22,7 @@ import {
 import type { User } from '../lib/dataService';
 import { useContentEngagement } from '../hooks/useContentEngagement';
 import { buildShareLandingUrl } from '../lib/shareLinks';
+import { getYiyuPageAttrs } from '../lib/yiyuTongSiteMap';
 
 interface ReportReaderPageProps {
   reportId: string;
@@ -269,7 +270,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
 
   if (!report) {
     return (
-      <div data-yiyu-page="report" className="min-h-screen bg-gray-50">
+      <div {...getYiyuPageAttrs('report')} className="min-h-screen bg-gray-50">
         <Header isLoggedIn={isLoggedIn} userType={isLoggedIn ? 'member' : 'visitor'} />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center max-w-md px-6">
@@ -299,11 +300,19 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
   }
 
   return (
-    <div data-yiyu-page="report" className="min-h-screen bg-gray-50 flex flex-col">
+    <div {...getYiyuPageAttrs('report')} className="min-h-screen bg-gray-50 flex flex-col">
       <Header isLoggedIn={isLoggedIn} userType={isLoggedIn ? 'member' : 'visitor'} />
 
       {/* 报告信息头部 */}
-      <div ref={bookInfoRef} className={`bg-white border-b border-gray-200 pt-16 ${isVisitor ? "blur-sm pointer-events-none select-none" : ""}`}>
+      <div
+        ref={bookInfoRef}
+        data-yiyu-section="report-detail-hero"
+        data-yiyu-section-type="hero"
+        data-yiyu-section-title="报告详情头部"
+        data-yiyu-section-order="1"
+        data-yiyu-section-enterable="false"
+        className={`bg-white border-b border-gray-200 pt-16 ${isVisitor ? "blur-sm pointer-events-none select-none" : ""}`}
+      >
         <div className="max-w-4xl mx-auto px-6 py-8">
           {/* 面包屑 */}
           <div className="flex items-center gap-2 mb-4 text-[13px] text-gray-500">
@@ -355,7 +364,14 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
       </div>
 
       {/* 内容区域 */}
-      <div className={`px-4 sm:px-6 lg:px-8 pb-10 ${isVisitor ? "blur-sm pointer-events-none select-none" : ""}`}>
+      <div
+        data-yiyu-section="report-detail-reader"
+        data-yiyu-section-type="detail"
+        data-yiyu-section-title="报告阅读区"
+        data-yiyu-section-order="2"
+        data-yiyu-section-enterable="false"
+        className={`px-4 sm:px-6 lg:px-8 pb-10 ${isVisitor ? "blur-sm pointer-events-none select-none" : ""}`}
+      >
         {/* PDF阅读区域（四四方方的框，max-w-4xl） */}
         <div
           className="max-w-4xl mx-auto w-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col"
@@ -420,7 +436,14 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
 
       {/* Action Bar + Comment Section (under reader) */}
       {report && (
-        <div className="px-4 sm:px-6 lg:px-8 pb-16">
+        <div
+          data-yiyu-section="report-detail-comments"
+          data-yiyu-section-type="comments"
+          data-yiyu-section-title="报告评论区"
+          data-yiyu-section-order="3"
+          data-yiyu-section-enterable="true"
+          className="px-4 sm:px-6 lg:px-8 pb-16"
+        >
           <div className="max-w-4xl mx-auto">
             <div className="mt-6 pt-6 border-t border-gray-200">
               <div className="flex flex-wrap items-center gap-3">

@@ -1,6 +1,7 @@
 import { ArrowLeft, ExternalLink, Mail, Phone, Sparkles } from 'lucide-react';
 import { Header } from './Header';
 import { DIAGNOSIS_FORM_URL, SITE_CONTACT_EMAIL, SITE_CONTACT_PHONE } from '../lib/siteMeta';
+import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 
 interface ConsultApplyPageProps {
   onBack?: () => void;
@@ -10,7 +11,7 @@ export function ConsultApplyPage({ onBack }: ConsultApplyPageProps) {
   const feishuFormUrl = ((import.meta as any).env?.VITE_FEISHU_FORM_URL as string | undefined)?.trim() || DIAGNOSIS_FORM_URL;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div {...getYiyuPageAttrs('consult-apply')} className="min-h-screen bg-background">
       <Header
         isLoggedIn={false}
         userType="visitor"
@@ -45,7 +46,10 @@ export function ConsultApplyPage({ onBack }: ConsultApplyPageProps) {
             </div>
 
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr),280px]">
-              <section className="rounded-[28px] border border-primary/15 bg-primary/5 p-6">
+              <section
+                {...getYiyuSectionAttrs('consult-apply', 'consult-apply-form')}
+                className="rounded-[28px] border border-primary/15 bg-primary/5 p-6"
+              >
                 <h2 className="text-lg font-semibold text-foreground">正式提交方式</h2>
                 <p className="mt-3 text-sm leading-relaxed text-muted-foreground/75">
                   建议直接填写飞书表单。这样你提交的信息会进入正式收集流程，便于后续评估、跟进与归档。
@@ -71,7 +75,10 @@ export function ConsultApplyPage({ onBack }: ConsultApplyPageProps) {
                 </a>
               </section>
 
-              <aside className="rounded-[28px] border border-border/50 bg-white p-6">
+              <aside
+                {...getYiyuSectionAttrs('consult-apply', 'consult-apply-contact')}
+                className="rounded-[28px] border border-border/50 bg-white p-6"
+              >
                 <h2 className="text-lg font-semibold text-foreground">直接联系</h2>
                 <div className="mt-5 space-y-4 text-sm">
                   <a

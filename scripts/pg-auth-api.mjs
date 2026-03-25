@@ -1,14 +1,50 @@
 import http from 'node:http';
 import crypto from 'node:crypto';
+import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import { Pool } from 'pg';
 import nodemailer from 'nodemailer';
 import tencentcloud from 'tencentcloud-sdk-nodejs';
 import { DEFAULT_STRATEGY_PROJECTS } from './strategy-companion-seeds.mjs';
+
+function loadYiyuTongSiteMap() {
+  const currentFile = fileURLToPath(import.meta.url);
+  const currentDir = path.dirname(currentFile);
+  const candidates = [
+    path.resolve(currentDir, 'config', 'yiyuTongSiteMap.json'),
+    path.resolve(currentDir, '../src/config/yiyuTongSiteMap.json'),
+    path.resolve(process.cwd(), 'src/config/yiyuTongSiteMap.json'),
+  ];
+
+  for (const candidate of candidates) {
+    if (fsSync.existsSync(candidate)) {
+      return JSON.parse(fsSync.readFileSync(candidate, 'utf8'));
+    }
+  }
+
+  return {
+    version: 'fallback',
+    tour: {
+      publicOrder: ['home', 'insights', 'learning', 'strategy', 'about'],
+      finalPageId: 'about',
+    },
+    rules: {
+      representativeDetailSelection: 'latest_published',
+      returnAfterRepresentativeVisit: true,
+      stopOnPermissionDenied: true,
+      stopOnMissingTarget: true,
+    },
+    completionRules: {},
+    pages: {},
+  };
+}
+
+const YIYU_TONG_SITE_MAP = loadYiyuTongSiteMap();
 
 const PORT = Number(process.env.PG_AUTH_API_PORT || 8791);
 const pool = new Pool({
@@ -1020,10 +1056,14 @@ function buildFallbackSourceArtifacts(contentType, current = {}) {
   };
 }
 
-async function callArkChat(messages) {
+async function callArkChat(messages, options = {}) {
   if (!isArkReady()) {
     throw new Error('未配置火山方舟模型，请先完成后端密钥配置');
   }
+
+  const maxTokens = Number(options.maxTokens || 600);
+  const temperature = Number.isFinite(Number(options.temperature)) ? Number(options.temperature) : 0.2;
+  const reasoningEffort = safeText(options.reasoningEffort, 'low');
 
   const response = await fetch(`${ARK_BASE_URL}/api/v3/chat/completions`, {
     method: 'POST',
@@ -1033,9 +1073,9 @@ async function callArkChat(messages) {
     },
     body: JSON.stringify({
       model: ARK_MODEL,
-      reasoning_effort: 'low',
-      temperature: 0.2,
-      max_tokens: 600,
+      reasoning_effort: reasoningEffort,
+      temperature,
+      max_tokens: maxTokens,
       messages,
     }),
   });
@@ -3576,6 +3616,7 @@ const YIYU_TONG_SOURCE_TYPE_LABELS = {
   book: '推荐书籍',
   methodology: '益语方法论',
   case: '案例展示',
+  page: '官网页面',
 };
 
 function getAssistantPublicUrl(type, idOrSlug) {
@@ -3876,6 +3917,193 @@ function mapAssistantSourceCard(source) {
   };
 }
 
+function buildAssistantPageCard(pageId, snippet = '') {
+  const page = getYiyuTongSiteMapPage(pageId);
+  if (!page) return null;
+  return {
+    contentType: 'page',
+    contentId: page.id,
+    title: safeText(page.label),
+    snippet: safeText(snippet),
+    tags: [],
+    publishDate: '',
+    url: safeText(page.url || ''),
+    coverUrl: '',
+    label: '官网页面',
+  };
+}
+
+function buildContactAnswerText() {
+  const context = getYiyuTongSiteMapPage('about')?.answerContext?.contact || {};
+  const parts = [];
+  if (safeText(context.phone)) parts.push(`电话 ${safeText(context.phone)}`);
+  if (safeText(context.email)) parts.push(`邮箱 ${safeText(context.email)}`);
+  if (safeText(context.wechatOfficial)) parts.push(`公众号/微信 ${safeText(context.wechatOfficial)}`);
+  if (!parts.length) {
+    return '联系方式已整理在“关于我们”的联系我们区域。';
+  }
+  return `联系方式在“关于我们”的联系我们区域，${parts.join('，')}。`;
+}
+
+function buildMembershipAnswerText() {
+  const context = getYiyuTongSiteMapPage('membership')?.answerContext || {};
+  const plans = Array.isArray(context.plans) ? context.plans : [];
+  const rights = Array.isArray(context.rights) ? context.rights.filter(Boolean) : [];
+  const planText = plans.length
+    ? plans
+        .map((plan) => `${safeText(plan.name)} ${safeText(plan.price)} / ${Number(plan.durationDays || 0)}天`)
+        .join('；')
+    : '当前可在会员介绍页查看套餐';
+  const rightsText = rights.length ? `权益说明：${rights.join('；')}。` : '';
+  return `开通入口在会员介绍页，目前套餐包括：${planText}。${rightsText}`.trim();
+}
+
+function buildPageAnswerTextById(pageId) {
+  if (pageId === 'about') return buildContactAnswerText();
+  if (pageId === 'membership') return buildMembershipAnswerText();
+  return '';
+}
+
+function detectContactInfoIntent(question) {
+  return /(联系方式|联系你们|联系信息|联系电话|电话|邮箱|电子邮箱|微信|公众号)/.test(safeText(question));
+}
+
+function detectMembershipInfoIntent(question) {
+  return /(开通会员|续费|收费|价格|权益|付费会员|普通会员|套餐|月包|年包|怎么开通会员|如何收费)/.test(safeText(question));
+}
+
+function buildPageAnswerResponse({ pageId, goal, message, snippet }) {
+  const citation = buildAssistantPageCard(pageId, snippet);
+  return buildAssistantResponseEnvelope({
+    mode: 'answer',
+    goal,
+    entities: {
+      pageTarget: safeText(getYiyuTongSiteMapPage(pageId)?.url || ''),
+      query: goal,
+    },
+    message,
+    citations: citation ? [citation] : [],
+    finalState: buildFinalState({
+      pageId,
+      url: safeText(getYiyuTongSiteMapPage(pageId)?.url || ''),
+      note: message,
+    }),
+  });
+}
+
+function buildPageSectionTaskResponse({
+  currentUrl,
+  pageId,
+  sectionId,
+  goal,
+  message,
+  successMessage,
+  mode = 'site_task',
+  citations = [],
+}) {
+  const page = getYiyuTongSiteMapPage(pageId);
+  if (!page?.url) {
+    return buildAssistantResponseEnvelope({
+      mode: 'answer',
+      goal,
+      message: '当前官网地图里还没有这条页面路径信息。',
+      finalState: buildFinalState({ note: '当前官网地图里还没有这条页面路径信息。' }),
+    });
+  }
+
+  const normalizedCurrent = normalizeAssistantTarget(currentUrl);
+  const normalizedTarget = normalizeAssistantTarget(page.url);
+  const graphSteps = [];
+
+  if (!normalizedCurrent || normalizedCurrent !== normalizedTarget) {
+    graphSteps.push(
+      buildGraphStep('open_target_page', 'open_url', {
+        target: page.url,
+        pageId,
+        detail: `正在进入${page.label}。`,
+      })
+    );
+  }
+
+  if (safeText(sectionId)) {
+    graphSteps.push(
+      buildGraphStep('scroll_target_section', 'scroll_section', {
+        sectionId,
+        passes: 1,
+        detail: `正在定位${page.label}中的目标区域。`,
+      })
+    );
+  }
+
+  const routeTargets = [
+    {
+      label: page.label,
+      target: page.url,
+      pageId,
+      detail: `进入${page.label}`,
+    },
+  ];
+
+  return buildSiteTaskGraphResponse({
+    mode,
+    goal,
+    message,
+    prompt: [
+      `请在益语官网当前标签页内完成这个请求：${goal}`,
+      `先确保进入 ${page.label}（${page.url}）。`,
+      safeText(sectionId) ? `然后滚动并定位到区块 ${sectionId}。` : '进入页面后确认页面已稳定打开。',
+      '如果页面已经到达目标位置，立即调用 done。',
+    ].join('\n'),
+    entities: {
+      pageTarget: page.url,
+      query: goal,
+    },
+    steps: buildAssistantSteps(
+      buildAssistantStep('understanding', '正在理解你的目标', `识别到你想定位${page.label}里的指定区域。`),
+      buildAssistantStep('planning', '正在规划操作步骤', `计划进入${page.label}并定位到目标区域。`),
+      buildAssistantStep('locating', '正在定位相关页面', `准备进入${page.label}。`),
+      buildAssistantStep('acting', '正在操作页面', `正在定位${page.label}中的目标区域。`),
+    ),
+    citations,
+    route: buildRouteFromTargets(routeTargets),
+    completionRules: buildTaskRules(['detail_opened']),
+    failureRules: buildFailureRules('not_found_notice', 'permission_notice'),
+    graphSteps,
+    successMessage,
+    expectedUrl: page.url,
+    pageId,
+    finalState: buildFinalState({
+      pageId,
+      url: page.url,
+      note: successMessage,
+    }),
+    fallbackPlan: {
+      action: buildAssistantAction('open_url', `前往${page.label}`, page.url),
+    },
+  });
+}
+
+function buildContactMembershipMixedTaskResponse({ currentUrl, question }) {
+  const aboutContext = getYiyuTongSiteMapPage('about')?.answerContext?.contact || {};
+  const contactSnippet = buildContactAnswerText();
+  const membershipSnippet = buildMembershipAnswerText();
+  const aboutCitation = buildAssistantPageCard('about', contactSnippet);
+  const membershipCitation = buildAssistantPageCard('membership', membershipSnippet);
+  const sectionId = safeText(aboutContext.sectionId || 'about-contact');
+  const summary = `${contactSnippet}${membershipSnippet ? ` ${membershipSnippet}` : ''}`.trim();
+
+  return buildPageSectionTaskResponse({
+    currentUrl,
+    pageId: 'about',
+    sectionId,
+    goal: safeText(question),
+    message: '我先带你定位联系方式区域，再把会员开通、收费和权益告诉你。',
+    successMessage: summary,
+    mode: 'mixed_task',
+    citations: [aboutCitation, membershipCitation].filter(Boolean),
+  });
+}
+
 function summarizeAssistantSource(source) {
   const raw = safeText(source.summary || source.sourceSnippet || source.plainText || '');
   if (!raw) {
@@ -3993,6 +4221,14 @@ function detectSummaryIntent(question) {
   );
 }
 
+function detectMixedTaskIntent(question) {
+  const safe = safeText(question);
+  if (!safe) return false;
+  const hasAction = detectActionIntent(safe);
+  const hasAnswerNeed = detectContentQuestionIntent(safe) || detectSummaryIntent(safe) || /(告诉我|说明|说说|如何收费|怎么开通|对应的权益|联系方式)/.test(safe);
+  return hasAction && hasAnswerNeed;
+}
+
 function detectLastIntent(question) {
   return /(最后一[本篇份个条项家]?|最后那个|最后一个|最末|排在最后|最后的)/.test(
     safeText(question)
@@ -4060,8 +4296,22 @@ function splitSequentialClauses(question) {
 
 function getAssistantPageIdFromTarget(target) {
   const normalized = normalizeAssistantTarget(target);
+  if (normalized === '/') return 'home';
   const params = new URLSearchParams(normalized.split('?')[1] || '');
-  return params.get('page') || (normalized === '/' ? 'home' : '');
+  const pageParam = safeText(params.get('page'));
+  if (!pageParam) return '';
+
+  const direct = getYiyuTongSiteMapPage(pageParam);
+  if (direct) return direct.id;
+
+  const matched = Object.values(YIYU_TONG_SITE_MAP.pages || {}).find((page) => {
+    if (safeText(page?.url) === normalized) return true;
+    const pattern = safeText(page?.urlPattern);
+    if (!pattern || !pattern.includes(':id')) return false;
+    const prefix = pattern.split(':id')[0];
+    return prefix ? normalized.startsWith(prefix) : false;
+  });
+  return matched?.id || pageParam;
 }
 
 function buildGraphStep(id, type, payload = {}) {
@@ -4148,6 +4398,12 @@ function resolvePageNavigation(question) {
   const q = safeText(question);
   if (/(最新|最近)/.test(q) && /(报告|文章|洞察|书|图书|书籍|方法论|工具|案例|客户)/.test(q)) {
     return null;
+  }
+  if (/(联系方式|联系你们|联系信息|电话|邮箱|怎么联系)/.test(q)) {
+    return { label: '关于我们', target: '/?page=about' };
+  }
+  if (/(开通会员|续费|收费|价格|权益|付费会员|普通会员)/.test(q)) {
+    return { label: '会员介绍', target: '/?page=membership' };
   }
   if (/图书馆|书籍页|推荐书籍/.test(q)) {
     return { label: '图书馆', target: '/?page=book-library' };
@@ -4428,6 +4684,9 @@ const YIYU_TONG_PAGE_TARGETS = {
   'methodology-library': { label: '益语方法论', target: '/?page=methodology-library' },
   strategy: { label: '战略陪伴', target: '/?page=strategy' },
   about: { label: '关于我们', target: '/?page=about' },
+  membership: { label: '会员介绍', target: '/?page=membership' },
+  'user-center': { label: '个人中心', target: '/?page=user-center' },
+  'consult-apply': { label: '咨询申请', target: '/?page=consult-apply' },
 };
 
 function resolvePlannerPageTarget(key) {
@@ -4448,6 +4707,265 @@ function buildAssistantStep(id, label, detail = '') {
 
 function buildAssistantSteps(...steps) {
   return steps.filter(Boolean);
+}
+
+function buildUserVisiblePlan(steps = []) {
+  return (Array.isArray(steps) ? steps : [])
+    .map((step, index) => {
+      const label = safeText(step?.label);
+      const detail = safeText(step?.detail);
+      if (!label) return '';
+      return detail ? `${index + 1}. ${label}：${detail}` : `${index + 1}. ${label}`;
+    })
+    .filter(Boolean)
+    .join('\n');
+}
+
+function getYiyuTongSiteMapPage(pageId) {
+  return YIYU_TONG_SITE_MAP?.pages?.[pageId] || null;
+}
+
+function getYiyuTongSharedSections() {
+  return Array.isArray(YIYU_TONG_SITE_MAP?.sharedSections) ? YIYU_TONG_SITE_MAP.sharedSections : [];
+}
+
+function getYiyuTongCompletionRule(kind) {
+  const rule = YIYU_TONG_SITE_MAP?.completionRules?.[kind];
+  if (!rule) return null;
+  return {
+    kind: safeText(rule.kind || kind),
+    detail: safeText(rule.successHint || rule.detail || ''),
+    target: safeText(rule.adminState || ''),
+  };
+}
+
+function buildTaskRules(kinds = []) {
+  return kinds
+    .map((kind) => getYiyuTongCompletionRule(kind) || { kind: safeText(kind), detail: '', target: '' })
+    .filter((rule) => rule.kind);
+}
+
+function buildFailureRules(...rules) {
+  return rules
+    .flat()
+    .map((rule) => {
+      if (!rule) return null;
+      if (typeof rule === 'string') {
+        const mapped = getYiyuTongCompletionRule(rule);
+        return mapped || { kind: safeText(rule), detail: '', target: '' };
+      }
+      return {
+        kind: safeText(rule.kind),
+        detail: safeText(rule.detail),
+        target: safeText(rule.target),
+      };
+    })
+    .filter(Boolean);
+}
+
+function buildFinalState({ pageId = '', url = '', note = '' } = {}) {
+  const resolvedPage = getYiyuTongSiteMapPage(pageId);
+  return {
+    pageId: safeText(pageId),
+    url: safeText(url || resolvedPage?.url || ''),
+    note: safeText(note),
+  };
+}
+
+function buildRouteNode({
+  id = '',
+  pageId = '',
+  pageLabel = '',
+  level = '',
+  enterable = undefined,
+  action = '',
+  target = '',
+  detail = '',
+} = {}) {
+  const resolvedPage = getYiyuTongSiteMapPage(pageId);
+  return {
+    id: safeText(id || pageId || target || pageLabel),
+    pageId: safeText(pageId || resolvedPage?.id || ''),
+    pageLabel: safeText(pageLabel || resolvedPage?.label || ''),
+    level: safeText(level || resolvedPage?.level || ''),
+    enterable: typeof enterable === 'boolean' ? enterable : resolvedPage?.publicTour !== false,
+    action: safeText(action),
+    target: safeText(target || resolvedPage?.url || ''),
+    detail: safeText(detail),
+  };
+}
+
+function buildRouteFromTargets(targets = []) {
+  return targets
+    .map((target, index) =>
+      buildRouteNode({
+        id: `route_${index + 1}`,
+        pageId: target.pageId || getAssistantPageIdFromTarget(target.target || ''),
+        pageLabel: target.label || '',
+        target: target.target || '',
+        level: getYiyuTongSiteMapPage(target.pageId || getAssistantPageIdFromTarget(target.target || ''))?.level || '',
+        enterable: true,
+        action: 'open',
+        detail: safeText(target.detail || ''),
+      })
+    )
+    .filter((item) => item.pageId || item.target || item.pageLabel);
+}
+
+function buildUserVisiblePlanFromRoute(targets = [], answerText = '') {
+  const routeLines = (Array.isArray(targets) ? targets : [])
+    .map((target, index) => {
+      const label = safeText(target?.label || target?.pageLabel || target?.pageId || target?.target);
+      const detail = safeText(target?.detail || target?.note);
+      if (!label) return '';
+      return `${index + 1}. ${label}${detail ? `：${detail}` : ''}`;
+    })
+    .filter(Boolean);
+  if (answerText) {
+    routeLines.push(`结果说明：${answerText}`);
+  }
+  return routeLines.join('\n');
+}
+
+function getRepresentativeContentTypeForPage(pageId) {
+  return {
+    'article-center': 'insight',
+    'report-library': 'report',
+    'book-library': 'book',
+    'methodology-library': 'methodology',
+    strategy: 'case',
+  }[pageId] || '';
+}
+
+function getLatestRepresentativeSourceForPage(pageId, sources = []) {
+  const contentType = getRepresentativeContentTypeForPage(pageId);
+  if (!contentType) return null;
+  return pickLatestSourceByType(sources, contentType) || null;
+}
+
+function mapSectionsForTourStop(page) {
+  const sharedSections = getYiyuTongSharedSections()
+    .filter((section) => section.tour)
+    .map((section) => ({
+      id: section.id,
+      title: section.title,
+      type: section.type,
+      order: Number(section.order || 0),
+      enterable: Boolean(section.enterable),
+    }));
+  const pageSections = Array.isArray(page?.sections)
+    ? page.sections
+        .filter((section) => section.tour)
+        .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+        .map((section) => ({
+          id: section.id,
+          title: section.title,
+          type: section.type,
+          order: Number(section.order || 0),
+          enterable: Boolean(section.enterable),
+        }))
+    : [];
+  return [...sharedSections, ...pageSections].sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+}
+
+function buildTourStopsFromSiteMap(sources = []) {
+  const publicOrder = Array.isArray(YIYU_TONG_SITE_MAP?.tour?.publicOrder)
+    ? YIYU_TONG_SITE_MAP.tour.publicOrder
+    : [];
+  const stops = [];
+
+  for (const pageId of publicOrder) {
+    const page = getYiyuTongSiteMapPage(pageId);
+    if (!page) continue;
+    stops.push({
+      id: page.id,
+      label: page.label,
+      url: page.url,
+      pageId: page.id,
+      summary: `浏览${page.label}的主要公开内容。`,
+      sections: mapSectionsForTourStop(page),
+    });
+
+    const representativeChildren = Array.isArray(page.representativeChildren) ? page.representativeChildren : [];
+    for (const childPageId of representativeChildren) {
+      const child = getYiyuTongSiteMapPage(childPageId);
+      if (!child) continue;
+      const childLatestSource = getLatestRepresentativeSourceForPage(child.id, sources);
+      stops.push({
+        id: `${page.id}__${child.id}`,
+        label: child.level === 'detail' && childLatestSource ? childLatestSource.title : child.label,
+        url: child.level === 'detail' && childLatestSource ? childLatestSource.publicUrl : child.url,
+        pageId: child.id,
+        summary:
+          child.level === 'detail' && childLatestSource
+            ? `进入${page.label}里的代表性详情页《${childLatestSource.title}》后返回${page.label}。`
+            : `进入${child.label}看代表性内容后返回${page.label}。`,
+        sections: mapSectionsForTourStop(child),
+        isRepresentativeChild: true,
+        isRepresentativeDetail: child.level === 'detail',
+        returnUrl: page.url,
+        returnPageId: page.id,
+      });
+      if (child.level === 'detail') {
+        if (YIYU_TONG_SITE_MAP?.rules?.returnAfterRepresentativeVisit) {
+          stops.push({
+            id: `${page.id}__return_from__${child.id}`,
+            label: `返回${page.label}`,
+            url: page.url,
+            pageId: page.id,
+            summary: `返回${page.label}后继续后续导览。`,
+            sections: [],
+            isTransitStop: true,
+          });
+        }
+        continue;
+      }
+      const representativeDetail = child.representativeDetail;
+      const latestSource = representativeDetail
+        ? childLatestSource
+        : null;
+      const detailPage = representativeDetail?.pageId
+        ? getYiyuTongSiteMapPage(representativeDetail.pageId)
+        : null;
+      if (representativeDetail && latestSource && detailPage) {
+        stops.push({
+          id: `${child.id}__detail__${latestSource.contentId}`,
+          label: latestSource.title,
+          url: latestSource.publicUrl,
+          pageId: detailPage.id,
+          summary: `进入${child.label}里的代表性详情页《${latestSource.title}》后返回${child.label}。`,
+          sections: mapSectionsForTourStop(detailPage),
+          isRepresentativeDetail: true,
+          returnUrl: child.url,
+          returnPageId: child.id,
+        });
+        if (YIYU_TONG_SITE_MAP?.rules?.returnAfterRepresentativeVisit) {
+          stops.push({
+            id: `${child.id}__return_from_detail__${latestSource.contentId}`,
+            label: `返回${child.label}`,
+            url: child.url,
+            pageId: child.id,
+            summary: `返回${child.label}后继续当前模块的导览。`,
+            sections: [],
+            isTransitStop: true,
+          });
+        }
+      }
+      if (YIYU_TONG_SITE_MAP?.rules?.returnAfterRepresentativeVisit) {
+        stops.push({
+          id: `${page.id}__return_from__${child.id}`,
+          label: `返回${page.label}`,
+          url: page.url,
+          pageId: page.id,
+          summary: `返回${page.label}后继续后续导览。`,
+          sections: [],
+          isTransitStop: true,
+        });
+      }
+    }
+  }
+
+  return stops;
 }
 
 function getAssistantPageConfigByType(type) {
@@ -4497,14 +5015,24 @@ function buildAssistantResponseEnvelope({
   executionPlan = buildNoopExecutionPlan(),
   fallbackPlan = null,
   formContext = null,
+  userVisiblePlan = '',
+  route = [],
+  completionRules = [],
+  failureRules = [],
+  finalState = null,
 }) {
   return {
     mode,
     goal,
     entities,
     message,
+    userVisiblePlan: userVisiblePlan || buildUserVisiblePlan(steps),
+    route,
     steps,
+    completionRules,
+    failureRules,
     citations,
+    finalState,
     executionPlan,
     fallbackPlan,
     formContext,
@@ -4512,6 +5040,7 @@ function buildAssistantResponseEnvelope({
 }
 
 function buildSiteTaskGraphResponse({
+  mode = 'site_task',
   goal,
   message,
   prompt = '',
@@ -4524,6 +5053,10 @@ function buildSiteTaskGraphResponse({
   pageId = '',
   completionCheck = null,
   fallbackPlan = null,
+  route = [],
+  completionRules = [],
+  failureRules = [],
+  finalState = null,
 }) {
   const graphPrompt = graphSteps.map((step, index) => {
     switch (step.type) {
@@ -4553,19 +5086,26 @@ function buildSiteTaskGraphResponse({
   }).join('；');
 
   return buildAssistantResponseEnvelope({
-    mode: 'site_task',
+    mode,
     goal,
     entities,
     message,
     steps,
     citations,
+    route,
+    completionRules,
+    failureRules,
+    finalState: finalState || buildFinalState({ pageId, url: expectedUrl, note: successMessage || message }),
     executionPlan: buildSameTabExecutionPlan({
-      kind: 'site_task',
+      kind: mode === 'mixed_task' ? 'mixed_task' : 'site_task',
       prompt: prompt || graphPrompt || message,
       graphSteps,
       expectedUrl: expectedUrl || '',
       pageId: pageId || '',
       successMessage,
+      route,
+      completionRules,
+      failureRules,
       completionCheck,
     }),
     fallbackPlan,
@@ -4573,26 +5113,41 @@ function buildSiteTaskGraphResponse({
 }
 
 function buildCurrentPageResponse(message, goal = '当前页面已满足目标') {
+  const currentPageId = getAssistantPageIdFromTarget('/');
   return buildAssistantResponseEnvelope({
     mode: 'answer',
     goal,
     message,
+    finalState: buildFinalState({ note: message, pageId: currentPageId }),
   });
 }
 
-function buildPageTargetTaskResponse({ label, target, currentUrl, goal, detail }) {
+function buildPageTargetTaskResponse({ label, target, currentUrl, goal, detail, mode = 'site_task', citations = [] }) {
   const normalizedTarget = normalizeAssistantTarget(target);
+  const pageId = (() => {
+    const params = new URLSearchParams(target.split('?')[1] || '');
+    return params.get('page') || 'home';
+  })();
   if (currentUrl && normalizedTarget && currentUrl === normalizedTarget) {
     return buildCurrentPageResponse(`当前已经在${label}。`, goal || `当前已在${label}`);
   }
 
   return buildAssistantResponseEnvelope({
-    mode: 'site_task',
+    mode,
     goal: goal || `进入${label}`,
     entities: {
       pageTarget: target,
     },
     message: `我来带你进入${label}。`,
+    citations,
+    route: buildRouteFromTargets([{ label, target, pageId }]),
+    completionRules: buildTaskRules(['detail_opened']),
+    failureRules: buildFailureRules('not_found_notice', 'permission_notice'),
+    finalState: buildFinalState({
+      pageId,
+      url: target,
+      note: detail || `已为你打开${label}。`,
+    }),
     steps: buildAssistantSteps(
       buildAssistantStep('understanding', '正在理解你的目标', `识别到你想进入「${label}」。`),
       buildAssistantStep('planning', '正在规划操作步骤', `计划在当前标签页直接打开${label}。`),
@@ -4600,7 +5155,7 @@ function buildPageTargetTaskResponse({ label, target, currentUrl, goal, detail }
       buildAssistantStep('acting', '正在操作页面', `正在完成${label}的页面切换。`)
     ),
     executionPlan: buildSameTabExecutionPlan({
-      kind: 'site_task',
+      kind: mode === 'mixed_task' ? 'mixed_task' : 'site_task',
       prompt: [
         `你的任务是在当前网站同一标签页内打开${label}。`,
         `先使用 open_internal_url 打开 "${target}"。`,
@@ -4608,11 +5163,11 @@ function buildPageTargetTaskResponse({ label, target, currentUrl, goal, detail }
       ].join(' '),
       bootstrapUrl: target,
       expectedUrl: target,
-      pageId: (() => {
-        const params = new URLSearchParams(target.split('?')[1] || '');
-        return params.get('page') || 'home';
-      })(),
+      pageId,
       successMessage: detail || `已为你打开${label}。`,
+      route: buildRouteFromTargets([{ label, target, pageId }]),
+      completionRules: buildTaskRules(['detail_opened']),
+      failureRules: buildFailureRules('not_found_notice', 'permission_notice'),
     }),
     fallbackPlan: {
       action: buildAssistantAction('open_url', `前往${label}`, target),
@@ -4620,14 +5175,18 @@ function buildPageTargetTaskResponse({ label, target, currentUrl, goal, detail }
   });
 }
 
-function buildDirectSourceTaskResponseV2(source, currentUrl, wantsSummary = false) {
+function buildDirectSourceTaskResponseV2(source, currentUrl, wantsSummary = false, mode = 'site_task') {
   const normalizedTarget = normalizeAssistantTarget(source.publicUrl);
+  const pageId = (() => {
+    const params = new URLSearchParams(source.publicUrl.split('?')[1] || '');
+    return params.get('page') || 'home';
+  })();
   if (currentUrl && normalizedTarget && currentUrl === normalizedTarget) {
     return buildCurrentPageResponse(`当前就是《${source.title}》页面。`, `查看《${source.title}》`);
   }
 
   return buildAssistantResponseEnvelope({
-    mode: 'site_task',
+    mode,
     goal: `查看《${source.title}》`,
     entities: {
       contentTypes: [source.contentType],
@@ -4636,6 +5195,19 @@ function buildDirectSourceTaskResponseV2(source, currentUrl, wantsSummary = fals
     },
     message: `我来带你打开《${source.title}》。`,
     citations: wantsSummary ? [mapAssistantSourceCard(source)] : [],
+    route: buildRouteFromTargets([{
+      label: source.title,
+      target: source.publicUrl,
+      pageId,
+      detail: `进入《${source.title}》详情页`,
+    }]),
+    completionRules: buildTaskRules(['detail_opened']),
+    failureRules: buildFailureRules('not_found_notice', 'permission_notice'),
+    finalState: buildFinalState({
+      pageId,
+      url: source.publicUrl,
+      note: wantsSummary ? summarizeAssistantSource(source) : `已为你打开《${source.title}》。`,
+    }),
     steps: buildAssistantSteps(
       buildAssistantStep('understanding', '正在理解你的目标', `识别到你想查看《${source.title}》。`),
       buildAssistantStep('planning', '正在规划操作步骤', `计划直接进入《${source.title}》对应的前台页面。`),
@@ -4643,7 +5215,7 @@ function buildDirectSourceTaskResponseV2(source, currentUrl, wantsSummary = fals
       buildAssistantStep('acting', '正在操作页面', `正在打开《${source.title}》。`)
     ),
     executionPlan: buildSameTabExecutionPlan({
-      kind: 'site_task',
+      kind: mode === 'mixed_task' ? 'mixed_task' : 'site_task',
       prompt: [
         `你的任务是在当前网站同一标签页内打开《${source.title}》。`,
         `先使用 open_internal_url 打开 "${source.publicUrl}"。`,
@@ -4651,11 +5223,16 @@ function buildDirectSourceTaskResponseV2(source, currentUrl, wantsSummary = fals
       ].join(' '),
       bootstrapUrl: source.publicUrl,
       expectedUrl: source.publicUrl,
-      pageId: (() => {
-        const params = new URLSearchParams(source.publicUrl.split('?')[1] || '');
-        return params.get('page') || 'home';
-      })(),
+      pageId,
       successMessage: wantsSummary ? summarizeAssistantSource(source) : `已为你打开《${source.title}》。`,
+      route: buildRouteFromTargets([{
+        label: source.title,
+        target: source.publicUrl,
+        pageId,
+        detail: `进入《${source.title}》详情页`,
+      }]),
+      completionRules: buildTaskRules(['detail_opened']),
+      failureRules: buildFailureRules('not_found_notice', 'permission_notice'),
     }),
     fallbackPlan: {
       action: buildAssistantAction('open_detail', '打开对应页面', source.publicUrl),
@@ -4674,6 +5251,7 @@ function buildFilterTaskResponseV2({
   targetSource,
   openMode = 'none',
   wantsSummary = false,
+  mode = 'site_task',
 }) {
   const targetText = topic ? `${topic}相关的${pageLabel}` : pageLabel;
   const shouldOpenResult = true;
@@ -4708,7 +5286,7 @@ function buildFilterTaskResponseV2({
   promptParts.push('任务完成后立即调用 done，并用一句中文简要汇报结果。');
 
   return buildAssistantResponseEnvelope({
-    mode: 'site_task',
+    mode,
     goal: `定位${targetText}`,
     entities: {
       contentTypes: typeEntities,
@@ -4722,6 +5300,35 @@ function buildFilterTaskResponseV2({
     },
     message: `我来帮你定位${targetText}。`,
     citations: targetSource && wantsSummary ? [mapAssistantSourceCard(targetSource)] : [],
+    route: buildRouteFromTargets(
+      [
+        {
+          label: pageLabel,
+          target: pageTarget,
+          pageId,
+          detail: `进入${pageLabel}`,
+        },
+        targetSource
+          ? {
+              label: targetSource.title,
+              target: targetSource.publicUrl,
+              pageId: getAssistantPageIdFromTarget(targetSource.publicUrl),
+              detail: `打开《${targetSource.title}》`,
+            }
+          : null,
+      ].filter(Boolean)
+    ),
+    completionRules: buildTaskRules([targetSource ? 'detail_opened' : 'detail_opened']),
+    failureRules: buildFailureRules('not_found_notice', 'permission_notice'),
+    finalState: buildFinalState({
+      pageId: targetSource ? getAssistantPageIdFromTarget(targetSource.publicUrl) : pageId,
+      url: targetSource ? targetSource.publicUrl : pageTarget,
+      note: targetSource && wantsSummary
+        ? summarizeAssistantSource(targetSource)
+        : targetSource
+          ? `已帮你打开《${targetSource.title}》。`
+          : `已帮你定位到${targetText}。`,
+    }),
     steps: buildAssistantSteps(
       buildAssistantStep('understanding', '正在理解你的目标', topic
         ? `识别到你想找和「${topic}」有关的${pageLabel}。`
@@ -4745,7 +5352,7 @@ function buildFilterTaskResponseV2({
             : `正在筛选${targetText}。`),
     ),
     executionPlan: buildSameTabExecutionPlan({
-      kind: 'site_task',
+      kind: mode === 'mixed_task' ? 'mixed_task' : 'site_task',
       prompt: promptParts.join(' '),
       bootstrapUrl: pageTarget,
       expectedUrl: targetSource && shouldOpenResult ? targetSource.publicUrl : pageTarget,
@@ -4761,6 +5368,26 @@ function buildFilterTaskResponseV2({
         : targetSource
           ? `已帮你打开《${targetSource.title}》。`
           : `已帮你定位到${targetText}。`,
+      route: buildRouteFromTargets(
+        [
+          {
+            label: pageLabel,
+            target: pageTarget,
+            pageId,
+            detail: `进入${pageLabel}`,
+          },
+          targetSource
+            ? {
+                label: targetSource.title,
+                target: targetSource.publicUrl,
+                pageId: getAssistantPageIdFromTarget(targetSource.publicUrl),
+                detail: `打开《${targetSource.title}》`,
+              }
+            : null,
+        ].filter(Boolean)
+      ),
+      completionRules: buildTaskRules([targetSource ? 'detail_opened' : 'detail_opened']),
+      failureRules: buildFailureRules('not_found_notice', 'permission_notice'),
     }),
     fallbackPlan: {
       action: buildAssistantAction(
@@ -4782,6 +5409,19 @@ function buildGuideTaskResponseV2(question) {
       topic,
     },
     message: '我先带你去看更适合上手的内容入口。',
+    route: buildRouteFromTargets([{
+      label: '文章中心',
+      target: '/?page=article-center',
+      pageId: 'article-center',
+      detail: `进入文章中心并筛选「${topic}」`,
+    }]),
+    completionRules: buildTaskRules(['detail_opened']),
+    failureRules: buildFailureRules('not_found_notice'),
+    finalState: buildFinalState({
+      pageId: 'article-center',
+      url: '/?page=article-center',
+      note: '已为你打开更适合上手的内容入口。',
+    }),
     steps: buildAssistantSteps(
       buildAssistantStep('understanding', '正在理解你的目标', '识别到你是第一次来，希望先看更适合上手的内容。'),
       buildAssistantStep('planning', '正在规划操作步骤', `计划先进入文章中心，再按「${topic}」整理更适合的入口。`),
@@ -4803,6 +5443,14 @@ function buildGuideTaskResponseV2(question) {
         topic,
       },
       successMessage: '已为你打开更适合上手的内容入口。',
+      route: buildRouteFromTargets([{
+        label: '文章中心',
+        target: '/?page=article-center',
+        pageId: 'article-center',
+        detail: `进入文章中心并筛选「${topic}」`,
+      }]),
+      completionRules: buildTaskRules(['detail_opened']),
+      failureRules: buildFailureRules('not_found_notice'),
     }),
     fallbackPlan: {
       action: buildAssistantAction('open_url', '前往文章中心', '/?page=article-center'),
@@ -4810,44 +5458,78 @@ function buildGuideTaskResponseV2(question) {
   });
 }
 
-function buildSiteTourResponse(question) {
-  const tourStops = [
-    { id: 'home', label: '首页', url: '/', pageId: 'home', summary: '先快速看品牌主张和核心入口。', scrollPasses: 2 },
-    { id: 'insights', label: '前沿洞察', url: '/?page=insights', pageId: 'insights', summary: '再看最新内容与洞察入口。', scrollPasses: 2 },
-    { id: 'learning', label: '学习中心', url: '/?page=learning', pageId: 'learning', summary: '然后浏览图书、方法论等内容聚合入口。', scrollPasses: 2 },
-    { id: 'strategy', label: '战略陪伴', url: '/?page=strategy', pageId: 'strategy', summary: '继续看战略陪伴与客户案例。', scrollPasses: 2 },
-    { id: 'about', label: '关于我们', url: '/?page=about', pageId: 'about', summary: '最后看机构介绍和正式联系方式。', scrollPasses: 1 },
-  ];
+function buildSiteTourResponse(question, sources = []) {
+  const tourStops = buildTourStopsFromSiteMap(sources);
+  const route = buildRouteFromTargets(
+    tourStops.map((stop) => ({
+      label: stop.label,
+      target: stop.url,
+      pageId: stop.pageId,
+      detail: stop.isRepresentativeDetail
+        ? `进入代表性详情页《${stop.label}》后返回${getYiyuTongSiteMapPage(stop.returnPageId)?.label || '上一级页面'}`
+        : stop.isRepresentativeChild
+        ? `进入${stop.label}看代表性内容后返回${getYiyuTongSiteMapPage(stop.returnPageId)?.label || '上一级页面'}`
+        : `浏览${stop.label}`,
+    }))
+  );
+  const tourPlan = tourStops.map((stop, index) => {
+    const pageLabel = stop.label;
+    const sectionText = Array.isArray(stop.sections) && stop.sections.length
+      ? `浏览区块：${stop.sections
+          .slice()
+          .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+          .map((section) => section.title)
+          .join('、')}`
+      : '浏览该页面主要内容';
+    const childText = (stop.isRepresentativeChild || stop.isRepresentativeDetail) && stop.returnPageId
+      ? `结束后返回${getYiyuTongSiteMapPage(stop.returnPageId)?.label || '上一级页面'}`
+      : '';
+    const transitText = stop.isTransitStop ? '这是过渡返回站点，到达后直接继续后续路线' : '';
+    return `${index + 1}. ${pageLabel}：${sectionText}${childText ? `；${childText}` : ''}${transitText ? `；${transitText}` : ''}`;
+  }).join('\n');
 
   return buildAssistantResponseEnvelope({
     mode: 'site_tour',
     goal: '带用户快速浏览整个网站',
     entities: {
-      pageTarget: '/?page=home',
+      pageTarget: '/',
       query: safeText(question),
     },
     message: '我来带你快速逛一下整个网站。',
+    userVisiblePlan: tourPlan,
+    route,
+    completionRules: buildTaskRules(['tour_completed']),
+    failureRules: buildFailureRules('permission_notice', 'not_found_notice'),
+    finalState: buildFinalState({
+      pageId: safeText(YIYU_TONG_SITE_MAP?.tour?.finalPageId || 'about'),
+      url: safeText(getYiyuTongSiteMapPage(YIYU_TONG_SITE_MAP?.tour?.finalPageId || 'about')?.url || '/?page=about'),
+      note: '已按导览路线浏览完整个网站。',
+    }),
     steps: buildAssistantSteps(
       buildAssistantStep('understanding', '正在理解你的目标', '识别到你想快速浏览整个网站，看个整体概览。'),
-      buildAssistantStep('planning', '正在规划操作步骤', '计划依次带你看首页、前沿洞察、学习中心、战略陪伴和关于我们。'),
-      buildAssistantStep('locating', '正在定位相关页面', '准备按顺序进入各个主要板块。'),
-      buildAssistantStep('acting', '正在操作页面', '正在逐页滚动浏览，并在关键区域停留。'),
+      buildAssistantStep('planning', '正在规划操作步骤', tourPlan),
+      buildAssistantStep('locating', '正在定位相关页面', '准备按官网公开结构顺序进入每个板块。'),
+      buildAssistantStep('acting', '正在操作页面', '正在按区块连续缓慢滚动浏览，并在代表性二级页之间返回。'),
     ),
     executionPlan: buildSameTabExecutionPlan({
       kind: 'site_tour',
       prompt: [
         `请在益语官网当前标签页内完成这个导览请求：${question}`,
-        '请按顺序浏览首页、前沿洞察、学习中心、战略陪伴、关于我们。',
-        '每到一个页面都从上到下缓慢滚动，尽量让用户看清主要内容区，不要机械地迅速拉到底又反弹。',
-        '如果该板块有代表性的二级页面，可以短暂停留进去浏览后再返回主板块继续。',
-        '整个过程中重点是让页面真的像人工导览一样自然动起来。',
-        '导览完成后再用一句中文说明已经带用户看完主要板块。',
+        '官网结构地图已经明确提供了导览站点和每个页面的区块顺序，你需要按路线依次浏览。',
+        '同一页面内请优先使用 scroll_section 按区块连续缓慢浏览，不要直接滚半页、拉到底、回顶或反弹。',
+        '如果当前站点是代表性二级页或详情页，并且带有 returnUrl，请浏览完成后回到 returnUrl 再继续路线。',
+        '如果当前站点是过渡返回站点（isTransitStop=true 或标签以“返回”开头），确认已回到指定页面后可以直接切换下一站，不要再次完整浏览这一页。',
+        `公开导览路线如下：\n${tourPlan}`,
+        '完成导览后，用一句中文说明已经带用户看完主要板块。',
       ].join(' '),
       bootstrapUrl: '/',
-      expectedUrl: '/?page=about',
-      pageId: 'about',
+      expectedUrl: safeText(getYiyuTongSiteMapPage(YIYU_TONG_SITE_MAP?.tour?.finalPageId || 'about')?.url || '/?page=about'),
+      pageId: safeText(YIYU_TONG_SITE_MAP?.tour?.finalPageId || 'about'),
       successMessage: '已带你快速浏览完网站的主要板块。',
       tourStops,
+      route,
+      completionRules: buildTaskRules(['tour_completed']),
+      failureRules: buildFailureRules('permission_notice', 'not_found_notice'),
     }),
   });
 }
@@ -4887,6 +5569,201 @@ function resolveClauseToGraphTarget(clause, rankedSources, allSources) {
   }
 
   return null;
+}
+
+function resolvePlannerRouteTarget(target, rankedSources, allSources) {
+  const kind = safeText(target?.kind).toLowerCase();
+  const sourceId = safeText(target?.sourceId);
+  const pageId = safeText(target?.pageId);
+  const note = safeText(target?.note);
+
+  if (kind === 'source' && sourceId) {
+    const source = rankedSources.find((item) => item.contentId === sourceId) || allSources.find((item) => item.contentId === sourceId);
+    if (!source) return null;
+    return {
+      kind: 'source',
+      label: source.title,
+      target: source.publicUrl,
+      pageId: getAssistantPageIdFromTarget(source.publicUrl),
+      source,
+      note,
+    };
+  }
+
+  if (pageId) {
+    const page = getYiyuTongSiteMapPage(pageId);
+    if (!page?.url) return null;
+    return {
+      kind: 'page',
+      label: page.label,
+      target: page.url,
+      pageId: page.id,
+      source: null,
+      note,
+    };
+  }
+
+  return null;
+}
+
+function buildPlannerRouteTaskResponse({
+  question,
+  currentUrl,
+  routeTargets,
+  answerPageIds = [],
+  mode = 'site_task',
+  rankedSources = [],
+  allSources = [],
+}) {
+  const targets = Array.isArray(routeTargets)
+    ? routeTargets
+        .map((item) => resolvePlannerRouteTarget(item, rankedSources, allSources))
+        .filter(Boolean)
+    : [];
+  if (!targets.length) return null;
+
+  const route = buildRouteFromTargets(targets);
+  const answerSnippets = Array.isArray(answerPageIds)
+    ? answerPageIds
+        .map((pageId) => safeText(pageId))
+        .filter(Boolean)
+        .map((pageId) => ({
+          pageId,
+          text: buildPageAnswerTextById(pageId),
+          citation: buildAssistantPageCard(pageId, buildPageAnswerTextById(pageId)),
+        }))
+        .filter((item) => item.text || item.citation)
+    : [];
+  const citations = answerSnippets.map((item) => item.citation).filter(Boolean);
+  const answerText = answerSnippets.map((item) => item.text).filter(Boolean).join(' ');
+  const normalizedCurrentUrl = normalizeAssistantTarget(currentUrl);
+  const graphSteps = [];
+
+  targets.forEach((target, index) => {
+    const isFirstAndAlreadyThere = index === 0 && normalizedCurrentUrl && normalizedCurrentUrl === normalizeAssistantTarget(target.target);
+    if (isFirstAndAlreadyThere) return;
+    graphSteps.push(
+      buildGraphStep(`route_open_${index + 1}`, 'open_url', {
+        target: target.target,
+        pageId: target.pageId,
+        detail: `正在打开${target.label}。`,
+      })
+    );
+  });
+
+  const lastTarget = targets[targets.length - 1];
+  const sequenceText = targets.map((target) => target.label).join(' -> ');
+  const successMessage = answerText
+    ? `已按顺序完成：${sequenceText}。${answerText}`.trim()
+    : `已按顺序完成：${sequenceText}。`;
+  const userVisiblePlan = buildUserVisiblePlanFromRoute(
+    targets.map((target) => ({
+      label: target.label,
+      detail: target.note || `进入${target.label}`,
+    })),
+    answerText
+  );
+
+  if (!graphSteps.length) {
+    return buildAssistantResponseEnvelope({
+      mode: answerText ? 'mixed_task' : mode,
+      goal: safeText(question) || `按顺序完成：${sequenceText}`,
+      entities: {
+        query: safeText(question),
+      },
+      message: answerText || `当前已经在${lastTarget.label}。`,
+      userVisiblePlan,
+      citations,
+      route,
+      completionRules: buildTaskRules(['detail_opened']),
+      failureRules: buildFailureRules('not_found_notice', 'permission_notice'),
+      finalState: buildFinalState({
+        pageId: lastTarget.pageId,
+        url: lastTarget.target,
+        note: successMessage,
+      }),
+    });
+  }
+
+  return buildSiteTaskGraphResponse({
+    mode: answerText ? 'mixed_task' : mode,
+    goal: safeText(question) || `按顺序完成：${sequenceText}`,
+    prompt: [
+      `请在益语官网当前标签页内按顺序完成这个请求：${question}`,
+      `顺序目标如下：${sequenceText}。`,
+      '如果已经在其中某一步的目标页，就从当前状态继续后面的步骤。',
+      answerText ? '完成所有页面动作后，再给出任务要求的说明，并附上来源页面信息。' : '完成所有页面动作后立即结束。',
+    ].join('\n'),
+    entities: {
+      query: safeText(question),
+      targetTitle: lastTarget.source?.title || '',
+      targetId: lastTarget.source?.contentId || '',
+    },
+    message: `我来按顺序帮你完成：${sequenceText}。`,
+    userVisiblePlan,
+    steps: buildAssistantSteps(
+      buildAssistantStep('understanding', '正在理解你的目标', '识别到你给了一个按顺序完成的任务。'),
+      buildAssistantStep('planning', '正在规划操作步骤', `计划依次完成：${sequenceText}。`),
+      buildAssistantStep('locating', '正在定位相关页面', '准备按顺序进入每个目标页面。'),
+      buildAssistantStep('acting', '正在操作页面', `正在依次完成：${sequenceText}。`),
+    ),
+    citations,
+    route,
+    completionRules: buildTaskRules(['mixed_task_done']),
+    failureRules: buildFailureRules('not_found_notice', 'permission_notice'),
+    graphSteps,
+    successMessage,
+    expectedUrl: lastTarget.target,
+    pageId: lastTarget.pageId,
+    finalState: buildFinalState({
+      pageId: lastTarget.pageId,
+      url: lastTarget.target,
+      note: successMessage,
+    }),
+    fallbackPlan: {
+      action: buildAssistantAction('open_url', `前往${lastTarget.label}`, lastTarget.target),
+    },
+  });
+}
+
+function buildPlannerDrivenResponse({
+  question,
+  currentUrl,
+  plannerMode,
+  plannerRouteTargets,
+  plannerAnswerPageIds,
+  plannerPageTarget,
+  plannerMatchedSource,
+  rankedSources,
+  allSources,
+  hasMixedIntent,
+}) {
+  const routeTargets = Array.isArray(plannerRouteTargets) ? [...plannerRouteTargets] : [];
+  if (!routeTargets.length) {
+    if (plannerMatchedSource?.contentId) {
+      routeTargets.push({
+        kind: 'source',
+        sourceId: plannerMatchedSource.contentId,
+        note: `进入《${plannerMatchedSource.title}》详情页`,
+      });
+    } else if (plannerPageTarget?.pageId) {
+      routeTargets.push({
+        kind: 'page',
+        pageId: plannerPageTarget.pageId,
+        note: `进入${plannerPageTarget.label}`,
+      });
+    }
+  }
+  if (!routeTargets.length) return null;
+  return buildPlannerRouteTaskResponse({
+    question,
+    currentUrl,
+    routeTargets,
+    answerPageIds: plannerAnswerPageIds,
+    mode: plannerMode === 'mixed_task' || hasMixedIntent ? 'mixed_task' : 'site_task',
+    rankedSources,
+    allSources,
+  });
 }
 
 function buildSequentialSiteTaskResponse(question, currentUrl, rankedSources, allSources) {
@@ -4944,10 +5821,18 @@ function buildSequentialSiteTaskResponse(question, currentUrl, rankedSources, al
       buildAssistantStep('acting', '正在操作页面', `正在依次完成：${targets.map((target) => target.label).join(' -> ')}。`),
     ),
     citations: [],
+    route: buildRouteFromTargets(targets),
+    completionRules: buildTaskRules(['detail_opened']),
+    failureRules: buildFailureRules('not_found_notice', 'permission_notice'),
     graphSteps,
     successMessage: `已按顺序完成：${targets.map((target) => target.label).join(' -> ')}。`,
     expectedUrl: lastTarget.target,
     pageId: lastTarget.pageId,
+    finalState: buildFinalState({
+      pageId: lastTarget.pageId,
+      url: lastTarget.target,
+      note: `已按顺序完成：${targets.map((target) => target.label).join(' -> ')}。`,
+    }),
     fallbackPlan: {
       action: buildAssistantAction('open_url', `前往${lastTarget.label}`, lastTarget.target),
     },
@@ -4960,6 +5845,12 @@ function buildCommentSiteTaskResponse({ question, currentUrl, targetSource, comm
   const graphSteps = [];
   const normalizedCurrentUrl = normalizeAssistantTarget(currentUrl);
   const normalizedTarget = normalizeAssistantTarget(targetSource.publicUrl);
+  const commentSectionId = ({
+    insight: 'article-detail-comments',
+    report: 'report-detail-comments',
+    book: 'book-detail-comments',
+    methodology: 'detail-comments',
+  })[safeText(targetSource.contentType)] || 'detail-comments';
 
   if (!normalizedCurrentUrl || normalizedCurrentUrl !== normalizedTarget) {
     graphSteps.push(
@@ -4972,6 +5863,11 @@ function buildCommentSiteTaskResponse({ question, currentUrl, targetSource, comm
   }
 
   graphSteps.push(
+    buildGraphStep('scroll_comment_section', 'scroll_section', {
+      sectionId: commentSectionId,
+      passes: 1,
+      detail: '正在滚动到评论区，让用户能看到评论输入框。',
+    }),
     buildGraphStep('fill_comment', 'fill_comment', {
       text: commentText,
       detail: `正在写入评论：${commentText}`,
@@ -4991,7 +5887,7 @@ function buildCommentSiteTaskResponse({ question, currentUrl, targetSource, comm
       `请在益语官网当前标签页内完成这个请求：${question}`,
       `目标内容是《${targetSource.title}》：${targetSource.publicUrl}`,
       '如果当前不在这条内容详情页，就先进入该详情页。',
-      '然后滚动到评论区附近，让用户能看到评论输入框。',
+      `然后滚动到评论区（区块 ${commentSectionId}），让用户能看到评论输入框。`,
       `在评论输入框里写入这条评论：${commentText}`,
       '最后点击发表评论按钮。只要评论进入“待管理员审核后显示”的提交成功状态，就立刻调用 done，不要再做任何额外无关操作。',
       wantsSummary
@@ -5013,10 +5909,31 @@ function buildCommentSiteTaskResponse({ question, currentUrl, targetSource, comm
       buildAssistantStep('acting', '正在操作页面', '正在写入评论并提交。'),
     ),
     citations: wantsSummary ? [mapAssistantSourceCard(targetSource)] : [],
+    route: buildRouteFromTargets([
+      {
+        label: targetSource.title,
+        target: targetSource.publicUrl,
+        pageId: getAssistantPageIdFromTarget(targetSource.publicUrl),
+        detail: `进入《${targetSource.title}》详情页`,
+      },
+      {
+        label: '评论区',
+        target: targetSource.publicUrl,
+        pageId: getAssistantPageIdFromTarget(targetSource.publicUrl),
+        detail: '滚动到评论区，写入评论并提交',
+      },
+    ]),
+    completionRules: buildTaskRules(['comment_submission']),
+    failureRules: buildFailureRules('not_found_notice', 'permission_notice'),
     graphSteps,
     successMessage,
     expectedUrl: targetSource.publicUrl,
     pageId: getAssistantPageIdFromTarget(targetSource.publicUrl),
+    finalState: buildFinalState({
+      pageId: getAssistantPageIdFromTarget(targetSource.publicUrl),
+      url: targetSource.publicUrl,
+      note: successMessage,
+    }),
     completionCheck: {
       type: 'comment_submission',
       contentId: targetSource.contentId,
@@ -5044,14 +5961,155 @@ function buildAnswerResponse(question, sources) {
 
 async function planAssistantTaskWithArk(question, sources, currentUrl) {
   if (!isArkReady()) return null;
-  const preview = sources.slice(0, 12).map((item) => ({
+  const isTourPrompt = detectSiteTourIntent(question);
+  const isConsultPrompt = detectConsultIntent(question);
+  const hasContactPrompt = detectContactInfoIntent(question);
+  const hasMembershipPrompt = detectMembershipInfoIntent(question);
+  const preview = (isTourPrompt || isConsultPrompt || hasContactPrompt || hasMembershipPrompt ? [] : sources.slice(0, 6)).map((item) => ({
     id: item.contentId,
     type: item.contentType,
     title: item.title,
     clientName: item.clientName,
     tags: item.tags,
     url: item.publicUrl,
+    publishDate: item.publishDate || item.updatedAt || item.createdAt || '',
   }));
+  const summarizeSections = (page) =>
+    Array.isArray(page?.sections)
+      ? [...getYiyuTongSharedSections(), ...page.sections]
+          .filter((section) => section.tour)
+          .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+          .map((section) => ({
+            id: section.id,
+            title: section.title,
+            order: Number(section.order || 0),
+            enterable: Boolean(section.enterable),
+          }))
+      : [];
+  const summarizePage = (pageId) => {
+    const page = getYiyuTongSiteMapPage(pageId);
+    if (!page) return null;
+    return {
+      id: page.id,
+      label: page.label,
+      url: page.url || '',
+      level: page.level,
+      group: page.group,
+      parentId: page.parentId || '',
+      representativeChildren: Array.isArray(page.representativeChildren) ? page.representativeChildren : [],
+      representativeDetailPageId: safeText(page.representativeDetail?.pageId || ''),
+      sections: summarizeSections(page),
+    };
+  };
+  const fullSiteMapSummary = {
+    publicTourOrder: Array.isArray(YIYU_TONG_SITE_MAP?.tour?.publicOrder)
+      ? YIYU_TONG_SITE_MAP.tour.publicOrder
+      : [],
+    finalTourPageId: safeText(YIYU_TONG_SITE_MAP?.tour?.finalPageId || 'about'),
+    primaryPages: (YIYU_TONG_SITE_MAP?.tour?.publicOrder || [])
+      .map((pageId) => summarizePage(pageId))
+      .filter(Boolean),
+    secondaryPages: Object.values(YIYU_TONG_SITE_MAP?.pages || {})
+      .filter((page) => page.level === 'secondary')
+      .map((page) => summarizePage(page.id))
+      .filter(Boolean),
+    detailPages: Object.values(YIYU_TONG_SITE_MAP?.pages || {})
+      .filter((page) => page.level === 'detail')
+      .map((page) => ({
+        id: page.id,
+        label: page.label,
+        group: page.group,
+        parentId: page.parentId || '',
+        urlPattern: page.urlPattern || page.url || '',
+        sections: summarizeSections(page),
+        })),
+    sharedSections: getYiyuTongSharedSections().map((section) => ({
+      id: section.id,
+      title: section.title,
+      type: section.type,
+      order: Number(section.order || 0),
+      enterable: Boolean(section.enterable),
+    })),
+    utilityPages: ['user-center', 'membership', 'consult-apply', 'login', 'register', 'forgot-password', 'reset-password', 'payment-checkout', 'payment-result']
+      .map((pageId) => getYiyuTongSiteMapPage(pageId))
+      .filter(Boolean)
+      .map((page) => ({
+        id: page.id,
+        label: page.label,
+        url: page.url || '',
+        group: page.group,
+        level: page.level,
+      })),
+    answerPages: ['about', 'membership']
+      .map((pageId) => getYiyuTongSiteMapPage(pageId))
+      .filter(Boolean)
+      .map((page) => ({
+        id: page.id,
+        label: page.label,
+        url: page.url || '',
+        answerContext: page.answerContext || null,
+      })),
+    tourRoute: detectSiteTourIntent(question)
+      ? buildTourStopsFromSiteMap(sources).map((stop) => ({
+          id: stop.id,
+          label: stop.label,
+          url: stop.url,
+          pageId: stop.pageId || '',
+          returnPageId: stop.returnPageId || '',
+          isRepresentativeChild: Boolean(stop.isRepresentativeChild),
+          isRepresentativeDetail: Boolean(stop.isRepresentativeDetail),
+          sections: Array.isArray(stop.sections)
+            ? stop.sections
+                .slice()
+                .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+                .map((section) => ({
+                  id: section.id,
+                  title: section.title,
+                  order: Number(section.order || 0),
+                  enterable: Boolean(section.enterable),
+                }))
+            : [],
+        }))
+      : [],
+    rules: {
+      representativeDetailSelection: YIYU_TONG_SITE_MAP?.rules?.representativeDetailSelection || 'latest_published',
+      returnAfterRepresentativeVisit: Boolean(YIYU_TONG_SITE_MAP?.rules?.returnAfterRepresentativeVisit),
+      stopOnPermissionDenied: Boolean(YIYU_TONG_SITE_MAP?.rules?.stopOnPermissionDenied),
+      stopOnMissingTarget: Boolean(YIYU_TONG_SITE_MAP?.rules?.stopOnMissingTarget),
+      detailPagesAreNotSecondary: true,
+      publicTourExcludesUserCenter: true,
+    },
+  };
+  const siteMapSummary = isTourPrompt
+    ? {
+        publicTourOrder: fullSiteMapSummary.publicTourOrder,
+        finalTourPageId: fullSiteMapSummary.finalTourPageId,
+        primaryPages: fullSiteMapSummary.primaryPages,
+        secondaryPages: fullSiteMapSummary.secondaryPages,
+        detailPages: fullSiteMapSummary.detailPages,
+        tourRoute: fullSiteMapSummary.tourRoute,
+        rules: fullSiteMapSummary.rules,
+      }
+    : (hasContactPrompt || hasMembershipPrompt)
+      ? {
+          primaryPages: fullSiteMapSummary.primaryPages.map((page) => ({
+            id: page.id,
+            label: page.label,
+            url: page.url,
+            level: page.level,
+            group: page.group,
+          })),
+          utilityPages: fullSiteMapSummary.utilityPages,
+          answerPages: fullSiteMapSummary.answerPages,
+          rules: fullSiteMapSummary.rules,
+        }
+      : {
+          primaryPages: fullSiteMapSummary.primaryPages,
+          secondaryPages: fullSiteMapSummary.secondaryPages,
+          detailPages: fullSiteMapSummary.detailPages,
+          answerPages: fullSiteMapSummary.answerPages,
+          rules: fullSiteMapSummary.rules,
+        };
 
   try {
     const content = await callArkChat([
@@ -5059,11 +6117,22 @@ async function planAssistantTaskWithArk(question, sources, currentUrl) {
         role: 'system',
         content: [
           '你是益语通的前台任务编排器。',
-          '你的目标不是先回答，而是先判断这句话更适合：站内任务、网站导览、表单任务，还是最后兜底的问答。',
-          '如果用户明显想找、跳、筛、开、看、比较、浏览网站，请优先返回 site_task 或 site_tour。',
+          '你的目标不是先回答，而是先结合官网前台结构地图，把用户的模糊指令转成一个尽量清晰的任务图、回答方案或混合方案。',
+          '你最了解益语官网结构：一级页面、二级列表页、详情页、功能页、共享顶部栏/底部栏、代表性子页和可导览区块都已提供在站点地图里。',
+          '请先判断这是纯回答、纯操作，还是回答+操作混合任务。',
+          '如果用户明显想找、跳、筛、开、看、比较、浏览网站，请优先返回 site_task、site_tour 或 mixed_task。',
           '如果用户要咨询、预约、合作、报名，请返回 form_task。',
-          '只有真正是内容问答、或不适合自动执行时，才返回 answer。',
-          '只返回 JSON，格式为 {"mode":"site_task|site_tour|form_task|answer","goal":"","contentType":"","targetSourceId":"","targetPage":"","topic":"","openMode":"none|exact|first|last","wantsSummary":false,"query":"","notes":""}。',
+          '只有真正无需页面操作时，才返回 answer；如果用户既要先定位官网里的某个页面或区域，又要你说明该页相关信息，请返回 mixed_task。',
+          '多目标任务默认按顺序全部完成。',
+          '模糊导航优先落到最合适的列表页并筛选，而不是直接放弃执行。',
+          '站内导览时，应优先使用官网地图里定义的一级页面、代表性二级页、代表性详情页和区块顺序。',
+          '详情页不是二级页面，但可以作为代表性进入页；公开导览默认不进入个人中心等功能页。',
+          '用户最不了解官网，你最了解官网；因此要主动把模糊指令翻译成清晰路线，不要要求用户先学会网站结构。',
+          '路线里要写清楚去哪些页面、先后顺序、哪些只是定位区域、哪些页面默认进入后返回、什么算完成。',
+          '如果用户要混合任务，你可以同时指定页面定位目标和说明需求；最终说明会在任务结束后附出处。',
+          'routeHints 只保留最关键的 1 到 4 条，不要长篇复述官网地图。',
+          '如果这是多目标或混合任务，可以在 routeTargets 中按顺序列出目标；单目标时 routeTargets 可为空。',
+          '只返回 JSON，格式为 {"mode":"answer|site_task|site_tour|form_task|mixed_task","goal":"","contentType":"","targetSourceId":"","targetPage":"","topic":"","openMode":"none|exact|first|last","wantsSummary":false,"query":"","notes":"","routeHints":[""],"routeTargets":[{"kind":"page|source","pageId":"","sourceId":"","note":""}],"answerPageIds":[""],"finalPageId":"","finalUrl":""}。',
         ].join(' '),
       },
       {
@@ -5071,11 +6140,15 @@ async function planAssistantTaskWithArk(question, sources, currentUrl) {
         content: JSON.stringify({
           question,
           currentUrl,
-          availablePages: Object.entries(YIYU_TONG_PAGE_TARGETS).map(([key, value]) => ({ key, ...value })),
+          siteMap: siteMapSummary,
           candidateSources: preview,
         }),
       },
-    ]);
+    ], {
+      maxTokens: 220,
+      temperature: 0.1,
+      reasoningEffort: 'low',
+    });
     return extractJsonObject(content);
   } catch {
     return null;
@@ -5166,7 +6239,11 @@ async function extractConsultFields(question, knownUserInfo, history = [], exist
           knownUserInfo: fallback,
         }),
       },
-    ]);
+    ], {
+      maxTokens: 180,
+      temperature: 0.1,
+      reasoningEffort: 'low',
+    });
     const parsed = extractJsonObject(content);
     return mergeCollectedFields(fallback, {
       name: safeText(parsed.name, fallback.name),
@@ -5210,6 +6287,10 @@ async function buildAssistantResponse(payload) {
   const wantsLast = detectLastIntent(question);
   const wantsSummary = detectSummaryIntent(question);
   const hasActionIntent = detectActionIntent(question);
+  const hasMixedIntent = detectMixedTaskIntent(question);
+  const hasContactInfoIntent = detectContactInfoIntent(question);
+  const hasMembershipInfoIntent = detectMembershipInfoIntent(question);
+  const hasLocateCue = /(定位|那里|位置|在哪|哪里|哪儿|带我去|带我看|去看|去到|进入|打开|找到)/.test(safeText(question));
   const plannerMode = safeText(plannerOutput?.mode);
   const plannerType = safeText(plannerOutput?.contentType);
   const plannerTargetPage = safeText(plannerOutput?.targetPage);
@@ -5219,6 +6300,24 @@ async function buildAssistantResponse(payload) {
   const plannerQuery = safeText(plannerOutput?.query);
   const plannerSourceId = safeText(plannerOutput?.targetSourceId);
   const plannerGoal = safeText(plannerOutput?.goal);
+  const plannerRouteHints = Array.isArray(plannerOutput?.routeHints)
+    ? plannerOutput.routeHints.map((item) => safeText(item)).filter(Boolean)
+    : [];
+  const plannerRouteTargets = Array.isArray(plannerOutput?.routeTargets)
+    ? plannerOutput.routeTargets
+        .map((item) => ({
+          kind: safeText(item?.kind),
+          pageId: safeText(item?.pageId),
+          sourceId: safeText(item?.sourceId),
+          note: safeText(item?.note),
+        }))
+        .filter((item) => item.kind && (item.pageId || item.sourceId))
+    : [];
+  const plannerAnswerPageIds = Array.isArray(plannerOutput?.answerPageIds)
+    ? plannerOutput.answerPageIds.map((item) => safeText(item)).filter(Boolean)
+    : [];
+  const plannerFinalPageId = safeText(plannerOutput?.finalPageId);
+  const plannerFinalUrl = safeText(plannerOutput?.finalUrl);
   const plannerPageTarget = resolvePlannerPageTarget(plannerTargetPage);
   const plannerMatchedSource = plannerSourceId
     ? rankedSources.find((item) => item.contentId === plannerSourceId) || sources.find((item) => item.contentId === plannerSourceId)
@@ -5250,6 +6349,21 @@ async function buildAssistantResponse(payload) {
         buildAssistantStep('locating', '正在定位相关页面', '准备在新标签页中定位飞书正式申请表。'),
         buildAssistantStep('acting', '正在操作页面', missingFields.length ? `正在填写已知字段，稍后继续补填：${missingFields.join('、')}。` : '正在把已知信息写入正式申请表。'),
       ),
+      route: buildRouteFromTargets([{
+        label: '咨询申请表单',
+        target: YIYU_TONG_FORM_URL,
+        pageId: 'consult-apply',
+        detail: '打开正式申请表并持续补填字段',
+      }]),
+      completionRules: buildTaskRules(['mixed_task_done']),
+      failureRules: buildFailureRules('not_found_notice'),
+      finalState: buildFinalState({
+        pageId: 'consult-apply',
+        url: YIYU_TONG_FORM_URL,
+        note: missingFields.length
+          ? `已写入已知字段，还缺：${missingFields.join('、')}`
+          : '已写入当前已知字段，等待用户最终确认提交。',
+      }),
       executionPlan: buildMultiTabExecutionPlan({
         prompt: [
           `在新标签页打开这个飞书表单：${YIYU_TONG_FORM_URL}`,
@@ -5283,7 +6397,51 @@ async function buildAssistantResponse(payload) {
   }
 
   if (detectSiteTourIntent(question) || plannerMode === 'site_tour') {
-    return buildSiteTourResponse(question);
+    return buildSiteTourResponse(question, sources);
+  }
+
+  if (hasContactInfoIntent && hasMembershipInfoIntent) {
+    if (hasActionIntent || hasLocateCue || plannerMode === 'mixed_task' || plannerTargetPage === 'about' || plannerTargetPage === 'membership') {
+      return buildContactMembershipMixedTaskResponse({ currentUrl, question });
+    }
+    const contactText = buildContactAnswerText();
+    const membershipText = buildMembershipAnswerText();
+    return buildAssistantResponseEnvelope({
+      mode: 'answer',
+      goal: '说明联系方式以及会员开通、收费与权益',
+      entities: {
+        pageTarget: '/?page=about',
+        query: safeText(question),
+      },
+      message: `${contactText} ${membershipText}`.trim(),
+      citations: [
+        buildAssistantPageCard('about', contactText),
+        buildAssistantPageCard('membership', membershipText),
+      ].filter(Boolean),
+      finalState: buildFinalState({
+        pageId: 'about',
+        url: '/?page=about',
+        note: '已根据官网页面说明联系方式与会员信息。',
+      }),
+    });
+  }
+
+  if ((plannerMode === 'site_task' || plannerMode === 'mixed_task') && plannerRouteTargets.length) {
+    const plannerRouteResponse = buildPlannerDrivenResponse({
+      question,
+      currentUrl,
+      plannerMode,
+      plannerRouteTargets,
+      plannerAnswerPageIds,
+      plannerPageTarget,
+      plannerMatchedSource,
+      rankedSources,
+      allSources: sources,
+      hasMixedIntent,
+    });
+    if (plannerRouteResponse) {
+      return plannerRouteResponse;
+    }
   }
 
   const sequentialTaskResponse = buildSequentialSiteTaskResponse(question, currentUrl, rankedSources, sources);
@@ -5306,34 +6464,87 @@ async function buildAssistantResponse(payload) {
     }
   }
 
-  if (plannerMode === 'site_task' && plannerPageTarget) {
+  if (hasContactInfoIntent) {
+    const contactText = buildContactAnswerText();
+    if (hasActionIntent || hasLocateCue || plannerTargetPage === 'about') {
+      return buildPageSectionTaskResponse({
+        currentUrl,
+        pageId: 'about',
+        sectionId: safeText(getYiyuTongSiteMapPage('about')?.answerContext?.contact?.sectionId || 'about-contact'),
+        goal: '定位益语智库联系方式',
+        message: '我先带你定位到联系方式区域。',
+        successMessage: contactText,
+        mode: hasMixedIntent ? 'mixed_task' : 'site_task',
+        citations: [buildAssistantPageCard('about', contactText)].filter(Boolean),
+      });
+    }
+    return buildPageAnswerResponse({
+      pageId: 'about',
+      goal: '回答益语智库联系方式',
+      message: contactText,
+      snippet: contactText,
+    });
+  }
+
+  if (hasMembershipInfoIntent) {
+    const membershipText = buildMembershipAnswerText();
+    if ((hasActionIntent || hasLocateCue || plannerTargetPage === 'membership') && !detectConsultIntent(question)) {
+      return buildPageSectionTaskResponse({
+        currentUrl,
+        pageId: 'membership',
+        sectionId: 'membership-plans',
+        goal: '定位会员开通与套餐信息',
+        message: '我先带你到会员介绍页，再说明开通方式、收费和权益。',
+        successMessage: membershipText,
+        mode: 'mixed_task',
+        citations: [buildAssistantPageCard('membership', membershipText)].filter(Boolean),
+      });
+    }
+    return buildPageAnswerResponse({
+      pageId: 'membership',
+      goal: '回答会员开通、收费与权益',
+      message: membershipText,
+      snippet: membershipText,
+    });
+  }
+
+  if ((plannerMode === 'site_task' || plannerMode === 'mixed_task') && plannerPageTarget) {
     return buildPageTargetTaskResponse({
       label: plannerPageTarget.label,
       target: plannerPageTarget.target,
       currentUrl,
       goal: plannerGoal || `进入${plannerPageTarget.label}`,
+      mode: plannerMode === 'mixed_task' || hasMixedIntent ? 'mixed_task' : 'site_task',
     });
   }
 
-  if (plannerMode === 'site_task' && plannerMatchedSource) {
+  if ((plannerMode === 'site_task' || plannerMode === 'mixed_task') && plannerMatchedSource) {
     return buildDirectSourceTaskResponseV2(
       plannerMatchedSource,
       currentUrl,
-      wantsSummary || plannerWantsSummary
+      wantsSummary || plannerWantsSummary,
+      plannerMode === 'mixed_task' ? 'mixed_task' : 'site_task'
     );
   }
 
-  if (pageNavigation && (hasActionIntent || plannerMode === 'site_task' || !detectContentQuestionIntent(question))) {
+  if (pageNavigation && (hasActionIntent || plannerMode === 'site_task' || plannerMode === 'mixed_task' || !detectContentQuestionIntent(question))) {
     return buildPageTargetTaskResponse({
       label: pageNavigation.label,
       target: pageNavigation.target,
       currentUrl,
       goal: plannerGoal || `进入${pageNavigation.label}`,
+      mode: plannerMode === 'mixed_task' || hasMixedIntent ? 'mixed_task' : 'site_task',
+      citations: hasMixedIntent ? topSources.slice(0, 3).map(mapAssistantSourceCard) : [],
     });
   }
 
-  if (directSource && (hasActionIntent || /在哪|哪里|哪儿|案例|看看|看一下/.test(safeText(question)) || plannerMode === 'site_task')) {
-    return buildDirectSourceTaskResponseV2(directSource, currentUrl, wantsSummary || plannerWantsSummary);
+  if (directSource && (hasActionIntent || /在哪|哪里|哪儿|案例|看看|看一下/.test(safeText(question)) || plannerMode === 'site_task' || plannerMode === 'mixed_task')) {
+    return buildDirectSourceTaskResponseV2(
+      directSource,
+      currentUrl,
+      wantsSummary || plannerWantsSummary,
+      plannerMode === 'mixed_task' || hasMixedIntent ? 'mixed_task' : 'site_task'
+    );
   }
 
   if (detectGuideIntent(question)) {
@@ -5357,7 +6568,7 @@ async function buildAssistantResponse(payload) {
     || (resolvedOpenMode === 'last' ? lastSource : null)
     || (resolvedOpenMode === 'first' ? firstSource : null);
 
-  if (normalizedType && (hasActionIntent || plannerMode === 'site_task')) {
+  if (normalizedType && (hasActionIntent || plannerMode === 'site_task' || plannerMode === 'mixed_task')) {
     const mapping = getAssistantPageConfigByType(normalizedType);
     if (mapping) {
       return buildFilterTaskResponseV2({
@@ -5371,6 +6582,7 @@ async function buildAssistantResponse(payload) {
         targetSource,
         openMode: targetSource ? 'exact' : resolvedOpenMode,
         wantsSummary: wantsSummary || plannerWantsSummary,
+        mode: plannerMode === 'mixed_task' || wantsSummary || plannerWantsSummary || hasMixedIntent ? 'mixed_task' : 'site_task',
       });
     }
   }
@@ -5387,6 +6599,19 @@ async function buildAssistantResponse(payload) {
       wantsSummary: false,
     },
     message: answer,
+    route: plannerRouteHints.map((hint, index) => buildRouteNode({
+      id: `hint_${index + 1}`,
+      detail: hint,
+      pageId: plannerFinalPageId,
+      target: plannerFinalUrl,
+    })),
+    completionRules: [],
+    failureRules: buildFailureRules(noEvidence ? 'not_found_notice' : null),
+    finalState: buildFinalState({
+      pageId: plannerFinalPageId,
+      url: plannerFinalUrl,
+      note: noEvidence ? '当前官网已发布内容中未找到相关信息' : '已给出基于官网前台内容的说明。',
+    }),
     citations: noEvidence ? [] : topSources.map(mapAssistantSourceCard),
   });
 }

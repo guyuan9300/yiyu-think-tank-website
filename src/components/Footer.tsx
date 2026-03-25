@@ -17,7 +17,14 @@ export function Footer({ onNavigate }: FooterProps) {
   };
 
   return (
-    <footer className="py-16 px-4 sm:px-6 lg:px-8 border-t border-white/10 bg-black text-white">
+    <footer
+      data-yiyu-section="shared-footer"
+      data-yiyu-section-type="footer"
+      data-yiyu-section-title="底部栏"
+      data-yiyu-section-order="999"
+      data-yiyu-section-enterable="true"
+      className="py-16 px-4 sm:px-6 lg:px-8 border-t border-white/10 bg-black text-white"
+    >
       <div className="max-w-[1200px] mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
           {/* Brand + Slogan (largest) */}

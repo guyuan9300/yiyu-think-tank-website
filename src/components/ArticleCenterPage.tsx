@@ -12,6 +12,7 @@ import {
 import { getInsights, type InsightArticle } from '../lib/dataService';
 import { ContentResourceCard } from './ContentResourceCard';
 import { PaginationControls } from './PaginationControls';
+import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 
 const PAGE_SIZE = 6;
 
@@ -121,11 +122,14 @@ export function ArticleCenterPage({
   }
 
   return (
-    <div data-yiyu-page="article-center" className="min-h-screen bg-background flex flex-col">
+    <div {...getYiyuPageAttrs('article-center')} className="min-h-screen bg-background flex flex-col">
       <Header onNavigate={onNavigate} />
 
       {/* Hero 区域 */}
-      <section data-yiyu-section="article-center-hero" className="relative pt-24 sm:pt-32 pb-8 px-4 sm:px-6 overflow-hidden">
+      <section
+        {...getYiyuSectionAttrs('article-center', 'article-center-hero')}
+        className="relative pt-24 sm:pt-32 pb-8 px-4 sm:px-6 overflow-hidden"
+      >
         <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent" />
 
         <div className="relative max-w-7xl mx-auto">
@@ -160,9 +164,13 @@ export function ArticleCenterPage({
 
       {/* 筛选栏 - 固定定位 */}
       <div
-        data-yiyu-section="article-center-filters"
+        {...getYiyuSectionAttrs('article-center', 'article-center-filters')}
         data-yiyu-results-total={String(filteredArticles.length)}
         data-yiyu-active-topic={selectedTopic}
+        data-yiyu-search-query={searchQuery}
+        data-yiyu-current-page={String(safePage)}
+        data-yiyu-total-pages={String(totalPages)}
+        data-yiyu-sort="latest"
         className="bg-white/80 backdrop-blur-sm border-b border-border/40 sticky top-0 z-10"
       >
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -218,8 +226,11 @@ export function ArticleCenterPage({
 
       {/* 内容区域 */}
       <div
-        data-yiyu-section="article-center-results"
+        {...getYiyuSectionAttrs('article-center', 'article-center-results')}
         data-yiyu-results-total={String(filteredArticles.length)}
+        data-yiyu-current-page={String(safePage)}
+        data-yiyu-total-pages={String(totalPages)}
+        data-yiyu-sort="latest"
         className="max-w-4xl mx-auto px-6 py-8"
       >
         {/* 结果统计 */}
@@ -242,6 +253,8 @@ export function ArticleCenterPage({
             {paginatedArticles.map((article: InsightArticle) => (
               <ContentResourceCard
                 key={article.id}
+                contentId={article.id}
+                contentType="insight"
                 cover={
                   article.coverImage ? (
                     <img
@@ -274,6 +287,8 @@ export function ArticleCenterPage({
               {paginatedArticles.map((article: InsightArticle) => (
                 <ContentResourceCard
                   key={article.id}
+                  contentId={article.id}
+                  contentType="insight"
                   variant="list"
                   cover={
                     article.coverImage ? (

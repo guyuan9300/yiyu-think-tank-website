@@ -246,7 +246,7 @@ export default function App() {
 
   const [currentPage, setCurrentPage] = useState<string>(initialPage);
   const [unknownPage, setUnknownPage] = useState<string | null>(initialUnknown);
-  const [selectedBookId, setSelectedBookId] = useState<string>(initialParams.get('id') || 'shimeshiquanli');
+  const [selectedBookId, setSelectedBookId] = useState<string>(initialParams.get('id') || initialParams.get('bookId') || 'shimeshiquanli');
   const [selectedDetailId, setSelectedDetailId] = useState<string>(initialParams.get('id') || '');
   const [selectedCaseId, setSelectedCaseId] = useState<string>(initialParams.get('id') || 'case-1');
   const shouldShowYiyuTong = ![

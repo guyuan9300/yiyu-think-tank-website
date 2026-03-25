@@ -1,0 +1,916 @@
+{
+  "version": "2026-03-25",
+  "tour": {
+    "publicOrder": [
+      "home",
+      "insights",
+      "learning",
+      "strategy",
+      "about"
+    ],
+    "finalPageId": "about"
+  },
+  "sharedSections": [
+    {
+      "id": "shared-header",
+      "title": "顶部栏",
+      "type": "nav",
+      "order": 0,
+      "enterable": true,
+      "tour": false
+    },
+    {
+      "id": "shared-footer",
+      "title": "底部栏",
+      "type": "footer",
+      "order": 999,
+      "enterable": true,
+      "tour": false
+    }
+  ],
+  "rules": {
+    "representativeDetailSelection": "latest_published",
+    "returnAfterRepresentativeVisit": true,
+    "stopOnPermissionDenied": true,
+    "stopOnMissingTarget": true
+  },
+  "completionRules": {
+    "comment_submission": {
+      "kind": "comment_submission",
+      "successHint": "评论已提交，待管理员审核后将显示在评论列表中",
+      "adminState": "pending"
+    },
+    "detail_opened": {
+      "kind": "detail_opened"
+    },
+    "tour_completed": {
+      "kind": "tour_completed"
+    },
+    "permission_notice": {
+      "kind": "permission_notice"
+    },
+    "not_found_notice": {
+      "kind": "not_found_notice"
+    },
+    "mixed_task_done": {
+      "kind": "mixed_task_done"
+    }
+  },
+  "pages": {
+    "home": {
+      "id": "home",
+      "label": "首页",
+      "url": "/",
+      "level": "primary",
+      "group": "home",
+      "publicTour": true,
+      "sections": [
+        {
+          "id": "home-hero",
+          "title": "首页主视觉",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "home-latest-content",
+          "title": "最新内容",
+          "type": "list",
+          "order": 2,
+          "enterable": true,
+          "tour": true
+        },
+        {
+          "id": "home-strategy-companion",
+          "title": "战略陪伴入口",
+          "type": "cta",
+          "order": 3,
+          "enterable": true,
+          "tour": true
+        },
+        {
+          "id": "home-trust-indicators",
+          "title": "信任背书",
+          "type": "stats",
+          "order": 4,
+          "enterable": false,
+          "tour": true
+        }
+      ]
+    },
+    "insights": {
+      "id": "insights",
+      "label": "前沿洞察",
+      "url": "/?page=insights",
+      "level": "primary",
+      "group": "insights",
+      "publicTour": true,
+      "representativeChildren": [
+        "article-center",
+        "report-library"
+      ],
+      "sections": [
+        {
+          "id": "insights-hero",
+          "title": "前沿洞察主视觉",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "insights-reports",
+          "title": "报告库入口",
+          "type": "list",
+          "order": 2,
+          "enterable": true,
+          "tour": true
+        },
+        {
+          "id": "insights-articles",
+          "title": "文章中心入口",
+          "type": "list",
+          "order": 3,
+          "enterable": true,
+          "tour": true
+        }
+      ]
+    },
+    "learning": {
+      "id": "learning",
+      "label": "学习中心",
+      "url": "/?page=learning",
+      "level": "primary",
+      "group": "learning",
+      "publicTour": true,
+      "representativeChildren": [
+        "book-library",
+        "methodology-library"
+      ],
+      "sections": [
+        {
+          "id": "learning-hero",
+          "title": "学习中心主视觉",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "learning-books",
+          "title": "图书馆入口",
+          "type": "list",
+          "order": 2,
+          "enterable": true,
+          "tour": true
+        },
+        {
+          "id": "learning-methodologies",
+          "title": "工具与方法论入口",
+          "type": "list",
+          "order": 3,
+          "enterable": true,
+          "tour": true
+        }
+      ]
+    },
+    "strategy": {
+      "id": "strategy",
+      "label": "战略陪伴",
+      "url": "/?page=strategy",
+      "level": "primary",
+      "group": "strategy",
+      "publicTour": true,
+      "representativeChildren": [
+        "case"
+      ],
+      "sections": [
+        {
+          "id": "strategy-hero",
+          "title": "战略陪伴主视觉",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "strategy-cases",
+          "title": "服务客户案例",
+          "type": "list",
+          "order": 2,
+          "enterable": true,
+          "tour": true
+        },
+        {
+          "id": "strategy-insights",
+          "title": "战略洞察",
+          "type": "list",
+          "order": 3,
+          "enterable": true,
+          "tour": true
+        },
+        {
+          "id": "strategy-tools",
+          "title": "战略工具",
+          "type": "list",
+          "order": 4,
+          "enterable": true,
+          "tour": true
+        },
+        {
+          "id": "strategy-cooperation",
+          "title": "合作流程",
+          "type": "process",
+          "order": 5,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "strategy-faq",
+          "title": "常见问题",
+          "type": "faq",
+          "order": 6,
+          "enterable": false,
+          "tour": true
+        }
+      ]
+    },
+    "about": {
+      "id": "about",
+      "label": "关于我们",
+      "url": "/?page=about",
+      "level": "primary",
+      "group": "about",
+      "publicTour": true,
+      "answerContext": {
+        "contact": {
+          "sectionId": "about-contact",
+          "phone": "18027370767",
+          "email": "guyuan@klngo.org",
+          "wechatOfficial": "顾源源"
+        }
+      },
+      "sections": [
+        {
+          "id": "about-hero",
+          "title": "关于我们主视觉",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "about-values",
+          "title": "核心价值观",
+          "type": "content",
+          "order": 2,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "about-services",
+          "title": "服务内容",
+          "type": "content",
+          "order": 3,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "about-milestones",
+          "title": "发展历程",
+          "type": "content",
+          "order": 4,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "about-contact",
+          "title": "联系我们",
+          "type": "cta",
+          "order": 5,
+          "enterable": false,
+          "tour": true
+        }
+      ]
+    },
+    "article-center": {
+      "id": "article-center",
+      "label": "文章中心",
+      "url": "/?page=article-center",
+      "level": "secondary",
+      "group": "insights",
+      "parentId": "insights",
+      "publicTour": true,
+      "representativeDetail": {
+        "pageId": "article",
+        "selection": "latest_published"
+      },
+      "sections": [
+        {
+          "id": "article-center-hero",
+          "title": "文章中心头部",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "article-center-filters",
+          "title": "文章筛选区",
+          "type": "filters",
+          "order": 2,
+          "enterable": true,
+          "tour": true
+        },
+        {
+          "id": "article-center-results",
+          "title": "文章结果区",
+          "type": "results",
+          "order": 3,
+          "enterable": true,
+          "tour": true
+        }
+      ]
+    },
+    "report-library": {
+      "id": "report-library",
+      "label": "报告库",
+      "url": "/?page=report-library",
+      "level": "secondary",
+      "group": "insights",
+      "parentId": "insights",
+      "publicTour": true,
+      "representativeDetail": {
+        "pageId": "report",
+        "selection": "latest_published"
+      },
+      "sections": [
+        {
+          "id": "report-library-hero",
+          "title": "报告库头部",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "report-library-filters",
+          "title": "报告筛选区",
+          "type": "filters",
+          "order": 2,
+          "enterable": true,
+          "tour": true
+        },
+        {
+          "id": "report-library-results",
+          "title": "报告结果区",
+          "type": "results",
+          "order": 3,
+          "enterable": true,
+          "tour": true
+        }
+      ]
+    },
+    "book-library": {
+      "id": "book-library",
+      "label": "图书馆",
+      "url": "/?page=book-library",
+      "level": "secondary",
+      "group": "learning",
+      "parentId": "learning",
+      "publicTour": true,
+      "representativeDetail": {
+        "pageId": "book",
+        "selection": "latest_published"
+      },
+      "sections": [
+        {
+          "id": "book-library-hero",
+          "title": "图书馆头部",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "book-library-filters",
+          "title": "图书筛选区",
+          "type": "filters",
+          "order": 2,
+          "enterable": true,
+          "tour": true
+        },
+        {
+          "id": "book-library-results",
+          "title": "图书结果区",
+          "type": "results",
+          "order": 3,
+          "enterable": true,
+          "tour": true
+        }
+      ]
+    },
+    "methodology-library": {
+      "id": "methodology-library",
+      "label": "工具/方法论",
+      "url": "/?page=methodology-library",
+      "level": "secondary",
+      "group": "learning",
+      "parentId": "learning",
+      "publicTour": true,
+      "representativeDetail": {
+        "pageId": "methodology",
+        "selection": "latest_published"
+      },
+      "sections": [
+        {
+          "id": "methodology-library-hero",
+          "title": "方法论头部",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "methodology-library-filters",
+          "title": "方法论筛选区",
+          "type": "filters",
+          "order": 2,
+          "enterable": true,
+          "tour": true
+        },
+        {
+          "id": "methodology-library-results",
+          "title": "方法论结果区",
+          "type": "results",
+          "order": 3,
+          "enterable": true,
+          "tour": true
+        }
+      ]
+    },
+    "article": {
+      "id": "article",
+      "label": "文章详情",
+      "urlPattern": "/?page=article&id=:id",
+      "level": "detail",
+      "group": "insights",
+      "parentId": "article-center",
+      "publicTour": true,
+      "sections": [
+        {
+          "id": "article-detail-hero",
+          "title": "文章详情头部",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "article-detail-content",
+          "title": "文章正文",
+          "type": "detail",
+          "order": 2,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "article-detail-comments",
+          "title": "文章评论区",
+          "type": "comments",
+          "order": 3,
+          "enterable": true,
+          "tour": true
+        }
+      ]
+    },
+    "report": {
+      "id": "report",
+      "label": "报告详情",
+      "urlPattern": "/?page=report&id=:id",
+      "level": "detail",
+      "group": "insights",
+      "parentId": "report-library",
+      "publicTour": true,
+      "sections": [
+        {
+          "id": "report-detail-hero",
+          "title": "报告详情头部",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "report-detail-reader",
+          "title": "报告阅读区",
+          "type": "detail",
+          "order": 2,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "report-detail-comments",
+          "title": "报告评论区",
+          "type": "comments",
+          "order": 3,
+          "enterable": true,
+          "tour": true
+        }
+      ]
+    },
+    "book": {
+      "id": "book",
+      "label": "图书详情",
+      "urlPattern": "/?page=book-reader&id=:id",
+      "level": "detail",
+      "group": "learning",
+      "parentId": "book-library",
+      "publicTour": true,
+      "sections": [
+        {
+          "id": "book-detail-hero",
+          "title": "图书详情头部",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "book-detail-reader",
+          "title": "图书阅读区",
+          "type": "detail",
+          "order": 2,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "book-detail-comments",
+          "title": "图书评论区",
+          "type": "comments",
+          "order": 3,
+          "enterable": true,
+          "tour": true
+        }
+      ]
+    },
+    "methodology": {
+      "id": "methodology",
+      "label": "方法论详情",
+      "urlPattern": "/?page=methodology-library&id=:id",
+      "level": "detail",
+      "group": "learning",
+      "parentId": "methodology-library",
+      "publicTour": true,
+      "sections": [
+        {
+          "id": "methodology-detail-hero",
+          "title": "方法论详情头部",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "methodology-detail-body",
+          "title": "方法论正文",
+          "type": "detail",
+          "order": 2,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "methodology-detail-comments",
+          "title": "方法论评论区",
+          "type": "comments",
+          "order": 3,
+          "enterable": true,
+          "tour": true
+        }
+      ]
+    },
+    "case": {
+      "id": "case",
+      "label": "案例详情",
+      "urlPattern": "/?page=case&id=:id",
+      "level": "detail",
+      "group": "strategy",
+      "parentId": "strategy",
+      "publicTour": true,
+      "sections": [
+        {
+          "id": "case-detail-hero",
+          "title": "案例详情头部",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "case-detail-slides",
+          "title": "案例内容区",
+          "type": "detail",
+          "order": 2,
+          "enterable": false,
+          "tour": true
+        },
+        {
+          "id": "case-detail-related",
+          "title": "更多案例",
+          "type": "related",
+          "order": 3,
+          "enterable": true,
+          "tour": true
+        }
+      ]
+    },
+    "user-center": {
+      "id": "user-center",
+      "label": "个人中心",
+      "url": "/?page=user-center",
+      "level": "utility",
+      "group": "account",
+      "publicTour": false,
+      "sections": [
+        {
+          "id": "user-center-profile",
+          "title": "个人资料",
+          "type": "profile",
+          "order": 1,
+          "enterable": false,
+          "tour": false
+        },
+        {
+          "id": "user-center-security",
+          "title": "账号安全",
+          "type": "security",
+          "order": 2,
+          "enterable": false,
+          "tour": false
+        }
+      ]
+    },
+    "login": {
+      "id": "login",
+      "label": "登录",
+      "url": "/?page=login",
+      "level": "utility",
+      "group": "account",
+      "publicTour": false,
+      "sections": [
+        {
+          "id": "login-hero",
+          "title": "登录引导",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": false
+        },
+        {
+          "id": "login-form",
+          "title": "登录表单",
+          "type": "form",
+          "order": 2,
+          "enterable": true,
+          "tour": false
+        }
+      ]
+    },
+    "register": {
+      "id": "register",
+      "label": "注册",
+      "url": "/?page=register",
+      "level": "utility",
+      "group": "account",
+      "publicTour": false,
+      "sections": [
+        {
+          "id": "register-hero",
+          "title": "注册引导",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": false
+        },
+        {
+          "id": "register-form",
+          "title": "注册表单",
+          "type": "form",
+          "order": 2,
+          "enterable": true,
+          "tour": false
+        }
+      ]
+    },
+    "consult-apply": {
+      "id": "consult-apply",
+      "label": "咨询申请",
+      "url": "/?page=consult-apply",
+      "level": "utility",
+      "group": "utility",
+      "publicTour": false,
+      "sections": [
+        {
+          "id": "consult-apply-form",
+          "title": "正式提交入口",
+          "type": "cta",
+          "order": 1,
+          "enterable": true,
+          "tour": false
+        },
+        {
+          "id": "consult-apply-contact",
+          "title": "直接联系",
+          "type": "contact",
+          "order": 2,
+          "enterable": false,
+          "tour": false
+        }
+      ]
+    },
+    "membership": {
+      "id": "membership",
+      "label": "会员介绍",
+      "url": "/?page=membership",
+      "level": "utility",
+      "group": "account",
+      "publicTour": false,
+      "answerContext": {
+        "plans": [
+          {
+            "id": "monthly_trial",
+            "name": "月包试用",
+            "price": "¥19.80",
+            "durationDays": 30,
+            "highlight": "适合先体验",
+            "description": "30 天试用期，适合先熟悉内容与服务方式。"
+          },
+          {
+            "id": "yearly",
+            "name": "年包会员",
+            "price": "¥198.00",
+            "durationDays": 365,
+            "highlight": "长期陪伴更划算",
+            "description": "365 天有效，适合持续学习与长期使用。"
+          }
+        ],
+        "rights": [
+          "支付成功后立即生效",
+          "可在个人中心查看当前有效期",
+          "订单会同步进入后台付费管理"
+        ]
+      },
+      "sections": [
+        {
+          "id": "membership-hero",
+          "title": "会员介绍头部",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": false
+        },
+        {
+          "id": "membership-plans",
+          "title": "套餐列表",
+          "type": "list",
+          "order": 2,
+          "enterable": true,
+          "tour": false
+        }
+      ]
+    },
+    "payment-checkout": {
+      "id": "payment-checkout",
+      "label": "支付信息页",
+      "url": "/?page=payment-checkout",
+      "level": "utility",
+      "group": "account",
+      "publicTour": false,
+      "sections": [
+        {
+          "id": "payment-checkout-hero",
+          "title": "支付确认头部",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": false
+        },
+        {
+          "id": "payment-checkout-form",
+          "title": "支付信息表单",
+          "type": "form",
+          "order": 2,
+          "enterable": true,
+          "tour": false
+        }
+      ]
+    },
+    "payment-result": {
+      "id": "payment-result",
+      "label": "支付结果页",
+      "url": "/?page=payment-result",
+      "level": "utility",
+      "group": "account",
+      "publicTour": false,
+      "sections": [
+        {
+          "id": "payment-result-status",
+          "title": "支付结果状态",
+          "type": "status",
+          "order": 1,
+          "enterable": false,
+          "tour": false
+        }
+      ]
+    },
+    "forgot-password": {
+      "id": "forgot-password",
+      "label": "忘记密码",
+      "url": "/?page=forgot-password",
+      "level": "utility",
+      "group": "account",
+      "publicTour": false,
+      "sections": [
+        {
+          "id": "forgot-password-hero",
+          "title": "找回密码引导",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": false
+        },
+        {
+          "id": "forgot-password-form",
+          "title": "找回密码表单",
+          "type": "form",
+          "order": 2,
+          "enterable": true,
+          "tour": false
+        }
+      ]
+    },
+    "reset-password": {
+      "id": "reset-password",
+      "label": "重置密码",
+      "url": "/?page=reset-password",
+      "level": "utility",
+      "group": "account",
+      "publicTour": false,
+      "sections": [
+        {
+          "id": "reset-password-hero",
+          "title": "重置密码引导",
+          "type": "hero",
+          "order": 1,
+          "enterable": false,
+          "tour": false
+        },
+        {
+          "id": "reset-password-form",
+          "title": "重置密码表单",
+          "type": "form",
+          "order": 2,
+          "enterable": true,
+          "tour": false
+        }
+      ]
+    },
+    "terms-of-service": {
+      "id": "terms-of-service",
+      "label": "服务条款",
+      "url": "/?page=terms-of-service",
+      "level": "utility",
+      "group": "legal",
+      "publicTour": false,
+      "sections": [
+        {
+          "id": "terms-document",
+          "title": "服务条款正文",
+          "type": "document",
+          "order": 1,
+          "enterable": false,
+          "tour": false
+        }
+      ]
+    },
+    "privacy-policy": {
+      "id": "privacy-policy",
+      "label": "隐私政策",
+      "url": "/?page=privacy-policy",
+      "level": "utility",
+      "group": "legal",
+      "publicTour": false,
+      "sections": [
+        {
+          "id": "privacy-document",
+          "title": "隐私政策正文",
+          "type": "document",
+          "order": 1,
+          "enterable": false,
+          "tour": false
+        }
+      ]
+    }
+  }
+}

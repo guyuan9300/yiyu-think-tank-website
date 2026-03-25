@@ -26,6 +26,7 @@ import {
   ArrowUpRight,
   ChevronLeft,
 } from 'lucide-react';
+import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 
 // Strategy Page Props
 interface StrategyPageProps {
@@ -265,7 +266,7 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
   };
 
   return (
-    <div data-yiyu-page="strategy" className="min-h-screen bg-background">
+    <div {...getYiyuPageAttrs('strategy')} className="min-h-screen bg-background">
       <Header isLoggedIn={isClientMode} userType={isClientMode ? 'client' : 'visitor'} onNavigate={handleNavigate} />
 
       {/* Client Mode: Organization Status Bar */}
@@ -292,7 +293,7 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       {/* Results Section - Value Proposition - Apple Style */}
       <section
         id="results"
-        data-yiyu-section="strategy-hero"
+        {...getYiyuSectionAttrs('strategy', 'strategy-hero')}
         className={`pt-32 pb-16 px-4 sm:px-6 lg:px-8 ${isClientMode ? 'pt-48' : ''}`}
       >
         <div className="max-w-[1200px] mx-auto">
@@ -382,7 +383,7 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       {cases.length > 0 ? (
         <section
           id="cases"
-          data-yiyu-section="strategy-cases"
+          {...getYiyuSectionAttrs('strategy', 'strategy-cases')}
           data-yiyu-results-total={String(cases.length)}
           className="pt-0 pb-14 px-4 sm:px-6 lg:px-8"
         >
@@ -435,7 +436,11 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       ) : null}
 
       {/* Insights Section - 4 Column Horizontal Layout */}
-      <section id="insights" data-yiyu-section="strategy-insights" className="py-16 px-4 sm:px-6 lg:px-8">
+      <section
+        id="insights"
+        {...getYiyuSectionAttrs('strategy', 'strategy-insights')}
+        className="py-16 px-4 sm:px-6 lg:px-8"
+      >
         <div className="max-w-[1200px] mx-auto">
           {/* Section Header */}
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
@@ -508,7 +513,11 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       </section>
 
       {/* Tools Section - 4 Column Grid */}
-      <section id="tools" data-yiyu-section="strategy-tools" className="py-16 px-4 sm:px-6 lg:px-8">
+      <section
+        id="tools"
+        {...getYiyuSectionAttrs('strategy', 'strategy-tools')}
+        className="py-16 px-4 sm:px-6 lg:px-8"
+      >
         <div className="max-w-[1200px] mx-auto">
           {/* Section Header */}
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
@@ -598,7 +607,11 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
       </section>
 
       {/* Cooperation Section - Process Flow */}
-      <section id="cooperation" data-yiyu-section="strategy-cooperation" className="py-16 px-4 sm:px-6 lg:px-8">
+      <section
+        id="cooperation"
+        {...getYiyuSectionAttrs('strategy', 'strategy-cooperation')}
+        className="py-16 px-4 sm:px-6 lg:px-8"
+      >
         <div className="max-w-[1200px] mx-auto">
           {/* Section Header */}
           <div className="text-center mb-12">
@@ -660,7 +673,10 @@ export function StrategyPage({ onNavigate, isClientMode = false, clientInfo }: S
 
       {/* FAQ Section */}
       {/* FAQ Section - Apple Style */}
-      <section data-yiyu-section="strategy-faq" className="py-16 px-4 sm:px-6 lg:px-8">
+      <section
+        {...getYiyuSectionAttrs('strategy', 'strategy-faq')}
+        className="py-16 px-4 sm:px-6 lg:px-8"
+      >
         <div className="max-w-[800px] mx-auto">
           {/* Section Header */}
           <div className="text-center mb-12">

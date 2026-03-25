@@ -1,10 +1,10 @@
 import { authRequest, AUTH_BASE, type ApiResult } from './authHttp';
 
-export type YiyuTongMode = 'site_task' | 'site_tour' | 'form_task' | 'answer';
+export type YiyuTongMode = 'site_task' | 'site_tour' | 'form_task' | 'mixed_task' | 'answer';
 export type YiyuTongExecutor = 'same_tab_page_agent' | 'multi_tab_extension' | 'none';
 
 export interface YiyuTongCitation {
-  contentType: 'insight' | 'report' | 'book' | 'methodology' | 'case';
+  contentType: 'insight' | 'report' | 'book' | 'methodology' | 'case' | 'page';
   contentId: string;
   title: string;
   snippet: string;
@@ -34,6 +34,29 @@ export interface YiyuTongTaskStep {
   id: string;
   label: string;
   detail?: string;
+}
+
+export interface YiyuTongTaskRouteNode {
+  id: string;
+  pageId?: string;
+  pageLabel?: string;
+  level?: 'primary' | 'secondary' | 'detail' | 'utility';
+  enterable?: boolean;
+  action?: string;
+  target?: string;
+  detail?: string;
+}
+
+export interface YiyuTongTaskRule {
+  kind: string;
+  detail?: string;
+  target?: string;
+}
+
+export interface YiyuTongTaskFinalState {
+  pageId?: string;
+  url?: string;
+  note?: string;
 }
 
 export type YiyuTongSameTabGraphStep =
@@ -129,12 +152,24 @@ export interface YiyuTongTourStop {
   pageId?: string;
   summary?: string;
   scrollPasses?: number;
+  isTransitStop?: boolean;
+  sections?: Array<{
+    id: string;
+    title: string;
+    type?: string;
+    order?: number;
+    enterable?: boolean;
+  }>;
+  returnUrl?: string;
+  returnPageId?: string;
+  isRepresentativeChild?: boolean;
+  isRepresentativeDetail?: boolean;
 }
 
 export interface YiyuTongSameTabExecutionPlan {
   executor: 'same_tab_page_agent';
   prompt: string;
-  kind: 'site_task' | 'site_tour';
+  kind: 'site_task' | 'site_tour' | 'mixed_task';
   bootstrapUrl?: string;
   expectedUrl?: string;
   pageId?: string;
@@ -150,6 +185,9 @@ export interface YiyuTongSameTabExecutionPlan {
   successMessage?: string;
   tourStops?: YiyuTongTourStop[];
   graphSteps?: YiyuTongSameTabGraphStep[];
+  route?: YiyuTongTaskRouteNode[];
+  completionRules?: YiyuTongTaskRule[];
+  failureRules?: YiyuTongTaskRule[];
   completionCheck?:
     | {
         type: 'comment_submission';
@@ -190,8 +228,13 @@ export interface YiyuTongResponse {
   goal: string;
   entities: YiyuTongTaskEntities | null;
   message: string;
+  userVisiblePlan?: string | null;
+  route?: YiyuTongTaskRouteNode[];
   steps: YiyuTongTaskStep[];
+  completionRules?: YiyuTongTaskRule[];
+  failureRules?: YiyuTongTaskRule[];
   citations: YiyuTongCitation[];
+  finalState?: YiyuTongTaskFinalState | null;
   executionPlan: YiyuTongExecutionPlan;
   fallbackPlan: YiyuTongFallbackPlan | null;
   formContext: YiyuTongFormContext | null;

@@ -5,6 +5,7 @@ import { fetchCurrentProfile } from '../lib/authApi';
 import { createPaymentOrderApi, type PaymentReadiness } from '../lib/paymentApi';
 import { PAYMENT_PLAN_MAP, type PaymentPlanId, formatPlanMoney } from '../lib/paymentPlans';
 import { getSavedUserRaw } from '../lib/storage';
+import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 
 type PaymentCheckoutPageProps = {
   planId?: string;
@@ -82,7 +83,7 @@ export function PaymentCheckoutPage({ planId, onNavigate }: PaymentCheckoutPageP
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
+      <div {...getYiyuPageAttrs('payment-checkout')} className="min-h-screen bg-background">
         <Header onNavigate={(page) => onNavigate?.(page)} />
         <div className="pt-24 px-6 max-w-3xl mx-auto">
           <div className="rounded-3xl border border-border/40 bg-white/80 p-10 text-center">
@@ -133,11 +134,14 @@ export function PaymentCheckoutPage({ planId, onNavigate }: PaymentCheckoutPageP
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div {...getYiyuPageAttrs('payment-checkout')} className="min-h-screen bg-background">
       <Header onNavigate={(page) => onNavigate?.(page)} isLoggedIn userType="member" />
 
       <div className="pt-24 px-6 pb-16 max-w-5xl mx-auto space-y-8">
-        <section className="rounded-[32px] border border-border/40 bg-white/80 p-8 md:p-10">
+        <section
+          {...getYiyuSectionAttrs('payment-checkout', 'payment-checkout-hero')}
+          className="rounded-[32px] border border-border/40 bg-white/80 p-8 md:p-10"
+        >
           <div className="flex items-start justify-between gap-6 flex-col md:flex-row">
             <div>
               <div className="text-sm text-muted-foreground/70">支付信息确认</div>
@@ -152,7 +156,10 @@ export function PaymentCheckoutPage({ planId, onNavigate }: PaymentCheckoutPageP
           </div>
         </section>
 
-        <section className="rounded-[32px] border border-border/40 bg-white/80 p-8 md:p-10 space-y-5">
+        <section
+          {...getYiyuSectionAttrs('payment-checkout', 'payment-checkout-form')}
+          className="rounded-[32px] border border-border/40 bg-white/80 p-8 md:p-10 space-y-5"
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <label className="space-y-2">
               <span className="text-sm font-medium text-foreground">姓名</span>

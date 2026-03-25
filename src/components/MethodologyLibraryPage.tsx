@@ -23,6 +23,7 @@ import { buildShareLandingUrl } from '../lib/shareLinks';
 import { normalizeRichContentHtml } from '../lib/richContent';
 import { ContentResourceCard } from './ContentResourceCard';
 import { PaginationControls } from './PaginationControls';
+import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 
 type Topic = '战略' | '业务设计' | '组织' | 'AI 技术';
 const PAGE_SIZE = 6;
@@ -151,10 +152,13 @@ export function MethodologyLibraryPage({
     }
 
     return (
-    <div data-yiyu-page="methodology-library" className="min-h-screen bg-background flex flex-col">
+    <div {...getYiyuPageAttrs('methodology')} className="min-h-screen bg-background flex flex-col">
         <Header onNavigate={onNavigate} />
 
-        <section data-yiyu-section="methodology-detail-hero" className="relative pt-28 pb-14 px-6 overflow-hidden">
+        <section
+          {...getYiyuSectionAttrs('methodology', 'methodology-detail-hero')}
+          className="relative pt-28 pb-14 px-6 overflow-hidden"
+        >
           <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-primary/[0.035] via-background to-background" />
           <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-background/55 via-background/85 to-background" />
 
@@ -228,7 +232,10 @@ export function MethodologyLibraryPage({
         </section>
 
         {/* Body */}
-        <section data-yiyu-section="methodology-detail-body" className="px-6 pb-8">
+        <section
+          {...getYiyuSectionAttrs('methodology', 'methodology-detail-body')}
+          className="px-6 pb-8"
+        >
           <div className="max-w-4xl mx-auto">
             <article className="prose prose-lg max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-muted-foreground/80 prose-p:leading-relaxed prose-a:text-primary hover:prose-a:text-primary/80">
               {html ? (
@@ -297,7 +304,10 @@ export function MethodologyLibraryPage({
               </div>
 
             {/* Comment Section */}
-            <div className="mt-12">
+            <div
+              {...getYiyuSectionAttrs('methodology', 'methodology-detail-comments')}
+              className="mt-12"
+            >
               <CommentSection
                 contentId={selected.id}
                 contentType="methodology"
@@ -315,12 +325,12 @@ export function MethodologyLibraryPage({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div {...getYiyuPageAttrs('methodology-library')} className="min-h-screen bg-background">
       <Header onNavigate={onNavigate} />
 
       {/* Hero */}
       <section
-        data-yiyu-section="methodology-library-hero"
+        {...getYiyuSectionAttrs('methodology-library', 'methodology-library-hero')}
         className="relative pt-28 sm:pt-32 pb-10 sm:pb-12 px-4 sm:px-6 lg:px-8 overflow-hidden"
       >
         <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent" />
@@ -353,10 +363,14 @@ export function MethodologyLibraryPage({
 
       {/* Filter bar */}
       <div
-        data-yiyu-section="methodology-library-filters"
+        {...getYiyuSectionAttrs('methodology-library', 'methodology-library-filters')}
         data-yiyu-results-total={String(filtered.length)}
         data-yiyu-active-topic={selectedTopic}
         data-yiyu-active-year={selectedYear}
+        data-yiyu-search-query={searchQuery}
+        data-yiyu-current-page={String(safePage)}
+        data-yiyu-total-pages={String(totalPages)}
+        data-yiyu-sort="latest"
         className="bg-white/80 backdrop-blur-sm border-b border-border/40 sticky top-0 z-10"
       >
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -424,8 +438,11 @@ export function MethodologyLibraryPage({
 
       {/* Content */}
       <div
-        data-yiyu-section="methodology-library-results"
+        {...getYiyuSectionAttrs('methodology-library', 'methodology-library-results')}
         data-yiyu-results-total={String(filtered.length)}
+        data-yiyu-current-page={String(safePage)}
+        data-yiyu-total-pages={String(totalPages)}
+        data-yiyu-sort="latest"
         className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-10"
       >
         {isLoading ? (
@@ -439,6 +456,8 @@ export function MethodologyLibraryPage({
                 {paginated.map((m) => (
                   <ContentResourceCard
                     key={m.id}
+                    contentId={m.id}
+                    contentType="methodology"
                     cover={
                       m.coverImage ? (
                         <img
@@ -469,6 +488,8 @@ export function MethodologyLibraryPage({
                 {paginated.map((m) => (
                   <ContentResourceCard
                     key={m.id}
+                    contentId={m.id}
+                    contentType="methodology"
                     variant="list"
                     cover={
                       m.coverImage ? (

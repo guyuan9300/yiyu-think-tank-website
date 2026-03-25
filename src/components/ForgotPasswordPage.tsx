@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Mail, Smartphone } from 'lucide-react';
 import { sendVerifyCode } from '../lib/authApi';
+import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 
 type ResetChannel = 'email' | 'phone';
 
@@ -67,9 +68,12 @@ export function ForgotPasswordPage({ onNavigate }: ForgotPasswordPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4">
+    <div {...getYiyuPageAttrs('forgot-password')} className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        <div className="bg-white/80 backdrop-blur rounded-3xl shadow-xl border border-border/40 p-8">
+        <div
+          {...getYiyuSectionAttrs('forgot-password', 'forgot-password-form')}
+          className="bg-white/80 backdrop-blur rounded-3xl shadow-xl border border-border/40 p-8"
+        >
           <button type="button" onClick={() => onNavigate?.('login')} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-4 h-4" />
             返回登录

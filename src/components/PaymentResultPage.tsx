@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Header } from './Header';
 import { fetchPaymentOrder, type PaymentOrder } from '../lib/paymentApi';
 import { formatPlanMoney } from '../lib/paymentPlans';
+import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 
 type PaymentResultPageProps = {
   orderNo?: string;
@@ -88,11 +89,14 @@ export function PaymentResultPage({ orderNo, onNavigate }: PaymentResultPageProp
       : <XCircle className="w-10 h-10 text-red-600" />;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div {...getYiyuPageAttrs('payment-result')} className="min-h-screen bg-background">
       <Header onNavigate={(page) => onNavigate?.(page)} isLoggedIn userType="member" />
 
       <div className="pt-24 px-6 pb-16 max-w-4xl mx-auto">
-        <section className="rounded-[32px] border border-border/40 bg-white/80 p-8 md:p-10">
+        <section
+          {...getYiyuSectionAttrs('payment-result', 'payment-result-status')}
+          className="rounded-[32px] border border-border/40 bg-white/80 p-8 md:p-10"
+        >
           {isLoading ? (
             <div className="py-10 text-center">
               <Loader2 className="w-8 h-8 mx-auto animate-spin text-muted-foreground/70" />

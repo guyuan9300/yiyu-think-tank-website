@@ -1,4 +1,5 @@
 import { ArrowLeft, ShieldCheck, FileText } from 'lucide-react';
+import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 
 type LegalDocumentType = 'terms' | 'privacy';
 
@@ -128,6 +129,8 @@ export function LegalDocumentPage({ documentType, onNavigate }: LegalDocumentPag
   const title = isTerms ? '服务条款' : '隐私政策';
   const sections = isTerms ? termsSections : privacySections;
   const Icon = isTerms ? FileText : ShieldCheck;
+  const pageId = isTerms ? 'terms-of-service' : 'privacy-policy';
+  const documentSectionId = isTerms ? 'terms-document' : 'privacy-document';
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -138,7 +141,7 @@ export function LegalDocumentPage({ documentType, onNavigate }: LegalDocumentPag
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f8fa] px-4 py-8 sm:px-6">
+    <div {...getYiyuPageAttrs(pageId)} className="min-h-screen bg-[#f7f8fa] px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-4xl">
         <button
           type="button"
@@ -149,7 +152,10 @@ export function LegalDocumentPage({ documentType, onNavigate }: LegalDocumentPag
           返回上一页
         </button>
 
-        <div className="mt-6 rounded-[28px] border border-border/40 bg-white px-6 py-8 shadow-xl shadow-black/[0.04] sm:px-10">
+        <div
+          {...getYiyuSectionAttrs(pageId, documentSectionId)}
+          className="mt-6 rounded-[28px] border border-border/40 bg-white px-6 py-8 shadow-xl shadow-black/[0.04] sm:px-10"
+        >
           <div className="flex items-start gap-4 border-b border-border/50 pb-6">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <Icon className="h-7 w-7" />

@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Header } from './Header';
 import { getSavedUserRaw } from '../lib/storage';
 import { PAYMENT_PLAN_OPTIONS, formatPlanMoney } from '../lib/paymentPlans';
+import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 
 type PaymentIntroPageProps = {
   onNavigate?: (page: string, id?: string) => void;
@@ -24,7 +25,7 @@ export function PaymentIntroPage({ onNavigate }: PaymentIntroPageProps) {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
+      <div {...getYiyuPageAttrs('membership')} className="min-h-screen bg-background">
         <Header onNavigate={(page) => onNavigate?.(page)} />
         <div className="pt-24 px-6 max-w-3xl mx-auto">
           <div className="rounded-3xl border border-border/40 bg-white/80 p-10 text-center">
@@ -44,11 +45,14 @@ export function PaymentIntroPage({ onNavigate }: PaymentIntroPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div {...getYiyuPageAttrs('membership')} className="min-h-screen bg-background">
       <Header onNavigate={(page) => onNavigate?.(page)} isLoggedIn userType="member" />
 
       <div className="pt-24 px-6 pb-16 max-w-6xl mx-auto space-y-8">
-        <section className="rounded-[32px] border border-border/40 bg-white/80 p-8 md:p-10">
+        <section
+          {...getYiyuSectionAttrs('membership', 'membership-hero')}
+          className="rounded-[32px] border border-border/40 bg-white/80 p-8 md:p-10"
+        >
           <div className="flex items-start justify-between gap-6 flex-col md:flex-row">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-medium border border-amber-100">
@@ -65,10 +69,15 @@ export function PaymentIntroPage({ onNavigate }: PaymentIntroPageProps) {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <section
+          {...getYiyuSectionAttrs('membership', 'membership-plans')}
+          className="grid grid-cols-1 md:grid-cols-2 gap-6"
+        >
           {PAYMENT_PLAN_OPTIONS.map((plan) => (
             <article
               key={plan.id}
+              data-yiyu-membership-plan={plan.id}
+              data-yiyu-membership-price={formatPlanMoney(plan.amountFen)}
               className="rounded-[32px] border border-border/40 bg-white/80 p-8 shadow-sm"
             >
               <div className="flex items-start justify-between gap-4">
@@ -100,6 +109,8 @@ export function PaymentIntroPage({ onNavigate }: PaymentIntroPageProps) {
 
               <button
                 type="button"
+                data-yiyu-cta="open-checkout"
+                data-yiyu-plan-id={plan.id}
                 onClick={() => onNavigate?.('payment-checkout', plan.id)}
                 className="mt-8 w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-foreground text-white hover:bg-foreground/90 transition"
               >

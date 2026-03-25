@@ -7,6 +7,7 @@ import { getBooks, type Book } from '../lib/dataService';
 import { useState, useEffect, useMemo } from 'react';
 import { ContentResourceCard } from './ContentResourceCard';
 import { PaginationControls } from './PaginationControls';
+import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 const PAGE_SIZE = 6;
 
 export function BookLibraryPage({ onNavigate }: { onNavigate?: (page: string, id?: string) => void }) {
@@ -134,11 +135,14 @@ const filteredBooks = useMemo(() => {
   }
 
   return (
-    <div data-yiyu-page="book-library" className="min-h-screen bg-background flex flex-col">
+    <div {...getYiyuPageAttrs('book-library')} className="min-h-screen bg-background flex flex-col">
       <Header onNavigate={onNavigate} />
 
       {/* Page Header */}
-      <div data-yiyu-section="book-library-hero" className="bg-white/80 backdrop-blur-sm border-b border-border/40">
+      <div
+        {...getYiyuSectionAttrs('book-library', 'book-library-hero')}
+        className="bg-white/80 backdrop-blur-sm border-b border-border/40"
+      >
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="flex items-center gap-2 text-[13px] text-muted-foreground/60 mb-4">
             <button
@@ -162,10 +166,14 @@ const filteredBooks = useMemo(() => {
 
       {/* Filter Bar */}
       <div
-        data-yiyu-section="book-library-filters"
+        {...getYiyuSectionAttrs('book-library', 'book-library-filters')}
         data-yiyu-results-total={String(filteredBooks.length)}
         data-yiyu-active-topic={selectedTag}
         data-yiyu-active-year={selectedYear}
+        data-yiyu-search-query={searchQuery}
+        data-yiyu-current-page={String(safePage)}
+        data-yiyu-total-pages={String(totalPages)}
+        data-yiyu-sort="latest"
         className="bg-white/80 backdrop-blur-sm border-b border-border/40 sticky top-0 z-10"
       >
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -191,6 +199,7 @@ const filteredBooks = useMemo(() => {
               <div className="relative">
                 <button
                   data-yiyu-filter-topic-trigger="content"
+                  data-yiyu-filter-topic="content"
                   type="button"
                   onClick={() => {
                     setTagOpen((v) => !v);
@@ -228,6 +237,7 @@ const filteredBooks = useMemo(() => {
               <div className="relative">
                 <button
                   data-yiyu-filter-year-trigger="content"
+                  data-yiyu-filter-year="content"
                   type="button"
                   onClick={() => {
                     setYearOpen((v) => !v);
@@ -283,8 +293,11 @@ const filteredBooks = useMemo(() => {
 
       {/* Content */}
       <div
-        data-yiyu-section="book-library-results"
+        {...getYiyuSectionAttrs('book-library', 'book-library-results')}
         data-yiyu-results-total={String(filteredBooks.length)}
+        data-yiyu-current-page={String(safePage)}
+        data-yiyu-total-pages={String(totalPages)}
+        data-yiyu-sort="latest"
         className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1"
       >
         {/* Results Info */}
@@ -306,6 +319,8 @@ const filteredBooks = useMemo(() => {
             {paginatedBooks.map((book) => (
               <ContentResourceCard
                 key={book.id} 
+                contentId={book.id}
+                contentType="book"
                 cover={
                   book.coverImage ? (
                     <img
@@ -330,7 +345,7 @@ const filteredBooks = useMemo(() => {
                 publishDate={book.publishDate}
                 onClick={() => {
                   if (onNavigate) onNavigate('book-reader', book.id);
-                  else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(book.id)}`);
+                  else window.location.assign(`${window.location.pathname}?page=book-reader&id=${encodeURIComponent(book.id)}`);
                 }}
               />
             ))}
@@ -341,6 +356,8 @@ const filteredBooks = useMemo(() => {
             {paginatedBooks.map((book) => (
               <ContentResourceCard
                 key={book.id}
+                contentId={book.id}
+                contentType="book"
                 variant="list"
                 cover={
                   book.coverImage ? (
@@ -366,7 +383,7 @@ const filteredBooks = useMemo(() => {
                 publishDate={book.publishDate}
                 onClick={() => {
                   if (onNavigate) onNavigate('book-reader', book.id);
-                  else window.location.assign(`${window.location.pathname}?page=book-reader&bookId=${encodeURIComponent(book.id)}`);
+                  else window.location.assign(`${window.location.pathname}?page=book-reader&id=${encodeURIComponent(book.id)}`);
                 }}
               />
             ))}

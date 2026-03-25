@@ -147,7 +147,14 @@ export function CommentSection({
   };
 
   return (
-    <div className="mt-12 pt-8 border-t border-gray-200">
+    <div
+      data-yiyu-section="detail-comments"
+      data-yiyu-section-type="comments"
+      data-yiyu-comment-state={message?.type === 'success' ? 'submitted' : message?.type === 'error' ? 'error' : 'idle'}
+      data-yiyu-comment-success-hint="评论已提交，待管理员审核后将显示在评论列表中"
+      data-yiyu-comments-total={String(comments.length)}
+      className="mt-12 pt-8 border-t border-gray-200"
+    >
       {/* 标题 */}
       <div className="flex items-center gap-2 mb-6">
         <MessageSquare className="w-6 h-6 text-purple-600" />
@@ -158,9 +165,12 @@ export function CommentSection({
 
       {/* 提示消息 */}
       {message && (
-        <div className={`mb-6 p-4 rounded-xl flex items-center gap-2 ${
+        <div
+          data-yiyu-comment-status={message.type}
+          className={`mb-6 p-4 rounded-xl flex items-center gap-2 ${
           message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-        }`}>
+        }`}
+        >
           {message.type === 'success' ? (
             <CheckCircle className="w-5 h-5" />
           ) : (
@@ -181,6 +191,7 @@ export function CommentSection({
             
             <div className="flex-1">
               <textarea
+                data-yiyu-comment-box="true"
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder={derivedLoggedIn ? '写下你的评论...' : '请登录后发表评论'}
@@ -195,6 +206,7 @@ export function CommentSection({
                 </span>
                 
                 <button
+                  data-yiyu-comment-submit="true"
                   type="submit"
                   disabled={!derivedLoggedIn || !commentText.trim() || isSubmitting}
                   className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

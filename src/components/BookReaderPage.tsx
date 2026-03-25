@@ -23,6 +23,7 @@ import { getBooks, type Book } from '../lib/dataService';
 import type { User } from '../lib/dataService';
 import { useContentEngagement } from '../hooks/useContentEngagement';
 import { buildShareLandingUrl } from '../lib/shareLinks';
+import { getYiyuPageAttrs } from '../lib/yiyuTongSiteMap';
 
 // AI对话消息接口
 interface ChatMessage {
@@ -264,11 +265,19 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
   }, [chatMessages]);
 
   return (
-    <div data-yiyu-page="book" className="min-h-screen bg-gray-50 flex flex-col">
+    <div {...getYiyuPageAttrs('book')} className="min-h-screen bg-gray-50 flex flex-col">
       <Header isLoggedIn={true} userType="member" onNavigate={onNavigate} />
 
       {/* 书籍信息头部 - 优化为紧凑布局 */}
-      <div ref={bookInfoRef} className="bg-white border-b border-gray-200 pt-16">
+      <div
+        ref={bookInfoRef}
+        data-yiyu-section="book-detail-hero"
+        data-yiyu-section-type="hero"
+        data-yiyu-section-title="书籍详情头部"
+        data-yiyu-section-order="1"
+        data-yiyu-section-enterable="false"
+        className="bg-white border-b border-gray-200 pt-16"
+      >
         <div className="max-w-4xl mx-auto px-6 py-4">
           {/* 面包屑 */}
           <div className="flex items-center gap-2 mb-3 text-[13px] text-gray-500">
@@ -316,7 +325,14 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
       </div>
 
       {/* 内容区域 */}
-      <div className="px-4 sm:px-6 lg:px-8 pb-10">
+      <div
+        data-yiyu-section="book-detail-reader"
+        data-yiyu-section-type="detail"
+        data-yiyu-section-title="图书阅读区"
+        data-yiyu-section-order="2"
+        data-yiyu-section-enterable="false"
+        className="px-4 sm:px-6 lg:px-8 pb-10"
+      >
         {/* PDF阅读区域（四四方方的框，max-w-4xl） */}
         <div
           className="max-w-4xl mx-auto w-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col"
@@ -380,7 +396,14 @@ export function BookReaderPage({ bookId: initialBookId = 'shimeshiquanli', onNav
 
       {/* Action Bar + Comment Section (under reader) */}
       {book && (
-        <div className="px-4 sm:px-6 lg:px-8 pb-16">
+        <div
+          data-yiyu-section="book-detail-comments"
+          data-yiyu-section-type="comments"
+          data-yiyu-section-title="图书评论区"
+          data-yiyu-section-order="3"
+          data-yiyu-section-enterable="true"
+          className="px-4 sm:px-6 lg:px-8 pb-16"
+        >
           <div className="max-w-4xl mx-auto">
             <div className="mt-6 pt-6 border-t border-gray-200">
               <div className="flex flex-wrap items-center gap-3">

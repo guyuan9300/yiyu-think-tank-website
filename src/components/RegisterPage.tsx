@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, User, Smartphone, CheckCircle } from 'lucide-react';
 import { registerByCode, sendVerifyCode } from '../lib/authApi';
+import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 
 // NOTE: 邮箱验证邮件的跳转地址由 auth.ts 内的 emailRedirectTo 控制（需包含 BASE_URL 子路径）。
 
@@ -205,13 +206,16 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div {...getYiyuPageAttrs('register')} className="min-h-screen bg-background">
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/[0.04] via-transparent to-transparent" />
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(900px_circle_at_20%_10%,rgba(59,130,246,0.10),transparent_55%)]" />
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(900px_circle_at_80%_20%,rgba(168,85,247,0.08),transparent_55%)]" />
       {/* Register Form */}
       <div className="min-h-screen flex items-center justify-center px-4 py-10">
-        <div className="w-full max-w-md rounded-[28px] bg-white border border-border/40 shadow-2xl shadow-black/[0.06] p-6 sm:p-8">
+        <div
+          {...getYiyuSectionAttrs('register', 'register-form')}
+          className="w-full max-w-md rounded-[28px] bg-white border border-border/40 shadow-2xl shadow-black/[0.06] p-6 sm:p-8"
+        >
           {/* Brand */}
           <div className="flex items-center gap-3 mb-8">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center overflow-hidden">
