@@ -22,7 +22,11 @@ import {
   type YiyuTongResponse,
   type YiyuTongTaskStep,
 } from '../lib/yiyuTongApi';
-import { executeYiyuTongSiteTask, type YiyuTongTaskPhase } from '../lib/yiyuTongPageAgent';
+import {
+  executeYiyuTongSiteTask,
+  type YiyuTongProgressEntry,
+  type YiyuTongTaskPhase,
+} from '../lib/yiyuTongPageAgent';
 import { runYiyuTongAction } from '../lib/yiyuTongActions';
 import {
   executeYiyuTongExtensionTask,
@@ -32,11 +36,8 @@ import {
   type YiyuTongExtensionStatus,
 } from '../lib/yiyuTongPageAgentExt';
 
-type TaskStepState = {
+type TaskStepState = YiyuTongProgressEntry & {
   id: string;
-  label: string;
-  status: 'pending' | 'active' | 'done' | 'error';
-  detail?: string;
 };
 
 type AssistantMessage = {
@@ -405,6 +406,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
   const [messages, setMessages] = useState<AssistantMessage[]>(initialState.messages);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [sameTabExecuting, setSameTabExecuting] = useState(false);
   const [panelRect, setPanelRect] = useState<PanelRect | null>(null);
   const [activeFormContext, setActiveFormContext] = useState<YiyuTongFormContext | null>(null);
   const [extensionStatus, setExtensionStatus] = useState<YiyuTongExtensionStatus>(() => getPageAgentExtStatus());
@@ -413,6 +415,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
   const pendingExtensionTasksRef = useRef(new Map<string, YiyuTongResponse>());
   const runningTasksRef = useRef(new Set<string>());
+  const promptedExtensionTasksRef = useRef(new Set<string>());
 
   useEffect(() => {
     try {
@@ -472,22 +475,14 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
       }
 
       if (plan.executor === 'same_tab_page_agent') {
-        let completed = false;
+        setSameTabExecuting(true);
         const result = await executeYiyuTongSiteTask({
           plan,
           ignoredElements: [() => panelRef.current, () => toggleButtonRef.current],
-          onPhaseChange: (phase, detail) => {
-            if (completed && phase !== 'done') return;
-            if (phase === 'done') completed = true;
+          onProgressChange: (entries) => {
             updateMessage(messageId, (message) => ({
               ...message,
-              taskPlan: applyPhaseToTaskPlan(message.taskPlan, phase, detail),
-              content:
-                phase === 'done'
-                  ? detail || response.message
-                  : phase === 'error'
-                    ? detail || '这次页面操作没有稳定完成。'
-                    : message.content,
+              taskPlan: entries as TaskStepState[],
             }));
           },
         });
@@ -495,32 +490,33 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
         if (result.ok) {
           updateMessage(messageId, (message) => ({
             ...message,
-            taskPlan: applyPhaseToTaskPlan(message.taskPlan, 'done', result.data || response.message),
             content: result.data || response.message,
-          }));
-          return;
-        }
-
-        if (response.fallbackPlan?.action) {
-          runYiyuTongAction(response.fallbackPlan.action);
-          updateMessage(messageId, (message) => ({
-            ...message,
-            taskPlan: applyPhaseToTaskPlan(message.taskPlan, 'done', response.fallbackPlan?.message || response.message),
-            content: response.fallbackPlan?.message || response.message,
           }));
           return;
         }
 
         updateMessage(messageId, (message) => ({
           ...message,
-          taskPlan: applyPhaseToTaskPlan(message.taskPlan, 'error', result.error || '这次页面操作没有稳定完成。'),
           content: result.error || '这次页面操作没有稳定完成。',
         }));
         return;
       }
 
-      const latestExtensionStatus = getPageAgentExtStatus();
+      let latestExtensionStatus = getPageAgentExtStatus();
       setExtensionStatus(latestExtensionStatus);
+      if (!latestExtensionStatus.ready) {
+        if (!promptedExtensionTasksRef.current.has(messageId)) {
+          promptedExtensionTasksRef.current.add(messageId);
+          if (!latestExtensionStatus.available) {
+            window.open(getPageAgentExtInstallUrl(), '_blank', 'noopener,noreferrer');
+          } else if (!latestExtensionStatus.hasToken) {
+            promptAndSavePageAgentExtToken();
+            latestExtensionStatus = getPageAgentExtStatus();
+            setExtensionStatus(latestExtensionStatus);
+          }
+        }
+      }
+
       if (!latestExtensionStatus.ready) {
         pendingExtensionTasksRef.current.set(messageId, response);
         updateMessage(messageId, (message) => ({
@@ -586,6 +582,9 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
         extensionError: current.needsExtensionSetup ? message : current.extensionError,
       }));
     } finally {
+      if (response.executionPlan?.executor === 'same_tab_page_agent') {
+        setSameTabExecuting(false);
+      }
       runningTasksRef.current.delete(messageId);
     }
   };
@@ -642,7 +641,12 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
       content: response.message,
       mode: response.mode,
       citations: response.citations,
-      taskPlan: response.steps.length ? createTaskPlan(response.steps) : undefined,
+      taskPlan:
+        response.executionPlan.executor === 'same_tab_page_agent'
+          ? undefined
+          : response.steps.length
+            ? createTaskPlan(response.steps)
+            : undefined,
       executionPlan: response.executionPlan,
       fallbackPlan: response.fallbackPlan,
       formContext: response.formContext,
@@ -659,6 +663,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
   const clearConversation = () => {
     pendingExtensionTasksRef.current.clear();
     runningTasksRef.current.clear();
+    promptedExtensionTasksRef.current.clear();
     setMessages([]);
     setInput('');
     setSessionId(createSessionId());
@@ -785,24 +790,30 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
               <div className="max-w-[270px] text-[12px] leading-5 text-muted-foreground/75">
                 你可以直接让我找内容、带你逛网站，或让我在官网里自动完成查找、筛选、打开和填写表单。
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={clearConversation}
-                  className="rounded-full p-2 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                  aria-label="清空对话记录"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsOpen(false)}
-                  className="rounded-full p-2 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                  aria-label="关闭益语通"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
+              {sameTabExecuting ? (
+                <div className="rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
+                  正在自动操作网页
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={clearConversation}
+                    className="rounded-full p-2 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                    aria-label="清空对话记录"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsOpen(false)}
+                    className="rounded-full p-2 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                    aria-label="关闭益语通"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -871,32 +882,38 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
           </div>
 
           <div className="border-t border-border/50 bg-white/90 p-4">
-            <div className="rounded-2xl border border-border/60 bg-muted/10 p-2">
-              <textarea
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' && !event.shiftKey) {
-                    event.preventDefault();
-                    void submitQuestion(input);
-                  }
-                }}
-                placeholder="比如：帮我找组织相关的书，或带我逛一下这个网站"
-                className="min-h-[88px] w-full resize-none border-0 bg-transparent px-2 py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground/55"
-              />
-              <div className="flex items-center justify-between gap-3 px-2 pb-1">
-                <div />
-                <button
-                  type="button"
-                  onClick={() => void submitQuestion(input)}
-                  disabled={!input.trim() || isLoading}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3 py-2 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <Send className="h-3.5 w-3.5" />
-                  发送
-                </button>
+            {sameTabExecuting ? (
+              <div className="rounded-2xl border border-primary/10 bg-primary/5 px-4 py-3 text-[12px] leading-5 text-muted-foreground/80">
+                益语通正在当前标签页里自动完成任务。等它停下来后，你再继续补充下一句就可以。
               </div>
-            </div>
+            ) : (
+              <div className="rounded-2xl border border-border/60 bg-muted/10 p-2">
+                <textarea
+                  value={input}
+                  onChange={(event) => setInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault();
+                      void submitQuestion(input);
+                    }
+                  }}
+                  placeholder="比如：帮我找组织相关的书，或带我逛一下这个网站"
+                  className="min-h-[88px] w-full resize-none border-0 bg-transparent px-2 py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground/55"
+                />
+                <div className="flex items-center justify-between gap-3 px-2 pb-1">
+                  <div />
+                  <button
+                    type="button"
+                    onClick={() => void submitQuestion(input)}
+                    disabled={!input.trim() || isLoading}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3 py-2 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    发送
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {[

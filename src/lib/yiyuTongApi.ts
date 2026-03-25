@@ -150,6 +150,14 @@ export interface YiyuTongSameTabExecutionPlan {
   successMessage?: string;
   tourStops?: YiyuTongTourStop[];
   graphSteps?: YiyuTongSameTabGraphStep[];
+  completionCheck?:
+    | {
+        type: 'comment_submission';
+        contentId: string;
+        contentType: 'insight' | 'report' | 'book' | 'methodology';
+        expectedText: string;
+      }
+    | null;
 }
 
 export interface YiyuTongFormContext {

@@ -1103,19 +1103,27 @@ function canonicalizePageAgentToolName(rawName, allowedToolNames) {
   const aliasMap = {
     click: 'click_element_by_index',
     click_element: 'click_element_by_index',
+    click_element_byindex: 'click_element_by_index',
+    click_elementbyindex: 'click_element_by_index',
+    clickbyindex: 'click_element_by_index',
     tap: 'click_element_by_index',
     press: 'click_element_by_index',
     input: 'input_text',
     type: 'input_text',
     fill: 'input_text',
+    inputtext: 'input_text',
+    input_by_index: 'input_text',
     enter_text: 'input_text',
     set_text: 'input_text',
     select: 'select_dropdown_option',
+    selectdropdownoption: 'select_dropdown_option',
     choose: 'select_dropdown_option',
     pick_option: 'select_dropdown_option',
     open_url: 'open_internal_url',
     goto: 'open_internal_url',
     navigate: 'open_internal_url',
+    scroll_page: 'scroll_section',
+    scrollpage: 'scroll_section',
   };
   const canonical = aliasMap[normalized] || '';
   return canonical && allowedToolNames.includes(canonical) ? canonical : '';
@@ -1511,7 +1519,7 @@ function normalizePageAgentProxyResponse(payload, responseData) {
     && (
       /<parameter\s+name=/i.test(rawContent)
       || /"action"\s*:/i.test(rawContent)
-      || /\b(click|click_element_by_index|input|type|fill|input_text|select|select_dropdown_option|scroll|scroll_horizontally|wait|done|open_internal_url|open_url|goto|navigate|set_site_filters|set_sort_mode|go_to_page|open_content_card|scroll_section|expand_section|confirm_current_state|fill_local_form_fields)\b/i.test(rawContent)
+      || /\b(click|click_element_by_index|input|type|fill|input_text|select|select_dropdown_option|scroll|scroll_page|scroll_horizontally|wait|done|open_internal_url|open_url|goto|navigate|set_site_filters|set_sort_mode|go_to_page|open_content_card|scroll_section|expand_section|confirm_current_state|fill_local_form_fields)\b/i.test(rawContent)
     )
   );
   if (Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
@@ -1540,6 +1548,23 @@ function normalizePageAgentProxyResponse(payload, responseData) {
             parsedArgs && typeof parsedArgs === 'object' && !Array.isArray(parsedArgs)
               ? parsedArgs
               : {},
+        })
+      );
+    }
+    const canonicalExistingToolName = canonicalizePageAgentToolName(existingToolName, allowedToolNames);
+    if (canonicalExistingToolName) {
+      const parsedArgs = coerceStructuredPageAgentValue(safeJsonParse(existingToolCall?.function?.arguments || '{}') || {});
+      return buildPageAgentContentResponse(
+        responseData,
+        choice,
+        message,
+        wrapPageAgentAgentOutput({
+          [canonicalExistingToolName]:
+            parsedArgs && typeof parsedArgs === 'object' && !Array.isArray(parsedArgs)
+              ? normalizePageAgentToolArguments(canonicalExistingToolName, parsedArgs)
+              : {},
+        }, {
+          evaluation_previous_goal: 'Proxy normalized malformed tool_call name from model output.',
         })
       );
     }
@@ -1635,7 +1660,10 @@ function buildArkPageAgentPayload(payload) {
 
   return {
     model: safeText(payload?.model, ARK_MODEL),
-    temperature: typeof payload?.temperature === 'number' ? payload.temperature : 0.1,
+    temperature: 0,
+    top_p: 0.1,
+    max_tokens: 220,
+    stream: false,
     reasoning_effort: undefined,
     messages: [systemPrelude, ...originalMessages],
   };
@@ -4486,6 +4514,7 @@ function buildAssistantResponseEnvelope({
 function buildSiteTaskGraphResponse({
   goal,
   message,
+  prompt = '',
   entities = null,
   steps = [],
   citations = [],
@@ -4493,6 +4522,7 @@ function buildSiteTaskGraphResponse({
   successMessage = '',
   expectedUrl = '',
   pageId = '',
+  completionCheck = null,
   fallbackPlan = null,
 }) {
   const graphPrompt = graphSteps.map((step, index) => {
@@ -4531,11 +4561,12 @@ function buildSiteTaskGraphResponse({
     citations,
     executionPlan: buildSameTabExecutionPlan({
       kind: 'site_task',
-      prompt: graphPrompt || message,
+      prompt: prompt || graphPrompt || message,
       graphSteps,
       expectedUrl: expectedUrl || '',
       pageId: pageId || '',
       successMessage,
+      completionCheck,
     }),
     fallbackPlan,
   });
@@ -4651,7 +4682,8 @@ function buildFilterTaskResponseV2({
   const finalOpenTitle = targetSource?.title || '';
 
   const promptParts = [
-    `你的任务是在当前网站同一标签页内帮用户定位${targetText}。`,
+    `请在益语官网当前标签页内完成这个请求：${question}`,
+    `你需要帮用户定位${targetText}。`,
     `如果当前不在${pageLabel}页面，先使用 open_internal_url 打开 "${pageTarget}"。`,
   ];
 
@@ -4804,10 +4836,12 @@ function buildSiteTourResponse(question) {
     executionPlan: buildSameTabExecutionPlan({
       kind: 'site_tour',
       prompt: [
-        '你的任务是带用户快速逛一下当前网站。',
+        `请在益语官网当前标签页内完成这个导览请求：${question}`,
         '请按顺序浏览首页、前沿洞察、学习中心、战略陪伴、关于我们。',
-        '每到一个页面都先进入该页面，再从上到下滚动浏览，让用户能看到主要内容区。',
-        '浏览完成后用一句中文说明已经带用户看完主要板块。',
+        '每到一个页面都从上到下缓慢滚动，尽量让用户看清主要内容区，不要机械地迅速拉到底又反弹。',
+        '如果该板块有代表性的二级页面，可以短暂停留进去浏览后再返回主板块继续。',
+        '整个过程中重点是让页面真的像人工导览一样自然动起来。',
+        '导览完成后再用一句中文说明已经带用户看完主要板块。',
       ].join(' '),
       bootstrapUrl: '/',
       expectedUrl: '/?page=about',
@@ -4890,6 +4924,13 @@ function buildSequentialSiteTaskResponse(question, currentUrl, rankedSources, al
 
   return buildSiteTaskGraphResponse({
     goal: '按顺序完成多个站内查看目标',
+    prompt: [
+      `请在益语官网当前标签页内按顺序完成这个请求：${question}`,
+      `你需要依次完成：${targets.map((target, index) => `${index + 1}.${target.label}`).join(' -> ')}。`,
+      '每一步完成后继续下一步，不要提前结束，也不要忽略前面的目标。',
+      '如果已经在某一步的目标页，就从当前状态继续往后完成。',
+      `最终停留在${lastTarget.label}页面，并在结束时用一句中文说明已按顺序完成任务。`,
+    ].join('\n'),
     entities: {
       targetTitle: lastTarget.source?.title || '',
       targetId: lastTarget.source?.contentId || '',
@@ -4946,6 +4987,17 @@ function buildCommentSiteTaskResponse({ question, currentUrl, targetSource, comm
 
   return buildSiteTaskGraphResponse({
     goal: `打开《${targetSource.title}》并发表评论`,
+    prompt: [
+      `请在益语官网当前标签页内完成这个请求：${question}`,
+      `目标内容是《${targetSource.title}》：${targetSource.publicUrl}`,
+      '如果当前不在这条内容详情页，就先进入该详情页。',
+      '然后滚动到评论区附近，让用户能看到评论输入框。',
+      `在评论输入框里写入这条评论：${commentText}`,
+      '最后点击发表评论按钮。只要评论进入“待管理员审核后显示”的提交成功状态，就立刻调用 done，不要再做任何额外无关操作。',
+      wantsSummary
+        ? '提交完成后，停留在当前内容页面，并用一句中文简要总结这篇内容的主要内容。'
+        : '提交完成后，停留在当前内容页面，并用一句中文说明评论已提交。',
+    ].join('\n'),
     entities: {
       contentTypes: [targetSource.contentType],
       targetId: targetSource.contentId,
@@ -4965,6 +5017,12 @@ function buildCommentSiteTaskResponse({ question, currentUrl, targetSource, comm
     successMessage,
     expectedUrl: targetSource.publicUrl,
     pageId: getAssistantPageIdFromTarget(targetSource.publicUrl),
+    completionCheck: {
+      type: 'comment_submission',
+      contentId: targetSource.contentId,
+      contentType: targetSource.contentType,
+      expectedText: commentText,
+    },
     fallbackPlan: {
       action: buildAssistantAction('open_detail', '打开对应页面', targetSource.publicUrl),
     },

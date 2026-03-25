@@ -14,6 +14,7 @@ export interface ExecuteYiyuTongSiteTaskOptions {
   plan: YiyuTongSameTabExecutionPlan;
   ignoredElements?: Array<Element | null | (() => Element | null)>;
   onPhaseChange?: (phase: YiyuTongTaskPhase, detail?: string) => void;
+  onProgressChange?: (entries: YiyuTongProgressEntry[]) => void;
 }
 
 type LocalFormFields = {
@@ -24,15 +25,172 @@ type LocalFormFields = {
   note?: string;
 };
 
+export type YiyuTongProgressEntry = {
+  id: string;
+  label: string;
+  detail?: string;
+  status: 'pending' | 'active' | 'done' | 'error';
+};
+
 const EXECUTION_MAX_STEPS = 120;
-const EXECUTION_HEARTBEAT_GRACE_MS = 12_000;
-const EXECUTION_PROGRESS_GRACE_MS = 18_000;
-const EXECUTION_GLOBAL_FUSE_MS = 240_000;
+const EXECUTION_HEARTBEAT_GRACE_MS = 30_000;
+const EXECUTION_PROGRESS_GRACE_MS = 60_000;
+const EXECUTION_GLOBAL_FUSE_MS = 1_800_000;
 const EXECUTION_WATCHDOG_INTERVAL_MS = 600;
 const EXECUTION_LOOP_REPEAT_LIMIT = 5;
+const TOUR_IDLE_NUDGE_MS = 6_000;
+const PAGE_AGENT_HIDE_STYLE_ID = 'yiyu-page-agent-hide-style';
+const COMMENT_VERIFICATION_LOOKBACK_MS = 5 * 60 * 1000;
+
+let latestVerifiedCommentSubmission:
+  | {
+      contentId: string;
+      contentType: 'insight' | 'report' | 'book' | 'methodology';
+      text: string;
+      verifiedAt: number;
+    }
+  | null = null;
 
 function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function readSavedAuthToken() {
+  return localStorage.getItem('yiyu_auth_token') ?? sessionStorage.getItem('yiyu_auth_token') ?? '';
+}
+
+function inferCommentTargetFromUrl():
+  | { contentId: string; contentType: 'insight' | 'report' | 'book' | 'methodology' }
+  | null {
+  const params = new URLSearchParams(window.location.search);
+  const contentId = params.get('id') || '';
+  const page = params.get('page') || '';
+  if (!contentId || !page) return null;
+  const typeMap: Record<string, 'insight' | 'report' | 'book' | 'methodology'> = {
+    article: 'insight',
+    report: 'report',
+    'book-reader': 'book',
+    methodology: 'methodology',
+  };
+  const contentType = typeMap[page];
+  if (!contentType) return null;
+  return { contentId, contentType };
+}
+
+async function verifyPendingComment({
+  contentId,
+  contentType,
+  expectedText,
+}: {
+  contentId: string;
+  contentType: 'insight' | 'report' | 'book' | 'methodology';
+  expectedText: string;
+}) {
+  const token = readSavedAuthToken();
+  if (!token || !contentId || !contentType || !expectedText.trim()) return false;
+  const params = new URLSearchParams({
+    contentId,
+    contentType,
+    scope: 'admin',
+  });
+  try {
+    const response = await fetch(`/api/auth/comments?${params.toString()}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok || json?.ok === false || !Array.isArray(json?.data)) return false;
+    const expected = expectedText.trim();
+    const now = Date.now();
+    return json.data.some((item: any) => {
+      const text = String(item?.text || '').trim();
+      const createdAt = item?.createdAt || item?.created_at;
+      const createdTs = createdAt ? Date.parse(String(createdAt)) : 0;
+      return text === expected && Number.isFinite(createdTs) && now - createdTs <= COMMENT_VERIFICATION_LOOKBACK_MS;
+    });
+  } catch {
+    return false;
+  }
+}
+
+async function waitForPendingCommentVerification(input: {
+  contentId: string;
+  contentType: 'insight' | 'report' | 'book' | 'methodology';
+  expectedText: string;
+  timeoutMs?: number;
+  intervalMs?: number;
+}) {
+  const timeoutMs = input.timeoutMs ?? 6_000;
+  const intervalMs = input.intervalMs ?? 300;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() <= deadline) {
+    if (
+      await verifyPendingComment({
+        contentId: input.contentId,
+        contentType: input.contentType,
+        expectedText: input.expectedText,
+      })
+    ) {
+      return true;
+    }
+    await sleep(intervalMs);
+  }
+  return false;
+}
+
+function installPageAgentVisualSuppressor() {
+  let style = document.getElementById(PAGE_AGENT_HIDE_STYLE_ID) as HTMLStyleElement | null;
+  let created = false;
+  if (!style) {
+    style = document.createElement('style');
+    style.id = PAGE_AGENT_HIDE_STYLE_ID;
+    style.textContent = `
+      #playwright-highlight-container,
+      #playwright-highlight-container *,
+      .playwright-highlight-label {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+    created = true;
+  }
+
+  const hideContainer = (node?: Element | null) => {
+    if (!(node instanceof HTMLElement)) return;
+    if (node.id === 'playwright-highlight-container' || node.classList.contains('playwright-highlight-label')) {
+      node.style.display = 'none';
+      node.style.opacity = '0';
+      node.style.visibility = 'hidden';
+      node.style.pointerEvents = 'none';
+    }
+  };
+
+  hideContainer(document.getElementById('playwright-highlight-container'));
+  document.querySelectorAll('.playwright-highlight-label').forEach((node) => hideContainer(node));
+
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      mutation.addedNodes.forEach((node) => {
+        if (node instanceof Element) {
+          hideContainer(node);
+          hideContainer(node.querySelector('#playwright-highlight-container'));
+          node.querySelectorAll?.('.playwright-highlight-label').forEach((item) => hideContainer(item));
+        }
+      });
+    }
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  return () => {
+    observer.disconnect();
+    if (created) {
+      style?.remove();
+    }
+  };
 }
 
 function normalizeInternalUrl(target?: string | null) {
@@ -53,6 +211,18 @@ function getCurrentInternalUrl() {
 
 function getCurrentPageId() {
   return document.querySelector<HTMLElement>('[data-yiyu-page]')?.dataset.yiyuPage || '';
+}
+
+function findCurrentTourStopIndex(stops: Array<{ url: string; pageId?: string }>) {
+  if (!Array.isArray(stops) || !stops.length) return -1;
+  const currentUrl = normalizeInternalUrl(getCurrentInternalUrl());
+  const currentPageId = getCurrentPageId();
+  const exactIndex = stops.findIndex((stop) => normalizeInternalUrl(stop.url) === currentUrl);
+  if (exactIndex >= 0) return exactIndex;
+  if (currentPageId) {
+    return stops.findIndex((stop) => stop.pageId === currentPageId);
+  }
+  return -1;
 }
 
 async function waitFor(
@@ -110,6 +280,33 @@ async function waitForPage(pageId?: string) {
   await sleep(100);
   return true;
 }
+
+async function openNextTourStop(stops: Array<{ label: string; url: string; pageId?: string }>) {
+  if (!Array.isArray(stops) || !stops.length) {
+    throw new Error('当前导览任务没有可用的站点路线');
+  }
+  const currentIndex = findCurrentTourStopIndex(stops);
+  const nextIndex = currentIndex < 0 ? 0 : currentIndex + 1;
+  const nextStop = stops[nextIndex];
+  if (!nextStop) {
+    return '导览路线中的主要站点已经全部浏览完成。';
+  }
+  await openInternalUrl(nextStop.url);
+  if (nextStop.pageId) {
+    await waitForPage(nextStop.pageId);
+  }
+  return `已切换到下一站：${nextStop.label}。`;
+}
+
+type YiyuTongTourState = {
+  currentUrl: string;
+  currentPageId: string;
+  scrollBucket: number;
+  nearBottom: boolean;
+  tourStopIndex: number;
+  tourStopLabel: string;
+  isLastTourStop: boolean;
+};
 
 function findSearchInput() {
   return document.querySelector<HTMLInputElement>('[data-yiyu-search="content"]');
@@ -313,6 +510,13 @@ function findCommentSubmitButton() {
   ) || null;
 }
 
+function hasVisibleTextFragment(text: string) {
+  const normalized = text.replace(/\s+/g, '');
+  return Array.from(document.querySelectorAll<HTMLElement>('div, span, p'))
+    .filter((node) => isElementVisible(node))
+    .some((node) => String(node.textContent || '').replace(/\s+/g, '').includes(normalized));
+}
+
 async function fillComment(text: string) {
   const textarea = findCommentTextarea();
   if (!textarea) {
@@ -352,7 +556,58 @@ async function submitComment() {
     throw new Error('评论提交后页面没有出现成功反馈');
   }
 
-  return '评论已提交。';
+  const target = inferCommentTargetFromUrl();
+  if (target) {
+    const verified = await waitForPendingCommentVerification({
+      ...target,
+      expectedText: beforeValue,
+    });
+    if (!verified) {
+      throw new Error('评论提交后未通过后台待审核校验');
+    }
+    latestVerifiedCommentSubmission = {
+      ...target,
+      text: beforeValue,
+      verifiedAt: Date.now(),
+    };
+  }
+
+  return '评论已提交，待管理员审核后显示。';
+}
+
+function planContainsGraphStep(plan: YiyuTongSameTabExecutionPlan, stepType: YiyuTongSameTabGraphStep['type']) {
+  return Boolean(plan.graphSteps?.some((step) => step.type === stepType));
+}
+
+function isCommentTaskSatisfied(plan: YiyuTongSameTabExecutionPlan) {
+  if (!planContainsGraphStep(plan, 'submit_comment')) return false;
+  if (plan.expectedUrl && getCurrentInternalUrl() !== normalizeInternalUrl(plan.expectedUrl)) {
+    return false;
+  }
+
+  const completionCheck = plan.completionCheck;
+  if (
+    completionCheck?.type === 'comment_submission' &&
+    latestVerifiedCommentSubmission &&
+    latestVerifiedCommentSubmission.contentId === completionCheck.contentId &&
+    latestVerifiedCommentSubmission.contentType === completionCheck.contentType &&
+    latestVerifiedCommentSubmission.text === completionCheck.expectedText.trim()
+  ) {
+    return true;
+  }
+
+  const messageVisible = hasVisibleTextFragment('评论已提交，待管理员审核后将显示在评论列表中');
+  return messageVisible;
+}
+
+function isPlanCompletionSatisfied(plan: YiyuTongSameTabExecutionPlan) {
+  if (isCommentTaskSatisfied(plan)) {
+    return {
+      ok: true,
+      detail: plan.successMessage || '评论已提交，待管理员审核后显示。',
+    };
+  }
+  return null;
 }
 
 async function setSortMode(sortMode: string) {
@@ -450,16 +705,18 @@ async function scrollPagePasses(passes = 1) {
   }
 
   for (let pass = 0; pass < Math.max(1, passes); pass += 1) {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    await sleep(350);
-    window.scrollTo({ top: maxScrollTop * 0.45, behavior: 'smooth' });
-    await sleep(500);
-    window.scrollTo({ top: maxScrollTop, behavior: 'smooth' });
-    await sleep(650);
+    const currentTop = Math.max(0, Math.min(maxScrollTop, window.scrollY));
+    const baseStep = Math.max(window.innerHeight * 0.72, 420);
+    const targetTop = Math.min(maxScrollTop, currentTop + baseStep);
+    if (targetTop <= currentTop + 4) {
+      await sleep(180);
+      break;
+    }
+    window.scrollTo({ top: targetTop, behavior: 'smooth' });
+    await sleep(900);
   }
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  await sleep(300);
-  return '已完成当前页面滚动浏览。';
+  const nearBottom = Math.abs(maxScrollTop - window.scrollY) <= Math.max(64, window.innerHeight * 0.12);
+  return nearBottom ? '已滚动到当前页面底部。' : '已继续向下滚动当前页面。';
 }
 
 async function scrollSection(sectionId?: string, passes = 1) {
@@ -540,7 +797,7 @@ async function fillLocalFormFields(fields: LocalFormFields) {
   return `已填写 ${filledCount} 个表单字段。`;
 }
 
-function confirmCurrentState() {
+function confirmCurrentState(stops?: Array<{ label: string; url: string; pageId?: string }>) {
   const resultsTotal = document.querySelector<HTMLElement>('[data-yiyu-results-total]')?.dataset.yiyuResultsTotal || '';
   const activeTopic = document.querySelector<HTMLElement>('[data-yiyu-active-topic]')?.dataset.yiyuActiveTopic || '';
   const activeYear = document.querySelector<HTMLElement>('[data-yiyu-active-year]')?.dataset.yiyuActiveYear || '';
@@ -548,6 +805,9 @@ function confirmCurrentState() {
     .map((item) => item.dataset.yiyuSection || '')
     .filter(Boolean)
     .slice(0, 16);
+  const scrollBucket = getScrollBucket();
+  const tourStopIndex = Array.isArray(stops) && stops.length ? findCurrentTourStopIndex(stops) : -1;
+  const tourStop = tourStopIndex >= 0 ? stops?.[tourStopIndex] : null;
   return JSON.stringify({
     currentUrl: getCurrentInternalUrl(),
     currentPageId: getCurrentPageId(),
@@ -559,7 +819,29 @@ function confirmCurrentState() {
     activeTopic,
     activeYear,
     activeSections,
+    scrollBucket,
+    nearBottom: scrollBucket >= 11,
+    tourStopIndex,
+    tourStopLabel: tourStop?.label || '',
+    isLastTourStop: tourStopIndex >= 0 && Array.isArray(stops) ? tourStopIndex >= stops.length - 1 : false,
   });
+}
+
+function readCurrentTourState(stops: Array<{ label: string; url: string; pageId?: string }>): YiyuTongTourState | null {
+  try {
+    const parsed = JSON.parse(confirmCurrentState(stops));
+    return {
+      currentUrl: String(parsed?.currentUrl || ''),
+      currentPageId: String(parsed?.currentPageId || ''),
+      scrollBucket: Number(parsed?.scrollBucket || 0),
+      nearBottom: Boolean(parsed?.nearBottom),
+      tourStopIndex: Number.isFinite(Number(parsed?.tourStopIndex)) ? Number(parsed?.tourStopIndex) : -1,
+      tourStopLabel: String(parsed?.tourStopLabel || ''),
+      isLastTourStop: Boolean(parsed?.isLastTourStop),
+    };
+  } catch {
+    return null;
+  }
 }
 
 function isElementVisible(element: Element | null) {
@@ -617,85 +899,95 @@ function getExecutionStateSignature() {
   });
 }
 
-function hasStructuredSiteSteps(plan: YiyuTongSameTabExecutionPlan) {
-  return Boolean(
-    plan.graphSteps?.length ||
-    plan.bootstrapUrl ||
-      plan.filters?.searchQuery ||
-      plan.filters?.topic ||
-      plan.filters?.year ||
-      plan.sortMode ||
-      plan.pageNumber ||
-      (plan.openMode && plan.openMode !== 'none')
-  );
-}
-
-function isDirectOpenTask(plan: YiyuTongSameTabExecutionPlan) {
-  if (plan.graphSteps?.length) return false;
-  const hasFilters = Boolean(
-    plan.filters?.searchQuery ||
-      plan.filters?.topic ||
-      plan.filters?.year ||
-      plan.sortMode ||
-      plan.pageNumber
-  );
-  return !hasFilters && (!plan.openMode || plan.openMode === 'none');
-}
-
-function renderGraphStepPrompt(step: YiyuTongSameTabGraphStep) {
-  switch (step.type) {
-    case 'open_url':
-      return `先使用 open_internal_url 打开 "${step.target}"。`;
-    case 'set_filters': {
-      const parts = [];
-      if (step.filters.searchQuery) parts.push(`搜索词“${step.filters.searchQuery}”`);
-      if (step.filters.topic) parts.push(`标签“${step.filters.topic}”`);
-      if (step.filters.year) parts.push(`年份“${step.filters.year}”`);
-      return `然后设置当前列表页筛选：${parts.join('、')}。`;
-    }
+function prettifyToolName(toolName: string) {
+  switch (toolName) {
+    case 'open_internal_url':
+      return '打开页面';
+    case 'set_site_filters':
+      return '设置筛选';
     case 'set_sort_mode':
-      return `然后把当前列表排序切换为“${step.sortMode}”。`;
+      return '切换排序';
     case 'go_to_page':
-      return `然后切换到第 ${step.pageNumber} 页。`;
+      return '切换页码';
+    case 'open_next_tour_stop':
+      return '切换下一站';
     case 'open_content_card':
-      if (step.title) {
-        return `然后打开标题为《${step.title}》的内容卡片。`;
-      }
-      if (step.mode === 'last') return '然后打开当前结果列表里的最后一项。';
-      if (step.mode === 'first') return '然后打开当前结果列表里的第一项。';
-      return '然后打开目标内容卡片。';
+      return '打开内容';
     case 'scroll_section':
-      return step.sectionId
-        ? `然后滚动到 ${step.sectionId} 区域。`
-        : '然后从上到下滚动浏览当前页面。';
+    case 'scroll_page':
+    case 'scroll':
+      return '滚动页面';
     case 'expand_section':
-      return `然后展开 ${step.sectionId} 区域。`;
+      return '展开区域';
     case 'fill_local_form_fields':
-      return '然后把当前已知表单字段填写进页面。';
+      return '填写表单';
     case 'fill_comment':
-      return `然后在评论框里写入“${step.text}”。`;
+      return '写入评论';
     case 'submit_comment':
-      return '最后点击发表评论按钮，但不要做额外无关操作。';
+      return '提交评论';
+    case 'click_element_by_index':
+      return '点击页面元素';
+    case 'input_text':
+      return '输入文本';
+    case 'select_dropdown_option':
+      return '选择下拉项';
+    case 'wait':
+      return '等待页面变化';
+    case 'done':
+      return '完成任务';
     default:
-      return '';
+      return toolName || '执行页面操作';
   }
 }
 
-async function preBootstrapPlan(plan: YiyuTongSameTabExecutionPlan) {
-  const bootstrapUrl = normalizeInternalUrl(plan.bootstrapUrl);
-  if (!bootstrapUrl) {
-    return false;
+function normalizeProgressDetail(value: unknown) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  return text.slice(0, 220);
+}
+
+function buildProgressEntries(
+  history: Array<any>,
+  liveActivity?: { label: string; detail?: string; status?: 'active' | 'error' }
+): YiyuTongProgressEntry[] {
+  const entries: YiyuTongProgressEntry[] = [];
+  let stepIndex = 0;
+  let errorIndex = 0;
+
+  for (const item of history) {
+    if (item?.type === 'step') {
+      stepIndex += 1;
+      const actionName = prettifyToolName(String(item?.action?.name || ''));
+      const output = normalizeProgressDetail(item?.action?.output);
+      const nextGoal = normalizeProgressDetail(item?.reflection?.next_goal);
+      const memory = normalizeProgressDetail(item?.reflection?.memory);
+      const detailParts = [output, memory].filter(Boolean);
+      entries.push({
+        id: `step-${stepIndex}`,
+        label: nextGoal || actionName || `步骤 ${stepIndex}`,
+        detail: detailParts.join(' · ') || undefined,
+        status: 'done',
+      });
+    } else if (item?.type === 'error') {
+      errorIndex += 1;
+      entries.push({
+        id: `error-${errorIndex}`,
+        label: '正在调整操作',
+        detail: normalizeProgressDetail(item?.message),
+        status: 'active',
+      });
+    }
   }
 
-  if (getCurrentInternalUrl() !== bootstrapUrl) {
-    await openInternalUrl(bootstrapUrl);
+  if (liveActivity?.label) {
+    entries.push({
+      id: 'live-activity',
+      label: liveActivity.label,
+      detail: liveActivity.detail,
+      status: liveActivity.status || 'active',
+    });
   }
 
-  if (plan.pageId) {
-    await waitForPage(plan.pageId);
-  }
-
-  return true;
+  return entries.slice(-10);
 }
 
 function buildRuntimePrompt(
@@ -704,51 +996,55 @@ function buildRuntimePrompt(
     bootstrapped: boolean;
   }
 ) {
-  if (plan.kind === 'site_tour') {
-    return buildPrompt(plan);
-  }
-
   const promptParts = [
-    '你是益语通在益语官网中的页面执行器。',
-    '你的任务是在当前网站同一标签页内连续完成页面操作，让网站真正动起来。',
+    '你是益语官网当前标签页里的原生网页代理。',
+    '请先观察当前页面，再自己规划下一步，并持续执行，直到用户目标真正完成。',
     options.bootstrapped
-      ? '当前已经进入了正确的站内页面，请优先在当前页继续完成筛选、滚动、切换和打开详情，不要重复打开同一个页面。'
-      : '如果还不在目标页，可以先合理打开目标页，再继续执行后续操作。',
-    '优先使用站内专用工具；如果当前页确实需要进一步探索，可合理使用页面中已可见的控件。',
-    '只在同站同标签页内操作，不要打开外站，不要新建标签页，不要操作益语通悬浮窗。',
-    '如果需要点击页面元素，请使用 click_element_by_index；如果需要输入文本，请使用 input_text；如果需要选择下拉，请使用 select_dropdown_option。',
-    '任务完成后立即调用 done，不要额外闲聊。',
+      ? '如果当前页面已经合适，就继续在当前页面完成任务；如果不合适，也可以切换到更合适的站内页面。'
+      : '如果当前页面不合适，可以主动切换到更合适的站内页面。',
+    '只在益语官网当前标签页内操作，不要打开外站，不要新建标签页，也不要操作益语通悬浮窗。',
+    '你可以自由使用点击、输入、滚动、选择等标准网页动作；站内专用工具只是辅助，不是限制。',
+    '完成后立即 done；不要为了显得谨慎而停在半路，也不要做与目标无关的额外动作。',
   ];
 
-  if (plan.graphSteps?.length) {
-    promptParts.push('请严格按照下面的顺序步骤依次完成，不要跳步，不要提前结束：');
-    for (const [index, step] of plan.graphSteps.entries()) {
-      promptParts.push(`${index + 1}. ${renderGraphStepPrompt(step)}`);
-    }
-  }
-
   if (plan.filters?.searchQuery) {
-    promptParts.push(`当前任务包含搜索词：${plan.filters.searchQuery}。`);
+    promptParts.push(`任务里提到的搜索词是：${plan.filters.searchQuery}。`);
   }
   if (plan.filters?.topic) {
-    promptParts.push(`当前任务需要筛选标签：${plan.filters.topic}。`);
+    promptParts.push(`任务里提到的标签是：${plan.filters.topic}。`);
   }
   if (plan.filters?.year) {
-    promptParts.push(`当前任务需要筛选年份：${plan.filters.year}。`);
+    promptParts.push(`任务里提到的年份是：${plan.filters.year}。`);
   }
   if (plan.sortMode) {
-    promptParts.push(`当前任务需要切换排序：${plan.sortMode}。`);
+    promptParts.push(`如有需要，可把排序切到：${plan.sortMode}。`);
   }
   if (plan.openTitle) {
-    promptParts.push(`当前任务的目标标题是《${plan.openTitle}》。`);
+    promptParts.push(`如果任务里有明确目标内容，目标标题可能是《${plan.openTitle}》。`);
   } else if (plan.openMode === 'last') {
-    promptParts.push('当前任务需要打开筛选结果中的最后一项。');
+    promptParts.push('如果你已经筛出了结果，目标通常是打开结果中的最后一项。');
   } else if (plan.openMode === 'first') {
-    promptParts.push('当前任务需要打开筛选结果中的第一项。');
+    promptParts.push('如果你已经筛出了结果，目标通常是打开结果中的第一项。');
+  }
+
+  if (plan.bootstrapUrl) {
+    promptParts.push(`已知一个可能的站内起点是：${plan.bootstrapUrl}。只有在这能更快完成任务时再使用。`);
   }
 
   if (plan.prompt) {
-    promptParts.push(`用户原始任务要求：${plan.prompt}`);
+    promptParts.push(`用户原始任务：${plan.prompt}`);
+  }
+
+  if (plan.kind === 'site_tour' && Array.isArray(plan.tourStops) && plan.tourStops.length) {
+    const route = plan.tourStops
+      .map((stop, index) => `${index + 1}.${stop.label}（${stop.url}）`)
+      .join(' -> ');
+    promptParts.push(`这是一个整站导览任务，推荐路线是：${route}。`);
+    promptParts.push('请把每个页面都当成一个单独站点停靠点：先进入页面，再多次向下滚动，确认主要内容已经看过。');
+    promptParts.push('每次滚动后都结合当前页面状态继续判断是否还需要停留；请频繁调用 confirm_current_state 查看当前页、导览站点序号和滚动进度。');
+    promptParts.push('如果 confirm_current_state 显示 nearBottom=true 且 isLastTourStop=false，请优先调用 open_next_tour_stop 切到路线中的下一站。');
+    promptParts.push('如果 confirm_current_state 显示 nearBottom=true 且 isLastTourStop=true，请直接 done，表示整站导览已经完成。');
+    promptParts.push('除非页面里出现特别有代表性的二级页入口，否则不要在同一个页面里无限重复滚动，也不要滚到底后又自动回到顶部。');
   }
 
   return promptParts.join(' ');
@@ -858,47 +1154,14 @@ async function executeStructuredTourSteps(
   return { ok: true as const, data: plan.successMessage || '已带你浏览网站主要板块。' };
 }
 
-function buildPrompt(plan: YiyuTongSameTabExecutionPlan) {
-  if (plan.kind === 'site_tour') {
-    return [
-      '你是益语通在益语官网中的页面执行器。',
-      '现在要带用户在当前标签页内浏览整个网站。',
-      '请优先使用 open_internal_url、scroll_section、confirm_current_state 等工具完成多页导览。',
-      '不要打开外站，不要新建标签页，不要操作益语通悬浮窗。',
-      '如果需要点击页面元素，请使用 click_element_by_index，不要返回 click 这种别名。',
-      plan.prompt,
-      '完成整个导览后再调用 done，并用一句中文说明已完成。',
-    ].join(' ');
-  }
-
-  return [
-    '你是益语通在益语官网中的页面执行器。',
-    '你的目标是在当前网站同一标签页内尽快完成找、跳、筛、开、滚动、展开等页面操作。',
-    '优先使用站内专用工具，但如果当前页确实需要进一步探索，可以合理使用页面已有控件完成任务。',
-    '不要打开外站，不要新建标签页，不要操作益语通悬浮窗。',
-    '如果需要点击页面元素，请使用 click_element_by_index；如果需要输入文本，请使用 input_text；如果需要选择下拉，请使用 select_dropdown_option。',
-    '如果已经到达目标状态，请尽快调用 done，不要继续做无关尝试。',
-    plan.prompt,
-  ].join(' ');
-}
-
 export async function executeYiyuTongSiteTask({
   plan,
   ignoredElements = [],
   onPhaseChange,
+  onProgressChange,
 }: ExecuteYiyuTongSiteTaskOptions) {
+  latestVerifiedCommentSubmission = null;
   onPhaseChange?.('understanding', plan.kind === 'site_tour' ? '识别到你想浏览网站主要板块。' : '识别到你想让我直接在官网里完成操作。');
-  const hasGraphSteps = Boolean(plan.graphSteps?.length);
-  const structuredTask = plan.kind === 'site_tour' || hasStructuredSiteSteps(plan);
-
-  if (hasGraphSteps) {
-    try {
-      return await executeStructuredGraphSteps(plan, onPhaseChange);
-    } catch (error: any) {
-      onPhaseChange?.('error', error?.message || '执行失败');
-      return { ok: false as const, error: error?.message || '执行失败' };
-    }
-  }
 
   const [{ PageAgentCore, tool }, controllerModule] = await Promise.all([
     import('page-agent'),
@@ -917,9 +1180,7 @@ export async function executeYiyuTongSiteTask({
     highlightLabelOpacity: 0,
   });
 
-  const expectedUrl = normalizeInternalUrl(plan.expectedUrl);
-  const bootstrapUrl = normalizeInternalUrl(plan.bootstrapUrl);
-  const expectedPageId = plan.pageId || '';
+  const removePageAgentVisualSuppressor = installPageAgentVisualSuppressor();
 
   const agent = new PageAgentCore({
     baseURL: '/api/auth/assistant/page-agent',
@@ -932,16 +1193,6 @@ export async function executeYiyuTongSiteTask({
     customFetch: async (_input: RequestInfo | URL, init?: RequestInit) => {
       const rawBody = typeof init?.body === 'string' ? init.body : '{}';
       return proxyYiyuTongPageAgent(JSON.parse(rawBody), init?.signal || undefined);
-    },
-    instructions: {
-      system: [
-        '你是益语通在益语官网中的同标签页页面执行器。',
-        '你的首要目标是替用户完成页面操作，而不是解释原理。',
-        '优先使用站内专用工具，但允许在当前页面合理探索可见控件来完成任务。',
-        '不要打开外站，不要新建标签页，不要操作益语通悬浮窗。',
-        '如果页面已经达到目标状态，应立即调用 done。',
-        '如果你需要点击页面元素，请使用 click_element_by_index；如果需要输入，请使用 input_text；如果需要选择下拉，请使用 select_dropdown_option。',
-      ].join(''),
     },
     customTools: {
       ask_user: null,
@@ -975,6 +1226,11 @@ export async function executeYiyuTongSiteTask({
         }),
         execute: async ({ pageNumber }: { pageNumber: number }) => goToPage(pageNumber),
       }),
+      open_next_tour_stop: tool({
+        description: '在整站导览任务中切到路线里的下一站页面。',
+        inputSchema: z.object({}),
+        execute: async () => openNextTourStop(plan.tourStops || []),
+      }),
       open_content_card: tool({
         description: '打开当前列表中某个内容卡片，支持按标题精确打开、打开第一项或最后一项。',
         inputSchema: z.object({
@@ -993,6 +1249,13 @@ export async function executeYiyuTongSiteTask({
         execute: async ({ sectionId, passes }: { sectionId?: string; passes?: number }) =>
           scrollSection(sectionId, passes || 1),
       }),
+      scroll_page: tool({
+        description: '滚动当前页面，适合导览或浏览任务。',
+        inputSchema: z.object({
+          passes: z.number().int().positive().optional(),
+        }),
+        execute: async ({ passes }: { passes?: number }) => scrollSection(undefined, passes || 1),
+      }),
       expand_section: tool({
         description: '展开当前页面中的某个可折叠区域。',
         inputSchema: z.object({
@@ -1003,7 +1266,7 @@ export async function executeYiyuTongSiteTask({
       confirm_current_state: tool({
         description: '读取当前页面、URL、筛选和卡片状态，确认是否已经达到目标。',
         inputSchema: z.object({}),
-        execute: async () => confirmCurrentState(),
+        execute: async () => confirmCurrentState(plan.tourStops || []),
       }),
       fill_local_form_fields: tool({
         description: '在当前标签页内填写已经识别出的本地表单字段。',
@@ -1073,18 +1336,14 @@ export async function executeYiyuTongSiteTask({
   let activityProgressListener: EventListener | null = null;
   let statusHeartbeatListener: EventListener | null = null;
   let historyProgressListener: EventListener | null = null;
+  let liveActivity: { label: string; detail?: string; status?: 'active' | 'error' } | undefined;
+  const tourBottomHitCount = new Map<number, number>();
+  let pendingTourProgress = false;
+  let autoCompletedTour = '';
+  let lastTourNudgeAt = 0;
 
   try {
-    let bootstrapped = false;
-    if (plan.kind === 'site_task' && plan.bootstrapUrl) {
-      onPhaseChange?.('locating', '正在进入任务起始页面。');
-      bootstrapped = await preBootstrapPlan(plan);
-    }
-
-    if (plan.kind === 'site_task' && isDirectOpenTask(plan) && isStructuredSiteStateSatisfied(plan)) {
-      onPhaseChange?.('done', plan.successMessage || '已完成页面操作。');
-      return { ok: true as const, data: plan.successMessage || '已完成页面操作。' };
-    }
+    const bootstrapped = false;
 
     let lastHeartbeatAt = Date.now();
     let lastProgressAt = Date.now();
@@ -1139,8 +1398,66 @@ export async function executeYiyuTongSiteTask({
       reject?.(new Error(message));
     };
 
+    const maybeProgressTour = async (forceScroll = false) => {
+      if (plan.kind !== 'site_tour' || !plan.tourStops?.length || watchdogStopped || pendingTourProgress) return;
+      pendingTourProgress = true;
+      try {
+        const state = readCurrentTourState(plan.tourStops);
+        if (!state || state.tourStopIndex < 0) return;
+        if (!state.nearBottom) {
+          tourBottomHitCount.set(state.tourStopIndex, 0);
+          if (!forceScroll) return;
+          liveActivity = {
+            label: '继续浏览当前板块',
+            detail: `正在继续向下浏览${state.tourStopLabel || '当前板块'}。`,
+            status: 'active',
+          };
+          onProgressChange?.(buildProgressEntries(agent.history as any[], liveActivity));
+          await scrollPagePasses(1);
+          syncExecutionState();
+          lastTourNudgeAt = Date.now();
+          onPhaseChange?.('acting', `正在继续浏览${state.tourStopLabel || '当前板块'}。`);
+          return;
+        }
+
+        const nextHits = (tourBottomHitCount.get(state.tourStopIndex) || 0) + 1;
+        tourBottomHitCount.set(state.tourStopIndex, nextHits);
+        if (nextHits < 2) return;
+
+        if (state.isLastTourStop) {
+          autoCompletedTour = plan.successMessage || '已带你快速浏览完网站的主要板块。';
+          liveActivity = {
+            label: '导览完成',
+            detail: autoCompletedTour,
+            status: 'active',
+          };
+          onProgressChange?.(buildProgressEntries(agent.history as any[], liveActivity));
+          try {
+            agent.stop();
+          } catch {
+            // ignore
+          }
+          return;
+        }
+
+        liveActivity = {
+          label: '切换下一站',
+          detail: `已看完${state.tourStopLabel || '当前板块'}的主要内容，正在继续下一站。`,
+          status: 'active',
+        };
+        onProgressChange?.(buildProgressEntries(agent.history as any[], liveActivity));
+        await openNextTourStop(plan.tourStops);
+        tourBottomHitCount.set(state.tourStopIndex, 0);
+        syncExecutionState();
+        lastTourNudgeAt = Date.now();
+        onPhaseChange?.('acting', `已浏览完${state.tourStopLabel || '当前板块'}，正在继续下一站。`);
+      } finally {
+        pendingTourProgress = false;
+      }
+    };
+
     activityProgressListener = (event: Event) => {
-      const detail = (event as CustomEvent<{ type: string; tool?: string; input?: unknown }>).detail;
+      const detail = (event as CustomEvent<{ type: string; tool?: string; input?: unknown; message?: string }>).detail;
       if (!detail) return;
       markHeartbeat();
       if (detail.type === 'executed') {
@@ -1162,6 +1479,43 @@ export async function executeYiyuTongSiteTask({
           repeatedToolCount = 0;
         }
         lastExecutedToolKey = toolKey;
+        liveActivity = {
+          label: prettifyToolName(String(detail.tool || '')),
+          detail: normalizeProgressDetail(`已执行 ${prettifyToolName(String(detail.tool || ''))}`),
+          status: 'active',
+        };
+        onProgressChange?.(buildProgressEntries(agent.history as any[], liveActivity));
+        if (plan.kind === 'site_tour' && /scroll|confirm_current_state|open_next_tour_stop/i.test(String(detail.tool || ''))) {
+          void maybeProgressTour();
+        }
+      } else if (detail.type === 'thinking') {
+        liveActivity = {
+          label: '正在思考下一步',
+          detail: '正在结合当前页面状态继续规划操作。',
+          status: 'active',
+        };
+        onProgressChange?.(buildProgressEntries(agent.history as any[], liveActivity));
+      } else if (detail.type === 'executing') {
+        liveActivity = {
+          label: prettifyToolName(String(detail.tool || '执行页面操作')),
+          detail: normalizeProgressDetail(detail.tool ? `正在执行 ${prettifyToolName(String(detail.tool))}` : '正在执行页面操作。'),
+          status: 'active',
+        };
+        onProgressChange?.(buildProgressEntries(agent.history as any[], liveActivity));
+      } else if (detail.type === 'retrying') {
+        liveActivity = {
+          label: '正在重试',
+          detail: '页面状态还不稳定，正在继续尝试。',
+          status: 'active',
+        };
+        onProgressChange?.(buildProgressEntries(agent.history as any[], liveActivity));
+      } else if (detail.type === 'error') {
+        liveActivity = {
+          label: '正在调整操作',
+          detail: normalizeProgressDetail(detail.message),
+          status: 'active',
+        };
+        onProgressChange?.(buildProgressEntries(agent.history as any[], liveActivity));
       }
     };
 
@@ -1172,6 +1526,7 @@ export async function executeYiyuTongSiteTask({
     historyProgressListener = () => {
       markHeartbeat();
       syncExecutionState();
+      onProgressChange?.(buildProgressEntries(agent.history as any[], liveActivity));
     };
 
     agent.addEventListener('activity', activityProgressListener);
@@ -1179,6 +1534,37 @@ export async function executeYiyuTongSiteTask({
     agent.addEventListener('historychange', historyProgressListener);
 
     const execution = agent.execute(buildRuntimePrompt(plan, { bootstrapped }));
+    let completionProbeInterval: number | null = null;
+    const completionProbe = new Promise<{ success: true; data: string }>((resolve) => {
+      completionProbeInterval = window.setInterval(() => {
+        if (autoCompletedTour) {
+          if (completionProbeInterval !== null) {
+            window.clearInterval(completionProbeInterval);
+            completionProbeInterval = null;
+          }
+          resolve({
+            success: true,
+            data: autoCompletedTour,
+          });
+          return;
+        }
+        const satisfied = isPlanCompletionSatisfied(plan);
+        if (!satisfied?.ok) return;
+        if (completionProbeInterval !== null) {
+          window.clearInterval(completionProbeInterval);
+          completionProbeInterval = null;
+        }
+        try {
+          agent.stop();
+        } catch {
+          // ignore
+        }
+        resolve({
+          success: true,
+          data: satisfied.detail,
+        });
+      }, 300);
+    });
     const watchdog = new Promise<never>((_, reject) => {
       watchdogReject = reject;
       watchdogInterval = window.setInterval(() => {
@@ -1187,6 +1573,11 @@ export async function executeYiyuTongSiteTask({
 
         if (now - lastHeartbeatAt > EXECUTION_HEARTBEAT_GRACE_MS) {
           failExecutionWatchdog('页面操作暂时卡住了，长时间没有新的动作。');
+          return;
+        }
+
+        if (plan.kind === 'site_tour' && now - lastProgressAt > TOUR_IDLE_NUDGE_MS && now - lastTourNudgeAt > TOUR_IDLE_NUDGE_MS) {
+          void maybeProgressTour(true);
           return;
         }
 
@@ -1206,45 +1597,47 @@ export async function executeYiyuTongSiteTask({
       }, EXECUTION_WATCHDOG_INTERVAL_MS);
     });
 
-    const result = await Promise.race([execution, watchdog]);
+    const result = await Promise.race([execution, completionProbe, watchdog]);
+    if (completionProbeInterval !== null) {
+      window.clearInterval(completionProbeInterval);
+      completionProbeInterval = null;
+    }
     stopExecutionWatchdog();
     if (activityProgressListener) agent.removeEventListener('activity', activityProgressListener);
     if (statusHeartbeatListener) agent.removeEventListener('statuschange', statusHeartbeatListener);
     if (historyProgressListener) agent.removeEventListener('historychange', historyProgressListener);
-    const landedUrl = getCurrentInternalUrl();
-    const endsOnDifferentDetail = Boolean(expectedUrl && bootstrapUrl && expectedUrl !== bootstrapUrl);
-    const urlSatisfied = !expectedUrl || landedUrl === expectedUrl;
-    const pageSatisfied = endsOnDifferentDetail ? true : !expectedPageId || getCurrentPageId() === expectedPageId;
-    const structuredSatisfied = plan.kind === 'site_tour' ? true : !structuredTask || isStructuredSiteStateSatisfied(plan);
-
-    if (result.success && urlSatisfied && pageSatisfied && structuredSatisfied) {
+    if (result.success) {
+      onProgressChange?.(
+        buildProgressEntries(agent.history as any[], {
+          label: '已完成',
+          detail: normalizeProgressDetail(plan.successMessage || result.data || '已完成页面操作。'),
+          status: 'active',
+        })
+      );
       return { ok: true, data: plan.successMessage || result.data || '已完成页面操作。' };
     }
 
-    if (structuredTask) {
-      return plan.kind === 'site_tour'
-        ? executeStructuredTourSteps(plan, onPhaseChange)
-        : executeStructuredSiteSteps(plan, onPhaseChange);
-    }
-
+    onProgressChange?.(
+      buildProgressEntries(agent.history as any[], {
+        label: '执行未完成',
+        detail: normalizeProgressDetail(result.data || '未能稳定完成页面操作'),
+        status: 'error',
+      })
+    );
     return {
       ok: false,
-      error:
-        result.data ||
-        (expectedUrl ? `未能稳定到达 ${expectedUrl}` : expectedPageId ? `未能稳定停留在 ${expectedPageId}` : '未能稳定完成页面操作'),
+      error: result.data || '未能稳定完成页面操作',
     };
   } catch (error: any) {
-    if (structuredTask) {
-      try {
-        return plan.kind === 'site_tour'
-          ? await executeStructuredTourSteps(plan, onPhaseChange)
-          : await executeStructuredSiteSteps(plan, onPhaseChange);
-      } catch (structuredError: any) {
-        onPhaseChange?.('error', structuredError?.message || error?.message || '执行失败');
-        return { ok: false, error: structuredError?.message || error?.message || '执行失败' };
-      }
-    }
     onPhaseChange?.('error', error?.message || '执行失败');
+    onProgressChange?.([
+      {
+        id: 'fatal-error',
+        label: '执行失败',
+        detail: normalizeProgressDetail(error?.message || '执行失败'),
+        status: 'error',
+      },
+    ]);
     return { ok: false, error: error?.message || '执行失败' };
   } finally {
     agent.removeEventListener('activity', activityListener as EventListener);
@@ -1257,6 +1650,7 @@ export async function executeYiyuTongSiteTask({
     } catch {
       // ignore
     }
+    removePageAgentVisualSuppressor();
     agent.dispose();
   }
 }
