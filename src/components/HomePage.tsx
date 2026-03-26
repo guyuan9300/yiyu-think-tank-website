@@ -3,7 +3,6 @@ import { Header } from './Header';
 import { Footer } from './Footer';
 import { ArrowRight, Brain, Target, Users, TrendingUp, BookOpen, FileText, Lightbulb, ChevronRight, Star, Zap, ChevronDown, Wrench, Layers } from 'lucide-react';
 import { getInsights, getReports, getBooks, getMethodologies, type InsightArticle, type Report, type Book, type Methodology } from '../lib/dataService';
-import { DIAGNOSIS_FORM_URL } from '../lib/siteMeta';
 import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 
 // Quick Entry Card - Apple Style
@@ -159,7 +158,7 @@ function ModuleCard({ icon, title, subtitle, description, gradient, onMouseEnter
 }
 
 interface HomePageProps {
-  onNavigate?: (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'login' | 'register' | 'book-reader' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai', id?: string) => void;
+  onNavigate?: (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'login' | 'register' | 'book-reader' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai' | 'consult-apply', id?: string) => void;
   onNavigateToDetail?: (type: 'article' | 'report', id: string) => void;
 }
 
@@ -435,7 +434,7 @@ export function HomePage({ onNavigate, onNavigateToDetail }: HomePageProps) {
             {/* CTA Button */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
-                onClick={() => window.open(DIAGNOSIS_FORM_URL, '_blank')}
+                onClick={() => onNavigate?.('consult-apply')}
                 className="group inline-flex items-center gap-2 px-8 py-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/25"
               >
                 <span className="font-medium text-[15px]">免费预约组织诊断</span>

@@ -2,7 +2,6 @@ import { ArrowRight, BookOpen, Mail, Phone, QrCode, TrendingUp, Users, Zap } fro
 import { Header } from './Header';
 import { Footer } from './Footer';
 import {
-  DIAGNOSIS_FORM_URL,
   SITE_CONTACT_EMAIL,
   SITE_CONTACT_PHONE,
   SITE_WECHAT_OFFICIAL,
@@ -10,7 +9,7 @@ import {
 import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 
 interface AboutPageProps {
-  onNavigate?: (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'login' | 'register') => void;
+  onNavigate?: (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'login' | 'register' | 'consult-apply') => void;
 }
 
 const coreValues = [
@@ -75,7 +74,7 @@ const milestones = [
 ];
 
 export function AboutPage({ onNavigate }: AboutPageProps) {
-  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'login' | 'register') => {
+  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'login' | 'register' | 'consult-apply') => {
     onNavigate?.(page);
   };
 
@@ -118,7 +117,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
                 <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
               </button>
               <button
-                onClick={() => window.open(DIAGNOSIS_FORM_URL, '_blank')}
+                onClick={() => handleNavigate('consult-apply')}
                 className="group px-8 py-4 rounded-full border border-border/60 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 hover:scale-[1.02] flex items-center gap-2"
               >
                 <span className="font-medium text-[15px]">免费预约组织诊断</span>
@@ -264,7 +263,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
 
               <button
                 data-yiyu-cta="consult-diagnosis"
-                onClick={() => window.open(DIAGNOSIS_FORM_URL, '_blank')}
+                onClick={() => handleNavigate('consult-apply')}
                 className="mt-8 inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/25"
               >
                 <span className="font-medium text-[15px]">前往预约</span>

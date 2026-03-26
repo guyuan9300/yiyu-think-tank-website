@@ -36,6 +36,7 @@ type SiteMapPage = {
   group: string;
   parentId?: string;
   publicTour: boolean;
+  tourRepresentativeDetail?: boolean;
   representativeChildren?: string[];
   representativeDetail?: {
     pageId: string;

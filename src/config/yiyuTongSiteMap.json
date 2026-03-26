@@ -40,6 +40,11 @@
       "successHint": "评论已提交，待管理员审核后将显示在评论列表中",
       "adminState": "pending"
     },
+    "form_submitted": {
+      "kind": "form_submitted",
+      "successHint": "咨询申请已提交，我们会尽快与您联系",
+      "adminState": "new"
+    },
     "detail_opened": {
       "kind": "detail_opened"
     },
@@ -302,6 +307,7 @@
       "group": "insights",
       "parentId": "insights",
       "publicTour": true,
+      "tourRepresentativeDetail": false,
       "representativeDetail": {
         "pageId": "article",
         "selection": "latest_published"
@@ -341,6 +347,7 @@
       "group": "insights",
       "parentId": "insights",
       "publicTour": true,
+      "tourRepresentativeDetail": false,
       "representativeDetail": {
         "pageId": "report",
         "selection": "latest_published"
@@ -380,6 +387,7 @@
       "group": "learning",
       "parentId": "learning",
       "publicTour": true,
+      "tourRepresentativeDetail": false,
       "representativeDetail": {
         "pageId": "book",
         "selection": "latest_published"
@@ -419,6 +427,7 @@
       "group": "learning",
       "parentId": "learning",
       "publicTour": true,
+      "tourRepresentativeDetail": false,
       "representativeDetail": {
         "pageId": "methodology",
         "selection": "latest_published"
@@ -712,18 +721,34 @@
       "publicTour": false,
       "sections": [
         {
-          "id": "consult-apply-form",
-          "title": "正式提交入口",
-          "type": "cta",
+          "id": "consult-apply-hero",
+          "title": "咨询申请引导",
+          "type": "hero",
           "order": 1,
+          "enterable": false,
+          "tour": false
+        },
+        {
+          "id": "consult-apply-form",
+          "title": "咨询申请表单",
+          "type": "form",
+          "order": 2,
           "enterable": true,
           "tour": false
         },
         {
-          "id": "consult-apply-contact",
-          "title": "直接联系",
-          "type": "contact",
-          "order": 2,
+          "id": "consult-apply-submit",
+          "title": "提交按钮",
+          "type": "cta",
+          "order": 3,
+          "enterable": true,
+          "tour": false
+        },
+        {
+          "id": "consult-apply-success",
+          "title": "提交结果",
+          "type": "status",
+          "order": 4,
           "enterable": false,
           "tour": false
         }

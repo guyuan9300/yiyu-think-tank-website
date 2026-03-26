@@ -3,7 +3,7 @@ import http from 'node:http';
 const PORT = Number(process.env.ARK_PROXY_PORT || 8787);
 const API_KEY = process.env.ARK_API_KEY;
 const BASE_URL = process.env.ARK_BASE_URL || 'https://ark.cn-beijing.volces.com';
-const MODEL = process.env.ARK_MODEL || 'doubao-seed-2-0-pro-260215';
+const MODEL = process.env.ARK_MODEL || 'doubao-seed-2-0-lite-260215';
 
 // 视频接口路径可按火山文档调整
 const VIDEO_CREATE_PATH = process.env.ARK_VIDEO_CREATE_PATH || '/api/v3/contents/generations/tasks';

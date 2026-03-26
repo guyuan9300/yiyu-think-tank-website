@@ -100,6 +100,7 @@ const buildEditorDocument = (contentJson: any, legacyContent?: string | null, co
 import { isValidPdfFile, formatFileSize } from '../lib/pdfUtils';
 import { UserManagementPage } from './UserManagementPage';
 import { PaymentManagementPage } from './PaymentManagementPage';
+import { ConsultRequestsManagementPage } from './ConsultRequestsManagementPage';
 import AdminStrategyCompanionConceptPage from './AdminStrategyCompanionConceptPage';
 import {
   getClientProjects as getStrategyClients,
@@ -471,6 +472,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     { id: 'strategy-companion', label: '战略陪伴', description: '查看战略陪伴客户与项目入口。', icon: <Target className="w-5 h-5" /> },
     { id: 'user-management', label: '用户管理', description: '查看用户、用户类型与访问规则。', icon: <Users className="w-5 h-5" /> },
     { id: 'membership', label: '付费管理', description: '查看付费资格、来源与续期状态。', icon: <Crown className="w-5 h-5" /> },
+    { id: 'consult-requests', label: '咨询申请', description: '查看站内提交的组织诊断申请。', icon: <Send className="w-5 h-5" /> },
     { id: 'invite-codes', label: '邀请码管理', description: '查看邀请码状态与开通来源。', icon: <Gift className="w-5 h-5" /> },
   ];
 
@@ -2307,6 +2309,10 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
           {/* 付费管理 */}
           {activeMenu === 'membership' && (
             <PaymentManagementPage />
+          )}
+
+          {activeMenu === 'consult-requests' && (
+            <ConsultRequestsManagementPage />
           )}
 
           {/* 邀请码管理 */}

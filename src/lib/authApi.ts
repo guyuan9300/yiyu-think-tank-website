@@ -36,6 +36,27 @@ export interface LoginResponseData {
   expiresAt?: string;
 }
 
+export interface ConsultRequestInput {
+  organization: string;
+  name: string;
+  role: string;
+  phone: string;
+  email: string;
+  topic: string;
+  background: string;
+  constraints: string;
+  commitment: string;
+  notes: string;
+}
+
+export interface ConsultRequestRecord extends ConsultRequestInput {
+  id: string;
+  status: string;
+  createdAt?: string;
+  reviewedAt?: string | null;
+  reviewedBy?: string | null;
+}
+
 export async function sendVerifyCode(
   channel: AuthChannel,
   target: string,
@@ -195,6 +216,17 @@ export async function adminAiPrefill(params: {
     method: 'POST',
     body: JSON.stringify(params),
   }, { withAuth: true });
+}
+
+export async function submitConsultRequest(params: ConsultRequestInput) {
+  return authRequest<ConsultRequestRecord>('/consult-requests', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
+}
+
+export async function fetchAdminConsultRequests() {
+  return authRequest<ConsultRequestRecord[]>('/admin/consult-requests', undefined, { withAuth: true });
 }
 
 export function normalizeLoginUser(u: AuthApiUser) {

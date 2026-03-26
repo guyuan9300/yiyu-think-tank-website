@@ -84,7 +84,7 @@ function buildFormInstruction(formUrl: string, fields: YiyuTongCollectedFields) 
     ['机构', fields.organization],
     ['手机号', fields.phone],
     ['邮箱', fields.email],
-    ['需求摘要', fields.note],
+    ['需求摘要', fields.notes || fields.topic],
   ].filter(([, value]) => String(value || '').trim());
 
   const fieldLines = filledRows.length

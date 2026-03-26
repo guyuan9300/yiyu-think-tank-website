@@ -139,6 +139,7 @@ const SITE_PUBLIC_ROOT = process.env.YIYU_SITE_ROOT || '/var/www/yiyu-site';
 const ADMIN_UPLOAD_ROOT = process.env.YIYU_UPLOAD_ROOT || '/var/www/yiyu-site/uploads';
 const ARK_BASE_URL = (process.env.ARK_BASE_URL || 'https://ark.cn-beijing.volces.com').replace(/\/$/, '');
 const ARK_MODEL = process.env.ARK_MODEL || 'doubao-seed-2-0-lite-260215';
+const YIYU_TONG_ARK_MODEL = process.env.YIYU_TONG_ARK_MODEL || 'doubao-seed-2-0-lite-260215';
 const AI_PREFILL_TOPIC_OPTIONS = ['战略', '业务设计', '组织', 'AI 技术'];
 const execFileAsync = promisify(execFile);
 let ocrCapabilityPromise = null;
@@ -1061,6 +1062,7 @@ async function callArkChat(messages, options = {}) {
     throw new Error('未配置火山方舟模型，请先完成后端密钥配置');
   }
 
+  const model = safeText(options.model, ARK_MODEL);
   const maxTokens = Number(options.maxTokens || 600);
   const temperature = Number.isFinite(Number(options.temperature)) ? Number(options.temperature) : 0.2;
   const reasoningEffort = safeText(options.reasoningEffort, 'low');
@@ -1072,7 +1074,7 @@ async function callArkChat(messages, options = {}) {
       Authorization: `Bearer ${process.env.ARK_API_KEY}`,
     },
     body: JSON.stringify({
-      model: ARK_MODEL,
+      model,
       reasoning_effort: reasoningEffort,
       temperature,
       max_tokens: maxTokens,
@@ -1699,7 +1701,7 @@ function buildArkPageAgentPayload(payload) {
   };
 
   return {
-    model: safeText(payload?.model, ARK_MODEL),
+    model: safeText(payload?.model, YIYU_TONG_ARK_MODEL),
     temperature: 0,
     top_p: 0.1,
     max_tokens: 220,
@@ -2752,11 +2754,29 @@ async function ensureSchema() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS consult_requests (
+      id TEXT PRIMARY KEY,
+      organization TEXT NOT NULL,
+      name TEXT NOT NULL,
+      role TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      email TEXT NOT NULL,
+      topic TEXT NOT NULL,
+      background TEXT NOT NULL,
+      constraints TEXT NOT NULL,
+      commitment TEXT NOT NULL,
+      notes TEXT,
+      status TEXT NOT NULL DEFAULT 'new',
+      reviewed_at TIMESTAMPTZ,
+      reviewed_by TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
     CREATE INDEX IF NOT EXISTS idx_comments_content_status_created ON comments(content_id, content_type, status, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_payment_orders_user_created ON payment_orders(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_payment_orders_status_created ON payment_orders(status, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_case_showcases_publish_sort ON case_showcases(is_published, sort_order, created_at ASC);
     CREATE INDEX IF NOT EXISTS idx_case_showcases_slug ON case_showcases(slug);
+    CREATE INDEX IF NOT EXISTS idx_consult_requests_created ON consult_requests(created_at DESC, id DESC);
     CREATE TABLE IF NOT EXISTS project_learning_resources (
       id TEXT PRIMARY KEY,
       project_id TEXT NOT NULL,
@@ -3252,6 +3272,69 @@ async function listAdminUsers() {
   return q.rows.map(mapUser);
 }
 
+function mapConsultRequest(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    organization: safeText(row.organization),
+    name: safeText(row.name),
+    role: safeText(row.role),
+    phone: safeText(row.phone),
+    email: safeText(row.email),
+    topic: safeText(row.topic),
+    background: safeText(row.background),
+    constraints: safeText(row.constraints),
+    commitment: safeText(row.commitment),
+    notes: safeText(row.notes),
+    status: safeText(row.status, 'new'),
+    createdAt: row.created_at,
+    reviewedAt: row.reviewed_at || null,
+    reviewedBy: row.reviewed_by || null,
+  };
+}
+
+async function createConsultRequest(payload) {
+  const organization = safeText(payload.organization);
+  const name = safeText(payload.name);
+  const role = safeText(payload.role);
+  const phone = safeText(payload.phone);
+  const email = safeText(payload.email).toLowerCase();
+  const topic = safeText(payload.topic);
+  const background = safeText(payload.background);
+  const constraints = safeText(payload.constraints);
+  const commitment = safeText(payload.commitment);
+  const notes = safeText(payload.notes);
+
+  if (!organization || !name || !role || !phone || !email || !topic || !background || !constraints || !commitment) {
+    throw new Error('咨询申请字段不完整');
+  }
+  if (!/^1\d{10}$/.test(phone)) {
+    throw new Error('手机号格式不正确');
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error('邮箱格式不正确');
+  }
+
+  const id = `consult_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+  const inserted = await pool.query(
+    `INSERT INTO consult_requests(
+       id, organization, name, role, phone, email, topic, background, constraints, commitment, notes, status, created_at
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'new', now())
+     RETURNING *`,
+    [id, organization, name, role, phone, email, topic, background, constraints, commitment, notes || null]
+  );
+  return mapConsultRequest(inserted.rows[0]);
+}
+
+async function listConsultRequests() {
+  const q = await pool.query(
+    `SELECT *
+     FROM consult_requests
+     ORDER BY created_at DESC, id DESC`
+  );
+  return q.rows.map(mapConsultRequest);
+}
+
 async function listComments({ contentId, contentType, status, scope }) {
   const params = [];
   const where = [];
@@ -3608,7 +3691,7 @@ function mapStrategyLearningResource(row) {
   };
 }
 
-const YIYU_TONG_FORM_URL = process.env.YIYU_DIAGNOSIS_FORM_URL || 'https://hw7oabz548h.feishu.cn/share/base/form/shrcnOlk5n3pQdidooIVje76xUc';
+const YIYU_TONG_FORM_URL = process.env.YIYU_DIAGNOSIS_FORM_URL || '/?page=consult-apply';
 const YIYU_TONG_SOURCE_LIMIT = 3;
 const YIYU_TONG_SOURCE_TYPE_LABELS = {
   insight: '洞察文章',
@@ -4843,9 +4926,11 @@ function getLatestRepresentativeSourceForPage(pageId, sources = []) {
   return pickLatestSourceByType(sources, contentType) || null;
 }
 
-function mapSectionsForTourStop(page) {
+function mapSectionsForTourStop(page, options = {}) {
+  const excludeTypes = new Set(Array.isArray(options.excludeTypes) ? options.excludeTypes : []);
   const sharedSections = getYiyuTongSharedSections()
     .filter((section) => section.tour)
+    .filter((section) => !excludeTypes.has(section.type))
     .map((section) => ({
       id: section.id,
       title: section.title,
@@ -4856,6 +4941,7 @@ function mapSectionsForTourStop(page) {
   const pageSections = Array.isArray(page?.sections)
     ? page.sections
         .filter((section) => section.tour)
+        .filter((section) => !excludeTypes.has(section.type))
         .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
         .map((section) => ({
           id: section.id,
@@ -4900,7 +4986,7 @@ function buildTourStopsFromSiteMap(sources = []) {
           child.level === 'detail' && childLatestSource
             ? `进入${page.label}里的代表性详情页《${childLatestSource.title}》后返回${page.label}。`
             : `进入${child.label}看代表性内容后返回${page.label}。`,
-        sections: mapSectionsForTourStop(child),
+        sections: mapSectionsForTourStop(child, child.level === 'detail' ? { excludeTypes: ['comments'] } : {}),
         isRepresentativeChild: true,
         isRepresentativeDetail: child.level === 'detail',
         returnUrl: page.url,
@@ -4920,7 +5006,7 @@ function buildTourStopsFromSiteMap(sources = []) {
         }
         continue;
       }
-      const representativeDetail = child.representativeDetail;
+      const representativeDetail = child.tourRepresentativeDetail === true ? child.representativeDetail : null;
       const latestSource = representativeDetail
         ? childLatestSource
         : null;
@@ -4934,7 +5020,7 @@ function buildTourStopsFromSiteMap(sources = []) {
           url: latestSource.publicUrl,
           pageId: detailPage.id,
           summary: `进入${child.label}里的代表性详情页《${latestSource.title}》后返回${child.label}。`,
-          sections: mapSectionsForTourStop(detailPage),
+          sections: mapSectionsForTourStop(detailPage, { excludeTypes: ['comments'] }),
           isRepresentativeDetail: true,
           returnUrl: child.url,
           returnPageId: child.id,
@@ -4982,8 +5068,13 @@ function getAssistantMissingFields(fields) {
   const missing = [];
   if (!safeText(fields.organization)) missing.push('机构');
   if (!safeText(fields.name)) missing.push('姓名');
-  if (!safeText(fields.phone) && !safeText(fields.email)) missing.push('手机号或邮箱');
-  if (!safeText(fields.note)) missing.push('需求摘要');
+  if (!safeText(fields.role)) missing.push('角色');
+  if (!safeText(fields.phone)) missing.push('手机号');
+  if (!safeText(fields.email)) missing.push('邮箱');
+  if (!safeText(fields.topic)) missing.push('核心问题');
+  if (!safeText(fields.background)) missing.push('已有尝试');
+  if (!safeText(fields.constraints)) missing.push('阻力或约束');
+  if (!safeText(fields.commitment)) missing.push('可投入资源');
   return missing;
 }
 
@@ -5053,6 +5144,7 @@ function buildSiteTaskGraphResponse({
   pageId = '',
   completionCheck = null,
   fallbackPlan = null,
+  formContext = null,
   route = [],
   completionRules = [],
   failureRules = [],
@@ -5097,7 +5189,7 @@ function buildSiteTaskGraphResponse({
     failureRules,
     finalState: finalState || buildFinalState({ pageId, url: expectedUrl, note: successMessage || message }),
     executionPlan: buildSameTabExecutionPlan({
-      kind: mode === 'mixed_task' ? 'mixed_task' : 'site_task',
+      kind: mode === 'site_tour' ? 'site_tour' : mode === 'mixed_task' ? 'mixed_task' : 'site_task',
       prompt: prompt || graphPrompt || message,
       graphSteps,
       expectedUrl: expectedUrl || '',
@@ -5109,6 +5201,7 @@ function buildSiteTaskGraphResponse({
       completionCheck,
     }),
     fallbackPlan,
+    formContext,
   });
 }
 
@@ -5998,6 +6091,7 @@ async function planAssistantTaskWithArk(question, sources, currentUrl) {
       parentId: page.parentId || '',
       representativeChildren: Array.isArray(page.representativeChildren) ? page.representativeChildren : [],
       representativeDetailPageId: safeText(page.representativeDetail?.pageId || ''),
+      tourRepresentativeDetail: page.tourRepresentativeDetail === true,
       sections: summarizeSections(page),
     };
   };
@@ -6125,8 +6219,8 @@ async function planAssistantTaskWithArk(question, sources, currentUrl) {
           '只有真正无需页面操作时，才返回 answer；如果用户既要先定位官网里的某个页面或区域，又要你说明该页相关信息，请返回 mixed_task。',
           '多目标任务默认按顺序全部完成。',
           '模糊导航优先落到最合适的列表页并筛选，而不是直接放弃执行。',
-          '站内导览时，应优先使用官网地图里定义的一级页面、代表性二级页、代表性详情页和区块顺序。',
-          '详情页不是二级页面，但可以作为代表性进入页；公开导览默认不进入个人中心等功能页。',
+          '站内导览时，应优先使用官网地图里定义的一级页面、代表性二级页和区块顺序。',
+          '详情页不是二级页面；只有站点地图明确允许时，才把详情页作为代表性进入页。公开导览默认不进入个人中心等功能页。',
           '用户最不了解官网，你最了解官网；因此要主动把模糊指令翻译成清晰路线，不要要求用户先学会网站结构。',
           '路线里要写清楚去哪些页面、先后顺序、哪些只是定位区域、哪些页面默认进入后返回、什么算完成。',
           '如果用户要混合任务，你可以同时指定页面定位目标和说明需求；最终说明会在任务结束后附出处。',
@@ -6210,9 +6304,11 @@ async function extractConsultFields(question, knownUserInfo, history = [], exist
   const fallback = mergeCollectedFields({
     name: safeText(knownUserInfo?.nickname || ''),
     organization: safeText(knownUserInfo?.organization || ''),
+    role: safeText(knownUserInfo?.role || ''),
     phone: safeText(knownUserInfo?.phone || ''),
     email: safeText(knownUserInfo?.email || ''),
-    note: safeText(question || historyText),
+    topic: safeText(existingFields?.topic || question || historyText),
+    notes: safeText(existingFields?.notes || ''),
   }, existingFields);
 
   if (!isArkReady()) {
@@ -6225,10 +6321,10 @@ async function extractConsultFields(question, knownUserInfo, history = [], exist
         role: 'system',
         content: [
           '你是一个表单字段提取助手。',
-          '请根据用户输入和已有资料，提取咨询申请所需字段。',
+          '请根据用户输入和已有资料，提取组织诊断申请所需字段。',
           '如果字段不确定就返回空字符串。',
-          '备注字段用一句话概括用户需求。',
-          '只返回 JSON，格式为 {"name":"","organization":"","phone":"","email":"","note":""}。',
+          '核心问题、已有尝试、阻力/约束、可投入资源都应尽量保留用户原意。',
+          '只返回 JSON，格式为 {"name":"","organization":"","role":"","phone":"","email":"","topic":"","background":"","constraints":"","commitment":"","notes":""}。',
         ].join(''),
       },
       {
@@ -6248,9 +6344,14 @@ async function extractConsultFields(question, knownUserInfo, history = [], exist
     return mergeCollectedFields(fallback, {
       name: safeText(parsed.name, fallback.name),
       organization: safeText(parsed.organization, fallback.organization),
+      role: safeText(parsed.role, fallback.role),
       phone: safeText(parsed.phone, fallback.phone),
       email: safeText(parsed.email, fallback.email),
-      note: safeText(parsed.note, fallback.note),
+      topic: safeText(parsed.topic, fallback.topic),
+      background: safeText(parsed.background, fallback.background),
+      constraints: safeText(parsed.constraints, fallback.constraints),
+      commitment: safeText(parsed.commitment, fallback.commitment),
+      notes: safeText(parsed.notes, fallback.notes),
     });
   } catch {
     return fallback;
@@ -6333,65 +6434,87 @@ async function buildAssistantResponse(payload) {
       activeFormContext?.fields || {}
     );
     const missingFields = getAssistantMissingFields(collectedFields);
+    const canSubmit = missingFields.length === 0;
+    const graphSteps = [
+      buildGraphStep('open_consult_apply', 'open_url', {
+        target: YIYU_TONG_FORM_URL,
+        pageId: 'consult-apply',
+        detail: '进入组织诊断申请表。',
+      }),
+      buildGraphStep('fill_consult_apply', 'fill_local_form_fields', {
+        fields: collectedFields,
+        detail: '把你刚才提供的信息写进表单。',
+      }),
+      ...(canSubmit
+        ? [
+            buildGraphStep('submit_consult_apply', 'submit_local_form', {
+              detail: '提交组织诊断申请。',
+            }),
+          ]
+        : []),
+    ];
 
-    return buildAssistantResponseEnvelope({
+    return buildSiteTaskGraphResponse({
       mode: 'form_task',
-      goal: plannerGoal || '帮用户推进咨询申请并自动填写正式表单',
+      goal: plannerGoal || '帮用户填写并提交组织诊断申请',
+      prompt: [
+        `请在益语官网当前标签页内完成这个请求：${question}`,
+        '目标是打开组织诊断申请表，并把用户已经提供的字段写进去。',
+        canSubmit
+          ? '当前所需字段已经足够，请在填写完成后直接点击提交。'
+          : `当前仍缺少这些字段：${missingFields.join('、')}。请先填写已知字段，不要盲填缺失字段。`,
+        '如果页面出现“咨询申请已提交，我们会尽快与您联系”或等价成功提示，就立刻 done。',
+      ].join('\n'),
       entities: {
         query: safeText(question),
       },
-      message: missingFields.length
-        ? `我已经先把你提供的信息写进正式申请表了，还缺：${missingFields.join('、')}。你可以继续直接告诉我，我会继续帮你补填。`
-        : '我已经打开正式申请表，并先填好了你刚才提供的信息。你可以继续补充需求，我会继续帮你写入表单。',
+      message: canSubmit
+        ? '我来直接帮你填写并提交组织诊断申请。'
+        : `我先帮你把已知信息写进申请表，还缺：${missingFields.join('、')}。你继续直接告诉我，我会继续补填。`,
       steps: buildAssistantSteps(
-        buildAssistantStep('understanding', '正在理解你的目标', '识别到你想发起咨询或合作申请。'),
-        buildAssistantStep('planning', '正在规划操作步骤', '计划直接打开正式申请表，并把你已提供的信息先写进去。'),
-        buildAssistantStep('locating', '正在定位相关页面', '准备在新标签页中定位飞书正式申请表。'),
-        buildAssistantStep('acting', '正在操作页面', missingFields.length ? `正在填写已知字段，稍后继续补填：${missingFields.join('、')}。` : '正在把已知信息写入正式申请表。'),
+        buildAssistantStep('understanding', '理解申请内容', '识别到你想发起组织诊断申请。'),
+        buildAssistantStep('planning', '规划填写路径', canSubmit ? '准备打开申请表、填写字段并直接提交。' : `准备打开申请表并先写入已知字段，稍后继续补齐：${missingFields.join('、')}。`),
+        buildAssistantStep('locating', '定位申请表', '准备进入站内组织诊断申请表。'),
+        buildAssistantStep('acting', '填写申请信息', canSubmit ? '正在写入字段并提交申请。' : '正在把你已提供的信息写入申请表。'),
       ),
-      route: buildRouteFromTargets([{
-        label: '咨询申请表单',
-        target: YIYU_TONG_FORM_URL,
-        pageId: 'consult-apply',
-        detail: '打开正式申请表并持续补填字段',
-      }]),
-      completionRules: buildTaskRules(['mixed_task_done']),
+      route: buildRouteFromTargets([
+        {
+          label: '组织诊断申请表',
+          target: YIYU_TONG_FORM_URL,
+          pageId: 'consult-apply',
+          detail: canSubmit ? '打开站内申请表，填写并提交' : '打开站内申请表并持续补填字段',
+        },
+      ]),
+      completionRules: buildTaskRules([canSubmit ? 'form_submitted' : 'detail_opened']),
       failureRules: buildFailureRules('not_found_notice'),
+      graphSteps,
+      successMessage: canSubmit
+        ? '组织诊断申请已提交，我们会尽快与您联系。'
+        : `已写入当前已知字段，还缺：${missingFields.join('、')}。`,
+      completionCheck: canSubmit
+        ? {
+            type: 'local_form_submission',
+            statusText: '咨询申请已提交，我们会尽快与您联系',
+          }
+        : null,
+      expectedUrl: YIYU_TONG_FORM_URL,
+      pageId: 'consult-apply',
       finalState: buildFinalState({
         pageId: 'consult-apply',
         url: YIYU_TONG_FORM_URL,
-        note: missingFields.length
-          ? `已写入已知字段，还缺：${missingFields.join('、')}`
-          : '已写入当前已知字段，等待用户最终确认提交。',
+        note: canSubmit
+          ? '组织诊断申请已提交，我们会尽快与您联系。'
+          : `已打开站内申请表并写入已知字段，还缺：${missingFields.join('、')}。`,
       }),
-      executionPlan: buildMultiTabExecutionPlan({
-        prompt: [
-          `在新标签页打开这个飞书表单：${YIYU_TONG_FORM_URL}`,
-          '如果已经存在对应的飞书表单标签页，就切换过去继续填写，不要重复新开多个相同标签页。',
-          '请填写以下已经明确给出的信息，不要编造，也不要点击最终提交按钮。',
-          ...[
-            ['姓名', collectedFields.name],
-            ['机构', collectedFields.organization],
-            ['手机号', collectedFields.phone],
-            ['邮箱', collectedFields.email],
-            ['需求摘要', collectedFields.note],
-          ]
-            .filter(([, value]) => safeText(value))
-            .map(([label, value]) => `${label}：${safeText(value)}`),
-        ].join('\n'),
-        formUrl: YIYU_TONG_FORM_URL,
-        fields: collectedFields,
-        missingFields,
-      }),
+      fallbackPlan: {
+        action: buildAssistantAction('open_consult_form', '打开组织诊断申请表', YIYU_TONG_FORM_URL, collectedFields),
+      },
       formContext: {
         active: true,
         formUrl: YIYU_TONG_FORM_URL,
         fields: collectedFields,
         missingFields,
-        extensionRequired: true,
-      },
-      fallbackPlan: {
-        action: buildAssistantAction('open_consult_form', '打开正式申请表', YIYU_TONG_FORM_URL, collectedFields),
+        extensionRequired: false,
       },
     });
   }
@@ -7644,6 +7767,11 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true, data: await listAdminUsers() });
     }
 
+    if (url.pathname === '/api/auth/admin/consult-requests' && req.method === 'GET') {
+      await requireAdmin(req);
+      return json(res, 200, { ok: true, data: await listConsultRequests() });
+    }
+
     if (url.pathname === '/api/auth/comments' && req.method === 'GET') {
       const scope = url.searchParams.get('scope') || 'public';
       if (scope === 'admin') {
@@ -8183,6 +8311,15 @@ const server = http.createServer(async (req, res) => {
         await revokeSessionByToken(token);
       }
       return json(res, 200, { ok: true, message: '已退出登录' });
+    }
+
+    if (url.pathname === '/api/auth/consult-requests' && req.method === 'POST') {
+      try {
+        const saved = await createConsultRequest(body);
+        return json(res, 200, { ok: true, data: saved, message: '咨询申请已提交，我们会尽快与您联系。' });
+      } catch (error) {
+        return json(res, 400, { ok: false, error: error instanceof Error ? error.message : String(error) });
+      }
     }
 
     if (url.pathname === '/api/auth/profile' && req.method === 'POST') {

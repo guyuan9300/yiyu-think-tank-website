@@ -8,6 +8,7 @@ export const ADMIN_VISIBLE_TABS = [
   'strategy-companion',
   'user-management',
   'membership',
+  'consult-requests',
   'invite-codes',
 ] as const;
 
@@ -20,6 +21,7 @@ export const LEGACY_ADMIN_TAB_MAP: Record<string, AdminTab> = {
   methodologies: 'methodologies',
   'user-management': 'user-management',
   membership: 'membership',
+  'consult-requests': 'consult-requests',
   'invite-codes': 'invite-codes',
   'strategy-companion': 'strategy-companion',
   comments: 'comments',

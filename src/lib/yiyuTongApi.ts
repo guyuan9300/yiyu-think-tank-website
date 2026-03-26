@@ -25,9 +25,14 @@ export interface YiyuTongAction {
 export interface YiyuTongCollectedFields {
   name?: string;
   organization?: string;
+  role?: string;
   phone?: string;
   email?: string;
-  note?: string;
+  topic?: string;
+  background?: string;
+  constraints?: string;
+  commitment?: string;
+  notes?: string;
 }
 
 export interface YiyuTongTaskStep {
@@ -125,6 +130,11 @@ export type YiyuTongSameTabGraphStep =
       id: string;
       type: 'submit_comment';
       detail?: string;
+    }
+  | {
+      id: string;
+      type: 'submit_local_form';
+      detail?: string;
     };
 
 export interface YiyuTongTaskEntities {
@@ -194,6 +204,10 @@ export interface YiyuTongSameTabExecutionPlan {
         contentId: string;
         contentType: 'insight' | 'report' | 'book' | 'methodology';
         expectedText: string;
+      }
+    | {
+        type: 'local_form_submission';
+        statusText: string;
       }
     | null;
 }
