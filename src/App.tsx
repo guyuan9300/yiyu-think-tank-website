@@ -37,6 +37,7 @@ import { StrategyCompanionConceptPage } from './components/StrategyCompanionConc
 import AdminStrategyCompanionConceptPage from './components/AdminStrategyCompanionConceptPage';
 import { ConsultApplyPage } from './components/ConsultApplyPage';
 import { NotFoundPage } from './components/NotFoundPage';
+import { OpenSourceWorkbenchPage } from './components/OpenSourceWorkbenchPage';
 import { StrategyModuleIntroPage } from './components/StrategyModuleIntroPage';
 import { PaymentIntroPage } from './components/PaymentIntroPage';
 import { PaymentCheckoutPage } from './components/PaymentCheckoutPage';
@@ -232,6 +233,7 @@ export default function App() {
     'business-design',
     'org-effectiveness',
     'digital-ai',
+    'open-source-workbench',
 
     '404',
   ]);
@@ -374,7 +376,7 @@ export default function App() {
     }
   }, [currentPage, selectedBookId, selectedDetailId, selectedCaseId, unknownPage]);
 
-  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'terms-of-service' | 'privacy-policy' | 'case' | 'admin' | 'user-center' | 'membership' | 'payment-checkout' | 'payment-result' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply' | 'book-library' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai', bookId?: string, caseId?: string) => {
+  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'terms-of-service' | 'privacy-policy' | 'case' | 'admin' | 'user-center' | 'membership' | 'payment-checkout' | 'payment-result' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply' | 'book-library' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai' | 'open-source-workbench', bookId?: string, caseId?: string) => {
     // Reset scroll on page-level navigation so detail pages always open from the top.
     // (Otherwise the browser may keep the previous scroll position and look like it jumped to the bottom.)
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
@@ -741,6 +743,10 @@ export default function App() {
   // Consult Apply Page - 申请战略咨询（高门槛表单）
   if (currentPage === 'consult-apply') {
     return renderWithYiyuTong(<ConsultApplyPage onBack={() => handleNavigate('home')} />, 'consult-apply');
+  }
+
+  if (currentPage === 'open-source-workbench') {
+    return <OpenSourceWorkbenchPage onNavigate={(page) => handleNavigate(page as any)} />;
   }
 
   // Strategy Module Intro Pages

@@ -65,6 +65,7 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
       { id: 'learning', label: '学习中心', href: '#learning' },
       { id: 'strategy', label: '战略陪伴', href: '#strategy' }, // 所有用户都显示战略陪伴
       { id: 'about', label: '关于我们', href: '#about' },
+      { id: 'open-source-workbench', label: '开源工作台', href: '#open-source-workbench' },
     ];
 
     return baseItems;
