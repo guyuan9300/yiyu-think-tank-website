@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import {
@@ -29,6 +29,25 @@ export function ArticleCenterPage({
   const [articles, setArticles] = useState<InsightArticle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  // AI 封面 manifest (从 vite plugin /api/admin-ai/manifest 拉, 命中的文章用 AI 封面替换原 coverImage)
+  const aiManifestRef = useRef<Record<string, { cover?: any; illustrations?: any[] }>>({});
+
+  // 拉 AI manifest (异步, 命中即覆盖)
+  useEffect(() => {
+    fetch('/api/admin-ai/manifest', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((m) => { aiManifestRef.current = m || {}; })
+      .catch(() => {});
+  }, []);
+
+  // helper: 拿 AI 封面 URL (有就用 AI, 没有就用原 coverImage)
+  const resolveCover = (article: InsightArticle): string | undefined => {
+    const safe = article.id.replace(/[^a-zA-Z0-9_-]/g, '_');
+    if (aiManifestRef.current[article.id]?.cover) {
+      return `/ai-generated/articles/${safe}/cover.jpg`;
+    }
+    return article.coverImage;
+  };
 
   const topicOptions: Array<{ id: 'all' | '战略' | '业务设计' | '组织' | 'AI 技术'; label: string }> = [
     { id: 'all', label: '全部' },
@@ -250,10 +269,11 @@ export function ArticleCenterPage({
                 key={article.id}
                 contentId={article.id}
                 contentType="insight"
-                cover={
-                  article.coverImage ? (
+                cover={(() => {
+                  const cover = resolveCover(article);
+                  return cover ? (
                     <img
-                      src={article.coverImage}
+                      src={cover}
                       alt={article.title}
                       className="absolute inset-0 w-full h-full object-cover"
                       loading="lazy"
@@ -262,8 +282,8 @@ export function ArticleCenterPage({
                     <div className="absolute inset-0 flex items-center justify-center">
                       <FileText className="w-16 h-16 text-primary/10" />
                     </div>
-                  )
-                }
+                  );
+                })()}
                 tags={article.topics || []}
                 title={article.title}
                 excerpt={article.excerpt}
@@ -285,10 +305,11 @@ export function ArticleCenterPage({
                   contentId={article.id}
                   contentType="insight"
                   variant="list"
-                  cover={
-                    article.coverImage ? (
+                  cover={(() => {
+                    const cover = resolveCover(article);
+                    return cover ? (
                       <img
-                        src={article.coverImage}
+                        src={cover}
                         alt={article.title}
                         className="w-full h-full object-cover"
                         loading="lazy"
@@ -297,8 +318,8 @@ export function ArticleCenterPage({
                       <div className="w-full h-full flex items-center justify-center">
                         <FileText className="w-8 h-8 text-primary/20" />
                       </div>
-                    )
-                  }
+                    );
+                  })()}
                   tags={article.topics || []}
                   title={article.title}
                   excerpt={article.excerpt}

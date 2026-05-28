@@ -27,10 +27,16 @@ interface ArticleDetailPageProps {
   onNavigate: (page: string, id?: string) => void;
 }
 
+interface AiManifestEntry {
+  cover?: { filename: string; prompt: string };
+  illustrations?: { filename: string; prompt: string; title: string }[];
+}
+
 export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPageProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [article, setArticle] = useState<InsightArticle | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [aiEntry, setAiEntry] = useState<AiManifestEntry | null>(null);
   const { engagement, toggleLike, toggleFavorite } = useContentEngagement('insight', articleId);
 
   useEffect(() => {
@@ -40,6 +46,24 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
     setArticle(found || null);
     setIsLoading(false);
   }, [articleId]);
+
+  // 加载 AI manifest, 命中此文章则取出对应 cover + illustrations
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/admin-ai/manifest', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((m) => {
+        if (mounted && m && m[articleId]) setAiEntry(m[articleId] as AiManifestEntry);
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, [articleId]);
+
+  // 把 article.coverImage patch 成 AI cover (如果有)
+  const aiCoverUrl = aiEntry?.cover
+    ? `/ai-generated/articles/${articleId.replace(/[^a-zA-Z0-9_-]/g, '_')}/cover.jpg`
+    : null;
+  const aiIllustrations = aiEntry?.illustrations || [];
 
   // 监听用户登录状态（用于启用评论等功能）
   useEffect(() => {
@@ -124,11 +148,11 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
       >
         {/* Ambient background */}
         <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-primary/[0.035] via-background to-background" />
-        {displayArticle.coverImage ? (
+        {(aiCoverUrl || displayArticle.coverImage) ? (
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              backgroundImage: `url(${displayArticle.coverImage})`,
+              backgroundImage: `url(${aiCoverUrl || displayArticle.coverImage})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               filter: 'blur(36px)',
@@ -156,13 +180,20 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
           {/* Cover */}
           <div className="relative rounded-[28px] overflow-hidden border border-border/40 bg-white/40 backdrop-blur-xl shadow-2xl shadow-black/[0.05]">
             <div className="relative aspect-[21/9] sm:aspect-[24/9] bg-gradient-to-br from-success/[0.06] to-accent/[0.06]">
-              {displayArticle.coverImage ? (
-                <img
-                  src={displayArticle.coverImage}
-                  alt={displayArticle.title}
-                  className="absolute inset-0 w-full h-full object-cover"
-                  loading="lazy"
-                />
+              {(aiCoverUrl || displayArticle.coverImage) ? (
+                <>
+                  <img
+                    src={aiCoverUrl || displayArticle.coverImage}
+                    alt={displayArticle.title}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  {aiCoverUrl && (
+                    <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-black/55 text-white text-[10px] font-semibold tracking-[0.08em] backdrop-blur-sm z-10">
+                      AI · Doubao Seedream 4.0
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <BookOpen className="w-14 h-14 text-success/15" />
@@ -223,6 +254,39 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
         className="relative py-16 px-6"
       >
         <div className="relative max-w-4xl mx-auto">
+          {/* AI 章节配图带 (如果 manifest 有) */}
+          {aiIllustrations.length > 0 && (
+            <div className="mb-12">
+              <div className="flex items-center gap-2 mb-5 text-[12px] tracking-[0.16em] font-semibold text-os-blue uppercase">
+                <span className="h-px flex-1 bg-os-line" />
+                AI 章节配图 · {aiIllustrations.length} 张
+                <span className="h-px flex-1 bg-os-line" />
+              </div>
+              <div className="space-y-6">
+                {aiIllustrations.map((ill, i) => {
+                  const safe = articleId.replace(/[^a-zA-Z0-9_-]/g, '_');
+                  return (
+                    <figure key={i} className="rounded-[20px] overflow-hidden ring-1 ring-os-line shadow-os relative">
+                      <img
+                        src={`/ai-generated/articles/${safe}/${ill.filename}`}
+                        alt={ill.title}
+                        className="w-full h-auto block"
+                        style={{ aspectRatio: '1792 / 1024' }}
+                        loading="lazy"
+                      />
+                      <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full bg-black/55 text-white text-[10px] font-semibold tracking-[0.06em] backdrop-blur-sm">
+                        AI 配图 · {i + 1}/{aiIllustrations.length}
+                      </div>
+                      <figcaption className="px-5 py-3 bg-os-paper/95 text-[12.5px] text-os-muted/85 italic border-t border-os-line">
+                        图 {i + 1} · {ill.title}
+                      </figcaption>
+                    </figure>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Article Content */}
           <article className="prose prose-lg max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-muted-foreground/80 prose-p:leading-relaxed prose-a:text-primary hover:prose-a:text-primary/80">
             {(() => {
