@@ -349,47 +349,6 @@ export function ReportsManagement() {
   );
 }
 
-// ============== Module: Site Settings ==============
-export function SiteSettings() {
-  return (
-    <div className="space-y-6 max-w-[900px]">
-      <SectionTitle hint="影响整站 meta / 底部 / ICP / 联系方式 / 公众号">整站设置</SectionTitle>
-
-      <Card>
-        <h4 className="text-[13px] font-semibold text-os-navy mb-3">SEO Meta</h4>
-        <div className="space-y-3">
-          <Field label="网站标题"       defaultValue="益语智库 Yiyu Think Tank · 把战略思想做成 AI 工具的组织陪伴公司" />
-          <Field label="meta description" type="textarea" rows={2} defaultValue="益语智库 - 助力企业持续增长的战略陪伴者..." />
-          <Field label="keywords"        defaultValue="战略陪伴, 组织咨询, AI 工作流, 益语智库" />
-          <Field label="OG image"        defaultValue="/og-image.png" />
-        </div>
-      </Card>
-
-      <Card>
-        <h4 className="text-[13px] font-semibold text-os-navy mb-3">联系方式 / 底部</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="联系电话" defaultValue="占位" />
-          <Field label="联系邮箱" defaultValue="占位" />
-          <Field label="微信公众号"defaultValue="占位" />
-          <Field label="ICP 备案号" defaultValue="占位" />
-          <Field label="ICP 链接"   defaultValue="占位" />
-          <Field label="底部 slogan" defaultValue="把战略思想做成 AI 工具的组织陪伴公司" />
-        </div>
-      </Card>
-
-      <Card>
-        <h4 className="text-[13px] font-semibold text-os-navy mb-3">GitHub / 开源</h4>
-        <Field label="GitHub 仓库 URL" defaultValue="https://github.com/guyuan9300-max/yiyu-thinktank-workbench" />
-      </Card>
-
-      <div className="flex items-center justify-end gap-2 pt-4">
-        <button className="px-5 py-2 rounded-full text-[13px] font-medium text-os-muted hover:text-os-navy">取消</button>
-        <ToolbarButton onClick={() => console.log('保存站点设置')}>保存</ToolbarButton>
-      </div>
-    </div>
-  );
-}
-
 // ============== Module: Members Management ==============
 export function MembersManagement() {
   return (

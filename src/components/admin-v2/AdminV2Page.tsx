@@ -4,7 +4,6 @@ import {
   DashboardOverview,
   ArticlesManagement,
   ReportsManagement,
-  SiteSettings,
   MembersManagement,
   OrdersManagement,
   ConsultRequests,
@@ -22,7 +21,6 @@ export function AdminV2Page({ onNavigate }: { onNavigate: (page: string) => void
       case 'overview':         return <DashboardOverview />;
       case 'articles':         return <ArticlesManagement />;
       case 'reports':          return <ReportsManagement />;
-      case 'site-settings':    return <SiteSettings />;
       case 'members':          return <MembersManagement />;
       case 'orders':           return <OrdersManagement />;
       case 'consult-requests': return <ConsultRequests />;
