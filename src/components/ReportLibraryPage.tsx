@@ -115,12 +115,12 @@ export function ReportLibraryPage({
   // 加载状态
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-os-canvas">
         <Header onNavigate={onNavigate} />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground/70">加载中...</p>
+            <div className="w-10 h-10 border-2 border-os-navy/20 border-t-os-navy rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-os-muted">加载中...</p>
           </div>
         </div>
       </div>
@@ -128,44 +128,41 @@ export function ReportLibraryPage({
   }
 
   return (
-    <div {...getYiyuPageAttrs('report-library')} className="min-h-screen bg-background flex flex-col">
+    <div {...getYiyuPageAttrs('report-library')} className="min-h-screen bg-os-canvas flex flex-col">
       <Header onNavigate={onNavigate} />
 
-      {/* Hero 区域 */}
+      {/* Hero 区域 — 已升级到 open-source-home 设计语言 */}
       <section
         {...getYiyuSectionAttrs('report-library', 'report-library-hero')}
-        className="relative pt-24 sm:pt-32 pb-8 px-4 sm:px-6 overflow-hidden"
+        className="relative pt-24 sm:pt-32 pb-12 px-4 sm:px-6 overflow-hidden bg-os-canvas"
       >
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent" />
+        {/* 极淡光晕 */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-[-20%] left-[12%] w-[40%] h-[60%] rounded-full bg-os-navy/[0.05] blur-[120px]" />
+          <div className="absolute top-[-10%] right-[10%] w-[30%] h-[50%] rounded-full bg-os-blue/[0.04] blur-[120px]" />
+        </div>
 
-        <div className="relative max-w-4xl mx-auto">
-          {/* 面包屑导航 */}
-          <div className="flex items-center gap-2 mb-6 text-[13px] text-muted-foreground/60">
-            <button
-              onClick={() => onNavigate?.('insights')}
-              className="hover:text-foreground transition-colors"
-            >
-              前沿洞察
-            </button>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-foreground">报告库</span>
+        <div className="relative max-w-[1200px] mx-auto">
+          {/* eyebrow */}
+          <div className="flex items-center gap-2.5 mb-6">
+            <span className="h-px w-7 bg-os-navy/60" />
+            <span className="text-[12px] font-semibold tracking-[0.18em] text-os-navy">益语智库 · 报告</span>
           </div>
 
-          {/* 主标题 */}
-          <div className="mb-4">
-            <h1 className="text-[56px] sm:text-[64px] lg:text-[72px] font-semibold leading-[1.05] tracking-[-0.025em] mb-3">
-              报告库
-            </h1>
-            <p className="text-[13px] text-muted-foreground/50 tracking-[0.15em] uppercase font-medium">
-              Report Library
-            </p>
-          </div>
+          {/* 衬线大标题 */}
+          <h1 className="font-serif-display text-[40px] sm:text-[56px] lg:text-[64px] font-semibold leading-[1.12] tracking-tight text-os-ink mb-5">
+            前沿分析、行业研究、
+            <br className="hidden sm:block" />
+            <span className="text-ink-accent">值得读的深度报告</span>
+          </h1>
 
           {/* 副标题 */}
-          <p className="text-[21px] text-muted-foreground/70 leading-[1.5] max-w-3xl font-light">
-            汇集行业研究报告、市场分析和政策解读，助力科学决策
+          <p className="text-[16px] sm:text-[18px] text-os-muted leading-[1.85] max-w-3xl">
+            汇集益语智库自研的分析报告，以及我们持续推荐的行业研究、市场分析、政策解读。
+            <span className="text-os-muted/70 text-[14px] mt-2 block">
+              * 自研与推荐的分类显示功能正在准备中
+            </span>
           </p>
-
         </div>
       </section>
 
