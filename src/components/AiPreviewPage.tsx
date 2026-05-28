@@ -118,10 +118,9 @@ export function AiPreviewPage({ onNavigate }: AiPreviewPageProps) {
                 className="w-full h-auto block"
                 style={{ aspectRatio: '1792 / 1024' }}
               />
-              {/* 右下角 AI 角标 */}
-              <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-black/55 text-white text-[10px] font-semibold backdrop-blur-sm inline-flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
-                豆包 Seedream 4.0
+              {/* 右下角 AI 角标 (纯文本 + 字间距, 避免 icon 渲染问题) */}
+              <div className="absolute bottom-3 right-3 px-3 py-1 rounded-full bg-black/60 text-white text-[10px] font-semibold tracking-[0.08em] backdrop-blur-sm">
+                AI · Doubao Seedream 4.0
               </div>
             </div>
 
