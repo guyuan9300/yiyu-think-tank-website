@@ -233,6 +233,25 @@ export function adminAiPlugin() {
   return {
     name: 'admin-ai',
     configureServer(server) {
+      // 备份转发: /api/content-snapshot → yiyu.love (用 node 原生 fetch, 绕过 vite http-proxy 偶发 TLS 卡死)
+      // 这样 admin-v2 报告模块 + 前台 dataService 都能拿到数据.
+      server.middlewares.use('/api/content-snapshot', async (req, res, next) => {
+        if (req.method !== 'GET') return next();
+        try {
+          const r = await fetch('https://yiyu.love/api/content-snapshot', { cache: 'no-store' });
+          const text = await r.text();
+          res.statusCode = r.status;
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-store');
+          res.end(text);
+        } catch (e) {
+          console.error('[content-snapshot forward]', e?.message);
+          res.statusCode = 502;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'upstream yiyu.love unreachable: ' + (e?.message || e) }));
+        }
+      });
+
       server.middlewares.use('/api/admin-ai', async (req, res, next) => {
         try {
           const fullUrl = req.url || '';
