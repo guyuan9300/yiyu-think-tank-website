@@ -58,7 +58,9 @@ export function ResetPasswordPage({ onNavigate }: ResetPasswordPageProps) {
   };
 
   return (
-    <div {...getYiyuPageAttrs('reset-password')} className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4">
+    <div {...getYiyuPageAttrs('reset-password')} className="min-h-screen bg-os-canvas flex items-center justify-center px-4 relative">
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(900px_circle_at_20%_10%,rgba(44,111,208,0.10),transparent_55%)]" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(900px_circle_at_80%_20%,rgba(124,58,237,0.08),transparent_55%)]" />
       <div className="w-full max-w-md">
         <div
           {...getYiyuSectionAttrs('reset-password', 'reset-password-form')}
@@ -69,7 +71,7 @@ export function ResetPasswordPage({ onNavigate }: ResetPasswordPageProps) {
             返回登录
           </button>
 
-          <h1 className="mt-6 text-2xl font-bold text-gray-900">重置密码</h1>
+          <h1 className="mt-6 font-serif-display text-[28px] sm:text-[32px] font-semibold tracking-tight text-os-ink">重置密码</h1>
           <p className="mt-2 text-sm text-muted-foreground">请输入收到的验证码并设置新密码。</p>
           <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-3 text-[13px] text-blue-700">
             同一账号只保留一个密码。若手机号和邮箱已同时绑定到该账号，重置后两种登录方式都会使用这一个新密码。
@@ -83,7 +85,7 @@ export function ResetPasswordPage({ onNavigate }: ResetPasswordPageProps) {
               <label className="block text-sm font-medium text-muted-foreground mb-2">重置目标</label>
               <div className="relative">
                 {channel === 'email' ? <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" /> : <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />}
-                <input value={target} readOnly className="w-full py-3 pl-12 pr-4 rounded-full border border-border/60 text-sm bg-gray-50 text-gray-600" />
+                <input value={target} readOnly className="w-full py-3 pl-12 pr-4 rounded-full border border-border/60 text-sm bg-os-mist/30 text-os-muted" />
               </div>
             </div>
 
@@ -120,7 +122,7 @@ export function ResetPasswordPage({ onNavigate }: ResetPasswordPageProps) {
           </form>
 
           {success && (
-            <button type="button" onClick={() => onNavigate?.('login')} className="mt-4 w-full py-3 rounded-full bg-gray-900 text-white font-medium hover:bg-gray-800 transition">
+            <button type="button" onClick={() => onNavigate?.('login')} className="mt-4 w-full py-3 rounded-full bg-os-navy text-white font-semibold hover:bg-os-navy/90 transition">
               去登录
             </button>
           )}

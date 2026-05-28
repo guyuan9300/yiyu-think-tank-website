@@ -68,7 +68,9 @@ export function ForgotPasswordPage({ onNavigate }: ForgotPasswordPageProps) {
   };
 
   return (
-    <div {...getYiyuPageAttrs('forgot-password')} className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4">
+    <div {...getYiyuPageAttrs('forgot-password')} className="min-h-screen bg-os-canvas flex items-center justify-center px-4 relative">
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(900px_circle_at_20%_10%,rgba(44,111,208,0.10),transparent_55%)]" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(900px_circle_at_80%_20%,rgba(124,58,237,0.08),transparent_55%)]" />
       <div className="w-full max-w-md">
         <div
           {...getYiyuSectionAttrs('forgot-password', 'forgot-password-form')}
@@ -79,7 +81,7 @@ export function ForgotPasswordPage({ onNavigate }: ForgotPasswordPageProps) {
             返回登录
           </button>
 
-          <h1 className="mt-6 text-2xl font-bold text-gray-900">找回密码</h1>
+          <h1 className="mt-6 font-serif-display text-[28px] sm:text-[32px] font-semibold tracking-tight text-os-ink">找回密码</h1>
           <p className="mt-2 text-sm text-muted-foreground">支持邮箱找回和手机找回。输入对应账号后，使用验证码即可重设密码。</p>
           <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-3 text-[13px] text-blue-700">
             若手机号和邮箱已绑定到同一账号，通过任一已绑定方式重置后，该账号的密码都会同步更新。

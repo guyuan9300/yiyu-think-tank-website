@@ -124,8 +124,8 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
   return (
     <div {...getYiyuPageAttrs('login')} className="min-h-screen bg-background">
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/[0.04] via-transparent to-transparent" />
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(900px_circle_at_20%_10%,rgba(59,130,246,0.10),transparent_55%)]" />
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(900px_circle_at_80%_20%,rgba(168,85,247,0.08),transparent_55%)]" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(900px_circle_at_20%_10%,rgba(44,111,208,0.10),transparent_55%)]" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(900px_circle_at_80%_20%,rgba(124,58,237,0.08),transparent_55%)]" />
       {/* Login Form */}
       <div className="min-h-screen flex items-center justify-center px-4 py-10">
         <div
@@ -159,7 +159,7 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
           {/* Access rule card removed (避免与左侧说明重复) */}
 
           {/* Title */}
-          <h2 className="text-[26px] font-semibold text-foreground mb-2">欢迎回来</h2>
+          <h2 className="font-serif-display text-[28px] sm:text-[32px] font-semibold text-foreground mb-2 tracking-tight">欢迎回来</h2>
           <p className="text-muted-foreground/70 text-[14px] mb-8">
             还没有账号？{' '}
             <button

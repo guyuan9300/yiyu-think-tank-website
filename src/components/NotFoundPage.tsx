@@ -9,7 +9,7 @@ export function NotFoundPage({ unknownPage, onGoHome }: { unknownPage?: string; 
             <AlertTriangle className="w-6 h-6 text-primary" />
           </div>
           <div className="flex-1">
-            <h1 className="text-2xl font-semibold tracking-tight">页面不存在</h1>
+            <h1 className="font-serif-display text-[28px] sm:text-[32px] font-semibold tracking-tight text-os-ink">页面不存在</h1>
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
               你打开的链接目前无法识别。
               {unknownPage ? (

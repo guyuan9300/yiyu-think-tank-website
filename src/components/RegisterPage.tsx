@@ -208,8 +208,8 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
   return (
     <div {...getYiyuPageAttrs('register')} className="min-h-screen bg-background">
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/[0.04] via-transparent to-transparent" />
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(900px_circle_at_20%_10%,rgba(59,130,246,0.10),transparent_55%)]" />
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(900px_circle_at_80%_20%,rgba(168,85,247,0.08),transparent_55%)]" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(900px_circle_at_20%_10%,rgba(44,111,208,0.10),transparent_55%)]" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(900px_circle_at_80%_20%,rgba(124,58,237,0.08),transparent_55%)]" />
       {/* Register Form */}
       <div className="min-h-screen flex items-center justify-center px-4 py-10">
         <div
@@ -244,7 +244,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
 
           {/* Title Section */}
           <div className="mb-8">
-            <h2 className="text-[28px] font-semibold text-foreground mb-2 tracking-tight">
+            <h2 className="font-serif-display text-[28px] sm:text-[32px] font-semibold text-foreground mb-2 tracking-tight">
               创建账户
             </h2>
             <p className="text-gray-500 text-[13px]">
