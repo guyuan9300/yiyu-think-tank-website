@@ -332,6 +332,334 @@ function ApiKeyField({ defaultMasked, source, storageKey }: { defaultMasked: str
   );
 }
 
+// ============================================================
+// 真接通: 调豆包图像生成 (走 vite dev proxy → 火山引擎方舟)
+// ============================================================
+const DEFAULT_IMAGE_MODEL = 'doubao-seedream-4-0-250828';
+const DEFAULT_IMAGE_PROMPT = '为益语智库文章《组织经营是一个整体》生成封面。深蓝紫主色 (#16265E 到 #7C3AED), 现代中国风, 抽象象征, 留白多, 不要任何文字, 16:9 横版构图';
+
+function ImageGenerationTester() {
+  const [prompt, setPrompt] = useState(DEFAULT_IMAGE_PROMPT);
+  const [size, setSize] = useState('1024x1024');
+  const [model, setModel] = useState(DEFAULT_IMAGE_MODEL);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<{ url: string; elapsedMs: number; usage?: any; size: string; model: string } | null>(null);
+
+  const handleGenerate = async () => {
+    if (!prompt.trim()) {
+      showToast('Prompt 不能为空', 'error');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    const t0 = Date.now();
+    try {
+      const resp = await fetch('/api/admin/ai/images/generations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, prompt, size, n: 1, response_format: 'url' }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        const msg = data?.error?.message || `HTTP ${resp.status}`;
+        setError(msg);
+        showToast(`生成失败: ${msg.slice(0, 80)}`, 'error');
+        return;
+      }
+      const url = data?.data?.[0]?.url;
+      if (!url) {
+        setError('返回无 image url: ' + JSON.stringify(data).slice(0, 200));
+        return;
+      }
+      setResult({ url, elapsedMs: Date.now() - t0, usage: data?.usage, size, model });
+      showToast(`✓ 生成成功 · ${Math.round((Date.now() - t0) / 1000)}s`, 'success');
+    } catch (e: any) {
+      const msg = e?.message || String(e);
+      setError(msg);
+      showToast(`异常: ${msg}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inputCls = 'w-full px-3 py-2 rounded-[10px] bg-os-canvas ring-1 ring-os-line text-[13px] focus:outline-none focus:ring-2 focus:ring-os-navy/30';
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {/* 左: 输入 */}
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <label className="text-[12px] font-semibold text-os-muted">测试 Prompt</label>
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            rows={5}
+            disabled={loading}
+            className={`${inputCls} resize-y font-mono`}
+            placeholder="描述要生成的画面..."
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-[12px] font-semibold text-os-muted">模型</label>
+            <select value={model} onChange={(e) => setModel(e.target.value)} disabled={loading} className={`${inputCls} cursor-pointer`}>
+              <option value="doubao-seedream-4-0-250828">Seedream 4.0 · 推荐 · 1024² 起</option>
+              <option value="doubao-seedream-4-5-251128">Seedream 4.5 · 需 ≥1920²</option>
+              <option value="doubao-seedream-5-0-260128">Seedream 5.0 · 最新 · 需 ≥1920²</option>
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[12px] font-semibold text-os-muted">尺寸</label>
+            <select value={size} onChange={(e) => setSize(e.target.value)} disabled={loading} className={`${inputCls} cursor-pointer`}>
+              <option value="1024x1024">1024 × 1024 (正方)</option>
+              <option value="1792x1024">1792 × 1024 (横 · 文章封面)</option>
+              <option value="1024x1792">1024 × 1792 (竖 · 海报)</option>
+              <option value="2048x2048">2048 × 2048 (4.5/5.0 需)</option>
+            </select>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <ToolbarButton onClick={handleGenerate}>
+            {loading
+              ? <><span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />生成中...</>
+              : <><Send className="w-3.5 h-3.5" />发起测试生成</>}
+          </ToolbarButton>
+          {result && (
+            <button
+              onClick={() => { navigator.clipboard?.writeText(result.url); showToast('图片 URL 已复制', 'info'); }}
+              className="px-3 py-1.5 rounded-full text-[12px] text-os-blue hover:text-os-navy inline-flex items-center gap-1"
+            >
+              <Copy className="w-3 h-3" />复制 URL
+            </button>
+          )}
+        </div>
+        <p className="text-[11px] text-os-muted/75 leading-relaxed">
+          走 vite dev proxy <code className="font-mono">/api/admin/ai/images/generations</code> →
+          火山引擎方舟 (API Key 由 .env.local 的 <code className="font-mono">ARK_API_KEY</code> 注入,前端 bundle 看不到)
+        </p>
+      </div>
+
+      {/* 右: 结果 */}
+      <div>
+        <div className="text-[12px] font-semibold text-os-muted mb-2">生成结果</div>
+        {loading && (
+          <div className="aspect-square rounded-[12px] bg-os-canvas ring-1 ring-os-line border-dashed flex flex-col items-center justify-center text-[12px] text-os-muted">
+            <span className="inline-block w-8 h-8 border-2 border-os-navy/20 border-t-os-navy rounded-full animate-spin mb-3" />
+            正在调用豆包 Seedream...
+            <span className="mt-1 text-[11px] text-os-muted/70">通常 8–15 秒</span>
+          </div>
+        )}
+        {!loading && !result && !error && (
+          <div className="aspect-square rounded-[12px] bg-gradient-to-br from-os-mist/40 to-os-canvas ring-1 ring-os-line border-dashed flex items-center justify-center">
+            <div className="text-center text-[12px] text-os-muted/60">
+              <ImageIcon className="w-10 h-10 mx-auto mb-2 opacity-40" />
+              点击左侧"发起测试生成"
+            </div>
+          </div>
+        )}
+        {error && !loading && (
+          <div className="rounded-[12px] bg-rose-50 ring-1 ring-rose-200 p-4 text-[12px] text-rose-700">
+            <div className="font-semibold mb-1 inline-flex items-center gap-1"><AlertCircle className="w-4 h-4" />生成失败</div>
+            <pre className="whitespace-pre-wrap font-mono text-[11px] text-rose-900/85 leading-relaxed">{error}</pre>
+          </div>
+        )}
+        {result && !loading && (
+          <div className="space-y-3">
+            <div className="rounded-[12px] overflow-hidden ring-1 ring-os-line bg-os-canvas relative">
+              <img
+                src={result.url}
+                alt="豆包 Seedream 生成"
+                className="w-full h-auto block"
+                style={{ aspectRatio: result.size.replace('x', ' / ') }}
+              />
+              <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full bg-black/55 text-white text-[10px] font-semibold backdrop-blur-sm">
+                AI · {result.model.replace('doubao-', '')}
+              </div>
+            </div>
+            <div className="rounded-[12px] bg-os-canvas ring-1 ring-os-line p-3 space-y-1.5 text-[12px]">
+              <div className="flex items-center justify-between text-os-muted">
+                <span>模型</span><span className="font-mono text-os-ink truncate ml-2">{result.model}</span>
+              </div>
+              <div className="flex items-center justify-between text-os-muted">
+                <span>尺寸</span><span className="font-mono text-os-ink">{result.size}</span>
+              </div>
+              <div className="flex items-center justify-between text-os-muted">
+                <span>耗时</span><span className="font-mono text-os-ink">{(result.elapsedMs / 1000).toFixed(1)} s</span>
+              </div>
+              {result.usage?.generated_images != null && (
+                <div className="flex items-center justify-between text-os-muted">
+                  <span>已生成</span><span className="font-mono text-os-ink">{result.usage.generated_images} 张 · {result.usage.total_tokens} tokens</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-os-muted">
+                <span>状态</span>
+                <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold"><Check className="w-3 h-3" />completed</span>
+              </div>
+              <div className="border-t border-os-line pt-2 flex items-center gap-2 justify-end">
+                <a href={result.url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-os-blue hover:text-os-navy">在新标签页打开</a>
+                <a href={result.url} download className="text-[11px] text-os-blue hover:text-os-navy">下载</a>
+              </div>
+              <p className="text-[11px] text-os-muted/70 leading-relaxed pt-1">
+                ⚠️ 此 URL 24 小时后过期 (X-Tos-Expires=86400). 生产环境需下载到自己服务器永久化.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// 真接通: 调豆包文本生成 (走同一个 dev proxy → chat/completions)
+// ============================================================
+function ChatCompletionTester() {
+  const [userMsg, setUserMsg] = useState('用一句话介绍益语智库做的事情');
+  const [model, setModel] = useState('doubao-seed-2-0-pro-260215');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<{ content: string; elapsedMs: number; usage?: any; model: string } | null>(null);
+
+  const handleSend = async () => {
+    if (!userMsg.trim()) {
+      showToast('User Message 不能为空', 'error');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    const t0 = Date.now();
+    try {
+      const resp = await fetch('/api/admin/ai/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: userMsg }],
+          max_tokens: 1024,
+          temperature: 0.7,
+        }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        const msg = data?.error?.message || `HTTP ${resp.status}`;
+        setError(msg);
+        showToast(`调用失败: ${msg.slice(0, 80)}`, 'error');
+        return;
+      }
+      const content = data?.choices?.[0]?.message?.content || '';
+      if (!content) {
+        setError('返回无 content: ' + JSON.stringify(data).slice(0, 200));
+        return;
+      }
+      setResult({ content, elapsedMs: Date.now() - t0, usage: data?.usage, model: data?.model || model });
+      showToast(`✓ 调用成功 · ${(Date.now() - t0)} ms`, 'success');
+    } catch (e: any) {
+      const msg = e?.message || String(e);
+      setError(msg);
+      showToast(`异常: ${msg}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inputCls = 'w-full px-3 py-2 rounded-[10px] bg-os-canvas ring-1 ring-os-line text-[13px] focus:outline-none focus:ring-2 focus:ring-os-navy/30';
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {/* 左: 输入 */}
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <label className="text-[12px] font-semibold text-os-muted">User Message</label>
+          <textarea
+            value={userMsg}
+            onChange={(e) => setUserMsg(e.target.value)}
+            rows={6}
+            disabled={loading}
+            className={`${inputCls} resize-y`}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-[12px] font-semibold text-os-muted">模型</label>
+          <select value={model} onChange={(e) => setModel(e.target.value)} disabled={loading} className={`${inputCls} cursor-pointer`}>
+            <option value="doubao-seed-2-0-pro-260215">doubao-seed-2-0-pro-260215 · 推荐</option>
+            <option value="doubao-seed-2-0-lite-260215">doubao-seed-2-0-lite-260215 · 轻量</option>
+            <option value="doubao-seed-2-0-mini-260215">doubao-seed-2-0-mini-260215</option>
+            <option value="doubao-1-5-pro-32k-250115">doubao-1-5-pro-32k-250115</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <ToolbarButton onClick={handleSend}>
+            {loading
+              ? <><span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />调用中...</>
+              : <><Send className="w-3.5 h-3.5" />发起测试调用</>}
+          </ToolbarButton>
+          {result && (
+            <button
+              onClick={() => { navigator.clipboard?.writeText(result.content); showToast('回复内容已复制', 'info'); }}
+              className="px-3 py-1.5 rounded-full text-[12px] text-os-blue hover:text-os-navy inline-flex items-center gap-1"
+            >
+              <Copy className="w-3 h-3" />复制回复
+            </button>
+          )}
+        </div>
+        <p className="text-[11px] text-os-muted/75 leading-relaxed">
+          走 vite dev proxy <code className="font-mono">/api/admin/ai/chat/completions</code> →
+          火山引擎方舟 Chat Completions (OpenAI 兼容)
+        </p>
+      </div>
+
+      {/* 右: 结果 */}
+      <div>
+        <div className="text-[12px] font-semibold text-os-muted mb-2">回复</div>
+        {loading && (
+          <div className="rounded-[12px] bg-os-canvas ring-1 ring-os-line border-dashed h-40 flex flex-col items-center justify-center text-[12px] text-os-muted">
+            <span className="inline-block w-7 h-7 border-2 border-os-navy/20 border-t-os-navy rounded-full animate-spin mb-2" />
+            正在调用豆包...
+          </div>
+        )}
+        {!loading && !result && !error && (
+          <div className="rounded-[12px] bg-gradient-to-br from-os-mist/40 to-os-canvas ring-1 ring-os-line border-dashed h-40 flex items-center justify-center text-[12px] text-os-muted/60">
+            点击左侧"发起测试调用"
+          </div>
+        )}
+        {error && !loading && (
+          <div className="rounded-[12px] bg-rose-50 ring-1 ring-rose-200 p-4 text-[12px] text-rose-700">
+            <div className="font-semibold mb-1 inline-flex items-center gap-1"><AlertCircle className="w-4 h-4" />调用失败</div>
+            <pre className="whitespace-pre-wrap font-mono text-[11px] text-rose-900/85 leading-relaxed">{error}</pre>
+          </div>
+        )}
+        {result && !loading && (
+          <div className="space-y-3">
+            <div className="rounded-[12px] bg-os-canvas ring-1 ring-os-line p-4 max-h-[400px] overflow-y-auto">
+              <pre className="text-[12.5px] text-os-ink/90 whitespace-pre-wrap font-sans leading-relaxed">{result.content}</pre>
+            </div>
+            <div className="rounded-[12px] bg-os-canvas ring-1 ring-os-line p-3 space-y-1.5 text-[12px]">
+              <div className="flex items-center justify-between text-os-muted">
+                <span>模型</span><span className="font-mono text-os-ink truncate ml-2">{result.model}</span>
+              </div>
+              <div className="flex items-center justify-between text-os-muted">
+                <span>延迟</span><span className="font-mono text-os-ink">{result.elapsedMs} ms</span>
+              </div>
+              {result.usage && (
+                <div className="flex items-center justify-between text-os-muted">
+                  <span>Token</span><span className="font-mono text-os-ink">输入 {result.usage.prompt_tokens} + 输出 {result.usage.completion_tokens} = {result.usage.total_tokens}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-os-muted">
+                <span>状态</span>
+                <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold"><Check className="w-3 h-3" />success</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function PromptTemplateEditor({ scenarios }: { scenarios: { id: string; label: string; defaultPrompt: string; variables?: string[] }[] }) {
   const [activeId, setActiveId] = useState(scenarios[0].id);
   const active = scenarios.find(s => s.id === activeId)!;
@@ -514,52 +842,12 @@ export function DoubaoLanguageAccess() {
         />
       </Card>
 
-      {/* Section 5: 测试调用 */}
+      {/* Section 5: 测试调用 (★ 已真接通豆包文本模型) */}
       <Card>
-        <SectionTitle icon={<FlaskConical className="w-4 h-4" />} hint="发起一次真实调用, 验证 API Key + 模型连通性 + prompt 效果">
+        <SectionTitle icon={<FlaskConical className="w-4 h-4" />} hint="✓ 已接通 · 真调火山引擎方舟 chat/completions">
           5. 测试调用
         </SectionTitle>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <div>
-            <Field label="测试 User Message" type="textarea" rows={6} defaultValue="把这段文字排版成 Markdown:\n\n益语智库是一家把战略思想做成 AI 工具的组织陪伴公司..." />
-            <Field label="使用场景 prompt" type="select" defaultValue="article-format" options={[
-              { value: 'article-format', label: '文章自动排版' },
-              { value: 'report-intro',   label: '报告自动介绍' },
-              { value: 'summary-tags',   label: '摘要与标签建议' },
-              { value: 'raw',            label: '不套 system prompt (raw 调用)' },
-            ]} />
-            <div className="mt-3">
-              <ToolbarButton onClick={() => showToast('发起测试 · 待接后端 /api/admin/ai/chat 后真调豆包文本模型', 'warning')}>
-                <Send className="w-3.5 h-3.5" />发起测试调用
-              </ToolbarButton>
-            </div>
-          </div>
-          <div>
-            <div className="text-[12px] font-semibold text-os-muted mb-2">测试结果 (占位 · 接数据后真实返回)</div>
-            <div className="rounded-[12px] bg-os-canvas ring-1 ring-os-line p-4 space-y-2 text-[12px]">
-              <div className="flex items-center justify-between text-os-muted">
-                <span>延迟</span><span className="font-mono text-os-ink">1.84 s</span>
-              </div>
-              <div className="flex items-center justify-between text-os-muted">
-                <span>Token 用量</span><span className="font-mono text-os-ink">输入 28 + 输出 156 = 184</span>
-              </div>
-              <div className="flex items-center justify-between text-os-muted">
-                <span>状态</span><span className="inline-flex items-center gap-1 text-emerald-700 font-semibold"><Check className="w-3 h-3" />成功</span>
-              </div>
-              <div className="border-t border-os-line pt-2 mt-2">
-                <div className="text-os-muted/70 text-[11px] mb-1">响应预览</div>
-                <pre className="text-[11px] text-os-ink/85 whitespace-pre-wrap font-mono leading-relaxed">{`## 益语智库的定位
-
-益语智库是一家把战略思想做成 AI 工具的组织陪伴公司。
-
-**我们看到的真相**: 组织经营是整体, 但工具把它切碎了...`}</pre>
-              </div>
-              <div className="pt-2 flex items-center gap-2 justify-end">
-                <button className="text-[11px] text-os-blue hover:text-os-navy inline-flex items-center gap-1"><Copy className="w-3 h-3" />复制完整响应</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ChatCompletionTester />
       </Card>
 
       {/* Section 6: 用量统计 */}
@@ -824,63 +1112,12 @@ export function DoubaoImageAccess() {
         />
       </Card>
 
-      {/* Section 6: 测试生成 */}
+      {/* Section 6: 测试生成 (★ 已真接通豆包图像 Seedream) */}
       <Card>
-        <SectionTitle icon={<FlaskConical className="w-4 h-4" />} hint="发起一次真实图像生成, 验证 API + 模型 + 参数效果">
+        <SectionTitle icon={<FlaskConical className="w-4 h-4" />} hint="✓ 已接通 · 真调火山引擎方舟 images/generations (doubao-seedream-4-0-250828)">
           6. 测试生成
         </SectionTitle>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <div>
-            <Field label="测试 Prompt" type="textarea" rows={5}
-              defaultValue="为益语智库文章《组织经营是一个整体》生成封面。深蓝紫主色, 现代中国风, 抽象象征, 留白多, 不要文字" />
-            <Field label="尺寸" type="select" defaultValue="1024x1024" options={[
-              { value: '1024x1024', label: '1024 × 1024' },
-              { value: '1792x1024', label: '1792 × 1024 · 文章封面常用' },
-            ]} />
-            <Field label="张数" defaultValue="1" />
-            <div className="mt-3 flex items-center gap-2">
-              <ToolbarButton onClick={() => showToast('发起测试 · 待接后端 /api/admin/ai/generate-image 后真调豆包图像', 'warning')}>
-                <Send className="w-3.5 h-3.5" />发起测试生成
-              </ToolbarButton>
-              <button
-                onClick={() => showToast('已保存为风格示例 (暂存浏览器)', 'success')}
-                className="px-3 py-1.5 rounded-full text-[12px] text-os-blue hover:text-os-navy"
-              >
-                保存为风格示例
-              </button>
-            </div>
-          </div>
-          <div>
-            <div className="text-[12px] font-semibold text-os-muted mb-2">测试结果 (占位 · 接数据后展示真图)</div>
-            <div className="rounded-[12px] bg-os-canvas ring-1 ring-os-line p-4 space-y-3 text-[12px]">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="aspect-square rounded-[10px] bg-gradient-to-br from-os-mist via-os-navy/10 to-os-spark/20 ring-1 ring-os-line flex items-center justify-center">
-                  <ImageIcon className="w-8 h-8 text-os-muted/50" />
-                </div>
-                <div className="aspect-square rounded-[10px] bg-gradient-to-br from-os-spark/10 via-os-navy/5 to-os-blue/15 ring-1 ring-os-line flex items-center justify-center">
-                  <ImageIcon className="w-8 h-8 text-os-muted/50" />
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-os-muted">
-                <span>任务 ID</span>
-                <span className="font-mono text-os-ink truncate ml-2 max-w-[140px]">task_seedream_xxxxx</span>
-              </div>
-              <div className="flex items-center justify-between text-os-muted">
-                <span>耗时</span><span className="font-mono text-os-ink">12.4 s</span>
-              </div>
-              <div className="flex items-center justify-between text-os-muted">
-                <span>状态</span><span className="inline-flex items-center gap-1 text-emerald-700 font-semibold"><Check className="w-3 h-3" />completed</span>
-              </div>
-              <div className="flex items-center justify-between text-os-muted">
-                <span>成本</span><span className="font-mono text-os-ink">¥ 0.04</span>
-              </div>
-              <div className="border-t border-os-line pt-2 flex items-center gap-2 justify-end">
-                <button className="text-[11px] text-os-blue hover:text-os-navy">下载 PNG</button>
-                <button className="text-[11px] text-os-blue hover:text-os-navy inline-flex items-center gap-1"><Copy className="w-3 h-3" />复制 URL</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ImageGenerationTester />
       </Card>
 
       {/* Section 7: 用量统计 */}
