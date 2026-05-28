@@ -35,6 +35,7 @@ import { NotFoundPage } from './components/NotFoundPage';
 import { OpenSourceHomePage } from './components/open-source-home/OpenSourceHomePage';
 import { SceneCapturePage } from './components/open-source-home/demo/SceneCapturePage';
 import { AdminV2Page } from './components/admin-v2/AdminV2Page';
+import { AiPreviewPage } from './components/AiPreviewPage';
 import { PaymentIntroPage } from './components/PaymentIntroPage';
 import { PaymentCheckoutPage } from './components/PaymentCheckoutPage';
 import { PaymentResultPage } from './components/PaymentResultPage';
@@ -207,6 +208,8 @@ export default function App() {
 
     // admin-v2 新统一后台
     'admin-v2',
+    // AI 生成文章演示 (验收期)
+    'ai-preview',
 
     // 内部 page key (新 URL alias 解析后会到这里)
     'article-center',
@@ -733,6 +736,11 @@ export default function App() {
   //    接 dataService 真数据前必须把 Gate 加回来 (TODO: Task #14 接数据时同步加回)
   if (currentPage === 'admin-v2') {
     return <AdminV2Page onNavigate={(page) => handleNavigate(page as any)} />;
+  }
+
+  // AI 生成文章预览 (验收期: 直接看 AI 封面 + AI 正文渲染到真实文章详情页效果)
+  if (currentPage === 'ai-preview') {
+    return <AiPreviewPage onNavigate={(page) => handleNavigate(page as any)} />;
   }
 
   // 2026-05-28 砍掉 demand-detail / strategy-path / business-design / org-effectiveness / digital-ai
