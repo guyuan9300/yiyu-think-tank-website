@@ -52,8 +52,8 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
     let mounted = true;
     fetch('/api/admin-ai/manifest', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : {}))
-      .then((m) => {
-        if (mounted && m && m[articleId]) setAiEntry(m[articleId] as AiManifestEntry);
+      .then((m: Record<string, AiManifestEntry> | null) => {
+        if (mounted && m && m[articleId]) setAiEntry(m[articleId]);
       })
       .catch(() => {});
     return () => { mounted = false; };
