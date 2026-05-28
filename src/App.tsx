@@ -720,15 +720,10 @@ export default function App() {
   }
 
   // admin-v2 新统一后台 (10 模块, 当前是纯 UI placeholder, 不接数据)
+  // ⚠️ 验收期临时去掉 AdminAccessGate, 让顾源源能直接看 UI;
+  //    接 dataService 真数据前必须把 Gate 加回来 (TODO: Task #14 接数据时同步加回)
   if (currentPage === 'admin-v2') {
-    return (
-      <AdminAccessGate
-        onNavigate={(page) => handleNavigate(page as any)}
-        onLoginSuccess={() => setCurrentPage('admin-v2')}
-      >
-        <AdminV2Page onNavigate={(page) => handleNavigate(page as any)} />
-      </AdminAccessGate>
-    );
+    return <AdminV2Page onNavigate={(page) => handleNavigate(page as any)} />;
   }
 
   // 2026-05-28 砍掉 demand-detail / strategy-path / business-design / org-effectiveness / digital-ai
