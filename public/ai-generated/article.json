@@ -5,5 +5,25 @@
     "组织",
     "业务设计"
   ],
-  "body": "## 工具割裂的核心病灶：模块化脱离经营本质\n当前市面上的经营工具普遍采用模块化交付逻辑，CRM管获客、ERP管生产、OA管行政、财务系统管报账，看似覆盖全场景，实则是厂商为了降低研发成本、适配标准化需求的商业选择，主动切割了组织经营的有机整体性。企业采购后往往按职能分部门使用，原本连贯的获客、签单、生产、交付、回款链路被拆成多个孤立节点，数据互不相通，流程断点频发。\n\n## 效能损耗的传导路径：全层级的隐性内耗\n工具割裂的损耗会从操作层逐层传导至决策层：基层员工需在多个系统重复录入相同信息，仅数据搬运就占日常工作时长的27%，出错率超15%；中层管理者要跨系统捞取数据拼接报表，半数以上的周度经营分析会因数据口径不一致陷入无谓争论；高层拿到的经营数据滞后3-7天，且各模块数据无法交叉验证，很容易做出误判，某消费品牌2023年就因销售、库存数据不同步，积压了超1800万的滞销货品。\n\n## 破局的核心逻辑：以经营整体为核心重构工具\n益语智库建议企业从两个维度调整：一是先梳理业务全链路再选型工具，放弃“凑工具”的思路，以从获客到回款的完整流程为核心，优先采购支持接口开放、可自定义配置的工具，避免新的信息孤岛；二是建立跨职能的工具运维小组，由业务、运营、财务、IT共同参与工具的迭代优化，确保工具适配真实的经营需求，而非要求业务适配工具逻辑，从根源上消除工具对经营整体性的切割。"
+  "body": "## 工具割裂的核心病灶：模块化脱离经营本质\n当前市面上的经营工具普遍采用模块化交付逻辑，CRM管获客、ERP管生产、OA管行政、财务系统管报账，看似覆盖全场景，实则是厂商为了降低研发成本、适配标准化需求的商业选择，主动切割了组织经营的有机整体性。企业采购后往往按职能分部门使用，原本连贯的获客、签单、生产、交付、回款链路被拆成多个孤立节点，数据互不相通，流程断点频发。\n\n## 效能损耗的传导路径：全层级的隐性内耗\n工具割裂的损耗会从操作层逐层传导至决策层：基层员工需在多个系统重复录入相同信息，仅数据搬运就占日常工作时长的27%，出错率超15%；中层管理者要跨系统捞取数据拼接报表，半数以上的周度经营分析会因数据口径不一致陷入无谓争论；高层拿到的经营数据滞后3-7天，且各模块数据无法交叉验证，很容易做出误判，某消费品牌2023年就因销售、库存数据不同步，积压了超1800万的滞销货品。\n\n## 破局的核心逻辑：以经营整体为核心重构工具\n益语智库建议企业从两个维度调整：一是先梳理业务全链路再选型工具，放弃“凑工具”的思路，以从获客到回款的完整流程为核心，优先采购支持接口开放、可自定义配置的工具，避免新的信息孤岛；二是建立跨职能的工具运维小组，由业务、运营、财务、IT共同参与工具的迭代优化，确保工具适配真实的经营需求，而非要求业务适配工具逻辑，从根源上消除工具对经营整体性的切割。",
+  "illustrations": [
+    {
+      "title": "工具割裂的核心病灶：模块化脱离经营本质",
+      "prompt": "Photorealistic editorial photography, cinematic soft low lighting, deep navy and purple subtle tones. Segmented disconnected office desk modules each holding a separate work device, broken glowing data stream snaking between gaps, blurred open office background, no text or faces.. Absolutely no text, no letters, no digits, no chinese characters, no watermarks, no labels.",
+      "filename": "illustration-1.jpg",
+      "sizeKb": 512
+    },
+    {
+      "title": "效能损耗的传导路径：全层级的隐性内耗",
+      "prompt": "Three tiered stacked office workspace levels, bottom cluttered with duplicate spreadsheets, middle scattered mismatched report drafts, top outdated data sheets next to stacked unsold product boxes. Cinematic soft lighting, deep navy and subtle purple tones, photorealistic magazine editorial aesthetic, no text no faces.. Absolutely no text, no letters, no digits, no chinese characters, no watermarks, no labels.",
+      "filename": "illustration-2.jpg",
+      "sizeKb": 618
+    },
+    {
+      "title": "破局的核心逻辑：以经营整体为核心重构工具",
+      "prompt": "Cinematic editorial photorealistic photo, subtle deep navy and purple tones. Connected modular software icons forming a seamless end-to-end path on an office desk, four varied work role badges alongside, soft side lighting, no text, no faces.. Absolutely no text, no letters, no digits, no chinese characters, no watermarks, no labels.",
+      "filename": "illustration-3.jpg",
+      "sizeKb": 486
+    }
+  ]
 }

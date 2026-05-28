@@ -15,31 +15,55 @@ import { Footer } from './Footer';
 //          生成的 1792×1024 封面图. 详见 commit 历史.
 // ============================================================
 
+interface AiIllustration {
+  title: string;
+  prompt: string;
+  filename: string;
+  sizeKb: number;
+}
+
 interface AiArticle {
   title: string;
   excerpt: string;
   topics: string[];
   body: string;
+  illustrations?: AiIllustration[];
+}
+
+interface Chapter {
+  title: string;
+  paragraphs: string[];
+  illustration?: AiIllustration;
 }
 
 interface AiPreviewPageProps {
   onNavigate?: (page: string) => void;
 }
 
-// 极简 Markdown 渲染 (只支持 ## 二级标题 + 段落, 够这个 demo 用)
-function renderMarkdown(md: string): { type: 'h2' | 'p'; text: string }[] {
-  const lines = md.split('\n').map(l => l.trim()).filter(Boolean);
-  const out: { type: 'h2' | 'p'; text: string }[] = [];
+// 按 ## 二级标题切分章节, 每章节挂一张插图 (按 index 对应)
+function parseChapters(article: AiArticle): Chapter[] {
+  const lines = article.body.split('\n').map(l => l.trim()).filter(Boolean);
+  const chapters: Chapter[] = [];
+  let current: Chapter | null = null;
   for (const line of lines) {
     if (line.startsWith('## ')) {
-      out.push({ type: 'h2', text: line.slice(3).trim() });
+      if (current) chapters.push(current);
+      current = { title: line.slice(3).trim(), paragraphs: [] };
     } else if (line.startsWith('# ')) {
-      out.push({ type: 'h2', text: line.slice(2).trim() });
+      if (current) chapters.push(current);
+      current = { title: line.slice(2).trim(), paragraphs: [] };
     } else {
-      out.push({ type: 'p', text: line });
+      if (!current) current = { title: '', paragraphs: [] };
+      current.paragraphs.push(line);
     }
   }
-  return out;
+  if (current) chapters.push(current);
+  // 把插图按 index 绑到章节上
+  chapters.forEach((ch, i) => {
+    const ill = article.illustrations?.[i];
+    if (ill) ch.illustration = ill;
+  });
+  return chapters;
 }
 
 export function AiPreviewPage({ onNavigate }: AiPreviewPageProps) {
@@ -76,7 +100,7 @@ export function AiPreviewPage({ onNavigate }: AiPreviewPageProps) {
     );
   }
 
-  const blocks = renderMarkdown(article.body);
+  const chapters = parseChapters(article);
   const today = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
 
   return (
@@ -176,24 +200,50 @@ export function AiPreviewPage({ onNavigate }: AiPreviewPageProps) {
         </div>
       </section>
 
-      {/* 正文 (AI 生成 markdown) */}
+      {/* 正文 (AI 生成 markdown + 章节插图) */}
       <section className="px-6 pb-16">
         <div className="max-w-3xl mx-auto">
           <article className="prose-os">
-            {blocks.map((b, i) =>
-              b.type === 'h2' ? (
-                <h2
-                  key={i}
-                  className="font-serif-display text-[22px] sm:text-[26px] font-semibold leading-[1.4] tracking-tight text-os-navy mt-12 mb-4"
-                >
-                  {b.text}
-                </h2>
-              ) : (
-                <p key={i} className="text-[15.5px] sm:text-[16px] leading-[1.95] text-os-ink/85 my-5">
-                  {b.text}
-                </p>
-              )
-            )}
+            {chapters.map((ch, i) => (
+              <div key={i}>
+                {ch.title && (
+                  <h2 className="font-serif-display text-[22px] sm:text-[26px] font-semibold leading-[1.4] tracking-tight text-os-navy mt-12 mb-4">
+                    {ch.title}
+                  </h2>
+                )}
+                {/* 章节第一段引入 */}
+                {ch.paragraphs.slice(0, 1).map((p, j) => (
+                  <p key={`p-intro-${i}-${j}`} className="text-[15.5px] sm:text-[16px] leading-[1.95] text-os-ink/85 my-5">
+                    {p}
+                  </p>
+                ))}
+                {/* 插图: 写实摄影风 · 承上启下 */}
+                {ch.illustration && (
+                  <figure className="my-8 -mx-2 sm:mx-0">
+                    <div className="relative rounded-[20px] overflow-hidden ring-1 ring-os-line shadow-os">
+                      <img
+                        src={`/ai-generated/${ch.illustration.filename}`}
+                        alt={ch.illustration.title}
+                        className="w-full h-auto block"
+                        style={{ aspectRatio: '1792 / 1024' }}
+                      />
+                      <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full bg-black/55 text-white text-[10px] font-semibold tracking-[0.06em] backdrop-blur-sm">
+                        AI 配图 · {i + 1}/{chapters.length}
+                      </div>
+                    </div>
+                    <figcaption className="mt-2.5 text-center text-[11.5px] text-os-muted/75 leading-relaxed italic">
+                      图 {i + 1} · {ch.title.length > 24 ? ch.title.slice(0, 24) + '…' : ch.title}
+                    </figcaption>
+                  </figure>
+                )}
+                {/* 剩余段落 */}
+                {ch.paragraphs.slice(1).map((p, j) => (
+                  <p key={`p-rest-${i}-${j}`} className="text-[15.5px] sm:text-[16px] leading-[1.95] text-os-ink/85 my-5">
+                    {p}
+                  </p>
+                ))}
+              </div>
+            ))}
           </article>
 
           {/* AI 来源说明 */}
@@ -203,8 +253,9 @@ export function AiPreviewPage({ onNavigate }: AiPreviewPageProps) {
               <div>
                 <strong className="text-os-navy">本文为 AI 生成演示</strong>
                 <p className="mt-1 text-os-muted">
-                  封面由 <code className="font-mono px-1.5 py-0.5 rounded bg-os-paper text-os-blue">doubao-seedream-4-0-250828</code> 生成 (1792×1024) ·
+                  封面 + 章节配图 ({article.illustrations?.length || 0} 张) 由 <code className="font-mono px-1.5 py-0.5 rounded bg-os-paper text-os-blue">doubao-seedream-4-0-250828</code> 生成 (1792×1024, 写实摄影风) ·
                   正文由 <code className="font-mono px-1.5 py-0.5 rounded bg-os-paper text-os-blue">doubao-seed-2-0-pro-260215</code> 生成 ·
+                  每张配图的 prompt 由 doubao 文本模型阅读对应章节内容后自动生成 ·
                   主题: "组织经营是一个整体, 但今天所有工具都把它切碎了"
                 </p>
                 <p className="mt-1.5 text-os-muted/85">
