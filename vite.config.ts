@@ -8,5 +8,14 @@ export default defineConfig(({ mode }) => ({
   server: {
     port: 5173,
     host: true,
+    // dev 模式把 /api 反代到线上 yiyu.love, 让本地开发能直接看到真实的报告/文章数据.
+    // production build 不走 proxy, 由部署机 nginx 反代 /api → 本地 pg-auth-api 服务.
+    proxy: {
+      '/api': {
+        target: 'https://yiyu.love',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
   },
 }));
