@@ -2,8 +2,9 @@ import { Mail, Phone } from 'lucide-react';
 import { SITE_CONTACT_EMAIL, SITE_CONTACT_PHONE, SITE_ICP_NUMBER, SITE_ICP_URL, SITE_NAME } from '../lib/siteMeta';
 
 interface FooterProps {
-  // 4 项导航 + consult-apply 申请咨询入口
-  onNavigate?: (page: 'home' | 'articles' | 'reports' | 'about' | 'consult-apply') => void;
+  // 接受任意 page 字符串以兼容旧页面 (LibraryPage 等被砍页将在物理清理时一并删除).
+  // 新版只对外暴露 4 项导航 + consult-apply, 实际调用见 nav() 内部.
+  onNavigate?: (page: string) => void;
 }
 
 /**
@@ -14,6 +15,7 @@ export function Footer({ onNavigate }: FooterProps) {
   const currentYear = new Date().getFullYear();
 
   const nav = (page: 'home' | 'articles' | 'reports' | 'about' | 'consult-apply') => {
+    // Footer 自身只 emit 4 项导航 + consult-apply, 接口宽松仅为兼容旧调用方.
     onNavigate?.(page);
   };
 

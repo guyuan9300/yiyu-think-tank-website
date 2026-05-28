@@ -1,14 +1,9 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
-import { HomePage } from './components/HomePage';
-import { InsightsPage } from './components/InsightsPage';
-import { StrategyPage } from './components/StrategyPage';
+// 2026-05-28 统一架构: 已删 HomePage/InsightsPage/StrategyPage/LibraryPage/
+// BookLibraryPage/MethodologyLibraryPage/BookReaderPage/CaseDetailPage import
 import { AboutPage } from './components/AboutPage';
-import { LibraryPage } from './components/LibraryPage';
-import { BookLibraryPage } from './components/BookLibraryPage';
-import { MethodologyLibraryPage } from './components/MethodologyLibraryPage';
 import { ReportLibraryPage } from './components/ReportLibraryPage';
 import { ArticleCenterPage } from './components/ArticleCenterPage';
-import { BookReaderPage } from './components/BookReaderPage';
 import { ReportReaderPage } from './components/ReportReaderPage';
 import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
@@ -16,7 +11,6 @@ import { ForgotPasswordPage } from './components/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/ResetPasswordPage';
 import { LegalDocumentPage } from './components/LegalDocumentPage';
 import { ArticleDetailPage } from './components/ArticleDetailPage';
-import { CaseDetailPage } from './components/CaseDetailPage';
 import { AdminDashboard } from './components/AdminDashboard';
 import { buildAdminUrl, getAdminTabFromSearchParams } from './lib/adminConsole';
 import { fetchCurrentSession, normalizeLoginUser } from './lib/authApi';
@@ -37,13 +31,8 @@ import { StrategyCompanionConceptPage } from './components/StrategyCompanionConc
 import AdminStrategyCompanionConceptPage from './components/AdminStrategyCompanionConceptPage';
 import { ConsultApplyPage } from './components/ConsultApplyPage';
 import { NotFoundPage } from './components/NotFoundPage';
-import { OpenSourceWorkbenchPage } from './components/OpenSourceWorkbenchPage';
+// 已删: OpenSourceWorkbenchPage / DemandSubmit/Pool/Detail / VolunteerApply / StrategyModuleIntroPage
 import { OpenSourceHomePage } from './components/open-source-home/OpenSourceHomePage';
-import { DemandSubmitPage } from './components/DemandSubmitPage';
-import { VolunteerApplyPage } from './components/VolunteerApplyPage';
-import { DemandPoolPage } from './components/DemandPoolPage';
-import { DemandDetailPage } from './components/DemandDetailPage';
-import { StrategyModuleIntroPage } from './components/StrategyModuleIntroPage';
 import { PaymentIntroPage } from './components/PaymentIntroPage';
 import { PaymentCheckoutPage } from './components/PaymentCheckoutPage';
 import { PaymentResultPage } from './components/PaymentResultPage';
@@ -201,53 +190,48 @@ export default function App() {
 
   // P0-IX-12: handle unknown `?page=` gracefully.
   // If a user opens an old/typo link, show a friendly 404 page instead of silently rendering Home with a wrong URL.
+  // 2026-05-28 4 项导航统一架构后 ALLOWED_PAGES 大幅瘦身.
+  // 顶部导航只 4 项: home / articles(=article-center) / reports(=report-library) / about
+  // 其余保留: 详情页 / 法务 / 登录注册 / 后台 / 会员付费 / 战略陪伴客户工作台 / 申请咨询 / 开源首页 / 404
+  // 已砍: insights / library / book-library / methodology-library / book-reader / my-learning /
+  //       strategy / strategy-path / business-design / org-effectiveness / digital-ai /
+  //       case / demand-* / open-source-workbench / test
   const ALLOWED_PAGES = new Set([
+    // 4 项导航
     'home',
-    'insights',
-    'library',
-    'report-library',
-    'article-center',
-    // 新版 4 项导航 URL 别名 (Header 链接 ?page=articles / ?page=reports)
-    'articles',
-    'reports',
-    'book-reader',
-    'report',
-    'my-learning',
-    'strategy',
+    'articles',         // alias → article-center
+    'reports',          // alias → report-library
     'about',
+
+    // 内部 page key (新 URL alias 解析后会到这里)
+    'article-center',
+    'report-library',
+
+    // 内容详情
+    'article',
+    'report',
+
+    // 用户/会员/法务
     'login',
     'register',
     'forgot-password',
     'reset-password',
     'terms-of-service',
     'privacy-policy',
-    'article',
-    'case',
-    'admin',
-    'admin-legacy',
     'user-center',
     'membership',
     'payment-checkout',
     'payment-result',
+
+    // 战略陪伴客户工作台 (已签约) + 申请咨询 CTA
     'strategy-companion',
     'consult-apply',
-    'admin-strategy-companion',
-    'test',
-    'methodology-library',
-    'book-library',
 
-    // Strategy module intro pages (from Home "战略陪伴" cards)
-    'strategy-path',
-    'business-design',
-    'org-effectiveness',
-    'digital-ai',
-    'open-source-workbench',
+    // 开源首页 + 后台 + 404
     'open-source-home',
-    'demand-submit',
-    'volunteer-apply',
-    'demand-pool',
-    'demand-detail',
-
+    'admin',
+    'admin-legacy',
+    'admin-strategy-companion',
     '404',
   ]);
 
@@ -622,73 +606,12 @@ export default function App() {
     return renderWithYiyuTong(<ReportReaderPage reportId={selectedDetailId} />);
   }
 
-  // Case Detail Page
-  if (currentPage === 'case') {
-    return renderWithYiyuTong(
-      <CaseDetailPage
-        caseId={selectedCaseId}
-        onNavigate={(page, id) => {
-          if (page === 'case') {
-            handleNavigate('case', undefined, id);
-          } else {
-            handleNavigate(page as any);
-          }
-        }}
-      />
-    );
-  }
-
-  if (currentPage === 'insights') {
-    return renderWithYiyuTong(
-      <InsightsPage
-        onNavigate={(page, id) => {
-          if ((page === 'article' || page === 'report') && id) {
-            handleNavigateToDetail(page as any, id);
-            return;
-          }
-          handleNavigate(page as any, id);
-        }}
-      />
-    );
-  }
-
-  if (currentPage === 'strategy') {
-    return renderWithYiyuTong(
-      <StrategyPage
-        onNavigate={(page, id) => {
-          if (page === 'case') {
-            handleNavigate('case', undefined, id);
-            return;
-          }
-          handleNavigate(page as any, id);
-        }}
-      />
-    );
-  }
-
+  // 2026-05-28 砍掉 case/insights/strategy 分支 (page 已不在 ALLOWED_PAGES)
   if (currentPage === 'about') {
     return renderWithYiyuTong(<AboutPage onNavigate={handleNavigate} />);
   }
 
-  if (currentPage === 'library') {
-    return renderWithYiyuTong(<LibraryPage onNavigate={handleNavigate} />, 'learning');
-  }
-
-  if (currentPage === 'book-library') {
-    return renderWithYiyuTong(<BookLibraryPage onNavigate={(p, id) => handleNavigate(p as any, id)} />);
-  }
-
-  if (currentPage === 'methodology-library') {
-    return renderWithYiyuTong(
-      <MethodologyLibraryPage
-        onNavigate={(p, id) => handleNavigate(p as any, id)}
-        methodologyId={selectedDetailId}
-      />
-    );
-  }
-
-  // book-library page is deprecated (redirected to library)
-
+  // 2026-05-28 砍掉 library/book-library/methodology-library 分支
   if (currentPage === 'report-library') {
     return renderWithYiyuTong(
       <ReportLibraryPage onNavigate={(page) => handleNavigate(page as any)} onNavigateToDetail={(type, id) => handleNavigateToDetail(type as any, id)} />
@@ -702,9 +625,7 @@ export default function App() {
     );
   }
 
-  if (currentPage === 'book-reader') {
-    return renderWithYiyuTong(<BookReaderPage bookId={selectedBookId} onNavigate={(page) => handleNavigate(page as any)} />);
-  }
+  // 2026-05-28 砍掉 book-reader 分支
 
   // Admin Dashboard - 需要登录验证
   if (currentPage === 'admin') {
@@ -789,39 +710,12 @@ export default function App() {
     return renderWithYiyuTong(<ConsultApplyPage onBack={() => handleNavigate('home')} />, 'consult-apply');
   }
 
-  if (currentPage === 'open-source-workbench') {
-    return <OpenSourceWorkbenchPage onNavigate={(page) => handleNavigate(page as any)} />;
-  }
-
+  // 2026-05-28 砍掉 open-source-workbench (新版整页转作首页) + demand-* 4 个
   if (currentPage === 'open-source-home') {
     return <OpenSourceHomePage onNavigate={(page) => handleNavigate(page as any)} />;
   }
 
-  if (currentPage === 'demand-submit') {
-    return renderWithYiyuTong(<DemandSubmitPage onNavigate={(page) => handleNavigate(page as any)} />, 'demand-submit');
-  }
-
-  if (currentPage === 'volunteer-apply') {
-    return renderWithYiyuTong(<VolunteerApplyPage onNavigate={(page) => handleNavigate(page as any)} />, 'volunteer-apply');
-  }
-
-  if (currentPage === 'demand-pool') {
-    return renderWithYiyuTong(<DemandPoolPage onNavigate={(page, id) => handleNavigate(page as any, id)} />, 'demand-pool');
-  }
-
-  if (currentPage === 'demand-detail') {
-    return renderWithYiyuTong(
-      <DemandDetailPage demandId={selectedDetailId} onNavigate={(page, id) => handleNavigate(page as any, id)} />,
-      'demand-detail',
-    );
-  }
-
-  // Strategy Module Intro Pages
-  if (currentPage === 'strategy-path' || currentPage === 'business-design' || currentPage === 'org-effectiveness' || currentPage === 'digital-ai') {
-    return renderWithYiyuTong(
-      <StrategyModuleIntroPage module={currentPage as any} onNavigate={(p: any) => handleNavigate(p)} />
-    );
-  }
+  // 2026-05-28 砍掉 demand-detail / strategy-path / business-design / org-effectiveness / digital-ai
 
   // Admin Strategy Companion Page - 战略客户后台管理页面
   if (currentPage === 'admin-strategy-companion') {
