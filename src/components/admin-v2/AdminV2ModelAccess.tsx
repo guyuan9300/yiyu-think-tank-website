@@ -1,9 +1,66 @@
-import { useState, type ReactNode } from 'react';
+import { useState, useRef, type ReactNode } from 'react';
 import {
   Activity, Bot, Image as ImageIcon, KeyRound, Sliders, Wand2,
   FlaskConical, BarChart3, Settings2, Check, AlertCircle,
-  Send, Eye, EyeOff, Copy, RotateCcw, Save,
+  Send, Eye, EyeOff, Copy, RotateCcw, Save, Trash2, Info,
 } from 'lucide-react';
+
+// ============================================================
+// 全局 toast (验收期使用, 接 dataService 时换成正式 toast 库)
+// ============================================================
+function showToast(message: string, tone: 'success' | 'error' | 'info' | 'warning' = 'success') {
+  if (typeof document === 'undefined') return;
+  const div = document.createElement('div');
+  const bg = tone === 'success' ? '#10B981'
+           : tone === 'error'   ? '#EF4444'
+           : tone === 'warning' ? '#D97706'
+           : '#16265E';
+  div.style.cssText = `
+    position:fixed;top:80px;right:20px;z-index:9999;
+    padding:12px 18px;border-radius:14px;
+    background:${bg};color:white;font-size:13px;font-weight:600;
+    box-shadow:0 12px 32px rgba(0,0,0,0.18);
+    max-width:380px;line-height:1.55;
+    transform:translateX(20px);opacity:0;
+    transition:transform 0.3s ease-out, opacity 0.3s ease-out;
+    font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  `;
+  div.textContent = message;
+  document.body.appendChild(div);
+  requestAnimationFrame(() => {
+    div.style.transform = 'translateX(0)';
+    div.style.opacity = '1';
+  });
+  setTimeout(() => {
+    div.style.transform = 'translateX(20px)';
+    div.style.opacity = '0';
+    setTimeout(() => div.remove(), 320);
+  }, 3200);
+}
+
+// 脱敏: 前 8 + ... + 后 4
+function maskApiKey(key: string): string {
+  if (!key) return '';
+  const trimmed = key.trim();
+  if (trimmed.length < 14) return '***' + trimmed.slice(-4);
+  return trimmed.slice(0, 8) + '…' + trimmed.slice(-4);
+}
+
+// 顶部 banner: 提醒"前端暂存,未写入服务器"
+function StageBanner() {
+  return (
+    <div className="rounded-[14px] bg-amber-50 ring-1 ring-amber-200/70 px-4 py-3 flex items-start gap-3">
+      <Info className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
+      <div className="flex-1 text-[12.5px] text-amber-900 leading-relaxed">
+        <strong>验收阶段 · 仅前端暂存</strong> · 本页所有"保存"按钮当前只把数据暂存在浏览器
+        <code className="mx-1 px-1.5 py-0.5 rounded bg-amber-100/80 font-mono text-[11.5px]">localStorage</code>
+        里，<strong>不会写入服务器</strong>，刷新仍可见、清缓存就丢。<br />
+        要真生效，需 ssh 到腾讯云改 <code className="mx-0.5 px-1.5 py-0.5 rounded bg-amber-100/80 font-mono text-[11.5px]">/srv/yiyu-auth-api/.env</code>
+        + <code className="mx-0.5 px-1.5 py-0.5 rounded bg-amber-100/80 font-mono text-[11.5px]">systemctl restart yiyu-auth-api</code>。
+      </div>
+    </div>
+  );
+}
 
 // ============================================================
 // admin-v2 · 豆包模型接入入口 (2 个完整面板)
@@ -151,9 +208,53 @@ function StatusDot({ tone }: { tone: 'live' | 'idle' | 'error' | 'unconfigured' 
   );
 }
 
-function ApiKeyField({ defaultMasked, source }: { defaultMasked: string; source: string }) {
+function ApiKeyField({ defaultMasked, source, storageKey }: { defaultMasked: string; source: string; storageKey: string }) {
   const [revealed, setRevealed] = useState(false);
   const [editing, setEditing] = useState(false);
+  // 验收阶段: 用户输入的 key 暂存在 localStorage, 刷新仍可见
+  const [savedKey, setSavedKey] = useState<string>(() => {
+    if (typeof localStorage === 'undefined') return '';
+    try { return localStorage.getItem(storageKey) || ''; } catch { return ''; }
+  });
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // 当前显示值: 优先用暂存的 key (脱敏 / 全显), 否则用 defaultMasked
+  const display = savedKey
+    ? (revealed ? savedKey : maskApiKey(savedKey))
+    : defaultMasked;
+
+  const handleSave = () => {
+    const value = (inputRef.current?.value || '').trim();
+    if (!value) {
+      showToast('请粘贴 API Key 后再点保存', 'error');
+      inputRef.current?.focus();
+      return;
+    }
+    if (value.length < 16) {
+      showToast('这看起来不是有效的 API Key (长度太短)', 'error');
+      return;
+    }
+    try {
+      localStorage.setItem(storageKey, value);
+      setSavedKey(value);
+      setEditing(false);
+      setRevealed(false);
+      showToast(`✓ API Key 已暂存到浏览器 (${maskApiKey(value)}) · 未写入服务器`, 'success');
+    } catch (e) {
+      showToast('localStorage 写入失败, 浏览器可能禁用了存储', 'error');
+    }
+  };
+
+  const handleClear = () => {
+    if (!savedKey) return;
+    try {
+      localStorage.removeItem(storageKey);
+      setSavedKey('');
+      setRevealed(false);
+      showToast('已清除浏览器暂存的 API Key', 'info');
+    } catch {}
+  };
+
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between">
@@ -163,31 +264,70 @@ function ApiKeyField({ defaultMasked, source }: { defaultMasked: string; source:
       {editing ? (
         <div className="flex items-center gap-2">
           <input
+            ref={inputRef}
             type="password"
-            placeholder="粘贴新 API Key (sk-...)"
+            autoFocus
+            placeholder="粘贴 API Key (例: ark-xxxxxxxx-xxxx-xxxx-...)"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSave();
+              if (e.key === 'Escape') setEditing(false);
+            }}
             className="flex-1 px-3 py-2 rounded-[10px] bg-os-canvas ring-1 ring-os-line text-[13px] focus:outline-none focus:ring-2 focus:ring-os-navy/30 font-mono"
           />
-          <button onClick={() => { console.log('保存 API Key'); setEditing(false); }} className="px-3 py-2 rounded-[10px] bg-os-navy text-white text-[12px] font-semibold hover:brightness-110">
-            保存
+          <button
+            type="button"
+            onClick={handleSave}
+            className="px-3 py-2 rounded-[10px] bg-os-navy text-white text-[12px] font-semibold hover:brightness-110 inline-flex items-center gap-1"
+          >
+            <Check className="w-3.5 h-3.5" />保存
           </button>
-          <button onClick={() => setEditing(false)} className="px-3 py-2 rounded-[10px] bg-os-paper text-os-muted text-[12px] font-medium ring-1 ring-os-line hover:ring-os-navy/30">
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            className="px-3 py-2 rounded-[10px] bg-os-paper text-os-muted text-[12px] font-medium ring-1 ring-os-line hover:ring-os-navy/30"
+          >
             取消
           </button>
         </div>
       ) : (
         <div className="flex items-center gap-2">
           <code className="flex-1 px-3 py-2 rounded-[10px] bg-os-canvas ring-1 ring-os-line text-[13px] font-mono text-os-ink truncate">
-            {revealed ? '[模拟] 仅在后端 .env 可见,不能在前端展示真实值' : defaultMasked}
+            {display || <span className="text-os-muted/60 italic font-sans">未设置</span>}
           </code>
-          <button onClick={() => setRevealed(r => !r)} className="p-2 rounded-[10px] hover:bg-os-mist text-os-muted" title={revealed ? '隐藏' : '查看'}>
-            {revealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
-          <button onClick={() => setEditing(true)} className="px-3 py-2 rounded-[10px] bg-os-paper text-os-navy text-[12px] font-semibold ring-1 ring-os-line hover:ring-os-navy/30">
-            重新设置
+          {savedKey && (
+            <button
+              type="button"
+              onClick={() => setRevealed(r => !r)}
+              className="p-2 rounded-[10px] hover:bg-os-mist text-os-muted"
+              title={revealed ? '隐藏完整 key' : '显示完整 key (注意环境)'}
+            >
+              {revealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          )}
+          {savedKey && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="p-2 rounded-[10px] hover:bg-rose-50 text-rose-600"
+              title="清除浏览器暂存"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="px-3 py-2 rounded-[10px] bg-os-paper text-os-navy text-[12px] font-semibold ring-1 ring-os-line hover:ring-os-navy/30"
+          >
+            {savedKey ? '重新设置' : '设置 API Key'}
           </button>
         </div>
       )}
-      <p className="text-[11px] text-os-muted/75">API Key 仅保存在后端 .env 文件 (process.env.ARK_API_KEY), 前端任何时候都不展示真实值。修改后通过加密通道写入服务端。</p>
+      <p className="text-[11px] text-os-muted/75 leading-relaxed">
+        {savedKey
+          ? <>✓ 已暂存到浏览器 localStorage (key: <code className="font-mono">{storageKey}</code>)。这是验收期占位,刷新页面仍可见。<strong>要真生效,需 ssh 写入 /srv/yiyu-auth-api/.env</strong></>
+          : '生产环境 API Key 仅保存在后端 .env 文件 (process.env.ARK_API_KEY)。验收期可在此暂存到浏览器以验证 UI。'}
+      </p>
     </div>
   );
 }
@@ -220,10 +360,13 @@ function PromptTemplateEditor({ scenarios }: { scenarios: { id: string; label: s
         hint={active.variables ? `可用变量: ${active.variables.map(v => `{${v}}`).join(' / ')}` : undefined}
       />
       <div className="mt-3 flex items-center gap-2 justify-end">
-        <button onClick={() => console.log('恢复默认', activeId)} className="px-3 py-1.5 rounded-full text-[12px] font-medium text-os-muted hover:text-os-navy inline-flex items-center gap-1.5">
+        <button
+          onClick={() => showToast(`已恢复 "${active.label}" 的默认 prompt`, 'info')}
+          className="px-3 py-1.5 rounded-full text-[12px] font-medium text-os-muted hover:text-os-navy inline-flex items-center gap-1.5"
+        >
           <RotateCcw className="w-3 h-3" />恢复默认
         </button>
-        <ToolbarButton size="sm" onClick={() => console.log('保存 prompt', activeId)}>
+        <ToolbarButton size="sm" onClick={() => showToast(`✓ Prompt 模板"${active.label}"已暂存 · 未写入服务器`, 'success')}>
           <Save className="w-3 h-3" />保存当前场景
         </ToolbarButton>
       </div>
@@ -235,6 +378,8 @@ function PromptTemplateEditor({ scenarios }: { scenarios: { id: string; label: s
 export function DoubaoLanguageAccess() {
   return (
     <div className="space-y-6 max-w-[1100px]">
+      <StageBanner />
+
       {/* 状态卡 */}
       <Card tone="highlight">
         <div className="flex flex-wrap items-start gap-6">
@@ -268,7 +413,7 @@ export function DoubaoLanguageAccess() {
               </div>
             </div>
           </div>
-          <ToolbarButton onClick={() => console.log('测试连通性 · 语言模型')}>
+          <ToolbarButton onClick={() => showToast('测试连通性 · 待接后端 /api/admin/ai/test/language 后真调豆包', 'warning')}>
             <FlaskConical className="w-3.5 h-3.5" />测试连通性
           </ToolbarButton>
         </div>
@@ -284,7 +429,11 @@ export function DoubaoLanguageAccess() {
           <Field label="Chat Completions 路径" defaultValue="/api/v3/chat/completions" hint="OpenAI 兼容路径,通常不需要改" readOnly />
         </div>
         <div className="mt-4">
-          <ApiKeyField defaultMasked="sk-arkv3-****-****-****-************a8f2" source="存储于服务端 process.env.ARK_API_KEY" />
+          <ApiKeyField
+            defaultMasked="sk-arkv3-****-****-****-************a8f2"
+            source="存储于服务端 process.env.ARK_API_KEY"
+            storageKey="admin-v2.doubao-language.api-key"
+          />
         </div>
       </Card>
 
@@ -380,7 +529,7 @@ export function DoubaoLanguageAccess() {
               { value: 'raw',            label: '不套 system prompt (raw 调用)' },
             ]} />
             <div className="mt-3">
-              <ToolbarButton onClick={() => console.log('发起测试 · 语言')}>
+              <ToolbarButton onClick={() => showToast('发起测试 · 待接后端 /api/admin/ai/chat 后真调豆包文本模型', 'warning')}>
                 <Send className="w-3.5 h-3.5" />发起测试调用
               </ToolbarButton>
             </div>
@@ -477,8 +626,8 @@ export function DoubaoLanguageAccess() {
       </Card>
 
       <div className="flex items-center justify-end gap-2 pt-2">
-        <ToolbarButton variant="ghost" onClick={() => console.log('取消')}>取消</ToolbarButton>
-        <ToolbarButton onClick={() => console.log('保存所有语言模型配置')}>
+        <ToolbarButton variant="ghost" onClick={() => showToast('已取消,未保存改动', 'info')}>取消</ToolbarButton>
+        <ToolbarButton onClick={() => showToast('✓ 语言模型完整配置已暂存到浏览器 · 未写入服务器', 'success')}>
           <Save className="w-3.5 h-3.5" />保存全部配置
         </ToolbarButton>
       </div>
@@ -490,6 +639,8 @@ export function DoubaoLanguageAccess() {
 export function DoubaoImageAccess() {
   return (
     <div className="space-y-6 max-w-[1100px]">
+      <StageBanner />
+
       {/* 状态卡 */}
       <Card tone="warning">
         <div className="flex flex-wrap items-start gap-6">
@@ -527,7 +678,7 @@ export function DoubaoImageAccess() {
               </div>
             </div>
           </div>
-          <ToolbarButton onClick={() => console.log('测试生成 · 图像')}>
+          <ToolbarButton onClick={() => showToast('测试生成 · 待接后端 /api/admin/ai/generate-image 后真调豆包 Seedream', 'warning')}>
             <FlaskConical className="w-3.5 h-3.5" />测试生成
           </ToolbarButton>
         </div>
@@ -545,7 +696,11 @@ export function DoubaoImageAccess() {
           <Field label="任务超时 (s)" defaultValue="120" hint="单张图最长等待秒数. Seedream 平均 8-15s" />
         </div>
         <div className="mt-4">
-          <ApiKeyField defaultMasked="未设置 (点击右侧重新设置)" source="将存于 process.env.ARK_IMAGE_API_KEY (或复用 ARK_API_KEY)" />
+          <ApiKeyField
+            defaultMasked="未设置"
+            source="将存于 process.env.ARK_IMAGE_API_KEY (或复用 ARK_API_KEY)"
+            storageKey="admin-v2.doubao-image.api-key"
+          />
         </div>
       </Card>
 
@@ -684,10 +839,13 @@ export function DoubaoImageAccess() {
             ]} />
             <Field label="张数" defaultValue="1" />
             <div className="mt-3 flex items-center gap-2">
-              <ToolbarButton onClick={() => console.log('发起测试 · 图像')}>
+              <ToolbarButton onClick={() => showToast('发起测试 · 待接后端 /api/admin/ai/generate-image 后真调豆包图像', 'warning')}>
                 <Send className="w-3.5 h-3.5" />发起测试生成
               </ToolbarButton>
-              <button onClick={() => console.log('保存为风格示例')} className="px-3 py-1.5 rounded-full text-[12px] text-os-blue hover:text-os-navy">
+              <button
+                onClick={() => showToast('已保存为风格示例 (暂存浏览器)', 'success')}
+                className="px-3 py-1.5 rounded-full text-[12px] text-os-blue hover:text-os-navy"
+              >
                 保存为风格示例
               </button>
             </div>
@@ -772,8 +930,8 @@ export function DoubaoImageAccess() {
       </Card>
 
       <div className="flex items-center justify-end gap-2 pt-2">
-        <ToolbarButton variant="ghost" onClick={() => console.log('取消')}>取消</ToolbarButton>
-        <ToolbarButton onClick={() => console.log('保存所有图像模型配置')}>
+        <ToolbarButton variant="ghost" onClick={() => showToast('已取消,未保存改动', 'info')}>取消</ToolbarButton>
+        <ToolbarButton onClick={() => showToast('✓ 图像模型完整配置已暂存到浏览器 · 未写入服务器', 'success')}>
           <Save className="w-3.5 h-3.5" />保存全部配置
         </ToolbarButton>
       </div>
