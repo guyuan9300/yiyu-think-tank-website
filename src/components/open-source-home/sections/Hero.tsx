@@ -1,0 +1,140 @@
+import { Laptop, Monitor, Smartphone, ArrowRight, type LucideIcon } from 'lucide-react';
+import { Container, Button, Reveal } from '../ui';
+import { ANCHORS } from '../links';
+import { HeroProductDemo } from '../demo/HeroProductDemo';
+
+// 四平台下载入口（诚实状态：无确认公开下载链接前不标"可下载"）
+type PlatformStatus = '可下载' | '申请内测' | '即将开放' | '内测中';
+const PLATFORMS: { name: string; icon: LucideIcon; status: PlatformStatus; href?: string }[] = [
+  { name: 'macOS', icon: Laptop, status: '申请内测', href: ANCHORS.download },
+  { name: 'Windows', icon: Monitor, status: '即将开放' },
+  { name: 'iOS', icon: Smartphone, status: '内测中' },
+  { name: 'Android', icon: Smartphone, status: '内测中' },
+];
+
+export function Hero() {
+  return (
+    <section id="top" className="relative overflow-hidden bg-gradient-to-br from-[#EAEBF9] via-[#EFF0FC] to-[#F6F7FD] pt-[68px]">
+      {/* 极淡的暖光氛围，非科技霓虹 */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 right-[-10%] w-[46%] h-[60%] rounded-full bg-os-blue/[0.05] blur-[120px]" />
+        <div className="absolute bottom-[-10%] left-[-8%] w-[36%] h-[50%] rounded-full bg-os-spark/[0.05] blur-[120px]" />
+      </div>
+
+      <Container className="relative">
+        <div className="grid lg:grid-cols-[0.92fr_1.08fr] gap-10 lg:gap-14 items-center min-h-[calc(84vh-68px)] py-12 lg:py-0">
+          {/* 左：宣言文字 */}
+          <div className="max-w-xl min-w-0">
+            <Reveal>
+              <div className="inline-flex items-center gap-2 rounded-full bg-os-paper ring-1 ring-os-line px-3.5 py-1.5 text-[12.5px] font-semibold text-os-muted shadow-os">
+                <span className="w-1.5 h-1.5 rounded-full bg-os-spark" />
+                Open Source for Actioners · 益语智库
+              </div>
+            </Reveal>
+
+            <Reveal delay={80}>
+              <h1 className="font-serif-display mt-7 text-[40px] sm:text-[52px] lg:text-[60px] font-semibold leading-[1.12] tracking-tight text-os-navy">
+                给行动者的
+                <br className="hidden sm:block" />
+                <span className="text-ink-accent">一份礼物</span>
+              </h1>
+            </Reveal>
+
+            <Reveal delay={150}>
+              <div className="mt-6 max-w-[560px] space-y-4">
+                <p className="text-[17px] sm:text-[19px] font-semibold leading-[1.7] text-os-ink">
+                  组织真正卡住的地方，往往不是效率不够。
+                </p>
+                <p className="text-[15px] sm:text-[16px] leading-[1.85] text-os-muted">
+                  而是业务没有被想清楚，关键问题没有被识别，沟通协作不断消耗，数据没有进入决策，经验也没有沉淀成能力。
+                </p>
+                <p className="text-[15px] sm:text-[16px] leading-[1.85] text-os-muted">
+                  益语智库智能平台，把战略咨询、管理思想与 AI 工作流开源出来，让行动者用更低成本，获得理解业务、推进协作、辅助决策和沉淀经验的后台能力。
+                </p>
+              </div>
+            </Reveal>
+
+            <Reveal delay={300}>
+              <div className="mt-9 flex flex-wrap items-center gap-3">
+                <Button href={ANCHORS.download} variant="primary" withArrow>
+                  下载开源版
+                </Button>
+                <Button href={ANCHORS.features} variant="secondary">
+                  查看平台能力
+                </Button>
+                <Button href={ANCHORS.join} variant="ghost">
+                  参与行动者生态
+                </Button>
+              </div>
+            </Reveal>
+
+            {/* 次级：平台下载入口（与主行动按钮拉开层级） */}
+            <Reveal delay={340}>
+              <div className="mt-8">
+                <p className="text-[12.5px] leading-relaxed text-os-muted/80 mb-3">
+                  先从自己的设备开始，让 AI 学会理解你的项目、组织与行动。
+                </p>
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2.5">
+                  {PLATFORMS.map((p) => {
+                    const Icon = p.icon;
+                    const actionable = Boolean(p.href);
+                    const body = (
+                      <>
+                        <Icon className="w-[18px] h-[18px] text-os-navy/65 shrink-0" />
+                        <span className="flex flex-col leading-tight">
+                          <span className="text-[12px] font-semibold text-os-ink">{p.name}</span>
+                          <span className={`text-[10px] ${p.status === '即将开放' || p.status === '内测中' ? 'text-os-muted/70' : 'text-os-spark'}`}>
+                            {p.status}
+                          </span>
+                        </span>
+                      </>
+                    );
+                    return actionable ? (
+                      <a
+                        key={p.name}
+                        href={p.href}
+                        className="flex items-center gap-2 rounded-full bg-os-paper ring-1 ring-os-line px-3 py-1.5 hover:ring-os-navy/30 hover:shadow-os transition-all"
+                      >
+                        {body}
+                      </a>
+                    ) : (
+                      <div
+                        key={p.name}
+                        aria-disabled="true"
+                        title={`${p.name} · ${p.status}`}
+                        className="flex items-center gap-2 rounded-full bg-os-paper/50 ring-1 ring-os-line px-3 py-1.5 opacity-70 cursor-default"
+                      >
+                        {body}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </Reveal>
+
+            {/* 金句：首屏思想的收束 + 宣言入口 */}
+            <Reveal delay={400}>
+              <div className="mt-9 pt-7 border-t border-os-line/80">
+                <p className="border-l-2 border-os-blue/55 pl-4 font-serif-display text-[15.5px] leading-[1.75] text-os-navy/85">
+                  技术是思想的延伸。益语智库，是管理思想与人工智能结合的一次表达。
+                </p>
+                <a
+                  href={ANCHORS.manifesto}
+                  className="group mt-3 inline-flex items-center gap-1.5 pl-4 text-[14px] font-semibold text-os-blue hover:text-os-navy transition-colors"
+                >
+                  阅读《行动者宣言》
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                </a>
+              </div>
+            </Reveal>
+          </div>
+
+          {/* 右：代码写的产品自动演示（复用 2.1 产品视觉的轻量展示版，非截图/生图） */}
+          <Reveal delay={200} className="w-full min-w-0">
+            <HeroProductDemo />
+          </Reveal>
+        </div>
+      </Container>
+    </section>
+  );
+}

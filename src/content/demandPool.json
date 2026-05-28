@@ -1,0 +1,535 @@
+[
+  {
+    "id": "demand-volunteer-hours",
+    "title": "志愿者服务时长记录",
+    "requesterType": "社区公益组织",
+    "orgType": "公益组织",
+    "scenario": "志愿者管理",
+    "summary": "每月约 80 位志愿者参与入户探访，需要记录服务日期、服务对象、服务时长和活动反馈，减少月底人工统计压力。",
+    "status": "awaiting_claim",
+    "neededRoles": ["product", "backend", "frontend"],
+    "difficulty": "medium",
+    "isBeginnerFriendly": true,
+    "impactScope": "公益组织通用需求",
+    "watchersCount": 12,
+    "claimedCount": 1,
+    "updatedAtText": "2 天前更新",
+    "updatedAtISO": "2026-04-19T10:00:00.000Z",
+    "actionLabel": "我要认领",
+    "issueUrl": "https://github.com/guyuan9300/yiyu-thinktank-workbench/issues",
+    "participation": {
+      "realProblem": "志愿者服务时长难统计",
+      "whoIsConsumed": "项目负责人每月底需要手工翻签到表和 Excel",
+      "whatToFree": "减少重复统计和服务证明整理",
+      "whatCanBePreserved": "志愿者服务档案、活动参与记录、月度服务报表",
+      "possibleWorkbench": "志愿者服务工作台",
+      "missingRoles": ["产品志愿者", "前端开发", "测试志愿者", "文档志愿者"],
+      "estimatedEffort": "half_day",
+      "nextAction": "认领一个服务时长字段梳理任务",
+      "recommendedFor": ["product_volunteer", "developer", "tester", "writer"],
+      "valueTypes": ["cost_reduction", "free_repetition", "traceability", "workbench_form"],
+      "humanCost": "每月需要 1-2 人连续半天手工汇总。",
+      "socialResourceCost": "重复整理占用公益一线时间，挤压服务时间。",
+      "repeatFrequency": "每周活动都发生，每月底集中爆发。",
+      "impactedRoles": ["项目负责人", "志愿者管理员", "一线执行人员"],
+      "ifNotSolved": "服务记录会持续断档，证明开具和复盘都会延迟。",
+      "preserveProcess": "报名、签到、服务反馈全链路过程留痕。",
+      "preserveAssets": "志愿者长期服务档案和活动历史。",
+      "preserveTemplates": "服务记录模板、活动统计模板。",
+      "preserveReports": "月度服务时长报表与活动参与报表。",
+      "preserveJudgement": "可判断志愿者活跃度和活动投入节奏。",
+      "beneficiaryOrganizations": ["公益组织", "社区服务机构", "志愿服务团队"]
+    },
+    "detail": {
+      "sceneDescription": "组织每月会组织志愿者参与社区探访。目前报名在微信群，签到用纸质表，月底由工作人员手动录入 Excel。",
+      "currentApproach": "当前做法是微信群接龙报名 + 纸质签到 + Excel 手工汇总。",
+      "problems": [
+        "报名、签到和统计分散，信息容易漏",
+        "服务时长核对成本高",
+        "志愿者服务记录不连续",
+        "活动结束后复盘耗时"
+      ],
+      "expectedFeatures": [
+        "志愿者报名与活动签到",
+        "服务时长自动汇总",
+        "按志愿者查看累计服务记录",
+        "按活动查看参与人员与总时长",
+        "服务记录导出"
+      ],
+      "tasks": [
+        {
+          "id": "vh-task-1",
+          "title": "梳理服务时长核心字段",
+          "roleNeeded": ["product"],
+          "difficulty": "beginner",
+          "status": "等待认领",
+          "estimate": "2-3 天"
+        },
+        {
+          "id": "vh-task-2",
+          "title": "设计服务记录列表与录入页",
+          "roleNeeded": ["frontend", "design"],
+          "difficulty": "beginner",
+          "status": "等待认领",
+          "estimate": "3-5 天"
+        },
+        {
+          "id": "vh-task-3",
+          "title": "新增服务记录接口与统计聚合",
+          "roleNeeded": ["backend"],
+          "difficulty": "medium",
+          "status": "已认领",
+          "assignee": "后端志愿者 A",
+          "estimate": "5-7 天"
+        }
+      ],
+      "acceptanceCriteria": [
+        "工作人员可以新增与编辑服务记录",
+        "可按志愿者查看累计服务时长",
+        "可按活动查看参与人员与总时长",
+        "支持导出服务记录",
+        "不展示敏感个人信息"
+      ],
+      "links": [
+        {
+          "label": "GitHub Issue",
+          "url": "https://github.com/guyuan9300/yiyu-thinktank-workbench/issues"
+        }
+      ],
+      "dataCenterMapping": {
+        "dataObjects": ["志愿者", "活动", "签到", "服务记录"],
+        "relationships": ["志愿者参加活动", "活动产生服务记录", "服务记录累加为服务时长"],
+        "computedMetrics": ["累计服务时长", "活动参与次数", "月度服务总量"],
+        "targetWorkbench": "志愿者服务工作台",
+        "dataInputs": ["活动报名", "签到记录", "服务反馈"],
+        "dataOutputs": ["志愿者服务档案", "活动统计", "服务时长报表"],
+        "dataFeedbackLoop": ["新活动继续产生服务记录", "反馈继续优化服务分类"],
+        "privacyLevel": "internal",
+        "reusablePotential": "适用于社区服务、助老、环保、教育公益等需要志愿者服务记录的组织。",
+        "contributionLayers": [
+          "data_modeling",
+          "metric_computation",
+          "workbench_component",
+          "testing_validation",
+          "documentation_training"
+        ]
+      }
+    }
+  },
+  {
+    "id": "demand-donor-followup",
+    "title": "捐赠人回访提醒",
+    "requesterType": "教育公益项目",
+    "orgType": "公益组织",
+    "scenario": "捐赠人管理",
+    "summary": "希望在收到捐赠后自动生成回访提醒，记录沟通内容，并支持按捐赠人类型做分层跟进。",
+    "status": "confirming",
+    "neededRoles": ["product", "backend"],
+    "difficulty": "beginner",
+    "isBeginnerFriendly": true,
+    "impactScope": "公益组织、社会企业可复用",
+    "watchersCount": 8,
+    "claimedCount": 0,
+    "updatedAtText": "昨天更新",
+    "updatedAtISO": "2026-04-20T08:30:00.000Z",
+    "actionLabel": "查看需求",
+    "issueUrl": "https://github.com/guyuan9300/yiyu-thinktank-workbench/issues",
+    "participation": {
+      "realProblem": "捐赠后回访和沟通记录容易遗漏",
+      "whoIsConsumed": "运营同事需要手工维护日历提醒并在多个聊天窗口查记录",
+      "whatToFree": "减少人工提醒、减少关系维护断档",
+      "whatCanBePreserved": "捐赠人分层标签、回访记录、关系温度变化",
+      "possibleWorkbench": "捐赠人关系工作台",
+      "missingRoles": ["产品志愿者", "后端开发", "文档志愿者"],
+      "estimatedEffort": "1_hour",
+      "nextAction": "先完成捐赠人分层字段和回访规则确认",
+      "recommendedFor": ["product_volunteer", "developer", "writer", "nonprofit"],
+      "valueTypes": ["cost_reduction", "org_memory", "traceability", "workbench_form"],
+      "humanCost": "单个项目每周要花 2-4 小时维护提醒和关系记录。",
+      "socialResourceCost": "支持者关系维护效率低会影响长期筹资稳定性。",
+      "repeatFrequency": "每次捐赠后都需要回访，全年持续发生。",
+      "impactedRoles": ["运营同事", "项目负责人"],
+      "ifNotSolved": "回访遗漏会降低关系温度和长期支持率。",
+      "preserveProcess": "捐赠-回访-反馈全过程可追踪。",
+      "preserveAssets": "捐赠人画像和历史沟通记录。",
+      "preserveTemplates": "回访节奏模板和感谢模板。",
+      "preserveReports": "分层回访完成率和支持者活跃度报表。",
+      "preserveJudgement": "可判断哪些支持者需要优先沟通。",
+      "beneficiaryOrganizations": ["公益组织", "社会企业"]
+    },
+    "detail": {
+      "sceneDescription": "项目希望维护长期支持者关系，而不是只在筹款时才联系捐赠人。",
+      "currentApproach": "目前主要依赖人工日历提醒，沟通记录分散在聊天和文档中。",
+      "problems": [
+        "回访动作容易遗漏",
+        "沟通记录难统一",
+        "缺少分层运营依据"
+      ],
+      "expectedFeatures": [
+        "捐赠后自动生成回访待办",
+        "按捐赠类型分层标签",
+        "沟通记录统一沉淀",
+        "回访完成状态可追踪"
+      ],
+      "tasks": [
+        {
+          "id": "df-task-1",
+          "title": "补齐捐赠人分层字段定义",
+          "roleNeeded": ["product"],
+          "difficulty": "beginner",
+          "status": "需求确认中",
+          "estimate": "1-2 天"
+        }
+      ],
+      "acceptanceCriteria": [
+        "可创建回访提醒",
+        "可记录回访内容",
+        "可按类型筛选捐赠人"
+      ],
+      "links": [
+        {
+          "label": "GitHub Issue",
+          "url": "https://github.com/guyuan9300/yiyu-thinktank-workbench/issues"
+        }
+      ],
+      "dataCenterMapping": {
+        "dataObjects": ["捐赠人", "捐赠记录", "回访记录", "项目", "感谢反馈"],
+        "relationships": ["捐赠人关联捐赠记录", "回访动作绑定项目阶段", "回访结果回流为关系状态"],
+        "computedMetrics": ["回访优先级", "捐赠人活跃度", "待感谢提醒", "捐赠项目匹配度"],
+        "targetWorkbench": "捐赠人关系工作台",
+        "dataInputs": ["捐赠流水", "回访记录", "项目进展"],
+        "dataOutputs": ["回访待办", "关系状态看板", "捐赠人分层报表"],
+        "dataFeedbackLoop": ["回访结果更新标签", "后续沟通继续沉淀关系温度"],
+        "privacyLevel": "internal",
+        "reusablePotential": "适用于需要维护长期支持者关系的公益组织与社会企业。",
+        "contributionLayers": [
+          "data_modeling",
+          "metric_computation",
+          "scenario_application",
+          "documentation_training"
+        ]
+      }
+    }
+  },
+  {
+    "id": "demand-activity-signin",
+    "title": "活动报名与签到二维码",
+    "requesterType": "街道社会组织",
+    "orgType": "公益组织",
+    "scenario": "活动管理",
+    "summary": "活动报名、签到、照片归档和满意度反馈目前分散在多个工具，希望统一到一条流程中。",
+    "status": "awaiting_split",
+    "neededRoles": ["product", "frontend", "design"],
+    "difficulty": "beginner",
+    "isBeginnerFriendly": true,
+    "impactScope": "公益组织、社会企业可复用",
+    "watchersCount": 15,
+    "claimedCount": 0,
+    "updatedAtText": "4 小时前更新",
+    "updatedAtISO": "2026-04-21T03:30:00.000Z",
+    "actionLabel": "参与拆分",
+    "issueUrl": "https://github.com/guyuan9300/yiyu-thinktank-workbench/issues",
+    "participation": {
+      "realProblem": "活动报名、签到、反馈和资料归档分散在多个工具",
+      "whoIsConsumed": "活动运营需要在活动前后反复转存数据并补统计",
+      "whatToFree": "减少活动结束后的手工汇总和重复对齐",
+      "whatCanBePreserved": "活动流程数据、参与记录、反馈结果和复盘素材",
+      "possibleWorkbench": "活动管理工作台",
+      "missingRoles": ["产品志愿者", "前端开发", "设计师", "测试志愿者"],
+      "estimatedEffort": "half_day",
+      "nextAction": "先完成活动流程节点拆分，再进入页面与接口协作",
+      "recommendedFor": ["product_volunteer", "designer", "developer", "tester", "beginner_volunteer"],
+      "valueTypes": ["cost_reduction", "free_repetition", "traceability", "workbench_form", "org_memory"],
+      "humanCost": "每场活动后需要 2-3 小时补录和归档。",
+      "socialResourceCost": "大量人工整理挤压活动复盘和服务改进时间。",
+      "repeatFrequency": "每次活动都发生。",
+      "impactedRoles": ["活动运营", "项目负责人", "志愿者管理员"],
+      "ifNotSolved": "活动数据持续碎片化，难以形成可复用经验。",
+      "preserveProcess": "活动发布、报名、签到、反馈链路沉淀。",
+      "preserveAssets": "活动素材与反馈库。",
+      "preserveTemplates": "活动流程模板、复盘模板。",
+      "preserveReports": "活动完成率、参与率和满意度报表。",
+      "preserveJudgement": "可判断活动质量与资源投入效率。",
+      "beneficiaryOrganizations": ["公益组织", "社会企业", "中小企业培训团队"]
+    },
+    "detail": {
+      "sceneDescription": "活动前后需要完成报名、签到、资料归档和反馈统计，当前动作分散。",
+      "currentApproach": "报名用表单、签到线下、照片另存网盘，反馈单独整理。",
+      "problems": [
+        "数据不在同一链路",
+        "活动结束后复盘困难"
+      ],
+      "expectedFeatures": [
+        "活动发布与报名",
+        "二维码签到",
+        "反馈收集",
+        "活动统计报表"
+      ],
+      "tasks": [
+        {
+          "id": "as-task-1",
+          "title": "拆分活动流程节点",
+          "roleNeeded": ["product"],
+          "difficulty": "beginner",
+          "status": "待拆分任务",
+          "estimate": "2 天"
+        }
+      ],
+      "acceptanceCriteria": [
+        "活动流程可视化",
+        "签到数据可统计",
+        "活动结果可导出"
+      ],
+      "links": [
+        {
+          "label": "GitHub Issue",
+          "url": "https://github.com/guyuan9300/yiyu-thinktank-workbench/issues"
+        }
+      ],
+      "dataCenterMapping": {
+        "dataObjects": ["活动", "报名", "签到", "反馈", "资料归档"],
+        "relationships": ["报名关联活动", "签到关联参与者", "反馈回流活动复盘"],
+        "computedMetrics": ["报名转签到率", "活动参与率", "满意度得分", "活动完成率"],
+        "targetWorkbench": "活动管理工作台",
+        "dataInputs": ["活动发布", "报名信息", "签到记录", "反馈问卷"],
+        "dataOutputs": ["活动结果看板", "参与清单", "活动复盘数据"],
+        "dataFeedbackLoop": ["活动反馈持续优化下次活动模板", "签到与参与记录沉淀组织经验"],
+        "privacyLevel": "internal",
+        "reusablePotential": "适用于公益活动、培训活动、社区活动等需要完整活动链路管理的组织。",
+        "contributionLayers": [
+          "data_modeling",
+          "workbench_component",
+          "scenario_application",
+          "testing_validation"
+        ]
+      }
+    }
+  },
+  {
+    "id": "demand-contract-reminder",
+    "title": "合同到期和回款节点提醒",
+    "requesterType": "小型服务企业",
+    "orgType": "中小企业",
+    "scenario": "合同管理",
+    "summary": "合同分散在表格和聊天记录中，续约、回款和付款节点经常遗漏，需要统一提醒和进度追踪。",
+    "status": "developing",
+    "neededRoles": ["backend", "testing", "docs"],
+    "difficulty": "medium",
+    "isBeginnerFriendly": false,
+    "impactScope": "中小企业通用需求",
+    "watchersCount": 10,
+    "claimedCount": 2,
+    "updatedAtText": "今天更新",
+    "updatedAtISO": "2026-04-21T07:00:00.000Z",
+    "actionLabel": "参与测试",
+    "issueUrl": "https://github.com/guyuan9300/yiyu-thinktank-workbench/issues",
+    "participation": {
+      "realProblem": "合同到期、续约和回款节点容易遗漏",
+      "whoIsConsumed": "销售与财务需要人工对表和反复提醒责任人",
+      "whatToFree": "减少节点遗漏和跨团队追问",
+      "whatCanBePreserved": "合同节点历史、跟进记录、风险变化轨迹",
+      "possibleWorkbench": "合同风险工作台",
+      "missingRoles": ["后端开发", "测试志愿者", "文档志愿者"],
+      "estimatedEffort": "one_week",
+      "nextAction": "完成回款状态机后进入测试验证与使用说明补齐",
+      "recommendedFor": ["developer", "tester", "writer", "sme"],
+      "valueTypes": ["cost_reduction", "traceability", "workbench_form", "open_source"],
+      "humanCost": "每周需人工巡检合同节点并在群内反复催办。",
+      "socialResourceCost": "关键节点遗漏会直接影响现金流和服务连续性。",
+      "repeatFrequency": "按合同周期持续发生。",
+      "impactedRoles": ["销售", "财务", "项目负责人"],
+      "ifNotSolved": "合同风险持续扩大，续约和回款稳定性下降。",
+      "preserveProcess": "节点状态流转和责任动作留痕。",
+      "preserveAssets": "合同执行历史与风险案例。",
+      "preserveTemplates": "合同节点跟进模板。",
+      "preserveReports": "节点完成率与风险报表。",
+      "preserveJudgement": "可判断高风险客户和高风险节点。",
+      "beneficiaryOrganizations": ["中小企业", "社会企业", "服务型团队"]
+    },
+    "detail": {
+      "sceneDescription": "项目组需要在续约、回款和付款节点及时提醒责任人。",
+      "currentApproach": "依赖 Excel 与聊天提醒，节点变更难同步。",
+      "problems": [
+        "节点遗漏风险高",
+        "责任人交接困难"
+      ],
+      "expectedFeatures": [
+        "到期提醒",
+        "节点跟踪",
+        "负责人可视化"
+      ],
+      "tasks": [
+        {
+          "id": "cr-task-1",
+          "title": "回款节点状态机实现",
+          "roleNeeded": ["backend"],
+          "difficulty": "medium",
+          "status": "开发中",
+          "assignee": "后端志愿者 B",
+          "estimate": "5 天"
+        },
+        {
+          "id": "cr-task-2",
+          "title": "回归测试用例整理",
+          "roleNeeded": ["testing"],
+          "difficulty": "beginner",
+          "status": "等待认领",
+          "estimate": "2 天"
+        }
+      ],
+      "acceptanceCriteria": [
+        "关键节点可提醒",
+        "可查看节点历史",
+        "可导出合同节点清单"
+      ],
+      "links": [
+        {
+          "label": "GitHub Issue",
+          "url": "https://github.com/guyuan9300/yiyu-thinktank-workbench/issues"
+        }
+      ],
+      "dataCenterMapping": {
+        "dataObjects": ["客户", "合同", "回款节点", "付款节点", "负责人"],
+        "relationships": ["合同关联客户和负责人", "节点状态关联回款与付款动作", "提醒动作回流合同状态"],
+        "computedMetrics": ["到期风险", "回款进度", "逾期天数", "节点完成率"],
+        "targetWorkbench": "合同风险工作台",
+        "dataInputs": ["合同台账", "回款记录", "付款记录", "沟通跟进"],
+        "dataOutputs": ["节点提醒面板", "合同风险清单", "周度跟进报表"],
+        "dataFeedbackLoop": ["节点处理结果回流合同健康度", "续约与回款记录持续修正风险模型"],
+        "privacyLevel": "internal",
+        "reusablePotential": "适用于有合同周期管理和回款跟踪需求的中小企业与社会企业。",
+        "contributionLayers": [
+          "data_modeling",
+          "metric_computation",
+          "workbench_component",
+          "testing_validation",
+          "documentation_training"
+        ]
+      }
+    }
+  },
+  {
+    "id": "demand-supplies-trace",
+    "title": "物资发放去向记录",
+    "requesterType": "社区服务机构",
+    "orgType": "公益组织",
+    "scenario": "物资管理",
+    "summary": "希望记录每批物资从入库、分拣、领取到发放的全过程，并能自动生成月度统计。",
+    "status": "testing",
+    "neededRoles": ["testing", "docs", "deploy"],
+    "difficulty": "complex",
+    "isBeginnerFriendly": false,
+    "impactScope": "公益组织、社区服务项目可复用",
+    "watchersCount": 9,
+    "claimedCount": 1,
+    "updatedAtText": "1 天前更新",
+    "updatedAtISO": "2026-04-20T03:00:00.000Z",
+    "actionLabel": "参与验证",
+    "issueUrl": "https://github.com/guyuan9300/yiyu-thinktank-workbench/issues",
+    "detail": {
+      "sceneDescription": "物资项目希望知道每批物资来源、库存、去向和发放结果。",
+      "currentApproach": "出入库与发放记录分别在多个表维护。",
+      "problems": [
+        "难以形成完整追溯链路",
+        "月报统计重复劳动"
+      ],
+      "expectedFeatures": [
+        "入库、出库、发放一体化记录",
+        "按批次追踪",
+        "月度统计生成"
+      ],
+      "tasks": [
+        {
+          "id": "st-task-1",
+          "title": "真实场景试用验证",
+          "roleNeeded": ["testing"],
+          "difficulty": "medium",
+          "status": "测试中",
+          "estimate": "3 天"
+        }
+      ],
+      "acceptanceCriteria": [
+        "可追踪物资去向",
+        "可按批次查询",
+        "可导出月度报表"
+      ],
+      "links": [
+        {
+          "label": "GitHub Issue",
+          "url": "https://github.com/guyuan9300/yiyu-thinktank-workbench/issues"
+        }
+      ],
+      "dataCenterMapping": {
+        "dataObjects": ["物资", "入库记录", "出库记录", "发放对象", "项目", "库存"],
+        "relationships": ["物资批次关联入库与出库", "出库关联发放对象和项目", "库存状态关联预警策略"],
+        "computedMetrics": ["当前库存", "发放数量", "库存预警", "月度发放统计"],
+        "targetWorkbench": "物资管理工作台",
+        "dataInputs": ["入库单", "出库单", "发放反馈"],
+        "dataOutputs": ["去向追踪明细", "批次查询", "月度发放报表"],
+        "dataFeedbackLoop": ["新入库与新发放持续回流库存状态", "反馈修正分类与预警阈值"],
+        "privacyLevel": "internal",
+        "reusablePotential": "适用于物资发放、救助发放、社区服务和公益仓储管理场景。",
+        "contributionLayers": [
+          "data_ingestion",
+          "metric_computation",
+          "workbench_component",
+          "testing_validation",
+          "deployment_support"
+        ]
+      }
+    }
+  },
+  {
+    "id": "demand-project-weekly-report",
+    "title": "项目周报自动汇总",
+    "requesterType": "社会企业项目组",
+    "orgType": "社会企业",
+    "scenario": "项目管理",
+    "summary": "每周要汇总项目推进、风险和待确认事项，当前依赖手工整理，耗时且易遗漏。",
+    "status": "merged",
+    "neededRoles": ["docs", "deploy"],
+    "difficulty": "medium",
+    "isBeginnerFriendly": false,
+    "impactScope": "社会企业与中小企业可复用",
+    "watchersCount": 7,
+    "claimedCount": 1,
+    "updatedAtText": "1 周前更新",
+    "updatedAtISO": "2026-04-14T03:00:00.000Z",
+    "actionLabel": "查看代码",
+    "issueUrl": "https://github.com/guyuan9300/yiyu-thinktank-workbench/issues",
+    "detail": {
+      "sceneDescription": "每周复盘前需要整理推进、延期、风险和待确认事项。",
+      "currentApproach": "团队每周从多个表格手动复制到周报模板。",
+      "problems": [
+        "周报准备耗时",
+        "信息容易漏项"
+      ],
+      "expectedFeatures": [
+        "自动汇总周推进",
+        "自动识别延期和风险",
+        "生成待确认动作清单"
+      ],
+      "tasks": [
+        {
+          "id": "pw-task-1",
+          "title": "使用文档补齐",
+          "roleNeeded": ["docs"],
+          "difficulty": "beginner",
+          "status": "已完成",
+          "assignee": "文档志愿者 A"
+        }
+      ],
+      "acceptanceCriteria": [
+        "可一键生成周报草稿",
+        "可手动调整并确认",
+        "支持团队导出"
+      ],
+      "links": [
+        {
+          "label": "GitHub Issue",
+          "url": "https://github.com/guyuan9300/yiyu-thinktank-workbench/issues"
+        }
+      ]
+    }
+  }
+]

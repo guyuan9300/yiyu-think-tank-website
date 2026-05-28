@@ -38,6 +38,11 @@ import AdminStrategyCompanionConceptPage from './components/AdminStrategyCompani
 import { ConsultApplyPage } from './components/ConsultApplyPage';
 import { NotFoundPage } from './components/NotFoundPage';
 import { OpenSourceWorkbenchPage } from './components/OpenSourceWorkbenchPage';
+import { OpenSourceHomePage } from './components/open-source-home/OpenSourceHomePage';
+import { DemandSubmitPage } from './components/DemandSubmitPage';
+import { VolunteerApplyPage } from './components/VolunteerApplyPage';
+import { DemandPoolPage } from './components/DemandPoolPage';
+import { DemandDetailPage } from './components/DemandDetailPage';
 import { StrategyModuleIntroPage } from './components/StrategyModuleIntroPage';
 import { PaymentIntroPage } from './components/PaymentIntroPage';
 import { PaymentCheckoutPage } from './components/PaymentCheckoutPage';
@@ -234,6 +239,11 @@ export default function App() {
     'org-effectiveness',
     'digital-ai',
     'open-source-workbench',
+    'open-source-home',
+    'demand-submit',
+    'volunteer-apply',
+    'demand-pool',
+    'demand-detail',
 
     '404',
   ]);
@@ -307,6 +317,10 @@ export default function App() {
       return `?page=${page}&id=${encodeURIComponent(detailId || '')}`;
     }
 
+    if (page === 'demand-detail') {
+      return `?page=demand-detail&id=${encodeURIComponent(detailId || '')}`;
+    }
+
     if (page === 'strategy-companion') {
       // Preserve clientId from current URL if present.
       const params = new URLSearchParams(window.location.search);
@@ -339,7 +353,14 @@ export default function App() {
       const { page, unknown, id } = parseUrl();
       setUnknownPage(unknown);
       setCurrentPage(page);
-      if (page === 'article' || page === 'report' || page === 'methodology-library' || page === 'payment-checkout' || page === 'payment-result') {
+      if (
+        page === 'article' ||
+        page === 'report' ||
+        page === 'methodology-library' ||
+        page === 'payment-checkout' ||
+        page === 'payment-result' ||
+        page === 'demand-detail'
+      ) {
         setSelectedDetailId(id);
       }
       if (page === 'book-reader') {
@@ -376,7 +397,7 @@ export default function App() {
     }
   }, [currentPage, selectedBookId, selectedDetailId, selectedCaseId, unknownPage]);
 
-  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'terms-of-service' | 'privacy-policy' | 'case' | 'admin' | 'user-center' | 'membership' | 'payment-checkout' | 'payment-result' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply' | 'book-library' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai' | 'open-source-workbench', bookId?: string, caseId?: string) => {
+  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'terms-of-service' | 'privacy-policy' | 'case' | 'admin' | 'user-center' | 'membership' | 'payment-checkout' | 'payment-result' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply' | 'book-library' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai' | 'open-source-workbench' | 'demand-submit' | 'volunteer-apply' | 'demand-pool' | 'demand-detail', bookId?: string, caseId?: string) => {
     // Reset scroll on page-level navigation so detail pages always open from the top.
     // (Otherwise the browser may keep the previous scroll position and look like it jumped to the bottom.)
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
@@ -421,6 +442,11 @@ export default function App() {
       setCurrentPage('strategy-companion');
     } else if (page === 'consult-apply') {
       setCurrentPage('consult-apply');
+    } else if (page === 'demand-submit' || page === 'volunteer-apply' || page === 'demand-pool') {
+      setCurrentPage(page);
+    } else if (page === 'demand-detail') {
+      setSelectedDetailId(bookId || '');
+      setCurrentPage(page);
     } else {
       setCurrentPage(page);
     }
@@ -463,7 +489,7 @@ export default function App() {
           return;
         }
 
-        if (page === 'payment-checkout' || page === 'payment-result' || page === 'methodology-library') {
+        if (page === 'payment-checkout' || page === 'payment-result' || page === 'methodology-library' || page === 'demand-detail') {
           handleNavigate(page as any, id);
           return;
         }
@@ -481,6 +507,10 @@ export default function App() {
         }
         if (page === 'book-reader') {
           handleNavigate('book-reader', id);
+          return;
+        }
+        if (page === 'demand-detail') {
+          handleNavigate('demand-detail', id);
           return;
         }
         handleNavigate(page as any, id);
@@ -747,6 +777,29 @@ export default function App() {
 
   if (currentPage === 'open-source-workbench') {
     return <OpenSourceWorkbenchPage onNavigate={(page) => handleNavigate(page as any)} />;
+  }
+
+  if (currentPage === 'open-source-home') {
+    return <OpenSourceHomePage onNavigate={(page) => handleNavigate(page as any)} />;
+  }
+
+  if (currentPage === 'demand-submit') {
+    return renderWithYiyuTong(<DemandSubmitPage onNavigate={(page) => handleNavigate(page as any)} />, 'demand-submit');
+  }
+
+  if (currentPage === 'volunteer-apply') {
+    return renderWithYiyuTong(<VolunteerApplyPage onNavigate={(page) => handleNavigate(page as any)} />, 'volunteer-apply');
+  }
+
+  if (currentPage === 'demand-pool') {
+    return renderWithYiyuTong(<DemandPoolPage onNavigate={(page, id) => handleNavigate(page as any, id)} />, 'demand-pool');
+  }
+
+  if (currentPage === 'demand-detail') {
+    return renderWithYiyuTong(
+      <DemandDetailPage demandId={selectedDetailId} onNavigate={(page, id) => handleNavigate(page as any, id)} />,
+      'demand-detail',
+    );
   }
 
   // Strategy Module Intro Pages

@@ -10,6 +10,9 @@ interface ImportMetaEnv {
   readonly VITE_LOG_LEVEL?: 'debug' | 'info' | 'warn' | 'error';
   readonly VITE_REQUEST_TIMEOUT_MS?: string;
   readonly VITE_HEALTH_ENDPOINT?: string;
+  readonly VITE_DEMAND_FORM_ENDPOINT?: string;
+  readonly VITE_VOLUNTEER_FORM_ENDPOINT?: string;
+  readonly VITE_DEMAND_POOL_SOURCE?: string;
 }
 
 interface ImportMeta {

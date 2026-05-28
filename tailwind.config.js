@@ -20,6 +20,23 @@ export default {
         border: '#E7E5E4',
         success: '#10B981',
         card: '#FFFFFF',
+        // 开源官网首页专用调色板（深蓝主色 · 仅 open-source-home 使用，不影响咨询站紫靛 token）
+        os: {
+          // 品牌主题：深蓝 + 紫（取自益语智库 logo 的渐变深蓝 + 品牌紫），精致克制
+          navy: '#16265E',      // 深藏蓝(logo 底) — 标题/页脚/主按钮
+          'navy-700': '#21357F',
+          blue: '#2C6FD0',      // 天青蓝(logo 顶) — 链接/图标/交互
+          indigo: '#4F46E5',    // 品牌靛(渐变桥)
+          violet: '#7C3AED',    // 品牌紫 — 次强调
+          canvas: '#F7F8FC',    // 冷调浅底
+          paper: '#FFFFFF',
+          mist: '#ECEFFB',      // 浅靛蓝(区块/卡片底)
+          spark: '#7C3AED',     // 强调/加电 = 品牌紫
+          'spark-soft': '#EDE7FB',
+          ink: '#1A2235',       // 蓝墨近黑(正文标题)
+          muted: '#5A6178',     // 蓝灰次要文字
+          line: '#E3E6F1',      // 发丝线/边框(微蓝)
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -75,6 +92,9 @@ export default {
         'glow-primary': '0 0 40px -8px rgba(79, 70, 229, 0.25)',
         'glow-secondary': '0 0 40px -8px rgba(124, 58, 237, 0.25)',
         'glow-accent': '0 0 40px -8px rgba(168, 85, 247, 0.25)',
+        // 开源官网：轻阴影（指令要求阴影必须轻，不要厚重浮层）
+        'os': '0 1px 2px rgba(22,38,94,0.05), 0 8px 24px -14px rgba(22,38,94,0.18)',
+        'os-lg': '0 2px 4px rgba(22,38,94,0.05), 0 18px 44px -20px rgba(22,38,94,0.22)',
       },
       backdropBlur: {
         xs: '2px',
