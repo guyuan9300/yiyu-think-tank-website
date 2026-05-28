@@ -33,6 +33,7 @@ import { ConsultApplyPage } from './components/ConsultApplyPage';
 import { NotFoundPage } from './components/NotFoundPage';
 // 已删: OpenSourceWorkbenchPage / DemandSubmit/Pool/Detail / VolunteerApply / StrategyModuleIntroPage
 import { OpenSourceHomePage } from './components/open-source-home/OpenSourceHomePage';
+import { AdminV2Page } from './components/admin-v2/AdminV2Page';
 import { PaymentIntroPage } from './components/PaymentIntroPage';
 import { PaymentCheckoutPage } from './components/PaymentCheckoutPage';
 import { PaymentResultPage } from './components/PaymentResultPage';
@@ -202,6 +203,9 @@ export default function App() {
     'articles',         // alias → article-center
     'reports',          // alias → report-library
     'about',
+
+    // admin-v2 新统一后台
+    'admin-v2',
 
     // 内部 page key (新 URL alias 解析后会到这里)
     'article-center',
@@ -713,6 +717,18 @@ export default function App() {
   // 2026-05-28 砍掉 open-source-workbench (新版整页转作首页) + demand-* 4 个
   if (currentPage === 'open-source-home') {
     return <OpenSourceHomePage onNavigate={(page) => handleNavigate(page as any)} />;
+  }
+
+  // admin-v2 新统一后台 (10 模块, 当前是纯 UI placeholder, 不接数据)
+  if (currentPage === 'admin-v2') {
+    return (
+      <AdminAccessGate
+        onNavigate={(page) => handleNavigate(page as any)}
+        onLoginSuccess={() => setCurrentPage('admin-v2')}
+      >
+        <AdminV2Page onNavigate={(page) => handleNavigate(page as any)} />
+      </AdminAccessGate>
+    );
   }
 
   // 2026-05-28 砍掉 demand-detail / strategy-path / business-design / org-effectiveness / digital-ai
