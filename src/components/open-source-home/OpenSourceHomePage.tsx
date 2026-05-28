@@ -3,6 +3,7 @@ import { Header } from '../Header';
 import { OpenSourceFooter } from './OpenSourceFooter';
 import { Hero } from './sections/Hero';
 import { Manifesto } from './sections/Manifesto';
+import { IntroduceYiyu } from './sections/IntroduceYiyu';
 import { QuoteBand } from './sections/QuoteBand';
 import { Features } from './sections/Features';
 import { Ledger } from './sections/Ledger';
@@ -64,6 +65,7 @@ export function OpenSourceHomePage({ onNavigate }: { onNavigate?: (page: string)
       <main>
         <Hero />
         <Manifesto />
+        <IntroduceYiyu />
         <QuoteBand />
         <Features />
         <Ledger />
