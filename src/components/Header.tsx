@@ -57,19 +57,15 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
     };
   }, [propIsLoggedIn]);
 
-  // 根据用户类型生成导航菜单项
+  // 顶部导航 — 4 项简化版 (2026-05-28 统一架构)
+  // 首页 = 开源首页 / 文章 = article-center alias / 报告 = report-library alias / 关于我们
   const getNavItems = () => {
-    const baseItems = [
+    return [
       { id: 'home', label: '首页', href: '#home' },
-      { id: 'insights', label: '前沿洞察', href: '#insights' },
-      { id: 'learning', label: '学习中心', href: '#learning' },
-      { id: 'strategy', label: '战略陪伴', href: '#strategy' }, // 所有用户都显示战略陪伴
+      { id: 'articles', label: '文章', href: '#articles' },
+      { id: 'reports', label: '报告', href: '#reports' },
       { id: 'about', label: '关于我们', href: '#about' },
-      { id: 'open-source-workbench', label: '开源工作台', href: '#open-source-workbench' },
-      { id: 'open-source-home', label: '益语智库智能平台', href: '#open-source-home' },
     ];
-
-    return baseItems;
   };
 
   const navItems = getNavItems();
@@ -79,28 +75,25 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
     handleNavClick('home');
   };
 
-  // 导航点击处理 - 根据菜单项ID跳转到对应页面
+  // 导航点击处理 - 4 项简化版
   const handleNavClick = (id: string) => {
-    // 统一映射：这里用 App 侧的导航语义（learning），避免类型/语义分裂。
+    // pageMap: nav id → App 路由 key
+    // 新版只有 4 项,articles/reports 是 URL alias,App.tsx 内 normalize 会还原.
     const pageMap: Record<string, string> = {
       home: 'home',
-      insights: 'insights',
-      learning: 'learning',
-      strategy: 'strategy',
-      about: 'about'
+      articles: 'articles',
+      reports: 'reports',
+      about: 'about',
     };
 
     const page = pageMap[id] || id;
 
     if (onNavigate) {
-      // 优先走 SPA 内部跳转（不刷新）
       onNavigate(page);
     } else {
-      // 兜底：如果某些页面没传 onNavigate，则退化为“真正跳转”。
-      // URL 参数用实际渲染页名（learning -> library），避免 App 初始化读到不认识的 page。
+      // 兜底硬跳转
       const path = window.location.pathname;
-      const pageParam = page === 'learning' ? 'library' : page;
-      const target = pageParam === 'home' ? path : `${path}?page=${encodeURIComponent(pageParam)}`;
+      const target = page === 'home' ? path : `${path}?page=${encodeURIComponent(page)}`;
       window.location.assign(target);
     }
 

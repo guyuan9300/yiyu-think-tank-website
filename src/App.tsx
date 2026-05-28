@@ -207,6 +207,9 @@ export default function App() {
     'library',
     'report-library',
     'article-center',
+    // 新版 4 项导航 URL 别名 (Header 链接 ?page=articles / ?page=reports)
+    'articles',
+    'reports',
     'book-reader',
     'report',
     'my-learning',
@@ -251,8 +254,13 @@ export default function App() {
   // Route alias normalization.
   // Canonical URL: `?page=learning` (we keep internal page key as `library`).
   const initialPageRaw = initialParams.get('page') || 'home';
-  // `learning` is an alias for `library`.
-  const normalized = initialPageRaw === 'learning' || initialPageRaw === 'my-learning' ? 'library' : initialPageRaw;
+  // alias 表: learning/my-learning → library, articles → article-center, reports → report-library
+  const normalized = (() => {
+    if (initialPageRaw === 'learning' || initialPageRaw === 'my-learning') return 'library';
+    if (initialPageRaw === 'articles') return 'article-center';
+    if (initialPageRaw === 'reports') return 'report-library';
+    return initialPageRaw;
+  })();
   const initialUnknown = ALLOWED_PAGES.has(normalized) ? null : normalized;
   const initialPage = initialUnknown ? '404' : normalized;
 
@@ -397,7 +405,7 @@ export default function App() {
     }
   }, [currentPage, selectedBookId, selectedDetailId, selectedCaseId, unknownPage]);
 
-  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'terms-of-service' | 'privacy-policy' | 'case' | 'admin' | 'user-center' | 'membership' | 'payment-checkout' | 'payment-result' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'consult-apply' | 'book-library' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai' | 'open-source-workbench' | 'demand-submit' | 'volunteer-apply' | 'demand-pool' | 'demand-detail', bookId?: string, caseId?: string) => {
+  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'terms-of-service' | 'privacy-policy' | 'case' | 'admin' | 'user-center' | 'membership' | 'payment-checkout' | 'payment-result' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'articles' | 'reports' | 'consult-apply' | 'book-library' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai' | 'open-source-workbench' | 'demand-submit' | 'volunteer-apply' | 'demand-pool' | 'demand-detail', bookId?: string, caseId?: string) => {
     // Reset scroll on page-level navigation so detail pages always open from the top.
     // (Otherwise the browser may keep the previous scroll position and look like it jumped to the bottom.)
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
@@ -408,6 +416,12 @@ export default function App() {
       setCurrentPage('insights');
     } else if (page === 'learning') {
       setCurrentPage('library');
+    } else if (page === 'articles') {
+      // 新版 URL alias: articles → article-center
+      setCurrentPage('article-center');
+    } else if (page === 'reports') {
+      // 新版 URL alias: reports → report-library
+      setCurrentPage('report-library');
     } else if (page === 'about') {
       setCurrentPage('about');
     } else if (page === 'book-reader') {
