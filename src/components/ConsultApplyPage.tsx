@@ -163,7 +163,7 @@ export function ConsultApplyPage({ onBack }: ConsultApplyPageProps) {
             {...getYiyuSectionAttrs('consult-apply', 'consult-apply-hero')}
             className="rounded-[32px] border border-border/40 bg-[radial-gradient(circle_at_top,_rgba(78,99,220,0.10),_transparent_55%),linear-gradient(180deg,rgba(248,250,255,0.96),rgba(241,246,255,0.84))] p-6 shadow-sm backdrop-blur-sm sm:p-8"
           >
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">益语智库-组织诊断申请表</h1>
+            <h1 className="font-serif-display text-[28px] sm:text-[36px] font-semibold tracking-tight text-foreground">益语智库 · 组织诊断申请</h1>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground/80">
               我们主要关注贵组织想要解决什么问题、为什么现在必须解决、愿意投入什么，因此回答可以简洁但足够清晰。
               所有信息仅用于评估与联系，不会用于其他用途。

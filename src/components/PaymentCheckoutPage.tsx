@@ -145,7 +145,7 @@ export function PaymentCheckoutPage({ planId, onNavigate }: PaymentCheckoutPageP
           <div className="flex items-start justify-between gap-6 flex-col md:flex-row">
             <div>
               <div className="text-sm text-muted-foreground/70">支付信息确认</div>
-              <h1 className="mt-2 text-3xl font-semibold text-foreground">{plan.name}</h1>
+              <h1 className="mt-2 font-serif-display text-[32px] sm:text-[36px] font-semibold tracking-tight text-foreground">{plan.name}</h1>
               <p className="mt-3 text-sm text-muted-foreground/80">提交信息后会直接跳转到微信 H5 支付页面。</p>
             </div>
             <div className="rounded-2xl border border-border/40 bg-white px-5 py-4">

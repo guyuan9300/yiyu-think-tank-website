@@ -59,7 +59,7 @@ export function PaymentIntroPage({ onNavigate }: PaymentIntroPageProps) {
                 <Crown className="w-3.5 h-3.5" />
                 {isPaid ? '付费会员续费' : '付费会员开通'}
               </div>
-              <h1 className="mt-4 text-3xl md:text-4xl font-semibold tracking-tight text-foreground">
+              <h1 className="mt-4 font-serif-display text-[32px] sm:text-[40px] md:text-[44px] font-semibold tracking-tight text-foreground leading-tight">
                 选择适合你的付费方案
               </h1>
               <p className="mt-3 text-sm md:text-base text-muted-foreground/80 max-w-2xl leading-7">

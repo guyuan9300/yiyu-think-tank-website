@@ -107,7 +107,7 @@ export function PaymentResultPage({ orderNo, onNavigate }: PaymentResultPageProp
               <div className="flex items-start gap-4">
                 {icon}
                 <div>
-                  <h1 className="text-3xl font-semibold text-foreground">{meta.title}</h1>
+                  <h1 className="font-serif-display text-[32px] sm:text-[36px] font-semibold tracking-tight text-foreground">{meta.title}</h1>
                   <p className="mt-2 text-sm text-muted-foreground/75">{error || meta.desc}</p>
                 </div>
               </div>

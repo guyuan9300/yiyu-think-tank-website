@@ -270,7 +270,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
 
   if (!report) {
     return (
-      <div {...getYiyuPageAttrs('report')} className="min-h-screen bg-gray-50">
+      <div {...getYiyuPageAttrs('report')} className="min-h-screen bg-os-canvas">
         <Header isLoggedIn={isLoggedIn} userType={isLoggedIn ? 'member' : 'visitor'} />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center max-w-md px-6">
@@ -300,7 +300,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
   }
 
   return (
-    <div {...getYiyuPageAttrs('report')} className="min-h-screen bg-gray-50 flex flex-col">
+    <div {...getYiyuPageAttrs('report')} className="min-h-screen bg-os-canvas flex flex-col">
       <Header isLoggedIn={isLoggedIn} userType={isLoggedIn ? 'member' : 'visitor'} />
 
       {/* 报告信息头部 */}
@@ -331,7 +331,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
             <ChevronRight className="w-3.5 h-3.5" />
             <span className="text-gray-900">详情</span>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="font-serif-display text-[36px] sm:text-[44px] font-semibold tracking-tight text-os-ink mb-4">
             {report.title}
           </h1>
 

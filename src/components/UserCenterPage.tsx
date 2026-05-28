@@ -625,8 +625,8 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
           className="bg-white/70 backdrop-blur rounded-3xl border border-border/40 p-6 md:p-8"
         >
           <div>
-            <h2 className="text-lg font-semibold text-foreground">个人资料</h2>
-            <p className="text-sm text-muted-foreground/70 mt-1">这里只保留当前账号真正需要维护的信息：头像、昵称与会员状态。</p>
+            <h2 className="font-serif-display text-[24px] sm:text-[28px] font-semibold tracking-tight text-foreground">个人资料</h2>
+            <p className="text-sm text-muted-foreground/70 mt-2">这里只保留当前账号真正需要维护的信息：头像、昵称与会员状态。</p>
           </div>
 
           <div className="mt-6 grid grid-cols-1 lg:grid-cols-[220px,1fr] gap-8">
