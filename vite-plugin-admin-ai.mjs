@@ -229,28 +229,52 @@ async function runBatchTask(taskId, articleIds) {
   }
 }
 
+// 通用转发到 yiyu.love (绕过 vite 内置 http-proxy 偶发 TLS 卡死).
+// connect-style middleware: req.url 已经 strip 掉注册时的 prefix.
+function makeYiyuForwarder(prefix) {
+  return async (req, res, next) => {
+    if (!req.url) return next();
+    try {
+      const upstream = `https://yiyu.love${prefix}${req.url}`;
+      // 准备 headers: 拷贝 + 删 hop-by-hop
+      const headers = { ...req.headers };
+      delete headers.host;
+      delete headers['content-length'];
+      delete headers.connection;
+
+      const init = { method: req.method, headers };
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method.toUpperCase())) {
+        const chunks = [];
+        for await (const c of req) chunks.push(c);
+        if (chunks.length > 0) init.body = Buffer.concat(chunks);
+      }
+
+      const r = await fetch(upstream, init);
+      const buf = Buffer.from(await r.arrayBuffer());
+      res.statusCode = r.status;
+      for (const [k, v] of r.headers.entries()) {
+        const lk = k.toLowerCase();
+        if (['transfer-encoding', 'connection', 'content-encoding', 'content-length'].includes(lk)) continue;
+        try { res.setHeader(k, v); } catch {}
+      }
+      res.end(buf);
+    } catch (e) {
+      console.error(`[forward ${prefix}]`, e?.message || e);
+      res.statusCode = 502;
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.end(JSON.stringify({ error: `upstream yiyu.love unreachable: ${e?.message || e}` }));
+    }
+  };
+}
+
 export function adminAiPlugin() {
   return {
     name: 'admin-ai',
     configureServer(server) {
-      // 备份转发: /api/content-snapshot → yiyu.love (用 node 原生 fetch, 绕过 vite http-proxy 偶发 TLS 卡死)
-      // 这样 admin-v2 报告模块 + 前台 dataService 都能拿到数据.
-      server.middlewares.use('/api/content-snapshot', async (req, res, next) => {
-        if (req.method !== 'GET') return next();
-        try {
-          const r = await fetch('https://yiyu.love/api/content-snapshot', { cache: 'no-store' });
-          const text = await r.text();
-          res.statusCode = r.status;
-          res.setHeader('Content-Type', 'application/json; charset=utf-8');
-          res.setHeader('Cache-Control', 'no-store');
-          res.end(text);
-        } catch (e) {
-          console.error('[content-snapshot forward]', e?.message);
-          res.statusCode = 502;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ error: 'upstream yiyu.love unreachable: ' + (e?.message || e) }));
-        }
-      });
+      // 所有 yiyu.love 后端 endpoint 走 plugin (node fetch), 绕过 vite proxy.
+      // 注意: /api/admin/ai/* (火山引擎方舟) 仍走 vite proxy (它要注入 ARK_API_KEY).
+      server.middlewares.use('/api/auth', makeYiyuForwarder('/api/auth'));
+      server.middlewares.use('/api/content-snapshot', makeYiyuForwarder('/api/content-snapshot'));
 
       server.middlewares.use('/api/admin-ai', async (req, res, next) => {
         try {

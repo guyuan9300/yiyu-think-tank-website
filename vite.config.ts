@@ -43,12 +43,11 @@ export default defineConfig(({ mode }) => ({
           });
         },
       },
-      // 普通 /api/* → 线上后端 (报告/文章/会员等真实数据)
-      '/api': {
-        target: 'https://yiyu.love',
-        changeOrigin: true,
-        secure: true,
-      },
+      // 2026-05-28 移除 /api → yiyu.love 这条 proxy 规则:
+      //   原因: vite 内置 http-proxy 跟 yiyu.love 的 TLS 握手反复偶发卡死.
+      //   替换: vite-plugin-admin-ai.mjs 用 node 原生 fetch 接管 /api/auth/* 和
+      //         /api/content-snapshot 的转发. 其它 /api/* 路径如有需要再加 plugin
+      //         middleware. 这样彻底避开 vite proxy 不稳定问题.
     },
   },
 }));
