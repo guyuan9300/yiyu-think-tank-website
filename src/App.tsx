@@ -33,6 +33,7 @@ import { ConsultApplyPage } from './components/ConsultApplyPage';
 import { NotFoundPage } from './components/NotFoundPage';
 // 已删: OpenSourceWorkbenchPage / DemandSubmit/Pool/Detail / VolunteerApply / StrategyModuleIntroPage
 import { OpenSourceHomePage } from './components/open-source-home/OpenSourceHomePage';
+import { SceneCapturePage } from './components/open-source-home/demo/SceneCapturePage';
 import { AdminV2Page } from './components/admin-v2/AdminV2Page';
 import { PaymentIntroPage } from './components/PaymentIntroPage';
 import { PaymentCheckoutPage } from './components/PaymentCheckoutPage';
@@ -233,6 +234,8 @@ export default function App() {
 
     // 开源首页 + 后台 + 404
     'open-source-home',
+    // GIF 录制专用最小页面 (scripts/capture-hero-gifs.mjs 调用)
+    'hero-capture',
     'admin',
     'admin-legacy',
     'admin-strategy-companion',
@@ -717,6 +720,12 @@ export default function App() {
   // 2026-05-28 砍掉 open-source-workbench (新版整页转作首页) + demand-* 4 个
   if (currentPage === 'open-source-home') {
     return <OpenSourceHomePage onNavigate={(page) => handleNavigate(page as any)} />;
+  }
+
+  // GIF 录制专用最小页面 (?page=hero-capture&scene=calendar|workspace|growth)
+  // 不挂 Header / Footer / YiyuTong, 只渲染单个 WindowCard, 供 playwright 录像
+  if (currentPage === 'hero-capture') {
+    return <SceneCapturePage />;
   }
 
   // admin-v2 新统一后台 (10 模块, 当前是纯 UI placeholder, 不接数据)
