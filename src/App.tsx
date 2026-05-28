@@ -821,7 +821,10 @@ export default function App() {
     );
   }
 
-  return renderWithYiyuTong(
-    <HomePage onNavigate={handleNavigate} onNavigateToDetail={handleNavigateToDetail} />
+  // Default fallback (含 currentPage === 'home') 直接渲染新版开源首页 OpenSourceHomePage.
+  // 老 HomePage 在 Step 10 物理删除前先保留 import 以便回滚;新首页不包 yiyuTong,
+  // 与 line 782 open-source-home 分支一致.
+  return (
+    <OpenSourceHomePage onNavigate={(page) => handleNavigate(page as any)} />
   );
 }
