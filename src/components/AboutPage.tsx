@@ -9,7 +9,8 @@ import {
 import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 
 interface AboutPageProps {
-  onNavigate?: (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'login' | 'register' | 'consult-apply') => void;
+  // strategy/insights/learning 路由将在 Step 10 清理后从 union 中移除;暂保留兼容
+  onNavigate?: (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'login' | 'register' | 'consult-apply' | 'articles' | 'reports') => void;
 }
 
 const coreValues = [
@@ -74,7 +75,7 @@ const milestones = [
 ];
 
 export function AboutPage({ onNavigate }: AboutPageProps) {
-  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'login' | 'register' | 'consult-apply') => {
+  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'login' | 'register' | 'consult-apply' | 'articles' | 'reports') => {
     onNavigate?.(page);
   };
 
@@ -84,43 +85,42 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
 
       <section
         {...getYiyuSectionAttrs('about', 'about-hero')}
-        className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden"
+        className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden bg-os-canvas"
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/4 via-transparent to-accent/4" />
-        <div className="absolute top-0 right-0 w-[560px] h-[560px] bg-primary/5 rounded-full blur-3xl" />
+        {/* 极淡光晕,与 ArticleCenterPage/ReportLibraryPage hero 同语言 */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-[-15%] left-[8%] w-[40%] h-[60%] rounded-full bg-os-navy/[0.05] blur-[120px]" />
+          <div className="absolute top-[-10%] right-[10%] w-[35%] h-[55%] rounded-full bg-os-spark/[0.05] blur-[120px]" />
+        </div>
 
         <div className="max-w-[1200px] mx-auto relative z-10">
           <div className="text-center max-w-4xl mx-auto">
-            <p className="text-[13px] font-medium text-muted-foreground/70 tracking-[0.15em] uppercase mb-6">
-              关于益语智库
-            </p>
+            {/* eyebrow 与发丝线 */}
+            <div className="flex items-center justify-center gap-2.5 mb-6">
+              <span className="h-px w-7 bg-os-blue/70" />
+              <span className="text-[12px] font-semibold tracking-[0.2em] text-os-blue">关于益语智库</span>
+              <span className="h-px w-7 bg-os-blue/70" />
+            </div>
 
-            <h1 className="text-[44px] sm:text-[56px] md:text-[64px] font-semibold leading-tight tracking-tight mb-6 text-foreground">
+            <h1 className="font-serif-display text-[40px] sm:text-[56px] md:text-[64px] font-semibold leading-[1.15] tracking-tight mb-6 text-os-ink">
               让战略落到地上
               <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">
-                让组织持续增长
-              </span>
+              <span className="text-ink-accent">让组织持续增长</span>
             </h1>
 
-            <p className="text-[17px] sm:text-[19px] text-muted-foreground/80 mb-10 max-w-3xl mx-auto leading-relaxed">
-              益语智库是面向公益行业与成长型组织的战略陪伴与知识服务平台，通过洞察、方法和 AI 赋能，
-              帮助组织把方向变成行动，把经验变成资产。
+            <p className="text-[16px] sm:text-[19px] text-os-muted mb-10 max-w-3xl mx-auto leading-[1.85]">
+              益语智库是一家把战略思想做成 AI 工具的组织陪伴公司。我们看到组织经营是一个整体,但今天所有工具都把它切碎了——
+              所以我们用 AI 和工作系统,把多年战略咨询沉淀的思想承载下来,作为持续陪伴客户的一种新方式。
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button
-                onClick={() => handleNavigate('strategy')}
-                className="group px-8 py-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/25 flex items-center gap-2"
-              >
-                <span className="font-medium text-[15px]">了解战略陪伴</span>
-                <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
-              </button>
+            {/* 单一主 CTA: 免费预约组织诊断 (strategy 页已砍, 申请咨询是主转化漏斗) */}
+            <div className="flex items-center justify-center">
               <button
                 onClick={() => handleNavigate('consult-apply')}
-                className="group px-8 py-4 rounded-full border border-border/60 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 hover:scale-[1.02] flex items-center gap-2"
+                className="group px-8 py-4 rounded-full bg-gradient-to-r from-os-navy to-os-indigo text-white hover:brightness-110 transition-all duration-300 hover:scale-[1.02] shadow-os flex items-center gap-2"
               >
-                <span className="font-medium text-[15px]">免费预约组织诊断</span>
+                <span className="font-semibold text-[15px]">免费预约组织诊断</span>
+                <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
               </button>
             </div>
           </div>
