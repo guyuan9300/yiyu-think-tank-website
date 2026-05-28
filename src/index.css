@@ -3,11 +3,14 @@
 @tailwind utilities;
 
 :root {
-  --color-primary: #4F46E5;
-  --color-secondary: #7C3AED;
-  --color-accent: #A855F7;
-  --color-background: #FAFAF9;
-  --color-foreground: #1C1917;
+  /* 全站语义 token 统一到 os 色板 (与 tailwind.config.js 保持一致) */
+  --color-primary: #16265E;     /* os-navy, 原 #4F46E5 */
+  --color-secondary: #7C3AED;   /* os-spark/violet, 保留 */
+  --color-accent: #2C6FD0;      /* os-blue, 原 #A855F7 */
+  --color-background: #F7F8FC;  /* os-canvas, 原 #FAFAF9 */
+  --color-foreground: #1A2235;  /* os-ink, 原 #1C1917 */
+  --color-muted-foreground: #5A6178;  /* os-muted, 原 #78716C */
+  --color-border: #E3E6F1;      /* os-line, 原 #E7E5E4 */
 }
 
 * {
@@ -70,7 +73,8 @@ body {
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  /* 冷渐变 navy → blue → indigo → spark, 与 open-source-home .text-ink-accent 一致 */
+  background: linear-gradient(118deg, #16265E 0%, #2C6FD0 38%, #4F46E5 68%, #7C3AED 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -246,9 +250,9 @@ body {
   ring-offset: 2px;
 }
 
-/* Selection */
+/* Selection - os-navy 高亮替代原紫靛 */
 ::selection {
-  background: rgba(79, 70, 229, 0.2);
+  background: rgba(22, 38, 94, 0.2);
   color: var(--color-foreground);
 }
 

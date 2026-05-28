@@ -7,17 +7,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#FAFAF9',
-        foreground: '#1C1917',
-        primary: '#4F46E5',
+        // 全站语义 token 已统一到 os 色板 (深蓝主导 + 紫强调),
+        // 让所有用 bg-background/text-foreground/text-primary 的旧页面
+        // 自动跟 open-source-home 同色系.
+        background: '#F7F8FC',          // 原 #FAFAF9 暖象牙白 → os-canvas 冷调浅蓝白
+        foreground: '#1A2235',          // 原 #1C1917 纯黑 → os-ink 蓝墨近黑
+        primary: '#16265E',             // 原 #4F46E5 紫靛 → os-navy 深藏蓝 (logo 底)
         'primary-foreground': '#FFFFFF',
-        secondary: '#7C3AED',
+        secondary: '#7C3AED',           // 保留 = os-spark/violet 品牌紫,强调位
         'secondary-foreground': '#FFFFFF',
-        accent: '#A855F7',
+        accent: '#2C6FD0',              // 原 #A855F7 浅紫 → os-blue 天青蓝 (logo 顶)
         'accent-foreground': '#FFFFFF',
-        muted: '#F5F5F4',
-        'muted-foreground': '#78716C',
-        border: '#E7E5E4',
+        muted: '#ECEFFB',               // 原 #F5F5F4 暖白 → os-mist 浅靛蓝
+        'muted-foreground': '#5A6178',  // 原 #78716C 暖灰 → os-muted 蓝灰
+        border: '#E3E6F1',              // 原 #E7E5E4 暖石灰 → os-line 冷蓝发丝线
         success: '#10B981',
         card: '#FFFFFF',
         // 开源官网首页专用调色板（深蓝主色 · 仅 open-source-home 使用，不影响咨询站紫靛 token）
