@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import {
   LayoutDashboard, FileText, Folder,
   Users, ShoppingCart, ClipboardList, UserCheck,
+  Bot, Image as ImageIcon,
   Menu, X, LogOut, ExternalLink, ArrowLeft,
 } from 'lucide-react';
 
@@ -18,18 +19,20 @@ export type AdminV2ModuleId =
   | 'members'
   | 'orders'
   | 'consult-requests'
-  | 'strategy-clients';
+  | 'strategy-clients'
+  | 'doubao-language'
+  | 'doubao-image';
 
 export interface ModuleDef {
   id: AdminV2ModuleId;
   label: string;
   icon: ReactNode;
-  group: '数据' | '内容管理' | '用户与商务';
+  group: '数据' | '内容管理' | '用户与商务' | '模型接入';
   description?: string;
 }
 
-// 2026-05-28 顾源源决定: 首页配置 + 关于我们配置 + 整站设置 走"直接改代码" 路径,
-// 不在 admin-v2 里做 UI 编辑入口. 故砍掉这三项.
+// 2026-05-28 顾源源决定: 首页配置 + 关于我们配置 + 整站设置 走"直接改代码" 路径.
+// 模型接入 = 豆包语言模型 + 豆包图像模型 两个完整接入入口 (各 7-8 段配置).
 export const ADMIN_V2_MODULES: ModuleDef[] = [
   { id: 'overview',         label: '数据概览',     icon: <LayoutDashboard className="w-4 h-4" />, group: '数据',       description: 'KPI / 流量 / 转化漏斗' },
   { id: 'articles',         label: '文章',         icon: <FileText className="w-4 h-4" />,       group: '内容管理',   description: '文章 CRUD' },
@@ -38,6 +41,8 @@ export const ADMIN_V2_MODULES: ModuleDef[] = [
   { id: 'orders',           label: '订单管理',     icon: <ShoppingCart className="w-4 h-4" />,   group: '用户与商务', description: '付费 / 退款 / 流水' },
   { id: 'consult-requests', label: '申请咨询',     icon: <ClipboardList className="w-4 h-4" />,  group: '用户与商务', description: 'consult-apply 提交列表' },
   { id: 'strategy-clients', label: '战略陪伴客户', icon: <UserCheck className="w-4 h-4" />,      group: '用户与商务', description: '已签约客户名册' },
+  { id: 'doubao-language',  label: '豆包·语言模型', icon: <Bot className="w-4 h-4" />,            group: '模型接入',   description: '文本 · 文章排版 / 报告介绍 / 益语通' },
+  { id: 'doubao-image',     label: '豆包·图像模型', icon: <ImageIcon className="w-4 h-4" />,      group: '模型接入',   description: '图像 · 文章封面 / 插图 / 报告封面' },
 ];
 
 interface AdminV2ShellProps {
