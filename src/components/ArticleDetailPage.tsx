@@ -143,11 +143,11 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 mb-7 text-[13px] text-muted-foreground/60">
             <button
-              onClick={() => onNavigate('article-center')}
+              onClick={() => onNavigate('articles')}
               className="flex items-center gap-1 hover:text-foreground transition-colors duration-200"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>文章中心</span>
+              <span>文章</span>
             </button>
             <ChevronRight className="w-3.5 h-3.5" />
             <span className="text-foreground">详情</span>
@@ -175,7 +175,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
             </div>
 
             <div className="px-6 sm:px-8 py-7 sm:py-8 bg-white/70 backdrop-blur-xl border-t border-border/30">
-              <h1 className="text-[30px] sm:text-[40px] font-semibold leading-[1.12] tracking-[-0.02em] text-foreground">
+              <h1 className="font-serif-display text-[30px] sm:text-[40px] font-semibold leading-[1.12] tracking-tight text-foreground">
                 {displayArticle.title}
               </h1>
               <p className="mt-4 text-[15px] sm:text-[17px] text-muted-foreground/80 leading-[1.75] max-w-3xl">

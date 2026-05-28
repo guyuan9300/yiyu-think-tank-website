@@ -109,12 +109,12 @@ export function ArticleCenterPage({
   // 加载状态
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-os-canvas">
         <Header onNavigate={onNavigate} />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground/70">加载中...</p>
+            <div className="w-10 h-10 border-2 border-os-navy/20 border-t-os-navy rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-os-muted">加载中...</p>
           </div>
         </div>
       </div>
@@ -122,47 +122,42 @@ export function ArticleCenterPage({
   }
 
   return (
-    <div {...getYiyuPageAttrs('article-center')} className="min-h-screen bg-background flex flex-col">
+    <div {...getYiyuPageAttrs('article-center')} className="min-h-screen bg-os-canvas flex flex-col">
       <Header onNavigate={onNavigate} />
 
-      {/* Hero 区域 */}
+      {/* Hero 区域 — 已升级到 open-source-home 设计语言: 衬线大标题 + eyebrow + os 色板 */}
       <section
         {...getYiyuSectionAttrs('article-center', 'article-center-hero')}
-        className="relative pt-24 sm:pt-32 pb-8 px-4 sm:px-6 overflow-hidden"
+        className="relative pt-24 sm:pt-32 pb-12 px-4 sm:px-6 overflow-hidden bg-os-canvas"
       >
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent" />
+        {/* 极淡光晕,纸面质感 */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-[-20%] left-[10%] w-[40%] h-[60%] rounded-full bg-os-blue/[0.04] blur-[120px]" />
+          <div className="absolute top-[-10%] right-[8%] w-[30%] h-[50%] rounded-full bg-os-spark/[0.04] blur-[120px]" />
+        </div>
 
-        <div className="relative max-w-7xl mx-auto">
-          {/* 面包屑导航 */}
-          <div className="flex items-center gap-2 mb-6 text-[13px] text-muted-foreground/60">
-            <button
-              onClick={() => onNavigate?.('insights')}
-              className="hover:text-foreground transition-colors"
-            >
-              前沿洞察
-            </button>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-foreground">文章中心</span>
+        <div className="relative max-w-[1200px] mx-auto">
+          {/* eyebrow */}
+          <div className="flex items-center gap-2.5 mb-6">
+            <span className="h-px w-7 bg-os-blue/70" />
+            <span className="text-[12px] font-semibold tracking-[0.18em] text-os-blue">益语智库 · 文章</span>
           </div>
 
-          {/* 主标题 */}
-          <div className="mb-4">
-            <h1 className="text-[56px] sm:text-[64px] lg:text-[72px] font-semibold leading-[1.05] tracking-[-0.025em] mb-3">
-              文章中心
-            </h1>
-            <p className="text-[13px] text-muted-foreground/50 tracking-[0.15em] uppercase font-medium">
-              Article Center
-            </p>
-          </div>
+          {/* 衬线大标题 */}
+          <h1 className="font-serif-display text-[40px] sm:text-[56px] lg:text-[64px] font-semibold leading-[1.12] tracking-tight text-os-ink mb-5">
+            观点、洞察、
+            <br className="hidden sm:block" />
+            <span className="text-ink-accent">深度思考</span>
+          </h1>
 
           {/* 副标题 */}
-          <p className="text-[21px] text-muted-foreground/70 leading-[1.5] max-w-3xl font-light">
-            分享专业观点、行业洞察和深度思考
+          <p className="text-[16px] sm:text-[18px] text-os-muted leading-[1.85] max-w-3xl">
+            益语智库分享对战略、业务设计、组织和 AI 技术的持续思考。一部分来自我们的咨询实践，一部分来自我们对前沿的观察。
           </p>
         </div>
       </section>
 
-      {/* 筛选栏 - 固定定位 */}
+      {/* 筛选栏 - 固定定位 (升级 os 色板) */}
       <div
         {...getYiyuSectionAttrs('article-center', 'article-center-filters')}
         data-yiyu-results-total={String(filteredArticles.length)}
@@ -171,7 +166,7 @@ export function ArticleCenterPage({
         data-yiyu-current-page={String(safePage)}
         data-yiyu-total-pages={String(totalPages)}
         data-yiyu-sort="latest"
-        className="bg-white/80 backdrop-blur-sm border-b border-border/40 sticky top-0 z-10"
+        className="bg-os-paper/85 backdrop-blur-md border-b border-os-line sticky top-0 z-10"
       >
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex flex-wrap items-center gap-4">
