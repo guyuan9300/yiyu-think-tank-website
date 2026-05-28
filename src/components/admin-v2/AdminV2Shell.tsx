@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import {
-  LayoutDashboard, FileText, Folder, Home, Info, Settings,
+  LayoutDashboard, FileText, Folder, Settings,
   Users, ShoppingCart, ClipboardList, UserCheck,
   Menu, X, LogOut, ExternalLink, ArrowLeft,
 } from 'lucide-react';
@@ -15,8 +15,6 @@ export type AdminV2ModuleId =
   | 'overview'
   | 'articles'
   | 'reports'
-  | 'home-config'
-  | 'about-config'
   | 'site-settings'
   | 'members'
   | 'orders'
@@ -31,12 +29,12 @@ export interface ModuleDef {
   description?: string;
 }
 
+// 2026-05-28 顾源源决定: 首页配置 + 关于我们配置 走"直接改代码" 路径,
+// 不在 admin-v2 里做 UI 编辑入口. 故砍掉 home-config + about-config 两项.
 export const ADMIN_V2_MODULES: ModuleDef[] = [
   { id: 'overview',         label: '数据概览',     icon: <LayoutDashboard className="w-4 h-4" />, group: '数据',       description: 'KPI / 流量 / 转化漏斗' },
   { id: 'articles',         label: '文章',         icon: <FileText className="w-4 h-4" />,       group: '内容管理',   description: '文章 CRUD' },
   { id: 'reports',          label: '报告',         icon: <Folder className="w-4 h-4" />,         group: '内容管理',   description: '报告 CRUD + 自做/推荐' },
-  { id: 'home-config',      label: '首页配置',     icon: <Home className="w-4 h-4" />,           group: '内容管理',   description: '思想介绍 / Manifesto / Features / Stories / Ledger / 客户墙' },
-  { id: 'about-config',     label: '关于我们配置', icon: <Info className="w-4 h-4" />,           group: '站点配置',   description: '核心价值观 / 服务 / 里程碑' },
   { id: 'site-settings',    label: '整站设置',     icon: <Settings className="w-4 h-4" />,       group: '站点配置',   description: 'SEO / 底部 / ICP / 联系方式' },
   { id: 'members',          label: '会员管理',     icon: <Users className="w-4 h-4" />,          group: '用户与商务', description: '用户列表 + 会员等级' },
   { id: 'orders',           label: '订单管理',     icon: <ShoppingCart className="w-4 h-4" />,   group: '用户与商务', description: '付费 / 退款 / 流水' },
