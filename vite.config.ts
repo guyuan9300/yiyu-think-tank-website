@@ -1,8 +1,15 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+// @ts-ignore - .mjs plugin
+import { adminAiPlugin } from './vite-plugin-admin-ai.mjs';
 
 export default defineConfig(({ mode }) => ({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // dev 期 admin-v2 文章 AI 服务 (端点 /api/admin-ai/*)
+    // 在 vite node 侧调豆包 + 写磁盘到 public/ai-generated/articles/
+    adminAiPlugin(),
+  ],
   // 默认部署到根路径（CVM/Nginx）；如需 GitHub Pages 可通过 VITE_BASE 覆盖
   base: mode === 'production' ? (process.env.VITE_BASE || '/') : '/',
   server: {
