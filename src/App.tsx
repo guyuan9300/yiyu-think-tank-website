@@ -35,6 +35,7 @@ import { NotFoundPage } from './components/NotFoundPage';
 import { OpenSourceHomePage } from './components/open-source-home/OpenSourceHomePage';
 import { SceneCapturePage } from './components/open-source-home/demo/SceneCapturePage';
 import { AdminV2Page } from './components/admin-v2/AdminV2Page';
+import { LocalAdminGate } from './components/admin-v2/LocalAdminGate';
 import { AiPreviewPage } from './components/AiPreviewPage';
 import { PaymentIntroPage } from './components/PaymentIntroPage';
 import { PaymentCheckoutPage } from './components/PaymentCheckoutPage';
@@ -731,11 +732,16 @@ export default function App() {
     return <SceneCapturePage />;
   }
 
-  // admin-v2 新统一后台 (10 模块, 当前是纯 UI placeholder, 不接数据)
-  // ⚠️ 验收期临时去掉 AdminAccessGate, 让顾源源能直接看 UI;
-  //    接 dataService 真数据前必须把 Gate 加回来 (TODO: Task #14 接数据时同步加回)
+  // admin-v2 新统一后台 (10 模块) — 验收期改用 LocalAdminGate:
+  //   1. 顾源源 / 白名单邮箱 登录后凭 localStorage 凭据放行
+  //   2. 未登录 / 非白名单 → 显示 LoginPage
+  // 部署生产时, 把 LocalAdminGate 换回 AdminAccessGate (调后端 fetchCurrentSession).
   if (currentPage === 'admin-v2') {
-    return <AdminV2Page onNavigate={(page) => handleNavigate(page as any)} />;
+    return (
+      <LocalAdminGate onNavigate={(page) => handleNavigate(page as any)}>
+        <AdminV2Page onNavigate={(page) => handleNavigate(page as any)} />
+      </LocalAdminGate>
+    );
   }
 
   // AI 生成文章预览 (验收期: 直接看 AI 封面 + AI 正文渲染到真实文章详情页效果)

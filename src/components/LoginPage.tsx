@@ -6,10 +6,21 @@ import { logger } from '../lib/logger';
 import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 
 // Admin credentials (global constant)
+// 2026-05-28 顾源源新增 guyuan@klngo.org 作为超级管理员账号 (验收期本地白名单, 跳过后端 user 表验证).
+// 生产部署后改为后端 PG users 表 + adminRole='admin' 字段管理.
 const ADMIN_CREDENTIALS = {
   username: 'guyuan9300@gmail.com',
   password: 'Guyuan9300'
 };
+
+const ADMIN_WHITELIST: { email: string; password: string }[] = [
+  { email: 'guyuan9300@gmail.com', password: 'Guyuan9300' },
+  { email: 'guyuan@klngo.org',     password: 'Guyuan31'   },
+];
+
+function matchAdminWhitelist(email: string, password: string) {
+  return ADMIN_WHITELIST.find((a) => a.email === email && a.password === password);
+}
 
 
 type LoginMode = 'email' | 'phone';
@@ -65,6 +76,31 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
         setError('请输入正确的手机号码');
         setIsLoading(false);
         return;
+      }
+
+      // ★ 本地超管白名单优先 (验收期, 跳过后端 PG users 表验证)
+      // 命中白名单 → 直接构造 admin user, 写入 localStorage, 跳转到管理后台.
+      if (loginMode === 'email') {
+        const matched = matchAdminWhitelist(normalizedEmail, password);
+        if (matched) {
+          const adminUser = {
+            id: `local_admin_${normalizedEmail.replace(/[^a-z0-9]/gi, '_')}`,
+            email: normalizedEmail,
+            nickname: normalizedEmail.split('@')[0],
+            adminRole: 'admin' as const,
+            memberType: 'admin' as const,
+            plainPassword: password,
+          };
+          saveUserRaw(JSON.stringify(adminUser), rememberMe);
+          setSavedItem(ADMIN_FLAG_KEY, 'true', rememberMe);
+          setSavedItem(ADMIN_EMAIL_KEY, normalizedEmail, rememberMe);
+          window.dispatchEvent(new Event('yiyu_user_updated'));
+          logger.info('login', '本地白名单超管登录成功', { email: normalizedEmail });
+          if (onAdminLogin) { onAdminLogin(); return; }
+          if (onLoginSuccess) { onLoginSuccess(); return; }
+          if (onNavigate) { onNavigate('home'); return; }
+          return;
+        }
       }
 
       const result = await loginByPassword({
