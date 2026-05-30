@@ -4,6 +4,7 @@ import {
   Users, ShoppingCart, ClipboardList, UserCheck,
   Bot, Image as ImageIcon,
   Menu, X, LogOut, ExternalLink, ArrowLeft,
+  Rocket, Tag, Send, Inbox, Package, ListChecks, Globe,
 } from 'lucide-react';
 
 // ============================================================
@@ -21,13 +22,20 @@ export type AdminV2ModuleId =
   | 'consult-requests'
   | 'strategy-clients'
   | 'doubao-language'
-  | 'doubao-image';
+  | 'doubao-image'
+  | 'release-overview'
+  | 'release-versions'
+  | 'release-targeting'
+  | 'release-feedback'
+  | 'release-downloads'
+  | 'release-checklist'
+  | 'release-website';
 
 export interface ModuleDef {
   id: AdminV2ModuleId;
   label: string;
   icon: ReactNode;
-  group: '数据' | '内容管理' | '用户与商务' | '模型接入';
+  group: '数据' | '内容管理' | '用户与商务' | '模型接入' | '发版与反馈';
   description?: string;
 }
 
@@ -43,6 +51,13 @@ export const ADMIN_V2_MODULES: ModuleDef[] = [
   { id: 'strategy-clients', label: '战略陪伴客户', icon: <UserCheck className="w-4 h-4" />,      group: '用户与商务', description: '已签约客户名册' },
   { id: 'doubao-language',  label: '豆包·语言模型', icon: <Bot className="w-4 h-4" />,            group: '模型接入',   description: '文本 · 文章排版 / 报告介绍 / 益语通' },
   { id: 'doubao-image',     label: '豆包·图像模型', icon: <ImageIcon className="w-4 h-4" />,      group: '模型接入',   description: '图像 · 文章封面 / 插图 / 报告封面' },
+  { id: 'release-overview',  label: '当前版本',   icon: <Rocket className="w-4 h-4" />,    group: '发版与反馈', description: '各平台版本 + 发版概览' },
+  { id: 'release-versions',  label: '版本管理',   icon: <Tag className="w-4 h-4" />,       group: '发版与反馈', description: '版本号 / 状态 / 更新内容' },
+  { id: 'release-targeting', label: '定向推送',   icon: <Send className="w-4 h-4" />,      group: '发版与反馈', description: '按组织代码定向 / 灰度 / 全量' },
+  { id: 'release-feedback',  label: '用户反馈',   icon: <Inbox className="w-4 h-4" />,     group: '发版与反馈', description: 'bug / 建议收件箱 + 状态机' },
+  { id: 'release-downloads', label: '安装包',     icon: <Package className="w-4 h-4" />,   group: '发版与反馈', description: '各平台下载包 / 校验 / 上下架' },
+  { id: 'release-checklist', label: '发版检查',   icon: <ListChecks className="w-4 h-4" />, group: '发版与反馈', description: '发版前检查清单门禁' },
+  { id: 'release-website',   label: '官网同步',   icon: <Globe className="w-4 h-4" />,     group: '发版与反馈', description: '下载页 / 更新日志派生预览' },
 ];
 
 interface AdminV2ShellProps {

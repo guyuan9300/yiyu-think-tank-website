@@ -11,6 +11,11 @@ import {
 import { DoubaoLanguageAccess, DoubaoImageAccess } from './AdminV2ModelAccess';
 // 真功能版文章管理 (接 vite-plugin-admin-ai, 替代 mock 版)
 import { ArticlesAiManagement } from './ArticlesAiManagement';
+// 发版与反馈控制台 (纯前端 mock, 待验收后接 cloud_backend)
+import {
+  ReleaseOverview, ReleaseVersions, ReleaseTargeting, ReleaseFeedback,
+  ReleaseDownloads, ReleaseChecklist, ReleaseWebsiteSync,
+} from './ReleaseConsoleModules';
 
 // admin-v2 入口页. 默认渲染 数据概览 (overview) 模块.
 // 当前所有模块用 mock placeholder, 等验收后再统一接 dataService.
@@ -29,6 +34,13 @@ export function AdminV2Page({ onNavigate }: { onNavigate: (page: string) => void
       case 'strategy-clients': return <StrategyClients />;
       case 'doubao-language':  return <DoubaoLanguageAccess />;
       case 'doubao-image':     return <DoubaoImageAccess />;
+      case 'release-overview':  return <ReleaseOverview />;
+      case 'release-versions':  return <ReleaseVersions />;
+      case 'release-targeting': return <ReleaseTargeting />;
+      case 'release-feedback':  return <ReleaseFeedback />;
+      case 'release-downloads': return <ReleaseDownloads />;
+      case 'release-checklist': return <ReleaseChecklist />;
+      case 'release-website':   return <ReleaseWebsiteSync />;
       default:                 return <DashboardOverview />;
     }
   };
