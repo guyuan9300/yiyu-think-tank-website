@@ -3,6 +3,7 @@ import {
   Rocket, Code2, Heart, Store,
 } from 'lucide-react';
 import { MobileAppShell } from '../MobileAppShell';
+import { CAPABILITY_ICONS } from '../icons/CapabilityIcons';
 
 // 移动端 App 化首页 (设计语言锚点)。桌面端 OpenSourceHomePage 不受影响。
 // 忠实承接桌面首页开场叙事 (HomeScrollStory): 战略陪伴者 → 增长维度 → 别人给观点我们交结果
@@ -31,6 +32,25 @@ const PHASES = [
   { tag: '前期', title: '梳理与诊断', desc: '系统梳理资料、看清现状，区分表面现象与真实卡点。' },
   { tag: '中期', title: '共创战略与机制', desc: '一起对齐方向，把战略拆成路径、项目、角色与节奏。' },
   { tag: '后期', title: '陪伴落地、沉淀能力', desc: '持续推进与校准，把可复制的部分沉淀为组织能力。' },
+];
+
+// 关于益语智库 · 6 个能力领域 (图标取自 CAPABILITY_ICONS 同序)
+const CAPABILITIES = [
+  { title: '战略路径清晰化', desc: '把模糊方向，变成 3 年愿景 + 1 年关键任务 + 季度落地动作。' },
+  { title: '组织效能重构', desc: '让角色、机制、会议与复盘节奏，支撑战略被组织真正承接。' },
+  { title: '数字化与 AI 落地', desc: '从真实工作流出发，把 AI 变成团队稳定在用的业务应用。' },
+  { title: '公益与社会创新', desc: '从「项目做了什么」，转向「地方最终能留下什么」。' },
+  { title: '商业增长与战略慈善', desc: '把增长焦虑，拆成可判断、可执行、可复盘的问题。' },
+  { title: '内容 · 工具 · 知识沉淀', desc: '把方法、研究与经验，沉淀为可反复使用的组织资产。' },
+];
+
+// 正在陪伴的组织
+const CLIENTS = [
+  { name: '公益基金会', tag: '战略陪伴 + 工作台部署' },
+  { name: '品牌咨询机构', tag: '组织能力沉淀' },
+  { name: '创业公司 · 早期', tag: '0→1 阶段陪伴' },
+  { name: '行业领军企业', tag: '组织数字化转型' },
+  { name: '社会创新组织', tag: '使命驱动经营' },
 ];
 
 const STATS = [
@@ -145,7 +165,9 @@ export function MobileHomeScreen({ onNavigate }: ScreenProps) {
         {/* ── 三段陪伴 (时间线) ── */}
         <section className="animate-fade-in-up" style={{ animationDelay: '0.14s' }}>
           <SectionLabel>我们怎么陪你落地</SectionLabel>
-          <h2 className="mt-2.5 font-serif-display text-[22px] font-semibold text-os-ink mb-5">从诊断到沉淀，全程陪伴</h2>
+          <h2 className="mt-2.5 font-serif-display text-[22px] leading-tight font-semibold text-os-ink mb-5">
+            不是做完方案就离场，<br />而是做你身边的成长合伙人
+          </h2>
           <ol className="relative pl-9">
             <span className="absolute left-[14px] top-2 bottom-2 w-px bg-gradient-to-b from-os-blue/60 via-os-line to-os-line" />
             {PHASES.map((p, i) => (
@@ -159,6 +181,72 @@ export function MobileHomeScreen({ onNavigate }: ScreenProps) {
               </li>
             ))}
           </ol>
+        </section>
+
+        {/* ── 两条路径 ── */}
+        <section className="animate-fade-in-up" style={{ animationDelay: '0.16s' }}>
+          <div className="relative overflow-hidden rounded-[24px] bg-[linear-gradient(135deg,#16265E,#22417f)] text-white p-5 shadow-[0_22px_50px_-28px_rgba(14,28,68,0.8)]">
+            <div className="pointer-events-none absolute -bottom-12 -left-8 w-40 h-40 rounded-full bg-os-blue/25 blur-3xl" />
+            <p className="relative text-[13px] leading-[1.7] text-white/80">
+              企业 / 组织 leader 走<span className="font-semibold text-white">战略陪伴线</span>；行动者 / 公益 / 小团队 用<span className="font-semibold text-white">益语智库 AI（开源）</span>。
+            </p>
+            <div className="relative mt-4 grid grid-cols-1 gap-2.5">
+              <button onClick={() => onNavigate('consult-apply')}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-white text-os-navy text-[14px] font-semibold py-3 active:scale-[0.97] transition-transform">
+                申请深度战略陪伴 <ArrowRight size={15} />
+              </button>
+              <button onClick={() => onNavigate('workbench')}
+                className="inline-flex items-center justify-center gap-1.5 rounded-full bg-white/10 ring-1 ring-white/25 text-white text-[14px] font-medium py-3 active:scale-[0.97] transition-transform">
+                了解益语智库 AI
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* ── 关于益语智库 · 6 能力领域 ── */}
+        <section className="animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+          <SectionLabel>关于益语智库 · 可落地的增长咨询</SectionLabel>
+          <h2 className="mt-2.5 font-serif-display text-[24px] leading-tight font-semibold text-os-ink">
+            从战略切入，<br />陪组织把每件大事想清楚、做出来
+          </h2>
+          <p className="mt-3 text-[13px] leading-[1.75] text-os-muted">
+            不只给一个理念，而是把战略判断、组织协同、数字化与 AI 放在同一张工作图上——把方向变成机制、把机制变成行动、把行动沉淀为长期能力。
+          </p>
+          <div className="mt-5 space-y-2.5">
+            {CAPABILITIES.map((c, i) => {
+              const Icon = CAPABILITY_ICONS[i];
+              return (
+                <div key={c.title} className="flex gap-3.5 rounded-2xl bg-white ring-1 ring-os-line p-4 shadow-[0_8px_24px_-20px_rgba(22,38,94,0.55)]">
+                  <span className="shrink-0 w-11 h-11 rounded-xl bg-gradient-to-br from-os-mist to-white ring-1 ring-os-line flex items-center justify-center text-os-navy">
+                    <Icon size={22} />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-semibold text-os-blue tabular-nums">0{i + 1}</span>
+                      <h3 className="text-[15px] font-semibold text-os-ink">{c.title}</h3>
+                    </div>
+                    <p className="mt-1 text-[12.5px] leading-relaxed text-os-muted">{c.desc}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ── 正在陪伴的组织 ── */}
+        <section className="animate-fade-in-up" style={{ animationDelay: '0.24s' }}>
+          <SectionLabel>益语智库正在陪伴的组织</SectionLabel>
+          <div className="mt-3.5 flex gap-3 overflow-x-auto -mx-4 px-4 pb-1 snap-x snap-mandatory scrollbar-none">
+            {CLIENTS.map((c) => (
+              <div key={c.name} className="snap-start shrink-0 w-[46%] rounded-2xl bg-gradient-to-br from-os-navy/[0.05] to-white ring-1 ring-os-line p-4">
+                <span className="flex w-8 h-8 rounded-lg bg-os-navy/[0.07] items-center justify-center mb-3">
+                  <span className="w-2.5 h-2.5 rounded-[3px] bg-os-navy/55" />
+                </span>
+                <h3 className="text-[14px] font-semibold text-os-ink leading-snug">{c.name}</h3>
+                <p className="mt-1 text-[12px] leading-relaxed text-os-muted">{c.tag}</p>
+              </div>
+            ))}
+          </div>
         </section>
 
         {/* ── 平台总账 ── */}
