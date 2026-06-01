@@ -15,6 +15,7 @@ import { Header } from './Header';
 import { OpenSourceFooter } from './open-source-home/OpenSourceFooter';
 import { CommentSection } from './CommentSection';
 import { getInsights, type InsightArticle } from '../lib/dataService';
+import { aiArticleDir } from '../lib/aiAssets';
 import { generateHTML } from '@tiptap/html';
 import DOMPurify from 'dompurify';
 import { getArticleTiptapExtensions } from '../lib/tiptapSchema';
@@ -72,7 +73,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
 
   // 把 article.coverImage patch 成 AI cover (如果有)
   const aiCoverUrl = aiEntry?.cover
-    ? `/ai-generated/articles/${articleId.replace(/[^a-zA-Z0-9_-]/g, '_')}/cover.jpg`
+    ? `${aiArticleDir(articleId)}/cover.jpg`
     : null;
   const aiIllustrations = aiEntry?.illustrations || [];
 
@@ -334,11 +335,10 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
               </div>
               <div className="space-y-6">
                 {aiIllustrations.map((ill, i) => {
-                  const safe = articleId.replace(/[^a-zA-Z0-9_-]/g, '_');
                   return (
                     <figure key={i} className="rounded-[20px] overflow-hidden ring-1 ring-os-line shadow-os relative">
                       <img
-                        src={`/ai-generated/articles/${safe}/${ill.filename}`}
+                        src={`${aiArticleDir(articleId)}/${ill.filename}`}
                         alt={ill.title}
                         className="w-full h-auto block"
                         style={{ aspectRatio: '1792 / 1024' }}

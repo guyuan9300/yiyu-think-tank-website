@@ -10,6 +10,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { getInsights, type InsightArticle } from '../lib/dataService';
+import { aiArticleDir } from '../lib/aiAssets';
 import { ContentResourceCard } from './ContentResourceCard';
 import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
 import { useLang, type Bilingual } from '../lib/i18n';
@@ -44,9 +45,8 @@ export function ArticleCenterPage({
 
   // helper: 拿 AI 封面 URL (有就用 AI, 没有就用原 coverImage)
   const resolveCover = (article: InsightArticle): string | undefined => {
-    const safe = article.id.replace(/[^a-zA-Z0-9_-]/g, '_');
     if (aiManifestRef.current[article.id]?.cover) {
-      return `/ai-generated/articles/${safe}/cover.jpg`;
+      return `${aiArticleDir(article.id)}/cover.jpg`;
     }
     return article.coverImage;
   };
