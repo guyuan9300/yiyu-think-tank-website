@@ -68,6 +68,15 @@ body.has-mobile-tabbar {
   padding-bottom: var(--mobile-tabbar-h);
 }
 
+/* 横滑卡片区隐藏滚动条 (移动端 shelf) */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

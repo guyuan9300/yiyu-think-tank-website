@@ -49,6 +49,8 @@ import { PaymentCheckoutPage } from './components/PaymentCheckoutPage';
 import { PaymentResultPage } from './components/PaymentResultPage';
 import { YiyuTongAssistant } from './components/YiyuTongAssistant';
 import { MobileTabBar } from './components/mobile/MobileTabBar';
+import { MobileHomeScreen } from './components/mobile/screens/MobileHomeScreen';
+import { useIsMobile } from './lib/useIsMobile';
 
 function AdminRouteRedirect({ target }: { target: string }) {
   useEffect(() => {
@@ -307,6 +309,7 @@ export default function App() {
 
   const [currentPage, setCurrentPage] = useState<string>(initialPage);
   const [unknownPage, setUnknownPage] = useState<string | null>(initialUnknown);
+  const isMobile = useIsMobile();
   const [selectedBookId, setSelectedBookId] = useState<string>(initialParams.get('id') || initialParams.get('bookId') || 'shimeshiquanli');
   const [selectedDetailId, setSelectedDetailId] = useState<string>(initialParams.get('id') || '');
   const [selectedCaseId, setSelectedCaseId] = useState<string>(initialParams.get('id') || 'case-1');
@@ -757,7 +760,9 @@ export default function App() {
   if (currentPage === 'open-source-home') {
     return (
       <>
-        <OpenSourceHomePage onNavigate={(page, id) => handleNavigate(page as any, id)} />
+        {isMobile
+          ? <MobileHomeScreen onNavigate={(page, id) => handleNavigate(page as any, id)} />
+          : <OpenSourceHomePage onNavigate={(page, id) => handleNavigate(page as any, id)} />}
         <MobileTabBar currentPage={currentPage} onNavigate={(page) => handleNavigate(page as any)} />
       </>
     );
@@ -834,7 +839,9 @@ export default function App() {
   // 与 line 782 open-source-home 分支一致.
   return (
     <>
-      <OpenSourceHomePage onNavigate={(page, id) => handleNavigate(page as any, id)} />
+      {isMobile
+        ? <MobileHomeScreen onNavigate={(page, id) => handleNavigate(page as any, id)} />
+        : <OpenSourceHomePage onNavigate={(page, id) => handleNavigate(page as any, id)} />}
       <MobileTabBar currentPage={currentPage} onNavigate={(page) => handleNavigate(page as any)} />
     </>
   );
