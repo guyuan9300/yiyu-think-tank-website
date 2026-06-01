@@ -1,11 +1,13 @@
 import { ArrowRight, ChevronRight, Check, Rocket, Code2, Heart, Store } from 'lucide-react';
-import { type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { MobileAppShell } from '../MobileAppShell';
 import { Reveal } from '../Reveal';
 import { CountUp, useScrollProgress } from '../scrollMotion';
 import { CAPABILITY_ICONS } from '../icons/CapabilityIcons';
-import { DEFAULT_CASH_FLOW, computeTotals } from '../../../lib/cashFlowData';
-import { DEFAULT_SUPPORT_POOL } from '../../../lib/supportPoolData';
+import { useCashFlow, computeTotals } from '../../../lib/cashFlowData';
+import { useSupportPool } from '../../../lib/supportPoolData';
+import { CashFlowDrawer } from '../../open-source-home/sections/CashFlowStatement';
+import { SupportPoolDrawer } from '../../open-source-home/sections/SupportPoolProjects';
 
 // 移动端 App 化首页 = 价值展示页。风格: 极简 + iOS 分组 + 灰度质感过渡 + 滚动惊喜。
 // 反「单调」: 分组面微渐变/深色收束区/噪点肌理 制造节奏; 逐行级联 + 强调条生长 制造惊喜。
@@ -41,14 +43,8 @@ const PATHS = [
   { title: '益语智库 AI（开源）', desc: '行动者 / 公益 / 小团队', page: 'workbench' },
 ];
 
-// 平台总账 (取自数据层, 与桌面同源, 万元单位)
-const cf = computeTotals(DEFAULT_CASH_FLOW);
-const LEDGER_STATS = [
-  { label: '平台结余', end: cf.balance, decimals: 2, comma: false, unit: '万元' },
-  { label: '行动者支持池', end: DEFAULT_SUPPORT_POOL.stats.balance, decimals: 2, comma: false, unit: '万元' },
-  { label: '共建参与', end: 1246, decimals: 0, comma: true, unit: '人次' },
-  { label: '行动者影响', end: 132.6, decimals: 1, comma: false, unit: '万人次' },
-];
+// 平台总账元信息 (数值在组件内取 useCashFlow/useSupportPool 实时计算, 与抽屉/桌面同源)
+type LedgerStat = { label: string; end: number; decimals: number; comma: boolean; unit: string; action?: 'cashflow' | 'pool' };
 
 // 行动者参与入口 (桌面 Join 四类角色)
 const ROLES = [
@@ -72,6 +68,18 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
 export function MobileHomeScreen({ onNavigate }: ScreenProps) {
   const phase = useScrollProgress<HTMLDivElement>();
   const glow = useScrollProgress<HTMLDivElement>();
+  const [cashFlowOpen, setCashFlowOpen] = useState(false);
+  const [supportPoolOpen, setSupportPoolOpen] = useState(false);
+
+  // 与抽屉/桌面同源的实时数据
+  const cf = computeTotals(useCashFlow());
+  const { stats: poolStats } = useSupportPool();
+  const LEDGER_STATS: LedgerStat[] = [
+    { label: '平台结余', end: cf.balance, decimals: 2, comma: false, unit: '万元', action: 'cashflow' },
+    { label: '行动者支持池', end: poolStats.balance, decimals: 2, comma: false, unit: '万元', action: 'pool' },
+    { label: '共建参与', end: 1246, decimals: 0, comma: true, unit: '人次' },
+    { label: '行动者影响', end: 132.6, decimals: 1, comma: false, unit: '万人次' },
+  ];
 
   return (
     <MobileAppShell onNavigate={onNavigate} scrollTitle="可落地的增长咨询">
@@ -221,16 +229,34 @@ export function MobileHomeScreen({ onNavigate }: ScreenProps) {
             <Reveal delay={60}>
               <div className={`${SURFACE} overflow-hidden`}>
                 <div className="grid grid-cols-2 gap-px bg-os-line/60">
-                  {LEDGER_STATS.map((s) => (
-                    <div key={s.label} className="bg-gradient-to-b from-white to-[#fafbfe] px-4 py-4">
-                      <p className="text-[11.5px] text-os-muted">{s.label}</p>
-                      <p className="mt-1 text-os-navy">
-                        <CountUp end={s.end} decimals={s.decimals} withComma={s.comma}
-                          className="text-[21px] font-bold tracking-tight tabular-nums" />
-                        <span className="ml-1 text-[12px] text-os-muted font-medium">{s.unit}</span>
-                      </p>
-                    </div>
-                  ))}
+                  {LEDGER_STATS.map((s) => {
+                    const tappable = !!s.action;
+                    const onTap = () => {
+                      if (s.action === 'cashflow') setCashFlowOpen(true);
+                      else if (s.action === 'pool') setSupportPoolOpen(true);
+                    };
+                    return (
+                      <button
+                        key={s.label}
+                        type="button"
+                        onClick={tappable ? onTap : undefined}
+                        disabled={!tappable}
+                        className={`text-left bg-gradient-to-b from-white to-[#fafbfe] px-4 py-4 transition-colors ${
+                          tappable ? 'active:bg-os-mist/50' : 'cursor-default'
+                        }`}
+                      >
+                        <span className="flex items-center gap-1 text-[11.5px] text-os-muted">
+                          {s.label}
+                          {tappable && <ChevronRight size={12} className="text-os-blue/60" />}
+                        </span>
+                        <span className="mt-1 block text-os-navy">
+                          <CountUp end={s.end} decimals={s.decimals} withComma={s.comma}
+                            className="text-[21px] font-bold tracking-tight tabular-nums" />
+                          <span className="ml-1 text-[12px] text-os-muted font-medium">{s.unit}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </Reveal>
@@ -275,6 +301,10 @@ export function MobileHomeScreen({ onNavigate }: ScreenProps) {
           </Reveal>
         </div>
       </div>
+
+      {/* 详情抽屉: 复用桌面同款 (现金流量表 / 行动者支持项目卡片) */}
+      <CashFlowDrawer open={cashFlowOpen} onClose={() => setCashFlowOpen(false)} />
+      <SupportPoolDrawer open={supportPoolOpen} onClose={() => setSupportPoolOpen(false)} />
     </MobileAppShell>
   );
 }
