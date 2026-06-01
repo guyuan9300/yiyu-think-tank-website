@@ -56,7 +56,7 @@ export function MobileAppShell({ onNavigate, children, showLogin = true }: Mobil
       </header>
 
       {/* 滚动内容区 (底部留白由 body.has-mobile-tabbar 提供) */}
-      <main className="px-4 pt-3">{children}</main>
+      <main className="px-5">{children}</main>
     </div>
   );
 }
