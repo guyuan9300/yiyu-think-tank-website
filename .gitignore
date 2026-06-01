@@ -75,3 +75,12 @@ agent_harness/yiyu_site/evidence/
 
 # Media
 media/
+public/test-output/
+
+# 本地内容缓存 (scripts/pull-content.mjs 从线上拉, 不入库)
+.content-cache/
+
+# 脚本生成物 (hero gif/mp4 暂存、截图、运行日志), src 未引用, 不入库
+output/
+gifs-out/
+logs/
