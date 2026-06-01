@@ -37,6 +37,17 @@ body {
   overscroll-behavior-y: auto;
 }
 
+/* 标题排版：避免"被挤压/孤行"——浏览器自动平衡换行。
+   能一行写完就一行；必须换行时也均匀分布，不会把一两个字孤零零挤到第二行。
+   作用于 h1/h2/h3 与衬线标题(.font-serif-display)；中英文同样生效。 */
+h1, h2, h3, .font-serif-display {
+  text-wrap: balance;
+}
+/* 正文段落：避免最后一行只剩一个孤词 */
+p {
+  text-wrap: pretty;
+}
+
 /* iOS Safe Area helpers */
 .safe-bottom {
   padding-bottom: max(16px, env(safe-area-inset-bottom));

@@ -6,7 +6,7 @@ export interface PaymentOrder {
   orderNo: string;
   userId?: string;
   userNickname?: string;
-  planId: PaymentPlanId;
+  planId: PaymentPlanId | string;
   planName: string;
   amountFen: number;
   amount: number;
@@ -46,12 +46,18 @@ export interface PaymentReadiness {
 }
 
 export interface CreatePaymentOrderPayload {
-  planId: PaymentPlanId;
+  planId: PaymentPlanId | string;
   buyerName: string;
   buyerOrg?: string;
   buyerPhone: string;
-  buyerEmail: string;
+  buyerEmail?: string;
   buyerNote?: string;
+  // 实体书邮寄信息
+  receiverName?: string;
+  receiverPhone?: string;
+  shippingRegion?: string;
+  shippingAddress?: string;
+  postalCode?: string;
 }
 
 export function createPaymentOrderApi(payload: CreatePaymentOrderPayload) {

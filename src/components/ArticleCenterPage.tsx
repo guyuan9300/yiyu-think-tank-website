@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Header } from './Header';
-import { Footer } from './Footer';
+import { OpenSourceFooter } from './open-source-home/OpenSourceFooter';
 import {
   FileText,
   Search,
@@ -11,8 +11,8 @@ import {
 } from 'lucide-react';
 import { getInsights, type InsightArticle } from '../lib/dataService';
 import { ContentResourceCard } from './ContentResourceCard';
-import { PaginationControls } from './PaginationControls';
 import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
+import { useLang, type Bilingual } from '../lib/i18n';
 
 const PAGE_SIZE = 6;
 
@@ -23,12 +23,14 @@ export function ArticleCenterPage({
   onNavigate?: (page: string) => void;
   onNavigateToDetail?: (id: string) => void;
 }) {
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const { t } = useLang();
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState<'all' | '战略' | '业务设计' | '组织' | 'AI 技术'>('all');
   const [articles, setArticles] = useState<InsightArticle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   // AI 封面 manifest (从 vite plugin /api/admin-ai/manifest 拉, 命中的文章用 AI 封面替换原 coverImage)
   const aiManifestRef = useRef<Record<string, { cover?: any; illustrations?: any[] }>>({});
 
@@ -49,12 +51,12 @@ export function ArticleCenterPage({
     return article.coverImage;
   };
 
-  const topicOptions: Array<{ id: 'all' | '战略' | '业务设计' | '组织' | 'AI 技术'; label: string }> = [
-    { id: 'all', label: '全部' },
-    { id: '战略', label: '战略' },
-    { id: '业务设计', label: '业务设计' },
-    { id: '组织', label: '组织' },
-    { id: 'AI 技术', label: 'AI 技术' },
+  const topicOptions: Array<{ id: 'all' | '战略' | '业务设计' | '组织' | 'AI 技术'; label: Bilingual }> = [
+    { id: 'all', label: { zh: '全部', en: 'All' } },
+    { id: '战略', label: { zh: '战略', en: 'Strategy' } },
+    { id: '业务设计', label: { zh: '业务设计', en: 'Business Design' } },
+    { id: '组织', label: { zh: '组织', en: 'Organization' } },
+    { id: 'AI 技术', label: { zh: 'AI 技术', en: 'AI Technology' } },
   ];
 
   // 加载数据
@@ -106,16 +108,29 @@ export function ArticleCenterPage({
     });
   }, [articles, searchQuery, selectedTopic]);
 
+  // 筛选/搜索变化时重置已显示数量
   useEffect(() => {
-    setCurrentPage(1);
+    setVisibleCount(PAGE_SIZE);
   }, [searchQuery, selectedTopic]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredArticles.length / PAGE_SIZE));
-  const safePage = Math.min(currentPage, totalPages);
-  const paginatedArticles = useMemo(() => {
-    const start = (safePage - 1) * PAGE_SIZE;
-    return filteredArticles.slice(start, start + PAGE_SIZE);
-  }, [filteredArticles, safePage]);
+  const visibleArticles = useMemo(
+    () => filteredArticles.slice(0, visibleCount),
+    [filteredArticles, visibleCount],
+  );
+  const hasMore = visibleCount < filteredArticles.length;
+
+  // 无限滚动: 哨兵进入视口 → 加载更多 (不用翻页)
+  useEffect(() => {
+    if (!hasMore) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const ob = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) setVisibleCount((c) => c + PAGE_SIZE); },
+      { rootMargin: '500px 0px' },
+    );
+    ob.observe(el);
+    return () => ob.disconnect();
+  }, [hasMore, filteredArticles.length]);
 
   // 刷新数据
   const handleRefresh = () => {
@@ -133,7 +148,7 @@ export function ArticleCenterPage({
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="w-10 h-10 border-2 border-os-navy/20 border-t-os-navy rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-os-muted">加载中...</p>
+            <p className="text-os-muted">{t({ zh: '加载中...', en: 'Loading...' })}</p>
           </div>
         </div>
       </div>
@@ -159,19 +174,19 @@ export function ArticleCenterPage({
           {/* eyebrow */}
           <div className="flex items-center gap-2.5 mb-6">
             <span className="h-px w-7 bg-os-blue/70" />
-            <span className="text-[12px] font-semibold tracking-[0.18em] text-os-blue">益语智库 · 文章</span>
+            <span className="text-[12px] font-semibold tracking-[0.18em] text-os-blue">{t({ zh: '益语智库 · 文章', en: 'Yiyu Institute · Articles' })}</span>
           </div>
 
           {/* 衬线大标题 */}
           <h1 className="font-serif-display text-[40px] sm:text-[56px] lg:text-[64px] font-semibold leading-[1.12] tracking-tight text-os-ink mb-5">
-            观点、洞察、
+            {t({ zh: '观点、洞察、', en: 'Perspectives, insights,' })}
             <br className="hidden sm:block" />
-            <span className="text-ink-accent">深度思考</span>
+            <span className="text-ink-accent">{t({ zh: '深度思考', en: 'and deep thinking' })}</span>
           </h1>
 
           {/* 副标题 */}
           <p className="text-[16px] sm:text-[18px] text-os-muted leading-[1.85] max-w-3xl">
-            益语智库分享对战略、业务设计、组织和 AI 技术的持续思考。一部分来自我们的咨询实践，一部分来自我们对前沿的观察。
+            {t({ zh: '益语智库分享对战略、业务设计、组织和 AI 技术的持续思考。一部分来自我们的咨询实践，一部分来自我们对前沿的观察。', en: 'Yiyu Institute shares its ongoing thinking on strategy, business design, organization, and AI. Some of it comes from our consulting practice, and some from our observation of the frontier.' })}
           </p>
         </div>
       </section>
@@ -182,8 +197,8 @@ export function ArticleCenterPage({
         data-yiyu-results-total={String(filteredArticles.length)}
         data-yiyu-active-topic={selectedTopic}
         data-yiyu-search-query={searchQuery}
-        data-yiyu-current-page={String(safePage)}
-        data-yiyu-total-pages={String(totalPages)}
+        data-yiyu-current-page={'1'}
+        data-yiyu-total-pages={'1'}
         data-yiyu-sort="latest"
         className="bg-os-paper/85 backdrop-blur-md border-b border-os-line sticky top-0 z-10"
       >
@@ -195,7 +210,7 @@ export function ArticleCenterPage({
               <input
                 data-yiyu-search="content"
                 type="text"
-                placeholder="搜索文章、标签..."
+                placeholder={t({ zh: '搜索文章、标签...', en: 'Search articles, tags...' })}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-muted/30 border border-border/40 rounded-full text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
@@ -213,7 +228,7 @@ export function ArticleCenterPage({
               >
                 {topicOptions.map((opt) => (
                   <option key={opt.id} value={opt.id}>
-                    {opt.id === 'all' ? '全部标签' : opt.label}
+                    {opt.id === 'all' ? t({ zh: '全部标签', en: 'All tags' }) : t(opt.label)}
                   </option>
                 ))}
               </select>
@@ -242,15 +257,15 @@ export function ArticleCenterPage({
       <div
         {...getYiyuSectionAttrs('article-center', 'article-center-results')}
         data-yiyu-results-total={String(filteredArticles.length)}
-        data-yiyu-current-page={String(safePage)}
-        data-yiyu-total-pages={String(totalPages)}
+        data-yiyu-current-page={'1'}
+        data-yiyu-total-pages={'1'}
         data-yiyu-sort="latest"
         className="max-w-4xl mx-auto px-6 py-8"
       >
         {/* 结果统计 */}
         <div className="flex items-center justify-between mb-8">
           <p className="text-[14px] text-muted-foreground/70">
-            共找到 <span className="text-foreground font-medium">{filteredArticles.length}</span> 篇文章
+            {t({ zh: '共找到', en: 'Found' })} <span className="text-foreground font-medium">{filteredArticles.length}</span> {t({ zh: '篇文章', en: 'articles' })}
           </p>
           {/* 刷新按钮已移除 */}
         </div>
@@ -259,12 +274,12 @@ export function ArticleCenterPage({
         {filteredArticles.length === 0 ? (
           <div className="bg-white/60 backdrop-blur-sm rounded-[20px] border border-border/40 p-16 text-center">
             <FileText className="w-14 h-14 mx-auto mb-4 text-muted-foreground/30" />
-            <p className="text-muted-foreground/70 text-[15px]">暂无文章</p>
+            <p className="text-muted-foreground/70 text-[15px]">{t({ zh: '暂无文章', en: 'No articles yet' })}</p>
           </div>
         ) : viewMode === 'grid' ? (
           /* 网格视图 */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {paginatedArticles.map((article: InsightArticle) => (
+            {visibleArticles.map((article: InsightArticle) => (
               <ContentResourceCard
                 key={article.id}
                 contentId={article.id}
@@ -299,7 +314,7 @@ export function ArticleCenterPage({
           /* 列表视图 */
           <div className="bg-white/60 backdrop-blur-sm rounded-[20px] border border-border/40 overflow-hidden">
             <div className="space-y-3 p-3">
-              {paginatedArticles.map((article: InsightArticle) => (
+              {visibleArticles.map((article: InsightArticle) => (
                 <ContentResourceCard
                   key={article.id}
                   contentId={article.id}
@@ -334,17 +349,26 @@ export function ArticleCenterPage({
           </div>
         )}
 
-        <div className="mt-8">
-          <PaginationControls
-            currentPage={safePage}
-            totalItems={filteredArticles.length}
-            pageSize={PAGE_SIZE}
-            onPageChange={setCurrentPage}
-          />
-        </div>
+        {/* 无限滚动: 哨兵 + 状态提示 (替代翻页) */}
+        {filteredArticles.length > 0 && (
+          <div ref={sentinelRef} className="mt-10 flex items-center justify-center">
+            {hasMore ? (
+              <div className="flex items-center gap-2 text-[13px] text-os-muted/60">
+                <span className="w-4 h-4 border-2 border-os-navy/20 border-t-os-navy rounded-full animate-spin" />
+                {t({ zh: '加载更多…', en: 'Loading more…' })}
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 text-[12.5px] text-os-muted/55">
+                <span className="h-px w-8 bg-os-line" />
+                {t({ zh: `已显示全部 ${filteredArticles.length} 篇`, en: `All ${filteredArticles.length} articles shown` })}
+                <span className="h-px w-8 bg-os-line" />
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      <Footer onNavigate={(p) => onNavigate?.(p)} />
+      <OpenSourceFooter />
     </div>
   );
 }

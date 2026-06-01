@@ -1,35 +1,35 @@
-// Hero 右侧自动演示舞台 —— 单卡 + 视差 + 数据层 + 时间线。
+// Hero 右侧自动演示舞台 —— 单卡 + 数据层 + 时间线。
 //
 // 视觉构成：
 //   - 同一时刻只显示 active 卡（其它 scene 仍挂载但 opacity 0，确保 remount 重播机制可用）
-//   - 切换 = cross-fade（旧 opacity 1→0、新 opacity 0→1 + scale 0.96→1，0.6s 同步）
-//   - 中卡跟随鼠标 ±5° rotateX/Y 视差倾斜
-//   - 顶边扫描光带（3.2s 来回）+ 下方紫蓝软光晕
+//   - 切换 = 顺序 fade（先淡出旧的 0.2s，0.2s 延迟后淡入新的 0.3s）—— 两个 scene 永远不同框
+//   - 下方紫蓝软光晕
 //   - 底层 32×32 数据网格（radial mask 中心实/边缘虚）+ 6 个浮动微粒
 //   - 底部时间线 3 节点 + 渐变连接线，active 节点脉冲发光
 //
-// 全 GPU 路径（perspective + transform + opacity）。
+// 全 GPU 路径（perspective + transform + opacity，无 mask-image 关键帧）。
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { CalendarScene } from './scenes/CalendarScene';
 import { WorkspaceScene } from './scenes/WorkspaceScene';
 import { GrowthScene } from './scenes/GrowthScene';
+import { useLang, type Bilingual } from '../../../lib/i18n';
 
 type DemoStateId = 'calendar' | 'workspace' | 'growth';
 
 interface DemoState {
   id: DemoStateId;
-  shortLabel: string;
-  tab: string;
-  caption: string;
+  shortLabel: Bilingual;
+  tab: Bilingual;
+  caption: Bilingual;
   dwellMs: number;
   render: () => JSX.Element;
 }
 
 const DEMO_STATES: DemoState[] = [
-  { id: 'calendar', shortLabel: '任务月历', tab: '任务与日程 · 我的月历', caption: '一个月的推进，密度看得见', dwellMs: 3200, render: () => <CalendarScene /> },
-  { id: 'workspace', shortLabel: '客户工作台', tab: '工作台 · 日慈基金会', caption: 'AI 读懂每一个客户的来龙去脉', dwellMs: 7000, render: () => <WorkspaceScene /> },
-  { id: 'growth', shortLabel: '成长中心', tab: '成长中心 · 能力成长', caption: '把工作经验变成组织资产', dwellMs: 4700, render: () => <GrowthScene /> },
+  { id: 'calendar', shortLabel: { zh: '任务月历', en: 'Task Calendar' }, tab: { zh: '任务与日程 · 我的月历', en: 'Tasks & Schedule · My Calendar' }, caption: { zh: '一个月的推进，密度看得见', en: 'A month of progress, density you can see' }, dwellMs: 3200, render: () => <CalendarScene /> },
+  { id: 'workspace', shortLabel: { zh: '客户工作台', en: 'Client Workspace' }, tab: { zh: '工作台 · 日慈基金会', en: 'Workspace · Rici Foundation' }, caption: { zh: 'AI 读懂每一个客户的来龙去脉', en: 'AI that understands each client’s full story' }, dwellMs: 7000, render: () => <WorkspaceScene /> },
+  { id: 'growth', shortLabel: { zh: '成长中心', en: 'Growth Center' }, tab: { zh: '成长中心 · 能力成长', en: 'Growth Center · Ability Growth' }, caption: { zh: '把工作经验变成组织资产', en: 'Turn work experience into organizational assets' }, dwellMs: 4700, render: () => <GrowthScene /> },
 ];
 
 const SCENE_NATIVE_WIDTH = 1280;
@@ -90,6 +90,21 @@ const HERO_CSS = `
     0 8px 28px -8px rgba(124,58,237,0.28);
   pointer-events: none;
   z-index: -1;
+}
+/* 离屏: 暂停无限装饰动画 + 卸掉 will-change 释放合成层 */
+.hpd-paused .hpd-particle,
+.hpd-paused .hpd-node-active .hpd-node-dot {
+  animation-play-state: paused;
+}
+.hpd-paused .hpd-particle {
+  will-change: auto;
+}
+/* 尊重"减少动态效果": 关掉漂移与脉冲, 微粒退化为静态点 */
+@media (prefers-reduced-motion: reduce) {
+  .hpd-particle,
+  .hpd-node-active .hpd-node-dot {
+    animation: none !important;
+  }
 }
 `;
 
@@ -167,12 +182,25 @@ function SceneStage({ scale, children }: { scale: number; children: ReactNode })
 
 export function HeroProductDemo(): JSX.Element {
   const reduced = useReducedMotion();
+  const { t } = useLang();
   const [activeIdx, setActiveIdx] = useState(0);
   const [paused, setPaused] = useState(false);
   const [centerCounter, setCenterCounter] = useState<number[]>(() => DEMO_STATES.map(() => 0));
-  const [tilt, setTilt] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const { ref: containerRef, scale } = useFitScale(SCENE_NATIVE_WIDTH);
-  const stageRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // 离屏时暂停所有无限装饰动画 (微粒漂移 / 节点脉冲) 并卸掉 will-change, 省 CPU/电/合成层内存。
+  // 直接 toggle class, 不走 React state, 避免无谓重渲染。
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const ob = new IntersectionObserver(
+      ([e]) => el.classList.toggle('hpd-paused', !e.isIntersecting),
+      { rootMargin: '0px', threshold: 0 },
+    );
+    ob.observe(el);
+    return () => ob.disconnect();
+  }, []);
 
   useEffect(() => {
     if (reduced || paused) return;
@@ -192,18 +220,6 @@ export function HeroProductDemo(): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeIdx]);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>): void => {
-    if (reduced || !stageRef.current) return;
-    const rect = stageRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5;
-    const y = (e.clientY - rect.top) / rect.height - 0.5;
-    setTilt({ x: y * -5, y: x * 5 });
-  };
-  const handleMouseLeave = (): void => {
-    setTilt({ x: 0, y: 0 });
-    setPaused(false);
-  };
-
   const handleNodeClick = (idx: number): void => {
     if (idx === activeIdx) return;
     setActiveIdx(idx);
@@ -213,9 +229,10 @@ export function HeroProductDemo(): JSX.Element {
 
   return (
     <div
+      ref={rootRef}
       className="relative mx-auto w-full max-w-[640px]"
       role="group"
-      aria-label="益语智库产品自动演示（任务月历 / 客户工作台 / 成长中心）"
+      aria-label={t({ zh: '益语智库产品自动演示（任务月历 / 客户工作台 / 成长中心）', en: 'Yiyu Institute product auto-demo (Task Calendar / Client Workspace / Growth Center)' })}
     >
       <style>{HERO_CSS}</style>
 
@@ -226,12 +243,10 @@ export function HeroProductDemo(): JSX.Element {
 
       {/* 3D 透视舞台（含数据网格 + 浮动微粒 + 单卡） */}
       <div
-        ref={stageRef}
         className="relative"
         style={{ perspective: '1400px', perspectiveOrigin: 'center center' }}
-        onMouseMove={handleMouseMove}
         onMouseEnter={() => setPaused(true)}
-        onMouseLeave={handleMouseLeave}
+        onMouseLeave={() => setPaused(false)}
       >
         {/* Layer 1: 数据网格 */}
         <div className="hpd-grid" aria-hidden="true" />
@@ -270,33 +285,23 @@ export function HeroProductDemo(): JSX.Element {
                   zIndex: isActive ? 10 : 1,
                   pointerEvents: isActive ? 'auto' : 'none',
                   transformStyle: 'preserve-3d',
+                  // 顺序 fade：active 延迟 0.2s 再淡入，inactive 立刻淡出 —— 两 scene 永远不同框
                   transition: reduced
                     ? undefined
-                    : 'opacity 0.35s ease, transform 0.4s cubic-bezier(0.34, 1.4, 0.64, 1)',
+                    : isActive
+                    ? 'opacity 0.3s ease 0.2s, transform 0.4s cubic-bezier(0.34, 1.4, 0.64, 1) 0.2s'
+                    : 'opacity 0.2s ease, transform 0.4s cubic-bezier(0.34, 1.4, 0.64, 1)',
                   willChange: 'opacity, transform',
                 }}
                 aria-hidden={!isActive}
               >
-                {/* 鼠标视差倾斜层（只对 active 卡生效） */}
-                <div
-                  className="relative h-full"
-                  style={{
-                    transform: isActive
-                      ? `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`
-                      : 'rotateX(0deg) rotateY(0deg)',
-                    transformStyle: 'preserve-3d',
-                    transition: reduced ? undefined : 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
-                    willChange: 'transform',
-                  }}
-                >
-                  {isActive && <div className="hpd-ambient-glow" aria-hidden="true" />}
+                {isActive && <div className="hpd-ambient-glow" aria-hidden="true" />}
 
-                  <WindowCard title={state.tab}>
-                    <SceneStage scale={scale}>
-                      <div key={sceneKey}>{state.render()}</div>
-                    </SceneStage>
-                  </WindowCard>
-                </div>
+                <WindowCard title={t(state.tab)}>
+                  <SceneStage scale={scale}>
+                    <div key={sceneKey}>{state.render()}</div>
+                  </SceneStage>
+                </WindowCard>
               </div>
             );
           })}
@@ -310,7 +315,7 @@ export function HeroProductDemo(): JSX.Element {
           className="inline-flex items-center gap-2 rounded-full bg-os-paper/80 ring-1 ring-os-line px-3.5 py-1.5 text-[12.5px] font-medium text-os-navy shadow-os animate-fade-in"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-os-violet" />
-          {activeState.caption}
+          {t(activeState.caption)}
         </span>
       </div>
 
@@ -323,7 +328,7 @@ export function HeroProductDemo(): JSX.Element {
               <button
                 type="button"
                 onClick={() => handleNodeClick(i)}
-                aria-label={`查看：${s.tab}`}
+                aria-label={t({ zh: `查看：${s.tab.zh}`, en: `View: ${s.tab.en ?? s.tab.zh}` })}
                 aria-current={isActive}
                 className={`group relative flex flex-col items-center px-3 py-1 outline-none focus-visible:ring-2 focus-visible:ring-os-blue/40 rounded-md ${
                   isActive ? 'hpd-node-active' : ''
@@ -344,7 +349,7 @@ export function HeroProductDemo(): JSX.Element {
                     isActive ? 'text-os-navy' : 'text-os-muted/70 group-hover:text-os-muted'
                   }`}
                 >
-                  {s.shortLabel}
+                  {t(s.shortLabel)}
                 </span>
               </button>
               {i < DEMO_STATES.length - 1 && (

@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useLang } from '../lib/i18n';
 
 export function PaginationControls({
   currentPage,
@@ -13,6 +14,7 @@ export function PaginationControls({
   onPageChange: (page: number) => void;
   className?: string;
 }) {
+  const { t } = useLang();
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   if (totalPages <= 1) return null;
 
@@ -28,7 +30,7 @@ export function PaginationControls({
       className={`flex flex-wrap items-center justify-between gap-4 ${className}`}
     >
       <div data-yiyu-results-summary="content" className="text-sm text-muted-foreground/70">
-        第 <span className="font-medium text-foreground">{currentPage}</span> / {totalPages} 页，共 {totalItems} 条
+        {t({ zh: '第', en: 'Page' })} <span className="font-medium text-foreground">{currentPage}</span> / {totalPages} {t({ zh: '页，共', en: '·' })} {totalItems} {t({ zh: '条', en: 'total' })}
       </div>
 
       <div className="flex items-center gap-2">
@@ -40,7 +42,7 @@ export function PaginationControls({
           className="inline-flex items-center gap-1 rounded-full border border-border/60 px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ChevronLeft className="w-4 h-4" />
-          上一页
+          {t({ zh: '上一页', en: 'Previous' })}
         </button>
 
         <div className="flex items-center gap-1">
@@ -69,7 +71,7 @@ export function PaginationControls({
           disabled={currentPage >= totalPages}
           className="inline-flex items-center gap-1 rounded-full border border-border/60 px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          下一页
+          {t({ zh: '下一页', en: 'Next' })}
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>

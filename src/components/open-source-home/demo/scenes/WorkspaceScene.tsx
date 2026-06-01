@@ -42,25 +42,28 @@ import {
   PenTool,
 } from 'lucide-react';
 import { AppShell } from './AppShell';
+import { useLang, type Bilingual } from '../../../../lib/i18n';
 
 interface FileRow {
   kind: 'xlsx' | 'docx';
-  name: string;
+  name: Bilingual;
 }
 
 const FILE_ROWS: FileRow[] = [
-  { kind: 'xlsx', name: '20260526_153859_把你掌握的所有日慈基金会的信息帮我做成一张表格.xlsx' },
-  { kind: 'docx', name: '20260525_215107_把你掌握的所有日慈基金会的信息帮我做成一张表格.docx' },
-  { kind: 'docx', name: '日慈基金会_品牌分析_20260525-153730.docx' },
-  { kind: 'docx', name: '日慈基金会_客户背景档案_(含组织介绍_+_项目清单)_20260525-153321.docx' },
+  { kind: 'xlsx', name: { zh: '20260526_153859_把你掌握的所有日慈基金会的信息帮我做成一张表格.xlsx', en: '20260526_153859_All Rici Foundation info compiled into a table.xlsx' } },
+  { kind: 'docx', name: { zh: '20260525_215107_把你掌握的所有日慈基金会的信息帮我做成一张表格.docx', en: '20260525_215107_All Rici Foundation info compiled into a table.docx' } },
+  { kind: 'docx', name: { zh: '日慈基金会_品牌分析_20260525-153730.docx', en: 'Rici Foundation_Brand Analysis_20260525-153730.docx' } },
+  { kind: 'docx', name: { zh: '日慈基金会_客户背景档案_(含组织介绍_+_项目清单)_20260525-153321.docx', en: 'Rici Foundation_Client Profile_(org intro + project list)_20260525-153321.docx' } },
 ];
 
-const USER_PROMPT =
-  '我要给广州民政写一段儿日慈基金会的介绍材料，大概在 2000 字左右。介绍日慈基金会的主要项目，解决的主要的问题，以及我们的项目设计逻辑、方法论，以及近几年项目创造的一些成果数据';
+const USER_PROMPT: Bilingual = {
+  zh: '我要给广州民政写一段儿日慈基金会的介绍材料，大概在 2000 字左右。介绍日慈基金会的主要项目，解决的主要的问题，以及我们的项目设计逻辑、方法论，以及近几年项目创造的一些成果数据',
+  en: 'I need to write an introduction of the Rici Foundation for the Guangzhou Civil Affairs Bureau, around 2,000 words. Cover the foundation’s main programs, the core problems it addresses, our program design logic and methodology, and some outcome data from recent years.',
+};
 
 // ── AI 回复的结构化文档（按段落 + 加粗 run 切分） ──
 interface TextRun {
-  text: string;
+  text: Bilingual;
   bold?: boolean;
 }
 type DocBlock =
@@ -71,40 +74,40 @@ const AI_RESPONSE: DocBlock[] = [
   {
     kind: 'h3',
     runs: [
-      { text: '日慈基金会专注青少年心理健康服务，具备成熟心智素养建设体系与实证落地成果' },
+      { text: { zh: '日慈基金会专注青少年心理健康服务，具备成熟心智素养建设体系与实证落地成果', en: 'The Rici Foundation focuses on youth mental health, with a mature mind-literacy framework and evidence-based results on the ground.' } },
     ],
   },
   {
     kind: 'p',
     runs: [
-      { text: '广东省日慈公益基金会于' },
-      { text: '2013 年 12 月 31 日', bold: true },
-      { text: '由广东省民政厅批准注册成立，注册地址位于广州市越秀区解放南路 123 号金汇大厦 18 楼 E034，是具备独立法人资格的地方性非公募基金会，2017 年正式认定为慈善组织。2024 年机构通过复审获得省级非营利组织免税资格，同时持续持有广东省级公益性社会组织捐赠税前扣除资格，历年年度工作报告、审计报告、管理制度均按监管要求在官方渠道公开披露，合规运营资质齐全。' },
+      { text: { zh: '广东省日慈公益基金会于', en: 'The Guangdong Rici Charity Foundation was approved and registered on ' } },
+      { text: { zh: '2013 年 12 月 31 日', en: 'December 31, 2013' }, bold: true },
+      { text: { zh: '由广东省民政厅批准注册成立，注册地址位于广州市越秀区解放南路 123 号金汇大厦 18 楼 E034，是具备独立法人资格的地方性非公募基金会，2017 年正式认定为慈善组织。2024 年机构通过复审获得省级非营利组织免税资格，同时持续持有广东省级公益性社会组织捐赠税前扣除资格，历年年度工作报告、审计报告、管理制度均按监管要求在官方渠道公开披露，合规运营资质齐全。', en: ' by the Guangdong Department of Civil Affairs, registered at Unit E034, Floor 18, Jinhui Building, 123 Jiefang South Road, Yuexiu District, Guangzhou. It is a local non-public-fundraising foundation with independent legal status, recognized as a charitable organization in 2017. In 2024 it passed review to obtain provincial nonprofit tax-exempt status and continues to hold provincial pre-tax donation deduction eligibility. Its annual reports, audits, and governance policies are publicly disclosed through official channels as required, with full compliance credentials.' } },
     ],
   },
   {
     kind: 'p',
     runs: [
-      { text: '机构自成立以来始终聚焦青少年儿童心理健康与幸福成长核心赛道，以积极心理学、社会情感学习（SEL）为核心理论基础，区别于传统聚焦个案干预的心理服务机构，核心定位为青少年心理健康前置教育供给方，通过普惠型课程、场景化活动、关键人群赋能等方式，从源头降低青少年心理问题累积风险，搭建由学校、家庭、社群共同参与的心理支持网络。' },
+      { text: { zh: '机构自成立以来始终聚焦青少年儿童心理健康与幸福成长核心赛道，以积极心理学、社会情感学习（SEL）为核心理论基础，区别于传统聚焦个案干预的心理服务机构，核心定位为青少年心理健康前置教育供给方，通过普惠型课程、场景化活动、关键人群赋能等方式，从源头降低青少年心理问题累积风险，搭建由学校、家庭、社群共同参与的心理支持网络。', en: 'Since its founding, the foundation has centered on youth and child mental health and well-being, grounded in positive psychology and social-emotional learning (SEL). Unlike traditional case-intervention providers, it positions itself as a supplier of preventive mental-health education for young people, using inclusive curricula, scenario-based activities, and empowerment of key groups to reduce the buildup of mental-health risks at the source, building a support network shared by schools, families, and communities.' } },
     ],
   },
   {
     kind: 'p',
     runs: [
-      { text: '日慈所有业务均严格划定专业合规边界，不提供心理诊断、治疗类服务，仅开展前置型心理健康教育、心理韧性建设与同伴 / 社群支持类服务，所有项目设计均符合《精神卫生法》《未成年人保护法》相关监管要求。' },
+      { text: { zh: '日慈所有业务均严格划定专业合规边界，不提供心理诊断、治疗类服务，仅开展前置型心理健康教育、心理韧性建设与同伴 / 社群支持类服务，所有项目设计均符合《精神卫生法》《未成年人保护法》相关监管要求。', en: 'All of Rici’s work stays within strict professional and compliance boundaries: it provides no diagnostic or treatment services, only preventive mental-health education, resilience building, and peer/community support, with every program designed to meet the Mental Health Law and the Law on the Protection of Minors.' } },
     ],
   },
   {
     kind: 'p',
     runs: [
-      { text: '目前机构已形成覆盖 6–24 岁全年龄段青少年的成熟项目矩阵，核心业务包括面向乡村中小学生的' },
-      { text: '心灵魔法学院', bold: true },
-      { text: '心理健康教育项目、面向 18–24 岁大学生群体的' },
-      { text: '心盛计划', bold: true },
-      { text: '同辈心理互助项目、面向一线授课教师的教师赋能项目三大板块。截至 2025 年，机构累计服务儿童超过' },
-      { text: '90 万名', bold: true },
-      { text: '、服务大学生近' },
-      { text: '17 万', bold: true },
+      { text: { zh: '目前机构已形成覆盖 6–24 岁全年龄段青少年的成熟项目矩阵，核心业务包括面向乡村中小学生的', en: 'The foundation now runs a mature program matrix spanning ages 6–24, anchored by three pillars: for rural primary and secondary students, the ' } },
+      { text: { zh: '心灵魔法学院', en: 'Mind Magic Academy' }, bold: true },
+      { text: { zh: '心理健康教育项目、面向 18–24 岁大学生群体的', en: ' mental-health education program; for university students aged 18–24, the ' } },
+      { text: { zh: '心盛计划', en: 'Flourishing Minds Program' }, bold: true },
+      { text: { zh: '同辈心理互助项目、面向一线授课教师的教师赋能项目三大板块。截至 2025 年，机构累计服务儿童超过', en: ' peer mental-health support initiative; and a teacher-empowerment program for frontline educators. As of 2025, it has served over ' } },
+      { text: { zh: '90 万名', en: '900,000' }, bold: true },
+      { text: { zh: '、服务大学生近', en: ' children and nearly ' } },
+      { text: { zh: '17 万', en: '170,000' }, bold: true },
     ],
   },
 ];
@@ -129,13 +132,13 @@ interface BlockChars {
   chars: CharSpan[];
 }
 
-function buildBlocks(doc: DocBlock[]): BlockChars[] {
+function buildBlocks(doc: DocBlock[], t: (text: Bilingual) => string): BlockChars[] {
   const result: BlockChars[] = [];
   let globalIdx = 0;
   for (const block of doc) {
     const chars: CharSpan[] = [];
     for (const run of block.runs) {
-      for (const ch of run.text) {
+      for (const ch of t(run.text)) {
         chars.push({ ch, bold: !!run.bold, globalIdx });
         globalIdx += 1;
       }
@@ -144,8 +147,6 @@ function buildBlocks(doc: DocBlock[]): BlockChars[] {
   }
   return result;
 }
-
-const BLOCKS = buildBlocks(AI_RESPONSE);
 
 // 一次性注入：字符波浪 + 文件卡 3D 扑入 keyframes
 const SCENE_CSS = `
@@ -246,6 +247,7 @@ function FileTypeIcon({ kind }: { kind: 'xlsx' | 'docx' }): JSX.Element {
 //   · rounded-[24px] 外壳 / 紫色 #5B7BFE 发送按钮 / 13×13 白方块停止图标 = 复用源码视觉常量
 //   · 三个 chip（深度思考 / 完全客观 / 写作风格）= 按用户提供的截图重画，V2.0 源码 grep 零命中
 function Composer(): JSX.Element {
+  const { t } = useLang();
   return (
     <div
       className="rounded-[20px] bg-white"
@@ -257,7 +259,7 @@ function Composer(): JSX.Element {
       {/* 上半：textarea placeholder 区 —— 文案保持软件原模板"让 ${model} 帮你推演 ${client} 的业务问题..." */}
       <div style={{ padding: '14px 16px 8px 16px' }}>
         <div style={{ color: '#94A3B8', fontSize: 13.5, lineHeight: 1.6, minHeight: 30 }}>
-          让 GPT 5.4 帮你推演 新思考 的业务问题...
+          {t({ zh: '让 GPT 5.4 帮你推演 新思考 的业务问题...', en: 'Let GPT 5.4 help you reason through New Thinking’s business questions...' })}
         </div>
       </div>
 
@@ -275,7 +277,7 @@ function Composer(): JSX.Element {
             }}
           >
             <Sparkles size={13} color="#7C3AED" />
-            <span className="font-medium text-[#475569]">深度思考</span>
+            <span className="font-medium text-[#475569]">{t({ zh: '深度思考', en: 'Deep Thinking' })}</span>
             <span
               className="relative inline-block"
               style={{
@@ -312,7 +314,7 @@ function Composer(): JSX.Element {
             }}
           >
             <ShieldCheck size={13} color="#64748B" />
-            <span className="font-medium text-[#475569]">完全客观</span>
+            <span className="font-medium text-[#475569]">{t({ zh: '完全客观', en: 'Fully Objective' })}</span>
             <ChevronDown size={11} color="#94A3B8" />
           </div>
 
@@ -327,7 +329,7 @@ function Composer(): JSX.Element {
             }}
           >
             <PenTool size={13} color="#64748B" />
-            <span className="font-medium text-[#475569]">写作风格</span>
+            <span className="font-medium text-[#475569]">{t({ zh: '写作风格', en: 'Writing Style' })}</span>
           </div>
         </div>
 
@@ -343,7 +345,7 @@ function Composer(): JSX.Element {
             border: 'none',
             cursor: 'default',
           }}
-          aria-label="停止当前回答"
+          aria-label={t({ zh: '停止当前回答', en: 'Stop current response' })}
         >
           <span
             className="block"
@@ -356,13 +358,14 @@ function Composer(): JSX.Element {
 }
 
 function FileRowCard({ row }: { row: FileRow }): JSX.Element {
+  const { t } = useLang();
   return (
     <div className="rounded-xl border border-[#E5E7EB] bg-white" style={{ padding: 12 }}>
       <div className="flex items-start gap-3 mb-2.5">
         <FileTypeIcon kind={row.kind} />
         <div className="flex-1 min-w-0">
           <div className="text-[#0F172A] font-semibold leading-snug" style={{ fontSize: 13 }}>
-            {row.name}
+            {t(row.name)}
           </div>
         </div>
       </div>
@@ -379,6 +382,8 @@ function FileRowCard({ row }: { row: FileRow }): JSX.Element {
 
 function WorkspaceMain(): JSX.Element {
   const reduced = useReducedMotion();
+  const { t } = useLang();
+  const blocks = buildBlocks(AI_RESPONSE, t);
 
   return (
     <div className="h-full flex flex-col">
@@ -391,7 +396,7 @@ function WorkspaceMain(): JSX.Element {
             WORKSPACE
           </div>
           <div className="text-[#0F172A] font-semibold tracking-tight mt-0.5" style={{ fontSize: 22 }}>
-            日慈基金会
+            {t({ zh: '日慈基金会', en: 'Rici Foundation' })}
           </div>
         </div>
         <div className="flex items-center gap-1.5 rounded-full" style={{ padding: '6px 14px', background: '#ECFDF5', border: '1px solid #A7F3D0' }}>
@@ -417,19 +422,19 @@ function WorkspaceMain(): JSX.Element {
                   lineHeight: 1.65,
                 }}
               >
-                {USER_PROMPT}
+                {t(USER_PROMPT)}
               </div>
             </div>
 
             {/* AI 回复 meta */}
             <div className="flex items-center justify-between mb-3 text-[#94A3B8]" style={{ fontSize: 11.5 }}>
-              <span className="font-medium">AI · 豆包火山方舟 · 耗时 348.4 秒</span>
+              <span className="font-medium">{t({ zh: 'AI · 豆包火山方舟 · 耗时 348.4 秒', en: 'AI · Doubao on Volcano Ark · 348.4s' })}</span>
               <Trash2 size={13} />
             </div>
 
             {/* AI 回复正文（字符波浪） */}
             <article className="overflow-hidden text-[#1E293B] flex-1" style={{ fontSize: 13.5, lineHeight: 1.85 }}>
-              {renderBlocks(BLOCKS, reduced)}
+              {renderBlocks(blocks, reduced)}
             </article>
           </div>
 
@@ -445,8 +450,8 @@ function WorkspaceMain(): JSX.Element {
           {/* 快捷工具 */}
           <div style={{ padding: '20px 22px 16px' }}>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[#0F172A] font-semibold" style={{ fontSize: 13 }}>快捷工具</span>
-              <span className="text-[#3A4FB5] font-medium" style={{ fontSize: 11.5 }}>打开工具页</span>
+              <span className="text-[#0F172A] font-semibold" style={{ fontSize: 13 }}>{t({ zh: '快捷工具', en: 'Quick Tools' })}</span>
+              <span className="text-[#3A4FB5] font-medium" style={{ fontSize: 11.5 }}>{t({ zh: '打开工具页', en: 'Open tools' })}</span>
             </div>
             <div className="grid grid-cols-5 gap-2">
               {[Upload, LayoutGrid, Leaf, Sparkles, Link2].map((Icon, i) => (
@@ -463,14 +468,14 @@ function WorkspaceMain(): JSX.Element {
 
           {/* 统计行 */}
           <div className="flex items-center justify-between text-[#64748B] border-y border-[#F1F5F9]" style={{ padding: '12px 22px', fontSize: 11.5 }}>
-            <span className="font-medium">247 份文件</span>
+            <span className="font-medium">{t({ zh: '247 份文件', en: '247 files' })}</span>
             <span className="flex items-center gap-1.5">
-              <span>OCR 识别率 94.2%</span>
+              <span>{t({ zh: 'OCR 识别率 94.2%', en: 'OCR accuracy 94.2%' })}</span>
               <RefreshCw size={11} />
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-              <span>待澄清 73</span>
+              <span>{t({ zh: '待澄清 73', en: 'To clarify 73' })}</span>
             </span>
           </div>
 
@@ -478,13 +483,13 @@ function WorkspaceMain(): JSX.Element {
           <div className="flex items-center gap-5 border-b border-[#F1F5F9] text-[#64748B]" style={{ padding: '12px 22px', fontSize: 13 }}>
             <span className="flex items-center gap-1 text-[#0F172A] font-bold border-b-2 border-[#3A4FB5]" style={{ paddingBottom: 6 }}>
               <FolderOpen size={14} />
-              <span>文件</span>
+              <span>{t({ zh: '文件', en: 'Files' })}</span>
             </span>
             <span className="flex items-center gap-1">
-              <span>收藏</span>
+              <span>{t({ zh: '收藏', en: 'Saved' })}</span>
             </span>
             <span className="flex items-center gap-1">
-              <span>工具</span>
+              <span>{t({ zh: '工具', en: 'Tools' })}</span>
             </span>
           </div>
 
@@ -492,10 +497,10 @@ function WorkspaceMain(): JSX.Element {
           <div className="flex items-center gap-2" style={{ padding: '12px 22px' }}>
             <div className="flex-1 flex items-center gap-2 rounded-full border border-[#E5E7EB] bg-white" style={{ padding: '7px 12px', fontSize: 12 }}>
               <Search size={13} color="#94A3B8" />
-              <span className="text-[#94A3B8]">写一句话告诉 AI 你想找</span>
+              <span className="text-[#94A3B8]">{t({ zh: '写一句话告诉 AI 你想找', en: 'Describe what you’re looking for' })}</span>
             </div>
             <div className="rounded-full border border-[#E5E7EB] bg-white text-[#0F172A] font-medium" style={{ padding: '7px 14px', fontSize: 12 }}>
-              AI 搜
+              {t({ zh: 'AI 搜', en: 'AI Search' })}
             </div>
           </div>
 

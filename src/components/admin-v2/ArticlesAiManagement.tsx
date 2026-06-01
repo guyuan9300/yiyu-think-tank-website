@@ -98,13 +98,13 @@ export function ArticlesAiManagement() {
     return () => clearInterval(interval);
   }, [task?.id, task?.status, loadList]);
 
-  const startBatch = async (ids: string[] | null, confirmMsg?: string) => {
+  const startBatch = async (ids: string[] | null, confirmMsg?: string, force = false) => {
     if (confirmMsg && !window.confirm(confirmMsg)) return;
     try {
       const r = await fetch('/api/admin-ai/regenerate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ids ? { ids } : {}),
+        body: JSON.stringify({ ...(ids ? { ids } : {}), force }),
       });
       const data = await r.json();
       if (!r.ok) { showToast(`启动失败: ${data.error || r.status}`, 'error'); return; }
@@ -130,11 +130,12 @@ export function ArticlesAiManagement() {
   };
 
   const startAll = () => {
-    startBatch(null, `将为全部 ${articles.length} 篇文章 重新生成 AI 封面+章节配图.\n预估 ${Math.ceil(articles.length * 1.5)} 分钟. 已有的图会被跳过 (除非手动删除). 确认?`);
+    startBatch(null, `将为全部 ${articles.length} 篇文章 重新生成 AI 封面+章节配图(覆盖已有图).\n预估 ${Math.ceil(articles.length * 1.5)} 分钟. 确认?`, true);
   };
 
-  const startOne = (id: string, title: string) => {
-    startBatch([id], `重新生成《${title.slice(0, 24)}》的 AI 套装?`);
+  const startOne = (id: string, _title: string) => {
+    // 单篇「重生成」直接启动(覆盖已有图), 不弹窗确认
+    startBatch([id], undefined, true);
   };
 
   // 筛选

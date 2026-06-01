@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, User, Smartphone, CheckCircle } from 'lucide-react';
 import { registerByCode, sendVerifyCode } from '../lib/authApi';
 import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
+import { useLang, type Bilingual } from '../lib/i18n';
 
 // NOTE: 邮箱验证邮件的跳转地址由 auth.ts 内的 emailRedirectTo 控制（需包含 BASE_URL 子路径）。
 
@@ -13,6 +14,7 @@ interface RegisterPageProps {
 }
 
 export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProps) {
+  const { t } = useLang();
   // 当前注册的Tab
   const [activeTab, setActiveTab] = useState<RegisterTab>('phone');
 
@@ -37,9 +39,9 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
   const [countdown, setCountdown] = useState(0);
 
   // Tab配置
-  const tabs = [
-    { id: 'phone' as RegisterTab, label: '手机注册', icon: Smartphone },
-    { id: 'email' as RegisterTab, label: '邮箱注册', icon: Mail },
+  const tabs: { id: RegisterTab; label: Bilingual; icon: typeof Smartphone }[] = [
+    { id: 'phone', label: { zh: '手机注册', en: 'Phone' }, icon: Smartphone },
+    { id: 'email', label: { zh: '邮箱注册', en: 'Email' }, icon: Mail },
   ];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,7 +61,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
 
     if (activeTab === 'phone') {
       if (!/^1[3-9]\d{9}$/.test(normalizedPhone)) {
-        setError('请输入正确的手机号码');
+        setError(t({ zh: '请输入正确的手机号码', en: 'Please enter a valid phone number' }));
         return;
       }
 
@@ -68,7 +70,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
       setIsSendingCode(false);
 
       if (result.ok) {
-        setSuccess('验证码已发送，请查收短信');
+        setSuccess(t({ zh: '验证码已发送，请查收短信', en: 'Verification code sent. Please check your SMS.' }));
         setCountdown(60);
         const timer = setInterval(() => {
           setCountdown(prev => {
@@ -80,11 +82,11 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
           });
         }, 1000);
       } else {
-        setError(result.error || '发送失败，请稍后重试');
+        setError(result.error || t({ zh: '发送失败，请稍后重试', en: 'Failed to send, please try again later' }));
       }
     } else if (activeTab === 'email') {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-        setError('请输入正确的邮箱地址');
+        setError(t({ zh: '请输入正确的邮箱地址', en: 'Please enter a valid email address' }));
         return;
       }
 
@@ -93,7 +95,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
       setIsSendingCode(false);
 
       if (result.ok) {
-        setSuccess('验证码已发送，请查收邮件');
+        setSuccess(t({ zh: '验证码已发送，请查收邮件', en: 'Verification code sent. Please check your email.' }));
         setCountdown(60);
         const timer = setInterval(() => {
           setCountdown(prev => {
@@ -105,7 +107,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
           });
         }, 1000);
       } else {
-        setError(result.error || '发送失败，请稍后重试');
+        setError(result.error || t({ zh: '发送失败，请稍后重试', en: 'Failed to send, please try again later' }));
       }
     }
   };
@@ -125,38 +127,38 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
     // 验证表单
     if (true) {
       if (!normalizedNickname) {
-        setError('请输入昵称');
+        setError(t({ zh: '请输入昵称', en: 'Please enter a nickname' }));
         return;
       }
 
       if (formData.password.length < 8) {
-        setError('密码长度至少为8位');
+        setError(t({ zh: '密码长度至少为8位', en: 'Password must be at least 8 characters' }));
         return;
       }
 
       if (formData.password !== formData.confirmPassword) {
-        setError('两次输入的密码不一致');
+        setError(t({ zh: '两次输入的密码不一致', en: 'The two passwords do not match' }));
         return;
       }
 
       if (!normalizedCode) {
-        setError('请输入验证码');
+        setError(t({ zh: '请输入验证码', en: 'Please enter the verification code' }));
         return;
       }
 
       if (activeTab === 'phone' && !/^1[3-9]\d{9}$/.test(normalizedPhone)) {
-        setError('请输入正确的手机号码');
+        setError(t({ zh: '请输入正确的手机号码', en: 'Please enter a valid phone number' }));
         return;
       }
 
       if (activeTab === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-        setError('请输入正确的邮箱地址');
+        setError(t({ zh: '请输入正确的邮箱地址', en: 'Please enter a valid email address' }));
         return;
       }
     }
 
     if (!agreedToTerms) {
-      setError('请同意服务条款和隐私政策');
+      setError(t({ zh: '请同意服务条款和隐私政策', en: 'Please agree to the Terms of Service and Privacy Policy' }));
       return;
     }
 
@@ -187,7 +189,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
 
       if (result.ok) {
         const upgradedByInvite = result.data?.user?.paidSource === 'invite_code' || result.data?.user?.memberType === 'gold';
-        setSuccess(upgradedByInvite ? '注册成功，已为你开通付费会员，正在跳转...' : '注册成功！正在跳转...');
+        setSuccess(upgradedByInvite ? t({ zh: '注册成功，已为你开通付费会员，正在跳转...', en: 'Registration successful. Paid membership activated, redirecting...' }) : t({ zh: '注册成功！正在跳转...', en: 'Registration successful! Redirecting...' }));
         setTimeout(() => {
           if (onRegisterSuccess) {
             onRegisterSuccess();
@@ -196,10 +198,10 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
           }
         }, 1500);
       } else {
-        setError(result.error || '注册失败，请稍后重试');
+        setError(result.error || t({ zh: '注册失败，请稍后重试', en: 'Registration failed, please try again later' }));
       }
     } catch (err) {
-      setError('注册失败，请稍后重试');
+      setError(t({ zh: '注册失败，请稍后重试', en: 'Registration failed, please try again later' }));
     } finally {
       setIsLoading(false);
     }
@@ -226,8 +228,8 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
               />
             </div>
             <div className="flex flex-col items-start">
-              <span className="text-xl font-semibold text-foreground leading-tight">益语智库</span>
-              <span className="text-[13px] text-muted-foreground/70 mt-1">提供可落地的增长咨询</span>
+              <span className="text-xl font-semibold text-foreground leading-tight">{t({ zh: '益语智库', en: 'Yiyu Institute' })}</span>
+              <span className="text-[13px] text-muted-foreground/70 mt-1">{t({ zh: '提供可落地的增长咨询', en: 'Actionable growth consulting' })}</span>
             </div>
           </div>
 
@@ -237,7 +239,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
             className="flex items-center gap-2 text-gray-500 hover:text-foreground transition-colors duration-200 mb-6 group"
           >
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-200" />
-            <span className="text-sm font-medium">返回首页</span>
+            <span className="text-sm font-medium">{t({ zh: '返回首页', en: 'Back to home' })}</span>
           </button>
 
           {/* Access rule card removed (避免与左侧说明重复) */}
@@ -245,15 +247,15 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
           {/* Title Section */}
           <div className="mb-8">
             <h2 className="font-serif-display text-[28px] sm:text-[32px] font-semibold text-foreground mb-2 tracking-tight">
-              创建账户
+              {t({ zh: '创建账户', en: 'Create account' })}
             </h2>
             <p className="text-gray-500 text-[13px]">
-              已有账号？{' '}
+              {t({ zh: '已有账号？', en: 'Already have an account?' })}{' '}
               <button
                 onClick={() => onNavigate?.('login')}
                 className="text-primary hover:text-primary/80 font-medium transition-colors duration-200 relative group"
               >
-                立即登录
+                {t({ zh: '立即登录', en: 'Sign in now' })}
                 <span className="absolute -bottom-0.5 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
               </button>
             </p>
@@ -279,13 +281,13 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-accent/5 rounded-xl" />
                 )}
                 <tab.icon className={`w-4 h-4 relative z-10 ${activeTab === tab.id ? 'text-primary' : ''}`} />
-                <span className="hidden sm:inline relative z-10">{tab.label}</span>
+                <span className="hidden sm:inline relative z-10">{t(tab.label)}</span>
               </button>
             ))}
           </div>
 
           <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-3 text-[13px] text-blue-700">
-            可使用手机号或邮箱创建账号。后续若同时绑定手机号和邮箱，它们会作为同一账号的两种入口，并共用一个密码。
+            {t({ zh: '可使用手机号或邮箱创建账号。后续若同时绑定手机号和邮箱，它们会作为同一账号的两种入口，并共用一个密码。', en: 'You can create an account with a phone number or email. If you later bind both, they act as two entry points to the same account and share a single password.' })}
           </div>
 
           {/* Success Message */}
@@ -310,7 +312,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
             {/* 昵称（所有方式都需要） */}
             <div className="animate-fadeInUp" style={{ animationDelay: '0ms' }}>
               <label className="block text-[13px] font-medium text-foreground mb-2">
-                昵称
+                {t({ zh: '昵称', en: 'Nickname' })}
               </label>
               <div className="relative group">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-primary transition-colors duration-200" />
@@ -319,7 +321,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                   name="nickname"
                   value={formData.nickname}
                   onChange={handleChange}
-                  placeholder="请输入您的昵称"
+                  placeholder={t({ zh: '请输入您的昵称', en: 'Enter your nickname' })}
                   className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white  focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60 text-[13px]"
                   required
                 />
@@ -331,7 +333,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
               <>
                 <div className="animate-fadeInUp" style={{ animationDelay: '100ms' }}>
                   <label className="block text-[13px] font-medium text-foreground mb-2">
-                    手机号码
+                    {t({ zh: '手机号码', en: 'Phone number' })}
                   </label>
                   <div className="relative group">
                     <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-primary transition-colors duration-200" />
@@ -340,7 +342,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      placeholder="请输入手机号码"
+                      placeholder={t({ zh: '请输入手机号码', en: 'Enter your phone number' })}
                       className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white  focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60 text-[13px]"
                       required
                     />
@@ -349,7 +351,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
 
                 <div className="animate-fadeInUp" style={{ animationDelay: '150ms' }}>
                   <label className="block text-[13px] font-medium text-foreground mb-2">
-                    验证码
+                    {t({ zh: '验证码', en: 'Verification code' })}
                   </label>
                   <div className="flex gap-3">
                     <div className="relative flex-1 group">
@@ -359,7 +361,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                         name="verifyCode"
                         value={formData.verifyCode}
                         onChange={handleChange}
-                        placeholder="请输入验证码"
+                        placeholder={t({ zh: '请输入验证码', en: 'Enter the verification code' })}
                         className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white  focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60 text-[13px]"
                         required
                       />
@@ -370,7 +372,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                       disabled={isSendingCode || countdown > 0}
                       className="px-5 py-3.5 bg-gray-100/80  text-gray-700 rounded-2xl font-medium hover:bg-gray-200 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm hover:shadow-md text-[13px]"
                     >
-                      {countdown > 0 ? `${countdown}s` : '获取验证码'}
+                      {countdown > 0 ? `${countdown}s` : t({ zh: '获取验证码', en: 'Get code' })}
                     </button>
                   </div>
                 </div>
@@ -382,7 +384,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
               <>
                 <div className="animate-fadeInUp" style={{ animationDelay: '100ms' }}>
                   <label className="block text-[13px] font-medium text-foreground mb-2">
-                    邮箱地址
+                    {t({ zh: '邮箱地址', en: 'Email address' })}
                   </label>
                   <div className="relative group">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-primary transition-colors duration-200" />
@@ -391,7 +393,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
-                      placeholder="请输入邮箱地址"
+                      placeholder={t({ zh: '请输入邮箱地址', en: 'Enter your email address' })}
                       className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white  focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60 text-[13px]"
                       required
                     />
@@ -400,7 +402,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
 
                 <div className="animate-fadeInUp" style={{ animationDelay: '150ms' }}>
                   <label className="block text-[13px] font-medium text-foreground mb-2">
-                    验证码
+                    {t({ zh: '验证码', en: 'Verification code' })}
                   </label>
                   <div className="flex gap-3">
                     <div className="relative flex-1 group">
@@ -410,7 +412,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                         name="verifyCode"
                         value={formData.verifyCode}
                         onChange={handleChange}
-                        placeholder="请输入验证码"
+                        placeholder={t({ zh: '请输入验证码', en: 'Enter the verification code' })}
                         className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white  focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60 text-[13px]"
                         required
                       />
@@ -421,12 +423,12 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                       disabled={isSendingCode || countdown > 0}
                       className="px-5 py-3.5 bg-gray-100/80  text-gray-700 rounded-2xl font-medium hover:bg-gray-200 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm hover:shadow-md text-[13px]"
                     >
-                      {countdown > 0 ? `${countdown}s` : '获取验证码'}
+                      {countdown > 0 ? `${countdown}s` : t({ zh: '获取验证码', en: 'Get code' })}
                     </button>
                   </div>
                   <p className="mt-2 text-xs text-gray-500 flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5" />
-                    验证码将发送到您的邮箱，请注意查收
+                    {t({ zh: '验证码将发送到您的邮箱，请注意查收', en: 'The code will be sent to your email; please check your inbox' })}
                   </p>
                 </div>
               </>
@@ -434,7 +436,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
 
             <div className="animate-fadeInUp" style={{ animationDelay: '180ms' }}>
               <label className="block text-[13px] font-medium text-foreground mb-2">
-                邀请码（选填）
+                {t({ zh: '邀请码（选填）', en: 'Invite code (optional)' })}
               </label>
               <div className="relative group">
                 <CheckCircle className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-primary transition-colors duration-200" />
@@ -443,7 +445,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                   name="inviteCode"
                   value={formData.inviteCode}
                   onChange={handleChange}
-                  placeholder="如有邀请码，可注册时直接开通付费会员或绑定机构战略陪伴"
+                  placeholder={t({ zh: '如有邀请码，可注册时直接开通付费会员或绑定机构战略陪伴', en: 'With an invite code, you can activate paid membership or bind organizational Strategic Companion at signup' })}
                   className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60 text-[13px]"
                 />
               </div>
@@ -454,7 +456,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
               <>
                 <div className="animate-fadeInUp" style={{ animationDelay: '200ms' }}>
                   <label className="block text-[13px] font-medium text-foreground mb-2">
-                    设置密码
+                    {t({ zh: '设置密码', en: 'Set password' })}
                   </label>
                   <div className="relative group">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-primary transition-colors duration-200" />
@@ -463,7 +465,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                       name="password"
                       value={formData.password}
                       onChange={handleChange}
-                      placeholder="请设置密码（至少8位）"
+                      placeholder={t({ zh: '请设置密码（至少8位）', en: 'Set a password (at least 8 characters)' })}
                       className="w-full py-3.5 pl-12 pr-12 rounded-2xl border border-border/40 bg-white  focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60 text-[13px]"
                       required
                     />
@@ -476,13 +478,13 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                     </button>
                   </div>
                   <p className="mt-2 text-xs text-gray-500">
-                    该密码会作为此账号的统一登录密码；后续若同时绑定手机号和邮箱，二者共用这一个密码。
+                    {t({ zh: '该密码会作为此账号的统一登录密码；后续若同时绑定手机号和邮箱，二者共用这一个密码。', en: 'This will be the unified sign-in password for the account; if you later bind both phone and email, they share this one password.' })}
                   </p>
                 </div>
 
                 <div className="animate-fadeInUp" style={{ animationDelay: '250ms' }}>
                   <label className="block text-[13px] font-medium text-foreground mb-2">
-                    确认密码
+                    {t({ zh: '确认密码', en: 'Confirm password' })}
                   </label>
                   <div className="relative group">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-primary transition-colors duration-200" />
@@ -491,7 +493,7 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                       name="confirmPassword"
                       value={formData.confirmPassword}
                       onChange={handleChange}
-                      placeholder="请再次输入密码"
+                      placeholder={t({ zh: '请再次输入密码', en: 'Enter the password again' })}
                       className="w-full py-3.5 pl-12 pr-4 rounded-2xl border border-border/40 bg-white  focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 hover:border-border/60 text-[13px]"
                       required
                     />
@@ -512,21 +514,21 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                 />
               </div>
               <label htmlFor="terms" className="text-[13px] text-gray-600 leading-relaxed cursor-pointer">
-                我已阅读并同意
+                {t({ zh: '我已阅读并同意', en: 'I have read and agree to the' })}
                 <button
                   type="button"
                   onClick={() => onNavigate?.('terms-of-service')}
                   className="text-primary hover:text-primary/80 font-medium transition-colors duration-200 mx-1"
                 >
-                  服务条款
+                  {t({ zh: '服务条款', en: 'Terms of Service' })}
                 </button>
-                和
+                {t({ zh: '和', en: 'and' })}
                 <button
                   type="button"
                   onClick={() => onNavigate?.('privacy-policy')}
                   className="text-primary hover:text-primary/80 font-medium transition-colors duration-200 ml-1"
                 >
-                  隐私政策
+                  {t({ zh: '隐私政策', en: 'Privacy Policy' })}
                 </button>
               </label>
             </div>
@@ -542,10 +544,10 @@ export function RegisterPage({ onNavigate, onRegisterSuccess }: RegisterPageProp
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    注册中...
+                    {t({ zh: '注册中...', en: 'Registering...' })}
                   </span>
                 ) : (
-                  '立即注册'
+                  t({ zh: '立即注册', en: 'Sign up now' })
                 )}
               </button>
             )}

@@ -21,21 +21,22 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useLang, type Bilingual } from '../../../../lib/i18n';
 
 export type AppNavKey = 'tasks' | 'workspace' | 'strategy' | 'intel' | 'growth';
 
 interface NavItem {
   key: AppNavKey;
-  label: string;
+  label: Bilingual;
   icon: LucideIcon;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { key: 'tasks', label: '任务与日程', icon: CheckSquare },
-  { key: 'workspace', label: '工作台', icon: Briefcase },
-  { key: 'strategy', label: '战略陪伴', icon: Target },
-  { key: 'intel', label: '资讯情报站', icon: Newspaper },
-  { key: 'growth', label: '成长中心', icon: TrendingUp },
+  { key: 'tasks', label: { zh: '任务与日程', en: 'Tasks & Schedule' }, icon: CheckSquare },
+  { key: 'workspace', label: { zh: '工作台', en: 'Workspace' }, icon: Briefcase },
+  { key: 'strategy', label: { zh: '战略陪伴', en: 'Strategy Companion' }, icon: Target },
+  { key: 'intel', label: { zh: '资讯情报站', en: 'Intelligence Hub' }, icon: Newspaper },
+  { key: 'growth', label: { zh: '成长中心', en: 'Growth Center' }, icon: TrendingUp },
 ];
 
 interface AppShellProps {
@@ -44,6 +45,7 @@ interface AppShellProps {
 }
 
 export function AppShell({ activeNav, children }: AppShellProps): JSX.Element {
+  const { t } = useLang();
   return (
     <div
       className="relative bg-[#FAFAFA] text-[#0F172A] font-sans"
@@ -65,9 +67,9 @@ export function AppShell({ activeNav, children }: AppShellProps): JSX.Element {
                 background: 'linear-gradient(135deg,#1F2D6E 0%,#3A4FB5 100%)',
               }}
             >
-              益语
+              {t({ zh: '益语', en: 'YY' })}
             </div>
-            <span className="text-[15px] font-semibold text-[#16265E] tracking-tight">益语智库</span>
+            <span className="text-[15px] font-semibold text-[#16265E] tracking-tight">{t({ zh: '益语智库', en: 'Yiyu Institute' })}</span>
           </div>
           <ChevronLeft size={16} className="text-[#94A3B8]" />
         </div>
@@ -85,7 +87,7 @@ export function AppShell({ activeNav, children }: AppShellProps): JSX.Element {
                 }`}
               >
                 <Icon size={18} className={active ? 'text-[#3A4FB5]' : 'text-[#64748B]'} />
-                <span className={`text-[14px] ${active ? 'font-semibold' : 'font-medium'}`}>{item.label}</span>
+                <span className={`text-[14px] ${active ? 'font-semibold' : 'font-medium'}`}>{t(item.label)}</span>
               </div>
             );
           })}
@@ -94,36 +96,36 @@ export function AppShell({ activeNav, children }: AppShellProps): JSX.Element {
         {/* 底部系统状态 */}
         <div className="px-4 pb-4 pt-3 border-t border-[#F1F5F9]">
           <div className="text-[10px] font-bold tracking-[1.4px] text-[#94A3B8] mb-2">
-            SYSTEM · 系统状态
+            {t({ zh: 'SYSTEM · 系统状态', en: 'SYSTEM · STATUS' })}
           </div>
           <div className="flex items-center justify-between text-[12px] text-[#334155] mb-1.5">
             <div className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span>数据中心</span>
+              <span>{t({ zh: '数据中心', en: 'Data Center' })}</span>
             </div>
-            <span className="text-[11px] text-[#64748B]">在线</span>
+            <span className="text-[11px] text-[#64748B]">{t({ zh: '在线', en: 'Online' })}</span>
           </div>
           <div className="flex items-center justify-between text-[12px] text-[#334155] mb-3">
             <div className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span>大模型</span>
+              <span>{t({ zh: '大模型', en: 'LLM' })}</span>
             </div>
-            <span className="text-[11px] text-[#64748B]">豆包 2.0</span>
+            <span className="text-[11px] text-[#64748B]">{t({ zh: '豆包 2.0', en: 'Doubao 2.0' })}</span>
           </div>
           <div className="flex items-center gap-2 text-[12px] text-[#475569] mb-3">
             <Settings size={14} />
-            <span>系统设置</span>
+            <span>{t({ zh: '系统设置', en: 'Settings' })}</span>
           </div>
 
           <div className="text-[10px] font-bold tracking-[1.4px] text-[#94A3B8] mb-1.5">
-            CURRENT · 当前登录
+            {t({ zh: 'CURRENT · 当前登录', en: 'CURRENT · SIGNED IN' })}
           </div>
-          <div className="text-[13px] font-semibold text-[#0F172A]">顾源源</div>
+          <div className="text-[13px] font-semibold text-[#0F172A]">{t({ zh: '顾源源', en: 'Gu Yuanyuan' })}</div>
           <div className="text-[10px] text-[#94A3B8] mt-0.5 mb-2 truncate">
             doubao-seed-2-0-pro-260215 · 13 ...
           </div>
           <div className="flex items-center gap-1 text-[11px] text-[#94A3B8]">
-            <span>退出登录</span>
+            <span>{t({ zh: '退出登录', en: 'Sign out' })}</span>
             <ChevronRight size={12} />
           </div>
         </div>

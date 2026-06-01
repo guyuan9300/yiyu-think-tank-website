@@ -9,7 +9,8 @@
     "build:ip": "VITE_BASE=/ npm run build",
     "build:gh": "VITE_BASE=${VITE_BASE:-/yiyu-think-tank-website/} npm run build",
     "preview": "vite preview",
-    "ark:proxy": "node scripts/ark-proxy-server.mjs"
+    "ark:proxy": "node scripts/ark-proxy-server.mjs",
+    "capture:gifs": "node scripts/capture-hero-gifs.mjs"
   },
   "dependencies": {
     "@page-agent/page-controller": "^1.6.1",

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Header } from './Header';
-import { Footer } from './Footer';
+import { OpenSourceFooter } from './open-source-home/OpenSourceFooter';
 import {
   FileText,
   Search,
@@ -15,6 +15,7 @@ import { PdfCoverImage } from './PdfCoverImage';
 import { ContentResourceCard } from './ContentResourceCard';
 import { PaginationControls } from './PaginationControls';
 import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
+import { useLang, type Bilingual } from '../lib/i18n';
 
 const PAGE_SIZE = 6;
 
@@ -25,6 +26,7 @@ export function ReportLibraryPage({
   onNavigate?: (page: string) => void;
   onNavigateToDetail?: (type: 'report', id: string) => void;
 }) {
+  const { t } = useLang();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState<'all' | '战略' | '业务设计' | '组织' | 'AI 技术'>('all');
@@ -33,19 +35,19 @@ export function ReportLibraryPage({
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const topicOptions: Array<{ id: 'all' | '战略' | '业务设计' | '组织' | 'AI 技术'; label: string }> = [
-    { id: 'all', label: '全部' },
-    { id: '战略', label: '战略' },
-    { id: '业务设计', label: '业务设计' },
-    { id: '组织', label: '组织' },
-    { id: 'AI 技术', label: 'AI 技术' },
+  const topicOptions: Array<{ id: 'all' | '战略' | '业务设计' | '组织' | 'AI 技术'; label: Bilingual }> = [
+    { id: 'all', label: { zh: '全部', en: 'All' } },
+    { id: '战略', label: { zh: '战略', en: 'Strategy' } },
+    { id: '业务设计', label: { zh: '业务设计', en: 'Business Design' } },
+    { id: '组织', label: { zh: '组织', en: 'Organization' } },
+    { id: 'AI 技术', label: { zh: 'AI 技术', en: 'AI Technology' } },
   ];
 
   // 加载数据（建造期：以本地数据为准；旧字段迁移也在 dataService 内部完成）
   useEffect(() => {
     const loadData = () => {
       const reportsData = getReportsLocal();
-      setReports(reportsData.filter((r: any) => r.status === 'published'));
+      setReports(reportsData.filter((r: any) => r.status === 'published' || r.status === 'parsed'));
       setIsLoading(false);
     };
 
@@ -106,7 +108,7 @@ export function ReportLibraryPage({
     setIsLoading(true);
     try {
       const reportsData = getReportsLocal();
-      setReports(reportsData.filter((r: any) => r.status === 'published'));
+      setReports(reportsData.filter((r: any) => r.status === 'published' || r.status === 'parsed'));
     } finally {
       setIsLoading(false);
     }
@@ -120,7 +122,7 @@ export function ReportLibraryPage({
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="w-10 h-10 border-2 border-os-navy/20 border-t-os-navy rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-os-muted">加载中...</p>
+            <p className="text-os-muted">{t({ zh: '加载中...', en: 'Loading...' })}</p>
           </div>
         </div>
       </div>
@@ -146,21 +148,21 @@ export function ReportLibraryPage({
           {/* eyebrow */}
           <div className="flex items-center gap-2.5 mb-6">
             <span className="h-px w-7 bg-os-navy/60" />
-            <span className="text-[12px] font-semibold tracking-[0.18em] text-os-navy">益语智库 · 报告</span>
+            <span className="text-[12px] font-semibold tracking-[0.18em] text-os-navy">{t({ zh: '益语智库 · 报告', en: 'Yiyu Institute · Reports' })}</span>
           </div>
 
           {/* 衬线大标题 */}
           <h1 className="font-serif-display text-[40px] sm:text-[56px] lg:text-[64px] font-semibold leading-[1.12] tracking-tight text-os-ink mb-5">
-            前沿分析、行业研究、
+            {t({ zh: '前沿分析、行业研究、', en: 'Frontier analysis, industry research,' })}
             <br className="hidden sm:block" />
-            <span className="text-ink-accent">值得读的深度报告</span>
+            <span className="text-ink-accent">{t({ zh: '值得读的深度报告', en: 'in-depth reports worth reading' })}</span>
           </h1>
 
           {/* 副标题 */}
           <p className="text-[16px] sm:text-[18px] text-os-muted leading-[1.85] max-w-3xl">
-            汇集益语智库自研的分析报告，以及我们持续推荐的行业研究、市场分析、政策解读。
+            {t({ zh: '汇集益语智库自研的分析报告，以及我们持续推荐的行业研究、市场分析、政策解读。', en: "A collection of Yiyu Institute's own analysis reports, alongside the industry research, market analysis, and policy interpretations we recommend." })}
             <span className="text-os-muted/70 text-[14px] mt-2 block">
-              * 自研与推荐的分类显示功能正在准备中
+              {t({ zh: '* 自研与推荐的分类显示功能正在准备中', en: '* Separate views for in-house and recommended reports are coming soon' })}
             </span>
           </p>
         </div>
@@ -186,7 +188,7 @@ export function ReportLibraryPage({
               <input
                 data-yiyu-search="content"
                 type="text"
-                placeholder="搜索报告、标签、机构..."
+                placeholder={t({ zh: '搜索报告、标签、机构...', en: 'Search reports, tags, publishers...' })}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-muted/30 border border-border/40 rounded-full text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
@@ -204,7 +206,7 @@ export function ReportLibraryPage({
               >
                 {topicOptions.map((opt) => (
                   <option key={opt.id} value={opt.id}>
-                    {opt.id === 'all' ? '全部标签' : opt.label}
+                    {opt.id === 'all' ? t({ zh: '全部标签', en: 'All tags' }) : t(opt.label)}
                   </option>
                 ))}
               </select>
@@ -215,7 +217,7 @@ export function ReportLibraryPage({
                 onChange={(e) => setSelectedYear(e.target.value)}
                 className="px-4 py-2.5 bg-muted/30 border border-border/40 rounded-full text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all cursor-pointer"
               >
-                <option value="all">全部年份</option>
+                <option value="all">{t({ zh: '全部年份', en: 'All years' })}</option>
                 {years.map(year => (
                   <option key={year} value={year}>{year}</option>
                 ))}
@@ -253,7 +255,7 @@ export function ReportLibraryPage({
         {/* 结果统计 */}
         <div className="flex items-center justify-between mb-8">
           <p className="text-[14px] text-muted-foreground/70">
-            共找到 <span className="text-foreground font-medium">{filteredReports.length}</span> 份报告
+            {t({ zh: '共找到', en: 'Found' })} <span className="text-foreground font-medium">{filteredReports.length}</span> {t({ zh: '份报告', en: 'reports' })}
           </p>
           {/* 刷新按钮已移除 */}
         </div>
@@ -262,8 +264,8 @@ export function ReportLibraryPage({
         {filteredReports.length === 0 ? (
           <div className="bg-white/60 backdrop-blur-sm rounded-[20px] border border-border/40 p-16 text-center">
             <FileText className="w-14 h-14 mx-auto mb-4 text-muted-foreground/30" />
-            <p className="text-muted-foreground/70 text-[15px] mb-2">暂无报告</p>
-            <p className="text-muted-foreground/50 text-[13px]">尝试调整搜索条件或筛选条件</p>
+            <p className="text-muted-foreground/70 text-[15px] mb-2">{t({ zh: '暂无报告', en: 'No reports yet' })}</p>
+            <p className="text-muted-foreground/50 text-[13px]">{t({ zh: '尝试调整搜索条件或筛选条件', en: 'Try adjusting your search or filters' })}</p>
           </div>
         ) : viewMode === 'grid' ? (
           /* 网格视图 */
@@ -362,7 +364,7 @@ export function ReportLibraryPage({
         </div>
       </div>
 
-      <Footer onNavigate={(p) => onNavigate?.(p)} />
+      <OpenSourceFooter />
     </div>
   );
 }

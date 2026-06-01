@@ -1,5 +1,6 @@
 import { Mail, Phone } from 'lucide-react';
 import { SITE_CONTACT_EMAIL, SITE_CONTACT_PHONE, SITE_ICP_NUMBER, SITE_ICP_URL, SITE_NAME } from '../lib/siteMeta';
+import { useLang } from '../lib/i18n';
 
 interface FooterProps {
   // 接受任意 page 字符串以兼容旧页面 (LibraryPage 等被砍页将在物理清理时一并删除).
@@ -12,6 +13,7 @@ interface FooterProps {
  * 视觉：黑底白字；层级：标语最大 / 栏目次大 / 条目更小 / 版权&备案最小.
  */
 export function Footer({ onNavigate }: FooterProps) {
+  const { t } = useLang();
   const currentYear = new Date().getFullYear();
 
   const nav = (page: 'home' | 'articles' | 'reports' | 'about' | 'consult-apply') => {
@@ -34,7 +36,7 @@ export function Footer({ onNavigate }: FooterProps) {
           <div className="md:col-span-1">
             <h4 className="font-semibold text-[18px] mb-3 text-white">{SITE_NAME}</h4>
             <p className="text-[16px] text-white/90 leading-relaxed">
-              把战略思想做成 AI 工具的组织陪伴公司
+              {t({ zh: '把战略思想做成 AI 工具的组织陪伴公司', en: 'An organizational companion turning strategic thinking into AI tools' })}
             </p>
 
             {/* Mobile Quick Links */}
@@ -44,44 +46,44 @@ export function Footer({ onNavigate }: FooterProps) {
                 onClick={() => nav('articles')}
                 className="px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[12px] text-white/80 hover:text-white hover:border-white/30 transition-colors"
               >
-                文章
+                {t({ zh: '文章', en: 'Articles' })}
               </button>
               <button
                 type="button"
                 onClick={() => nav('reports')}
                 className="px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[12px] text-white/80 hover:text-white hover:border-white/30 transition-colors"
               >
-                报告
+                {t({ zh: '报告', en: 'Reports' })}
               </button>
               <button
                 type="button"
                 onClick={() => nav('about')}
                 className="px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[12px] text-white/80 hover:text-white hover:border-white/30 transition-colors"
               >
-                关于我们
+                {t({ zh: '关于我们', en: 'About Us' })}
               </button>
               <button
                 type="button"
                 onClick={() => nav('consult-apply')}
                 className="px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[12px] text-white/80 hover:text-white hover:border-white/30 transition-colors"
               >
-                申请咨询
+                {t({ zh: '申请咨询', en: 'Apply for Consultation' })}
               </button>
             </div>
           </div>
 
           {/* 内容栏 */}
           <div className="hidden md:block">
-            <h4 className="font-medium text-[15px] mb-4 text-white">内容</h4>
+            <h4 className="font-medium text-[15px] mb-4 text-white">{t({ zh: '内容', en: 'Content' })}</h4>
             <ul className="space-y-2.5 text-[13px] text-white/70">
               <li>
                 <button type="button" onClick={() => nav('articles')} className="hover:text-white transition-colors">
-                  文章
+                  {t({ zh: '文章', en: 'Articles' })}
                 </button>
               </li>
               <li>
                 <button type="button" onClick={() => nav('reports')} className="hover:text-white transition-colors">
-                  报告
+                  {t({ zh: '报告', en: 'Reports' })}
                 </button>
               </li>
             </ul>
@@ -89,16 +91,16 @@ export function Footer({ onNavigate }: FooterProps) {
 
           {/* 合作 / 服务 */}
           <div className="hidden md:block">
-            <h4 className="font-medium text-[15px] mb-4 text-white">合作</h4>
+            <h4 className="font-medium text-[15px] mb-4 text-white">{t({ zh: '合作', en: 'Partnership' })}</h4>
             <ul className="space-y-2.5 text-[13px] text-white/70">
               <li>
                 <button type="button" onClick={() => nav('consult-apply')} className="hover:text-white transition-colors">
-                  申请战略陪伴
+                  {t({ zh: '申请战略陪伴', en: 'Apply for Strategic Companionship' })}
                 </button>
               </li>
               <li>
                 <button type="button" onClick={() => nav('about')} className="hover:text-white transition-colors">
-                  关于益语智库
+                  {t({ zh: '关于益语智库', en: 'About Yiyu Institute' })}
                 </button>
               </li>
               <li>
@@ -108,7 +110,7 @@ export function Footer({ onNavigate }: FooterProps) {
                   rel="noopener noreferrer"
                   className="hover:text-white transition-colors"
                 >
-                  开源工作台 GitHub
+                  {t({ zh: '益语智库 AI · GitHub', en: 'Yiyu AI · GitHub' })}
                 </a>
               </li>
             </ul>
@@ -116,7 +118,7 @@ export function Footer({ onNavigate }: FooterProps) {
 
           {/* Contact */}
           <div>
-            <h4 className="font-medium text-[15px] mb-4 text-white">联系我们</h4>
+            <h4 className="font-medium text-[15px] mb-4 text-white">{t({ zh: '联系我们', en: 'Contact Us' })}</h4>
             <ul className="space-y-2.5 text-[13px] text-white/70">
               <li className="flex items-start gap-2">
                 <Mail className="w-4 h-4 mt-0.5 flex-shrink-0 text-white/60" />

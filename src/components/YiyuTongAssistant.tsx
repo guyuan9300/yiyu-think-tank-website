@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { getSavedUserRaw } from '../lib/storage';
+import { useLang, type Bilingual } from '../lib/i18n';
 import {
   queryYiyuTong,
   type YiyuTongCitation,
@@ -194,6 +195,7 @@ function applyPhaseToTaskPlan(
 }
 
 function SourceCard({ card, onOpen }: { card: YiyuTongCitation; onOpen: () => void }) {
+  const { t } = useLang();
   const currentInternalUrl = typeof window === 'undefined'
     ? ''
     : `${window.location.pathname}${window.location.search}`;
@@ -218,13 +220,13 @@ function SourceCard({ card, onOpen }: { card: YiyuTongCitation; onOpen: () => vo
             <img src={card.coverUrl} alt={card.title} className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-[11px] font-medium text-muted-foreground/70">
-              {card.label || '内容'}
+              {card.label || t({ zh: '内容', en: 'Content' })}
             </div>
           )}
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="text-[11px] text-muted-foreground/65">{card.label || '内容'}</div>
+          <div className="text-[11px] text-muted-foreground/65">{card.label || t({ zh: '内容', en: 'Content' })}</div>
           <div className="mt-1 line-clamp-2 text-sm font-medium leading-5 text-foreground">{card.title}</div>
           <div className="mt-2 line-clamp-3 text-[12px] leading-5 text-muted-foreground/75">{card.snippet}</div>
           <div className="mt-3 flex items-center justify-between gap-3">
@@ -244,14 +246,14 @@ function SourceCard({ card, onOpen }: { card: YiyuTongCitation; onOpen: () => vo
       </div>
 
       {isCurrentPage ? (
-        <div className="mt-3 text-xs font-medium text-muted-foreground/60">当前页面</div>
+        <div className="mt-3 text-xs font-medium text-muted-foreground/60">{t({ zh: '当前页面', en: 'Current page' })}</div>
       ) : (
         <button
           type="button"
           onClick={onOpen}
           className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80"
         >
-          打开页面
+          {t({ zh: '打开页面', en: 'Open page' })}
           <ArrowUpRight className="h-3.5 w-3.5" />
         </button>
       )}
@@ -260,6 +262,7 @@ function SourceCard({ card, onOpen }: { card: YiyuTongCitation; onOpen: () => vo
 }
 
 function TaskPlanCard({ taskPlan }: { taskPlan: TaskStepState[] }) {
+  const { t } = useLang();
   const [expanded, setExpanded] = useState(() => taskPlan.some((step) => Boolean(step.detail)));
   const summaryDetail =
     [...taskPlan].reverse().find((step) => (step.status === 'active' || step.status === 'error') && step.detail)?.detail
@@ -268,13 +271,13 @@ function TaskPlanCard({ taskPlan }: { taskPlan: TaskStepState[] }) {
   return (
     <div className="rounded-2xl border border-border/50 bg-white/80 p-3">
       <div className="flex items-center justify-between gap-3">
-        <div className="text-[12px] font-medium text-muted-foreground/70">执行进度</div>
+        <div className="text-[12px] font-medium text-muted-foreground/70">{t({ zh: '执行进度', en: 'Progress' })}</div>
         <button
           type="button"
           onClick={() => setExpanded((prev) => !prev)}
           className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] text-muted-foreground/75 hover:bg-muted/60 hover:text-foreground"
         >
-          {expanded ? '收起详情' : '展开详情'}
+          {expanded ? t({ zh: '收起详情', en: 'Hide details' }) : t({ zh: '展开详情', en: 'Show details' })}
           {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
         </button>
       </div>
@@ -337,13 +340,14 @@ function ExtensionGuideCard({
   onRetry: () => void;
   error?: string | null;
 }) {
+  const { t } = useLang();
   const needsInstall = !status.available;
   const needsToken = status.available && !status.tokenSet;
   const title = needsInstall
-    ? '要继续自动填写表单，需要先安装 Page Agent 扩展。'
+    ? t({ zh: '要继续自动填写表单，需要先安装 Page Agent 扩展。', en: 'To keep auto-filling the form, install the Page Agent extension first.' })
     : needsToken
-      ? '要继续自动填写表单，需要先连接 Page Agent 扩展。'
-      : '扩展已连接，可以继续自动填写。';
+      ? t({ zh: '要继续自动填写表单，需要先连接 Page Agent 扩展。', en: 'To keep auto-filling the form, connect the Page Agent extension first.' })
+      : t({ zh: '扩展已连接，可以继续自动填写。', en: 'The extension is connected and ready to auto-fill.' });
 
   return (
     <div className="rounded-2xl border border-primary/15 bg-primary/5 p-3">
@@ -355,10 +359,10 @@ function ExtensionGuideCard({
           <div className="text-sm font-medium text-foreground">{title}</div>
           <div className="mt-1 text-[12px] leading-5 text-muted-foreground/75">
             {needsInstall
-              ? '安装后回到当前页面，输入扩展授权令牌，益语通就会继续把你提供的信息直接填到飞书表单里。'
+              ? t({ zh: '安装后回到当前页面，输入扩展授权令牌，益语通就会继续把你提供的信息直接填到飞书表单里。', en: 'After installing, return to this page and enter the extension authorization token; Yiyu Assistant will then fill your details straight into the Feishu form.' })
               : needsToken
-                ? '扩展安装后，请输入扩展里的授权令牌。连接成功后，当前任务会继续执行，不需要重新描述。'
-                : '如果刚刚还没自动填成功，可以重新执行当前任务。'}
+                ? t({ zh: '扩展安装后，请输入扩展里的授权令牌。连接成功后，当前任务会继续执行，不需要重新描述。', en: 'Once installed, enter the authorization token from the extension. After it connects, the current task continues—no need to describe it again.' })
+                : t({ zh: '如果刚刚还没自动填成功，可以重新执行当前任务。', en: 'If the auto-fill did not complete just now, you can re-run the current task.' })}
           </div>
           {error ? (
             <div className="mt-2 rounded-xl bg-white/80 px-3 py-2 text-[12px] leading-5 text-destructive">
@@ -372,7 +376,7 @@ function ExtensionGuideCard({
                 onClick={onInstall}
                 className="inline-flex items-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90"
               >
-                安装扩展
+                {t({ zh: '安装扩展', en: 'Install extension' })}
                 <ExternalLink className="h-3.5 w-3.5" />
               </button>
             ) : null}
@@ -382,7 +386,7 @@ function ExtensionGuideCard({
                 onClick={onConnect}
                 className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-white px-3.5 py-2 text-xs font-medium text-foreground hover:bg-muted/40"
               >
-                输入授权令牌
+                {t({ zh: '输入授权令牌', en: 'Enter token' })}
               </button>
             ) : null}
             <button
@@ -390,7 +394,7 @@ function ExtensionGuideCard({
               onClick={onRetry}
               className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-white px-3.5 py-2 text-xs font-medium text-foreground hover:bg-muted/40"
             >
-              重新检测并继续
+              {t({ zh: '重新检测并继续', en: 'Recheck and continue' })}
             </button>
           </div>
         </div>
@@ -400,6 +404,8 @@ function ExtensionGuideCard({
 }
 
 export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
+  const { t } = useLang();
+  const tr = (text: Bilingual) => t(text);
   const initialState = useMemo(() => loadInitialState(), []);
   const [isOpen, setIsOpen] = useState(initialState.open);
   const [sessionId, setSessionId] = useState(initialState.sessionId);
@@ -497,7 +503,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
 
         updateMessage(messageId, (message) => ({
           ...message,
-          content: result.error || '这次页面操作没有稳定完成。',
+          content: result.error || tr({ zh: '这次页面操作没有稳定完成。', en: 'This page action did not complete reliably.' }),
         }));
         return;
       }
@@ -523,8 +529,8 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
           ...message,
           needsExtensionSetup: true,
           extensionError: latestExtensionStatus.available
-            ? '尚未完成扩展授权，当前无法继续自动填写。'
-            : '当前浏览器里还没有可用的 Page Agent 扩展。',
+            ? tr({ zh: '尚未完成扩展授权，当前无法继续自动填写。', en: 'The extension is not yet authorized, so auto-fill cannot continue.' })
+            : tr({ zh: '当前浏览器里还没有可用的 Page Agent 扩展。', en: 'No Page Agent extension is available in this browser yet.' }),
         }));
         return;
       }
@@ -547,7 +553,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
           mappedPhase === 'done'
             ? detail || response.message
             : mappedPhase === 'error'
-              ? detail || '这次跨标签页自动填写没有稳定完成。'
+              ? detail || tr({ zh: '这次跨标签页自动填写没有稳定完成。', en: 'The cross-tab auto-fill did not complete reliably.' })
               : message.content,
       }));
     },
@@ -567,13 +573,13 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
 
       updateMessage(messageId, (message) => ({
         ...message,
-        taskPlan: applyPhaseToTaskPlan(message.taskPlan, 'error', result.error || '这次跨标签页自动填写没有稳定完成。'),
-        content: result.error || '这次跨标签页自动填写没有稳定完成。',
+        taskPlan: applyPhaseToTaskPlan(message.taskPlan, 'error', result.error || tr({ zh: '这次跨标签页自动填写没有稳定完成。', en: 'The cross-tab auto-fill did not complete reliably.' })),
+        content: result.error || tr({ zh: '这次跨标签页自动填写没有稳定完成。', en: 'The cross-tab auto-fill did not complete reliably.' }),
         needsExtensionSetup: false,
-        extensionError: result.error || '跨标签页执行失败',
+        extensionError: result.error || tr({ zh: '跨标签页执行失败', en: 'Cross-tab execution failed' }),
       }));
     } catch (error: any) {
-      const message = error?.message || '这次任务执行中断了。';
+      const message = error?.message || tr({ zh: '这次任务执行中断了。', en: 'This task was interrupted.' });
       updateMessage(messageId, (current) => ({
         ...current,
         taskPlan: applyPhaseToTaskPlan(current.taskPlan, 'error', message),
@@ -608,12 +614,12 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
     const placeholderAssistantMessage: AssistantMessage = {
       id: assistantMessageId,
       role: 'assistant',
-      content: '我先理解你的目标并开始执行。',
+      content: tr({ zh: '我先理解你的目标并开始执行。', en: 'Let me understand your goal and get started.' }),
       taskPlan: [
         {
           id: 'live-intake',
-          label: '正在理解任务',
-          detail: '正在结合官网结构和当前页面状态规划执行路径。',
+          label: tr({ zh: '正在理解任务', en: 'Understanding the task' }),
+          detail: tr({ zh: '正在结合官网结构和当前页面状态规划执行路径。', en: 'Planning the execution path based on the site structure and current page state.' }),
           status: 'active',
         },
       ],
@@ -638,13 +644,13 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
       updateMessage(assistantMessageId, () => ({
         id: assistantMessageId,
         role: 'assistant',
-        content: result.error || '益语通暂时没接上，请稍后再试。',
+        content: result.error || tr({ zh: '益语通暂时没接上，请稍后再试。', en: 'Yiyu Assistant is temporarily unavailable. Please try again later.' }),
         citations: [],
         taskPlan: [
           {
             id: 'live-intake',
-            label: '执行出现问题',
-            detail: result.error || '益语通暂时没接上，请稍后再试。',
+            label: tr({ zh: '执行出现问题', en: 'Execution ran into a problem' }),
+            detail: result.error || tr({ zh: '益语通暂时没接上，请稍后再试。', en: 'Yiyu Assistant is temporarily unavailable. Please try again later.' }),
             status: 'error',
           },
         ],
@@ -700,7 +706,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
       updateMessage(messageId, (message) => ({
         ...message,
         needsExtensionSetup: true,
-        extensionError: status.available ? '扩展仍未完成授权。' : '当前浏览器仍未检测到可用扩展。',
+        extensionError: status.available ? tr({ zh: '扩展仍未完成授权。', en: 'The extension is still not authorized.' }) : tr({ zh: '当前浏览器仍未检测到可用扩展。', en: 'No available extension was detected in this browser.' }),
       }));
       return;
     }
@@ -818,7 +824,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
         className="fixed bottom-6 right-6 z-[70] inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-3 text-sm font-medium text-white shadow-[0_20px_60px_-30px_rgba(15,23,42,0.6)] hover:bg-foreground/90"
       >
         {isOpen ? <X className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-        益语通
+        {t({ zh: '益语通', en: 'Yiyu Assistant' })}
       </button>
 
       {isOpen && currentRect ? (
@@ -839,11 +845,11 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
           >
             <div className="flex items-start justify-between gap-4">
               <div className="max-w-[270px] text-[12px] leading-5 text-muted-foreground/75">
-                你可以直接让我找内容、带你逛网站，或让我在官网里自动完成查找、筛选、打开和填写表单。
+                {t({ zh: '你可以直接让我找内容、带你逛网站，或让我在官网里自动完成查找、筛选、打开和填写表单。', en: 'Just ask me to find content, take you around the site, or automatically search, filter, open, and fill out forms for you.' })}
               </div>
               {sameTabExecuting ? (
                 <div className="rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
-                  正在自动操作网页
+                  {t({ zh: '正在自动操作网页', en: 'Operating the page' })}
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
@@ -851,7 +857,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
                     type="button"
                     onClick={clearConversation}
                     className="rounded-full p-2 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                    aria-label="清空对话记录"
+                    aria-label={t({ zh: '清空对话记录', en: 'Clear conversation' })}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -859,7 +865,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
                     type="button"
                     onClick={() => setIsOpen(false)}
                     className="rounded-full p-2 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                    aria-label="关闭益语通"
+                    aria-label={t({ zh: '关闭益语通', en: 'Close Yiyu Assistant' })}
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -910,7 +916,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
                           onOpen={() =>
                             runYiyuTongAction({
                               type: 'open_detail',
-                              label: '打开对应页面',
+                              label: tr({ zh: '打开对应页面', en: 'Open the relevant page' }),
                               target: card.url,
                             })
                           }
@@ -926,7 +932,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
               <div className="flex justify-start">
                 <div className="inline-flex items-center gap-2 rounded-2xl border border-border/50 bg-white px-4 py-3 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  益语通正在规划并执行任务…
+                  {t({ zh: '益语通正在规划并执行任务…', en: 'Yiyu Assistant is planning and running the task…' })}
                 </div>
               </div>
             ) : null}
@@ -935,7 +941,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
           <div className="border-t border-border/50 bg-white/90 p-4">
             {sameTabExecuting ? (
               <div className="rounded-2xl border border-primary/10 bg-primary/5 px-4 py-3 text-[12px] leading-5 text-muted-foreground/80">
-                益语通正在当前标签页里自动完成任务。等它停下来后，你再继续补充下一句就可以。
+                {t({ zh: '益语通正在当前标签页里自动完成任务。等它停下来后，你再继续补充下一句就可以。', en: 'Yiyu Assistant is completing the task in this tab. Once it stops, you can add your next message.' })}
               </div>
             ) : (
               <div className="rounded-2xl border border-border/60 bg-muted/10 p-2">
@@ -948,7 +954,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
                       void submitQuestion(input);
                     }
                   }}
-                  placeholder="比如：帮我找组织相关的书，或带我逛一下这个网站"
+                  placeholder={t({ zh: '比如：帮我找组织相关的书，或带我逛一下这个网站', en: 'e.g. find me books about organizations, or show me around this site' })}
                   className="min-h-[88px] w-full resize-none border-0 bg-transparent px-2 py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground/55"
                 />
                 <div className="flex items-center justify-between gap-3 px-2 pb-1">
@@ -960,7 +966,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
                     className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3 py-2 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <Send className="h-3.5 w-3.5" />
-                    发送
+                    {t({ zh: '发送', en: 'Send' })}
                   </button>
                 </div>
               </div>

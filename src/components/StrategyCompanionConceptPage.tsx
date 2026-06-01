@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import AdminStrategyCompanionConceptPage from './AdminStrategyCompanionConceptPage';
 import { fetchStrategyAccess, type StrategyAccessMode } from '../lib/strategyCompanionApi';
+import { useLang } from '../lib/i18n';
 
 function resolveProjectIdFromUrl() {
   try {
@@ -12,6 +13,7 @@ function resolveProjectIdFromUrl() {
 }
 
 export function StrategyCompanionConceptPage({ onNavigate }: { onNavigate?: (page: string) => void }) {
+  const { t } = useLang();
   const [accessMode, setAccessMode] = useState<StrategyAccessMode>('public');
   const [initialProjectId, setInitialProjectId] = useState('');
   const [loading, setLoading] = useState(true);
@@ -56,7 +58,7 @@ export function StrategyCompanionConceptPage({ onNavigate }: { onNavigate?: (pag
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F7F7F5] flex items-center justify-center text-sm text-slate-500">
-        正在加载战略陪伴页面…
+        {t({ zh: '正在加载战略陪伴页面…', en: 'Loading the Strategic Companionship page…' })}
       </div>
     );
   }

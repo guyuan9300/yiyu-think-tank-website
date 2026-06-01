@@ -1,10 +1,11 @@
 import { useState, type ReactNode } from 'react';
 import {
   LayoutDashboard, FileText, Folder,
-  Users, ShoppingCart, ClipboardList, UserCheck,
+  Users, ShoppingCart, ClipboardList, UserCheck, KeyRound,
   Bot, Image as ImageIcon,
   Menu, X, LogOut, ExternalLink, ArrowLeft,
-  Rocket, Tag, Send, Inbox, Package, ListChecks, Globe,
+  Rocket, Send, Inbox,
+  Wallet, HandHeart,
 } from 'lucide-react';
 
 // ============================================================
@@ -18,24 +19,23 @@ export type AdminV2ModuleId =
   | 'articles'
   | 'reports'
   | 'members'
+  | 'beta-applications'
   | 'orders'
   | 'consult-requests'
   | 'strategy-clients'
   | 'doubao-language'
   | 'doubao-image'
-  | 'release-overview'
-  | 'release-versions'
+  | 'release-publish'
   | 'release-targeting'
   | 'release-feedback'
-  | 'release-downloads'
-  | 'release-checklist'
-  | 'release-website';
+  | 'finance-cashflow'
+  | 'finance-support-pool';
 
 export interface ModuleDef {
   id: AdminV2ModuleId;
   label: string;
   icon: ReactNode;
-  group: '数据' | '内容管理' | '用户与商务' | '模型接入' | '发版与反馈';
+  group: '数据' | '内容管理' | '用户与商务' | '模型接入' | '发版与反馈' | '财务';
   description?: string;
 }
 
@@ -46,18 +46,17 @@ export const ADMIN_V2_MODULES: ModuleDef[] = [
   { id: 'articles',         label: '文章',         icon: <FileText className="w-4 h-4" />,       group: '内容管理',   description: '文章 CRUD' },
   { id: 'reports',          label: '报告',         icon: <Folder className="w-4 h-4" />,         group: '内容管理',   description: '报告 CRUD + 自做/推荐' },
   { id: 'members',          label: '会员管理',     icon: <Users className="w-4 h-4" />,          group: '用户与商务', description: '用户列表 + 会员等级' },
+  { id: 'beta-applications', label: '内测申请',    icon: <KeyRound className="w-4 h-4" />,       group: '用户与商务', description: '益语智库 AI 内测 · 审核发码' },
   { id: 'orders',           label: '订单管理',     icon: <ShoppingCart className="w-4 h-4" />,   group: '用户与商务', description: '付费 / 退款 / 流水' },
   { id: 'consult-requests', label: '申请咨询',     icon: <ClipboardList className="w-4 h-4" />,  group: '用户与商务', description: 'consult-apply 提交列表' },
   { id: 'strategy-clients', label: '战略陪伴客户', icon: <UserCheck className="w-4 h-4" />,      group: '用户与商务', description: '已签约客户名册' },
   { id: 'doubao-language',  label: '豆包·语言模型', icon: <Bot className="w-4 h-4" />,            group: '模型接入',   description: '文本 · 文章排版 / 报告介绍 / 益语通' },
   { id: 'doubao-image',     label: '豆包·图像模型', icon: <ImageIcon className="w-4 h-4" />,      group: '模型接入',   description: '图像 · 文章封面 / 插图 / 报告封面' },
-  { id: 'release-overview',  label: '当前版本',   icon: <Rocket className="w-4 h-4" />,    group: '发版与反馈', description: '各平台版本 + 发版概览' },
-  { id: 'release-versions',  label: '版本管理',   icon: <Tag className="w-4 h-4" />,       group: '发版与反馈', description: '版本号 / 状态 / 更新内容' },
-  { id: 'release-targeting', label: '定向推送',   icon: <Send className="w-4 h-4" />,      group: '发版与反馈', description: '按组织代码定向 / 灰度 / 全量' },
-  { id: 'release-feedback',  label: '用户反馈',   icon: <Inbox className="w-4 h-4" />,     group: '发版与反馈', description: 'bug / 建议收件箱 + 状态机' },
-  { id: 'release-downloads', label: '安装包',     icon: <Package className="w-4 h-4" />,   group: '发版与反馈', description: '各平台下载包 / 校验 / 上下架' },
-  { id: 'release-checklist', label: '发版检查',   icon: <ListChecks className="w-4 h-4" />, group: '发版与反馈', description: '发版前检查清单门禁' },
-  { id: 'release-website',   label: '官网同步',   icon: <Globe className="w-4 h-4" />,     group: '发版与反馈', description: '下载页 / 更新日志派生预览' },
+  { id: 'release-publish',   label: '版本发布',   icon: <Rocket className="w-4 h-4" />,    group: '发版与反馈', description: '版本号 / 更新说明 / 安装包 / 发布 → 官网下载页' },
+  { id: 'release-targeting', label: '定向推送',   icon: <Send className="w-4 h-4" />,      group: '发版与反馈', description: '按组织代码把最新版推给已安装用户' },
+  { id: 'release-feedback',  label: '用户反馈',   icon: <Inbox className="w-4 h-4" />,     group: '发版与反馈', description: 'bug / 建议收件箱 + 状态流转' },
+  { id: 'finance-cashflow',  label: '资金账本',   icon: <Wallet className="w-4 h-4" />,    group: '财务',       description: '收支科目录入 → 前台现金流量表' },
+  { id: 'finance-support-pool', label: '行动者支持池', icon: <HandHeart className="w-4 h-4" />, group: '财务', description: '立项项目管理 → 前台支持池' },
 ];
 
 interface AdminV2ShellProps {
@@ -129,7 +128,7 @@ export function AdminV2Shell({ activeModule, onModuleChange, onNavigateOut, chil
           ))}
         </nav>
 
-        {/* Sidebar 底部: 跳转回前台 / 旧后台入口 */}
+        {/* Sidebar 底部: 返回前台 (旧后台已屏蔽, 移除 Legacy 入口) */}
         <div className="absolute bottom-0 left-0 right-0 border-t border-os-line p-3 bg-os-paper space-y-1">
           <button
             onClick={() => onNavigateOut('home')}
@@ -137,13 +136,6 @@ export function AdminV2Shell({ activeModule, onModuleChange, onNavigateOut, chil
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             返回前台
-          </button>
-          <button
-            onClick={() => onNavigateOut('admin-legacy')}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-[10px] text-[12px] text-os-muted hover:bg-os-mist hover:text-os-navy transition-colors"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            旧版后台 (Legacy)
           </button>
         </div>
       </aside>

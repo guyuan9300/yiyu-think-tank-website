@@ -18,13 +18,18 @@ export interface Report {
   version: string;
   format: string[];
   coverImage?: string;
-  fileUrl?: string;
+  fileUrl?: string; // PDF 原件 (下载用)
   fileSize?: number;
+  /** 报告解读 Markdown 正文 (离线大模型生成, 前台据此渲染简介/目录/正文 + 作 AI 问答上下文) */
+  markdownContent?: string;
+  /** 或指向 .md 文件的 URL (与 markdownContent 二选一, content 优先) */
+  markdownUrl?: string;
   likes?: number;
   favoritesCount?: number;
   pages?: number;
   publishDate: string;
-  status: 'draft' | 'published' | 'archived';
+  /** parsed = 已从 Markdown 解析出正文(新增报告默认); published/draft/archived 为旧口径, 前台两者均展示 */
+  status: 'draft' | 'published' | 'archived' | 'parsed';
 
   /** 是否显示在首页（手动选择） */
   showOnHome: boolean;
@@ -45,6 +50,14 @@ export interface InsightArticle {
   contentText?: string;
   fileUrl?: string;
   fileSize?: number;
+
+  /** AI 综述（导读：这篇讲什么、核心是什么） */
+  aiOverview?: string;
+  /** AI 总结：核心观点 + 结构化目录（指向逻辑结构，非页码） */
+  aiSummary?: {
+    points: string[];
+    outline: { title: string; desc?: string }[];
+  };
 
   /** 统一标签（四类，多选）。旧 category/tags/readTime/featured/author 已彻底废弃。 */
   topics: ResourceTopic[];
@@ -340,12 +353,17 @@ export const schedulePgSync = (key: string, data: any) => {
   pgSyncTimers.set(key, timer);
 };
 
-// 工具函数：保存数据（内容域走内存缓存，非内容域仍可用 localStorage）
+// 工具函数：保存数据（内容域：内存缓存 + 后端 PG sync + 本地 localStorage 镜像）
+// 本地 localStorage 镜像的作用：内存缓存只在单个页面实例内有效，而后台↔前台是整页跳转
+// (window.location)，跳转后内存即清空。没有 localStorage 镜像，后台新上传的报告在前台
+// 刷新/跳转后就消失。写 localStorage 后：跨刷新可读、跨标签页 storage 事件可感知、
+// bootstrap 合并也能把它当作"本地新增"保留下来。
 const saveToStorage = (key: string, data: any) => {
   try {
     if (CONTENT_STORAGE_KEYS.has(key)) {
       contentMemoryCache.set(key, data);
       schedulePgSync(key, data);
+      try { localStorage.setItem(key, JSON.stringify(data)); } catch { /* 配额/隐私模式忽略 */ }
       return;
     }
     localStorage.setItem(key, JSON.stringify(data));
@@ -354,11 +372,18 @@ const saveToStorage = (key: string, data: any) => {
   }
 };
 
-// 工具函数：读取数据（内容域优先读内存缓存）
+// 工具函数：读取数据（内容域：内存缓存优先，缺失则回退 localStorage 镜像）
 const loadFromStorage = (key: string, defaultData: any) => {
   try {
     if (CONTENT_STORAGE_KEYS.has(key)) {
-      return contentMemoryCache.has(key) ? contentMemoryCache.get(key) : defaultData;
+      if (contentMemoryCache.has(key)) return contentMemoryCache.get(key);
+      const mirror = localStorage.getItem(key);
+      if (mirror) {
+        const parsed = JSON.parse(mirror);
+        contentMemoryCache.set(key, parsed);
+        return parsed;
+      }
+      return defaultData;
     }
     const data = localStorage.getItem(key);
     return data ? JSON.parse(data) : defaultData;
@@ -367,6 +392,19 @@ const loadFromStorage = (key: string, defaultData: any) => {
     return defaultData;
   }
 };
+
+// 跨标签页同步: 另一个标签页(如后台)写了内容域 localStorage 镜像时, 本标签页同步更新内存缓存,
+// 否则本页的内存缓存是旧的, getReports/loadFromStorage 优先读内存就看不到新数据。
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (!e.key || !CONTENT_STORAGE_KEYS.has(e.key)) return;
+    try {
+      if (e.newValue) contentMemoryCache.set(e.key, JSON.parse(e.newValue));
+      else contentMemoryCache.delete(e.key);
+      window.dispatchEvent(new Event('yiyu_data_change'));
+    } catch { /* ignore */ }
+  });
+}
 
 // ================================================
 // Legacy 字段迁移（彻底废弃 category/tags/readTime/featured/isHot/author 等）
@@ -490,10 +528,98 @@ export const calculateReadTime = (pages: number): string => {
 
 // ========== 报告管理 ==========
 
-// 获取所有报告
+// 内置样例报告 (SET 指数 2024) — 用于打通 Markdown 阅读 + AI 问答全链路。
+// markdownUrl/fileUrl 指向 public/reports/ 下的文件, 报告对象本身保持轻量。
+export const SET_INDEX_SEED_REPORT: Report = {
+  id: 'set-index-2024',
+  title: '全球创新城市教育科技人才协同发展评估报告暨 SET 指数 2024',
+  publisher: '深圳国际科技信息中心 / 清华大学 / 爱思唯尔',
+  summary:
+    'SET 指数从教育、科技、人才三个维度评估 30 个全球创新城市。波士顿、旧金山、北京位列前三；中美城市占据前列，中国城市在人才潜力、青年人才与科研机构增长上表现突出，深圳人才潜力居首。',
+  topics: ['战略', 'AI 技术'],
+  version: '2024',
+  format: ['PDF', 'Markdown'],
+  fileUrl: '/reports/set-index-2024.pdf',
+  markdownUrl: '/reports/set-index-2024.md',
+  pages: 80,
+  publishDate: '2025-02-14',
+  status: 'published',
+  showOnHome: true,
+  views: 0,
+  downloads: 0,
+  likes: 0,
+  favoritesCount: 0,
+  createdAt: '2025-02-14T00:00:00.000Z',
+  updatedAt: '2025-02-14T00:00:00.000Z',
+};
+
+// 内置样例报告 2: 临床 AI 报告 (含 30 个图表块, 用于验证图表渲染)
+export const CLINICAL_AI_SEED_REPORT: Report = {
+  id: 'clinical-ai-2026',
+  title: 'State of Clinical AI Report 2026 · 临床 AI 从能力展示走向真实照护转译',
+  publisher: 'ARISE Network',
+  summary:
+    '2026 年临床 AI 已从"模型性能展示"进入"真实照护转译"阶段：前沿模型在受控推理、影像识别与风险预测中快速逼近或超过人类，但真实临床价值仍取决于评估质量、工作流协同、不确定性校准、安全护栏与前瞻性证据。',
+  topics: ['战略', 'AI 技术'],
+  version: '2026',
+  format: ['Markdown'],
+  markdownUrl: '/reports/clinical-ai-2026.md',
+  publishDate: '2026-01-01',
+  status: 'parsed',
+  showOnHome: false,
+  views: 0,
+  downloads: 0,
+  likes: 0,
+  favoritesCount: 0,
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+};
+
+// 站点只保留用户自己通过后台上传的 MD 报告 —— 不再注入内置样例。
+// SET_INDEX / CLINICAL_AI 两个样例仅保留常量定义(供历史引用), 不进入报告列表。
+const SEED_REPORTS: Report[] = [];
+// 历史样例报告 id: 若 localStorage 残留其副本(含被编辑过的), 一并清除, 不在站点出现。
+const LEGACY_SEED_IDS = new Set<string>([SET_INDEX_SEED_REPORT.id, CLINICAL_AI_SEED_REPORT.id]);
+
+// 新解析机制: 报告必须有 Markdown 解读稿(markdownContent 或 markdownUrl)才有效。
+// 旧机制报告(纯 PDF / 无 MD 的历史报告)一律视为失效, 不在站点任何位置出现。
+export const isMarkdownReport = (r?: Report | null): boolean =>
+  !!(r && (r.markdownContent || r.markdownUrl));
+
+// 是否为应清除的报告(旧机制无 MD, 或历史样例 seed)
+const isStaleReport = (r?: Report | null): boolean =>
+  !r || !isMarkdownReport(r) || LEGACY_SEED_IDS.has(r.id);
+
+// 获取所有报告: 仅返回用户上传的新机制 MD 报告(过滤旧报告 + 历史样例)。
 export const getReports = (): Report[] => {
   const list = loadFromStorage(STORAGE_KEYS.reports, []);
-  return migrateList(STORAGE_KEYS.reports, list, 'report') as Report[];
+  const migrated = migrateList(STORAGE_KEYS.reports, list, 'report') as Report[];
+  const have = new Set(migrated.map(r => r.id));
+  const missing = SEED_REPORTS.filter(s => !have.has(s.id));
+  const all = missing.length ? [...missing, ...migrated] : migrated;
+  return all.filter(r => !isStaleReport(r));
+};
+
+/**
+ * 物理清除旧解析机制遗留的报告(无 Markdown 解读稿者): 重写 localStorage 镜像 + 内存缓存,
+ * 让旧报告痕迹彻底消失。每次启动调用, 自愈式清理(断网时也能清, 不依赖后端)。
+ * 返回被清除的数量。
+ */
+export const purgeLegacyReports = (): number => {
+  if (typeof localStorage === 'undefined') return 0;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.reports);
+    const stored: Report[] = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(stored) || stored.length === 0) return 0;
+    const kept = stored.filter(r => !isStaleReport(r));
+    const removed = stored.length - kept.length;
+    if (removed > 0) {
+      try { localStorage.setItem(STORAGE_KEYS.reports, JSON.stringify(kept)); } catch {}
+      contentMemoryCache.set(STORAGE_KEYS.reports, kept);
+      try { window.dispatchEvent(new Event('yiyu_data_change')); } catch {}
+    }
+    return removed;
+  } catch { return 0; }
 };
 
 // 工具函数：触发数据变化事件
@@ -539,6 +665,8 @@ export const saveReport = (report: Partial<Report> | Report): Report => {
     favoritesCount: (report as any).favoritesCount || 0,
     fileUrl: report.fileUrl,
     fileSize: report.fileSize,
+    markdownContent: (report as any).markdownContent,
+    markdownUrl: (report as any).markdownUrl,
     pages: report.pages,
     publishDate: report.publishDate || new Date().toISOString().split('T')[0],
     status: report.status || 'draft',
@@ -1069,8 +1197,21 @@ export const bootstrapFromPgApi = async (): Promise<boolean> => {
       return false;
     }
 
+    // 报告: 合并本地新增 —— 后台新上传的报告先写在 localStorage 镜像里, 后端快照还没有它,
+    // 必须保留, 否则每次 bootstrap 都把它冲掉(这正是"上传后前台看不到"的根因)。
+    // 新机制: 仅保留有 Markdown 解读稿的报告 —— 后端历史旧报告/样例(无 MD 或样例 id)一并过滤, 不再回流。
+    const backendReports = ((payload.reports || []) as Report[]).filter((r) => !isStaleReport(r));
+    const backendIds = new Set(backendReports.map((r) => r && r.id));
+    let localReports: Report[] = [];
+    try { localReports = JSON.parse(localStorage.getItem(STORAGE_KEYS.reports) || '[]'); } catch { localReports = []; }
+    // 保留后端没有的本地报告(后台新上传、尚未同步到云者), 同样只保留新机制 MD 报告, 旧报告/样例不留痕。
+    const localOnlyReports = localReports.filter(
+      (r) => r && r.id && !backendIds.has(r.id) && !isStaleReport(r),
+    );
+    const mergedReports = [...localOnlyReports, ...backendReports];
+
     const writes: Array<[string, any]> = [
-      [STORAGE_KEYS.reports, payload.reports || []],
+      [STORAGE_KEYS.reports, mergedReports],
       [STORAGE_KEYS.insights, payload.insights || []],
       [STORAGE_KEYS.methodologies, payload.methodologies || []],
       [STORAGE_KEYS.books, payload.books || []],
@@ -1084,11 +1225,17 @@ export const bootstrapFromPgApi = async (): Promise<boolean> => {
 
     for (const [key, value] of writes) {
       contentMemoryCache.set(key, value);
-      try { localStorage.removeItem(key); } catch {}
+      if (key === STORAGE_KEYS.reports) {
+        // 保留报告的本地镜像(含本地新增), 供跨刷新/标签页读取
+        try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+      } else {
+        try { localStorage.removeItem(key); } catch {}
+      }
     }
 
-    // 清理浏览器内历史内容缓存，避免误导排查
+    // 清理浏览器内历史内容缓存(reports 除外, 它要保留本地镜像)
     for (const key of CONTENT_STORAGE_KEYS) {
+      if (key === STORAGE_KEYS.reports) continue;
       try { localStorage.removeItem(key); } catch {}
     }
 
@@ -1151,7 +1298,17 @@ export const importAllData = (jsonData: string): boolean => {
     }
     
     // 导入各类数据
-    if (data.reports) saveToStorage(STORAGE_KEYS.reports, data.reports);
+    // 报告: 与本地合并 —— 后端没有的本地报告(如后台新上传、尚未同步到云的)予以保留,
+    // 避免每次启动 bootstrap 把本地上传冲掉。冲突 id 以后端为准(生产真相)。
+    if (data.reports) {
+      const backendReports = data.reports as Report[];
+      const backendIds = new Set(backendReports.map((r) => r.id));
+      const localReports = loadFromStorage(STORAGE_KEYS.reports, []) as Report[];
+      const localOnly = localReports.filter(
+        (r) => r && r.id && !backendIds.has(r.id) && r.id !== SET_INDEX_SEED_REPORT.id,
+      );
+      saveToStorage(STORAGE_KEYS.reports, [...localOnly, ...backendReports]);
+    }
     if (data.insights) saveToStorage(STORAGE_KEYS.insights, data.insights);
     if (data.methodologies) saveToStorage(STORAGE_KEYS.methodologies, data.methodologies);
     if (data.books) saveToStorage(STORAGE_KEYS.books, data.books);

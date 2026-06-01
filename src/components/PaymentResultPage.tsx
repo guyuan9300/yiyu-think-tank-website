@@ -4,42 +4,46 @@ import { Header } from './Header';
 import { fetchPaymentOrder, type PaymentOrder } from '../lib/paymentApi';
 import { formatPlanMoney } from '../lib/paymentPlans';
 import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
+import { useLang, type Bilingual } from '../lib/i18n';
 
 type PaymentResultPageProps = {
   orderNo?: string;
   onNavigate?: (page: string, id?: string) => void;
 };
 
-function statusMeta(order?: PaymentOrder) {
+type StatusMeta = { title: Bilingual; desc: Bilingual; tone: 'error' | 'success' | 'pending' };
+
+function statusMeta(order?: PaymentOrder): StatusMeta {
   if (!order) {
     return {
-      title: '订单不存在',
-      desc: '未找到对应订单，请返回个人中心重新发起。',
+      title: { zh: '订单不存在', en: 'Order not found' },
+      desc: { zh: '未找到对应订单，请返回个人中心重新发起。', en: 'No matching order was found. Please return to the user center and start again.' },
       tone: 'error' as const,
     };
   }
   if (order.status === 'paid') {
     return {
-      title: '支付成功',
-      desc: '付费会员状态已自动更新，可以返回个人中心查看。',
+      title: { zh: '支付成功', en: 'Payment successful' },
+      desc: { zh: '付费会员状态已自动更新，可以返回个人中心查看。', en: 'Your paid membership has been updated automatically. You can check it in the user center.' },
       tone: 'success' as const,
     };
   }
   if (order.status === 'pending') {
     return {
-      title: '支付处理中',
-      desc: '系统正在确认微信支付结果，请稍候。',
+      title: { zh: '支付处理中', en: 'Payment processing' },
+      desc: { zh: '系统正在确认微信支付结果，请稍候。', en: 'Confirming your WeChat Pay result, please wait.' },
       tone: 'pending' as const,
     };
   }
   return {
-    title: '支付未完成',
-    desc: order.note || '当前订单还未支付成功，你可以返回后重新发起。',
+    title: { zh: '支付未完成', en: 'Payment incomplete' },
+    desc: order.note ? { zh: order.note, en: order.note } : { zh: '当前订单还未支付成功，你可以返回后重新发起。', en: 'This order has not been paid yet. You can go back and start again.' },
     tone: 'error' as const,
   };
 }
 
 export function PaymentResultPage({ orderNo, onNavigate }: PaymentResultPageProps) {
+  const { t } = useLang();
   const [order, setOrder] = useState<PaymentOrder | null>(null);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -49,7 +53,7 @@ export function PaymentResultPage({ orderNo, onNavigate }: PaymentResultPageProp
 
   const loadOrder = async (background = false) => {
     if (!orderNo) {
-      setError('缺少订单号');
+      setError(t({ zh: '缺少订单号', en: 'Missing order number' }));
       setIsLoading(false);
       return;
     }
@@ -60,7 +64,7 @@ export function PaymentResultPage({ orderNo, onNavigate }: PaymentResultPageProp
     }
     const result = await fetchPaymentOrder(orderNo);
     if (!result.ok || !result.data) {
-      setError(result.error || '订单查询失败');
+      setError(result.error || t({ zh: '订单查询失败', en: 'Failed to query the order' }));
       setOrder(null);
     } else {
       setError('');
@@ -100,42 +104,42 @@ export function PaymentResultPage({ orderNo, onNavigate }: PaymentResultPageProp
           {isLoading ? (
             <div className="py-10 text-center">
               <Loader2 className="w-8 h-8 mx-auto animate-spin text-muted-foreground/70" />
-              <p className="mt-3 text-sm text-muted-foreground/70">正在获取订单状态…</p>
+              <p className="mt-3 text-sm text-muted-foreground/70">{t({ zh: '正在获取订单状态…', en: 'Loading order status…' })}</p>
             </div>
           ) : (
             <>
               <div className="flex items-start gap-4">
                 {icon}
                 <div>
-                  <h1 className="font-serif-display text-[32px] sm:text-[36px] font-semibold tracking-tight text-foreground">{meta.title}</h1>
-                  <p className="mt-2 text-sm text-muted-foreground/75">{error || meta.desc}</p>
+                  <h1 className="font-serif-display text-[32px] sm:text-[36px] font-semibold tracking-tight text-foreground">{t(meta.title)}</h1>
+                  <p className="mt-2 text-sm text-muted-foreground/75">{error || t(meta.desc)}</p>
                 </div>
               </div>
 
               {order && (
                 <div className="mt-8 rounded-3xl border border-border/40 bg-white p-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
-                    <div className="text-muted-foreground/70">订单号</div>
+                    <div className="text-muted-foreground/70">{t({ zh: '订单号', en: 'Order number' })}</div>
                     <div className="mt-1 font-medium break-all">{order.orderNo}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground/70">套餐</div>
+                    <div className="text-muted-foreground/70">{t({ zh: '套餐', en: 'Plan' })}</div>
                     <div className="mt-1 font-medium">{order.planName}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground/70">金额</div>
+                    <div className="text-muted-foreground/70">{t({ zh: '金额', en: 'Amount' })}</div>
                     <div className="mt-1 font-medium">{formatPlanMoney(order.amountFen)}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground/70">状态</div>
-                    <div className="mt-1 font-medium">{meta.title}</div>
+                    <div className="text-muted-foreground/70">{t({ zh: '状态', en: 'Status' })}</div>
+                    <div className="mt-1 font-medium">{t(meta.title)}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground/70">下单时间</div>
+                    <div className="text-muted-foreground/70">{t({ zh: '下单时间', en: 'Order time' })}</div>
                     <div className="mt-1 font-medium">{new Date(order.createdAt).toLocaleString('zh-CN')}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground/70">支付时间</div>
+                    <div className="text-muted-foreground/70">{t({ zh: '支付时间', en: 'Payment time' })}</div>
                     <div className="mt-1 font-medium">{order.paidAt ? new Date(order.paidAt).toLocaleString('zh-CN') : '—'}</div>
                   </div>
                 </div>
@@ -149,7 +153,7 @@ export function PaymentResultPage({ orderNo, onNavigate }: PaymentResultPageProp
                     className="px-5 py-3 rounded-2xl border border-border/50 hover:bg-muted/30 inline-flex items-center justify-center gap-2"
                   >
                     <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                    刷新状态
+                    {t({ zh: '刷新状态', en: 'Refresh status' })}
                   </button>
                 )}
                 <button
@@ -157,7 +161,7 @@ export function PaymentResultPage({ orderNo, onNavigate }: PaymentResultPageProp
                   onClick={() => onNavigate?.('user-center')}
                   className="px-5 py-3 rounded-2xl bg-foreground text-white hover:bg-foreground/90"
                 >
-                  返回个人中心
+                  {t({ zh: '返回个人中心', en: 'Back to user center' })}
                 </button>
               </div>
             </>

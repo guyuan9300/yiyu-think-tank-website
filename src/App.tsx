@@ -11,7 +11,6 @@ import { ForgotPasswordPage } from './components/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/ResetPasswordPage';
 import { LegalDocumentPage } from './components/LegalDocumentPage';
 import { ArticleDetailPage } from './components/ArticleDetailPage';
-import { AdminDashboard } from './components/AdminDashboard';
 import { buildAdminUrl, getAdminTabFromSearchParams } from './lib/adminConsole';
 import { fetchCurrentSession, normalizeLoginUser } from './lib/authApi';
 import { bootstrapFromPgApi } from './lib/dataService';
@@ -21,6 +20,8 @@ import {
   AUTH_TOKEN_KEY,
   clearUser,
   getSavedAuthToken,
+  getSavedItem,
+  getSavedUserRaw,
   removeSavedItem,
   saveUserRaw,
   setSavedItem,
@@ -33,16 +34,20 @@ import { ConsultApplyPage } from './components/ConsultApplyPage';
 import { NotFoundPage } from './components/NotFoundPage';
 // 已删: OpenSourceWorkbenchPage / DemandSubmit/Pool/Detail / VolunteerApply / StrategyModuleIntroPage
 import { OpenSourceHomePage } from './components/open-source-home/OpenSourceHomePage';
+import { WorkbenchPage } from './components/open-source-home/WorkbenchPage';
 import { SceneCapturePage } from './components/open-source-home/demo/SceneCapturePage';
 import { AdminV2Page } from './components/admin-v2/AdminV2Page';
 import { LocalAdminGate } from './components/admin-v2/LocalAdminGate';
 import { AiPreviewPage } from './components/AiPreviewPage';
+import { FriendsLivePage } from './components/FriendsLivePage';
+import { UnicornCompanionPage } from './components/UnicornCompanionPage';
+import { WorkshopPage } from './components/WorkshopPage';
+import { PlatformSupportPage } from './components/PlatformSupportPage';
+import { BookDetailPage } from './components/BookDetailPage';
 import { PaymentIntroPage } from './components/PaymentIntroPage';
 import { PaymentCheckoutPage } from './components/PaymentCheckoutPage';
 import { PaymentResultPage } from './components/PaymentResultPage';
 import { YiyuTongAssistant } from './components/YiyuTongAssistant';
-
-const ADMIN_SHELL_VERSION = '20260319-admin-shell-refresh';
 
 function AdminRouteRedirect({ target }: { target: string }) {
   useEffect(() => {
@@ -77,18 +82,42 @@ function AdminAccessGate({
   const [version, setVersion] = useState(0);
 
   useEffect(() => {
+    // 沙箱/本地 dev: 管理员鉴权直通, 方便优化网站(免登录直接进后台)。
+    // ⚠️ 仅 import.meta.env.DEV 生效; 生产 build 此分支被 tree-shake, 线上仍走下方正经鉴权。
+    if (import.meta.env.DEV) {
+      setStatus('allowed');
+      return;
+    }
+
     let canceled = false;
+
+    // 本地是否已是管理员: 有 token 且 (管理员标记=true 或 已存 user.adminRole=admin)
+    const hasLocalAdmin = (): boolean => {
+      if (!getSavedAuthToken()) return false;
+      if (getSavedItem(ADMIN_FLAG_KEY) === 'true') return true;
+      try {
+        const raw = getSavedUserRaw();
+        if (raw && JSON.parse(raw)?.adminRole === 'admin') return true;
+      } catch {
+        /* ignore parse error */
+      }
+      return false;
+    };
 
     const verifyAdminSession = async () => {
       const token = getSavedAuthToken();
-      if (!token) {
+      const optimistic = hasLocalAdmin();
+
+      // 已登录管理员 → 直接放行进入，不卡服务端往返(应直接跳转)
+      if (optimistic) {
+        if (!canceled) setStatus('allowed');
+      } else if (!token) {
         clearAdminMarkers();
-        if (!canceled) {
-          setStatus('denied');
-        }
+        if (!canceled) setStatus('denied');
         return;
       }
 
+      // 后台静默校验: 仅当服务端"明确"回应才据此调整; 网络/代理失败不踢已登录的人
       const result = await fetchCurrentSession();
       if (canceled) return;
 
@@ -103,10 +132,18 @@ function AdminAccessGate({
           setStatus('allowed');
           return;
         }
+
+        // 服务端明确返回"非管理员" → 降级登出
+        clearAdminMarkers();
+        setStatus('denied');
+        return;
       }
 
-      clearAdminMarkers();
-      setStatus('denied');
+      // 服务端没给出有效结论(网络/代理失败): 本地已是管理员则维持放行, 否则拒绝
+      if (!optimistic) {
+        clearAdminMarkers();
+        setStatus('denied');
+      }
     };
 
     setStatus('checking');
@@ -220,6 +257,9 @@ export default function App() {
     'article',
     'report',
 
+    // 书籍销售
+    'book-detail',
+
     // 用户/会员/法务
     'login',
     'register',
@@ -238,6 +278,11 @@ export default function App() {
 
     // 开源首页 + 后台 + 404
     'open-source-home',
+    'workbench',
+    'friends-live',
+    'unicorn-companion',
+    'digital-workshop',
+    'platform-support',
     // GIF 录制专用最小页面 (scripts/capture-hero-gifs.mjs 调用)
     'hero-capture',
     'admin',
@@ -324,6 +369,10 @@ export default function App() {
       return `?page=demand-detail&id=${encodeURIComponent(detailId || '')}`;
     }
 
+    if (page === 'book-detail') {
+      return `?page=book-detail&id=${encodeURIComponent(detailId || '')}`;
+    }
+
     if (page === 'strategy-companion') {
       // Preserve clientId from current URL if present.
       const params = new URLSearchParams(window.location.search);
@@ -362,7 +411,8 @@ export default function App() {
         page === 'methodology-library' ||
         page === 'payment-checkout' ||
         page === 'payment-result' ||
-        page === 'demand-detail'
+        page === 'demand-detail' ||
+        page === 'book-detail'
       ) {
         setSelectedDetailId(id);
       }
@@ -400,7 +450,7 @@ export default function App() {
     }
   }, [currentPage, selectedBookId, selectedDetailId, selectedCaseId, unknownPage]);
 
-  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'terms-of-service' | 'privacy-policy' | 'case' | 'admin' | 'user-center' | 'membership' | 'payment-checkout' | 'payment-result' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'articles' | 'reports' | 'consult-apply' | 'book-library' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai' | 'open-source-workbench' | 'demand-submit' | 'volunteer-apply' | 'demand-pool' | 'demand-detail', bookId?: string, caseId?: string) => {
+  const handleNavigate = (page: 'home' | 'insights' | 'learning' | 'strategy' | 'about' | 'book-reader' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'terms-of-service' | 'privacy-policy' | 'case' | 'admin' | 'user-center' | 'membership' | 'payment-checkout' | 'payment-result' | 'test' | 'my-learning' | 'strategy-companion' | 'report-library' | 'article-center' | 'articles' | 'reports' | 'consult-apply' | 'book-library' | 'methodology-library' | 'strategy-path' | 'business-design' | 'org-effectiveness' | 'digital-ai' | 'open-source-workbench' | 'demand-submit' | 'volunteer-apply' | 'demand-pool' | 'demand-detail' | 'book-detail', bookId?: string, caseId?: string) => {
     // Reset scroll on page-level navigation so detail pages always open from the top.
     // (Otherwise the browser may keep the previous scroll position and look like it jumped to the bottom.)
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
@@ -456,6 +506,10 @@ export default function App() {
     } else if (page === 'demand-detail') {
       setSelectedDetailId(bookId || '');
       setCurrentPage(page);
+    } else if (page === 'book-detail') {
+      // 书籍详情页: planId (book_51 / book_org / book_bundle) 走 bookId 参数
+      setSelectedDetailId(bookId || '');
+      setCurrentPage('book-detail');
     } else {
       setCurrentPage(page);
     }
@@ -619,7 +673,7 @@ export default function App() {
 
   // 2026-05-28 砍掉 case/insights/strategy 分支 (page 已不在 ALLOWED_PAGES)
   if (currentPage === 'about') {
-    return renderWithYiyuTong(<AboutPage onNavigate={handleNavigate} />);
+    return renderWithYiyuTong(<AboutPage onNavigate={(p) => handleNavigate(p as any)} />);
   }
 
   // 2026-05-28 砍掉 library/book-library/methodology-library 分支
@@ -638,48 +692,14 @@ export default function App() {
 
   // 2026-05-28 砍掉 book-reader 分支
 
-  // Admin Dashboard - 需要登录验证
+  // 旧后台(iframe admin.html)已屏蔽 → 统一跳转到新后台 admin-v2
   if (currentPage === 'admin') {
-    const shellParams = new URLSearchParams();
-    const currentParams = new URLSearchParams(window.location.search);
-    const tab = currentParams.get('tab');
-    const legacyTab = currentParams.get('legacyTab');
-    if (tab) shellParams.set('tab', tab);
-    if (legacyTab) shellParams.set('legacyTab', legacyTab);
-    shellParams.set('v', ADMIN_SHELL_VERSION);
-    const adminShellSrc = `${import.meta.env.BASE_URL}admin.html${shellParams.toString() ? `?${shellParams.toString()}` : ''}`;
-
-    return (
-      <AdminAccessGate
-        onNavigate={(page) => handleNavigate(page as any)}
-        onLoginSuccess={() => setCurrentPage('home')}
-      >
-        <iframe
-          title="益语智库管理后台 · 数据概览"
-          src={adminShellSrc}
-          style={{ width: '100%', height: '100vh', border: '0', display: 'block' }}
-        />
-      </AdminAccessGate>
-    );
+    return <AdminRouteRedirect target="?page=admin-v2" />;
   }
 
-  // Legacy Admin Dashboard（旧后台真实管理页）
+  // 旧 Legacy 后台已屏蔽 → 统一跳转到新后台 admin-v2
   if (currentPage === 'admin-legacy') {
-    return (
-      <AdminAccessGate
-        onNavigate={(page) => handleNavigate(page as any)}
-        onLoginSuccess={() => setCurrentPage('home')}
-      >
-        <AdminDashboard
-          onNavigateHome={() => handleNavigate('home')}
-          onLogout={() => {
-            clearUser();
-            window.dispatchEvent(new Event('yiyu_user_updated'));
-            handleNavigate('home');
-          }}
-        />
-      </AdminAccessGate>
-    );
+    return <AdminRouteRedirect target="?page=admin-v2" />;
   }
 
   // User Center Page
@@ -721,9 +741,43 @@ export default function App() {
     return renderWithYiyuTong(<ConsultApplyPage onBack={() => handleNavigate('home')} />, 'consult-apply');
   }
 
+  // 书籍详情/购买页 (planId: book_51 / book_org / book_bundle)
+  if (currentPage === 'book-detail') {
+    return (
+      <BookDetailPage
+        planId={selectedDetailId}
+        onNavigate={(page, id) => handleNavigate(page as any, id)}
+      />
+    );
+  }
+
   // 2026-05-28 砍掉 open-source-workbench (新版整页转作首页) + demand-* 4 个
   if (currentPage === 'open-source-home') {
-    return <OpenSourceHomePage onNavigate={(page) => handleNavigate(page as any)} />;
+    return <OpenSourceHomePage onNavigate={(page, id) => handleNavigate(page as any, id)} />;
+  }
+
+  // 「益语的朋友们 · 直播讨论」介绍页(占位, 入口来自付费弹窗权益)
+  if (currentPage === 'friends-live') {
+    return <FriendsLivePage onNavigate={(page) => handleNavigate(page as any)} />;
+  }
+
+  // 独角兽战略陪伴项目 · 金句型详情页(入口来自首页项目卡片)
+  if (currentPage === 'workbench') {
+    return <WorkbenchPage onNavigate={(page) => handleNavigate(page as any)} />;
+  }
+
+  if (currentPage === 'unicorn-companion') {
+    return <UnicornCompanionPage onNavigate={(page, id) => handleNavigate(page as any, id)} />;
+  }
+
+  // 数字化战略工作坊 · 项目介绍页(入口来自支持池卡片)
+  if (currentPage === 'digital-workshop') {
+    return <WorkshopPage onNavigate={(page, id) => handleNavigate(page as any, id)} />;
+  }
+
+  // 益语智库智能平台公益组织支持计划 · 项目介绍页(入口来自支持池卡片)
+  if (currentPage === 'platform-support') {
+    return <PlatformSupportPage onNavigate={(page, id) => handleNavigate(page as any, id)} />;
   }
 
   // GIF 录制专用最小页面 (?page=hero-capture&scene=calendar|workspace|growth)
@@ -767,6 +821,6 @@ export default function App() {
   // 老 HomePage 在 Step 10 物理删除前先保留 import 以便回滚;新首页不包 yiyuTong,
   // 与 line 782 open-source-home 分支一致.
   return (
-    <OpenSourceHomePage onNavigate={(page) => handleNavigate(page as any)} />
+    <OpenSourceHomePage onNavigate={(page, id) => handleNavigate(page as any, id)} />
   );
 }

@@ -19,6 +19,9 @@ const ADMIN_EMAIL_WHITELIST = ['guyuan9300@gmail.com', 'guyuan@klngo.org'];
 
 function isLocalAdmin(): boolean {
   if (typeof window === 'undefined') return false;
+  // 本地 dev 直通(免登录), 方便验收期直接进后台用 AI 面板。
+  // ⚠️ 仅 import.meta.env.DEV 生效, 生产 build 会被 tree-shake, 仍走下方正经鉴权。
+  if (import.meta.env.DEV) return true;
   try {
     // flag 已写过
     const flag = localStorage.getItem(ADMIN_FLAG_KEY) || sessionStorage.getItem(ADMIN_FLAG_KEY);

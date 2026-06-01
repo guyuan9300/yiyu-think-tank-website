@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ChevronRight, ChevronLeft, Shield } from 'lucide-react';
+import { useLang, type Bilingual } from '../../../lib/i18n';
+import { useCashFlow, computeTotals, type CashFlowItem } from '../../../lib/cashFlowData';
 
 // ============================================================
 // 现金流量表 · 平台总账抽屉
@@ -9,168 +11,39 @@ import { X, ChevronRight, ChevronLeft, Shield } from 'lucide-react';
 // 上线前需替换为真实账目（守 ANTI_FAKE 红线）。
 // ============================================================
 
-interface Transaction {
-  date: string;
-  party: string;
-  amount: string;
-}
-
-interface CashFlowEntry {
-  name: string;
-  subtitle: string;
-  amount: number;
+// 渲染用条目 = 共享数据条目 + 计算出的占比/配色
+interface CashFlowEntry extends CashFlowItem {
   share: number;
   swatch: string;
   barClass: string;
-  transactions: Transaction[];
-  moreCount?: number;
 }
 
-const INFLOWS: CashFlowEntry[] = [
-  {
-    name: '个人捐赠',
-    subtitle: '238 笔 · 平均 ¥2,875',
-    amount: 68.42,
-    share: 53.2,
-    swatch: 'bg-[#34c77b]',
-    barClass: 'bg-gradient-to-r from-[#34c77b] to-[#6cdba0]',
-    transactions: [
-      { date: '05-26', party: '王女士 · 月度定期', amount: '5,000' },
-      { date: '05-24', party: '匿名捐赠 · 来自 H5 落地页', amount: '12,800' },
-      { date: '05-22', party: '李先生 · 项目定向捐赠', amount: '3,000' },
-      { date: '05-18', party: '张女士 · 行动者支持', amount: '1,500' },
-      { date: '05-12', party: '匿名捐赠 · 来自小程序', amount: '8,866' },
-      { date: '05-08', party: '陈先生 · 月度定期', amount: '2,000' },
-    ],
-    moreCount: 232,
-  },
-  {
-    name: '企业配捐',
-    subtitle: '4 家企业 · 1:1 配捐计划',
-    amount: 32.18,
-    share: 25.0,
-    swatch: 'bg-[#2bb673]',
-    barClass: 'bg-gradient-to-r from-[#2bb673] to-[#5fc99a]',
-    transactions: [
-      { date: '05-28', party: '某科技公司 · 配捐 5 月', amount: '120,000' },
-      { date: '05-20', party: '某基金会 · 战略合作', amount: '85,000' },
-      { date: '05-15', party: '某互联网企业 · 月度配捐', amount: '72,000' },
-      { date: '05-06', party: '某文化机构 · 项目赞助', amount: '44,800' },
-    ],
-  },
-  {
-    name: '项目赞助',
-    subtitle: '7 个独立项目 · 定向用途',
-    amount: 18.66,
-    share: 14.5,
-    swatch: 'bg-[#22a566]',
-    barClass: 'bg-gradient-to-r from-[#22a566] to-[#52b585]',
-    transactions: [
-      { date: '05-25', party: '乡村教育计划 · 第二期', amount: '68,000' },
-      { date: '05-19', party: '无障碍工具开发', amount: '52,000' },
-      { date: '05-10', party: '公益开源贡献者激励', amount: '38,000' },
-      { date: '05-04', party: '心理支持热线运营', amount: '28,600' },
-    ],
-  },
-  {
-    name: '平台服务费',
-    subtitle: 'SaaS 订阅 · 工具收入',
-    amount: 6.84,
-    share: 5.3,
-    swatch: 'bg-[#1f9657]',
-    barClass: 'bg-gradient-to-r from-[#1f9657] to-[#4ea579]',
-    transactions: [
-      { date: '05-31', party: '月度订阅汇总 · 23 个组织', amount: '42,400' },
-      { date: '05-15', party: '企业版定制服务', amount: '26,000' },
-    ],
-  },
-  {
-    name: '利息及其他',
-    subtitle: '银行利息 · 退款冲回',
-    amount: 2.44,
-    share: 2.0,
-    swatch: 'bg-[#1c7a48]',
-    barClass: 'bg-gradient-to-r from-[#1c7a48] to-[#479671]',
-    transactions: [
-      { date: '05-31', party: '活期存款利息', amount: '18,420' },
-      { date: '05-22', party: '未使用项目款冲回', amount: '6,000' },
-    ],
-  },
+// 配色按序分配(收入=绿系, 支出=橙红系); 新增科目自动循环取色
+const IN_PALETTE = [
+  { swatch: 'bg-[#34c77b]', barClass: 'bg-gradient-to-r from-[#34c77b] to-[#6cdba0]' },
+  { swatch: 'bg-[#2bb673]', barClass: 'bg-gradient-to-r from-[#2bb673] to-[#5fc99a]' },
+  { swatch: 'bg-[#22a566]', barClass: 'bg-gradient-to-r from-[#22a566] to-[#52b585]' },
+  { swatch: 'bg-[#1f9657]', barClass: 'bg-gradient-to-r from-[#1f9657] to-[#4ea579]' },
+  { swatch: 'bg-[#1c7a48]', barClass: 'bg-gradient-to-r from-[#1c7a48] to-[#479671]' },
+];
+const OUT_PALETTE = [
+  { swatch: 'bg-[#ef7a5f]', barClass: 'bg-gradient-to-r from-[#ef7a5f] to-[#f5a081]' },
+  { swatch: 'bg-[#ec6b4f]', barClass: 'bg-gradient-to-r from-[#ec6b4f] to-[#f3936f]' },
+  { swatch: 'bg-[#d95f45]', barClass: 'bg-gradient-to-r from-[#d95f45] to-[#e6886a]' },
+  { swatch: 'bg-[#c2553d]', barClass: 'bg-gradient-to-r from-[#c2553d] to-[#d27d65]' },
+  { swatch: 'bg-[#a64a37]', barClass: 'bg-gradient-to-r from-[#a64a37] to-[#bd7560]' },
 ];
 
-const OUTFLOWS: CashFlowEntry[] = [
-  {
-    name: '行动者支持',
-    subtitle: '236 位行动者 · 直接拨付',
-    amount: 17.32,
-    share: 41.1,
-    swatch: 'bg-[#ef7a5f]',
-    barClass: 'bg-gradient-to-r from-[#ef7a5f] to-[#f5a081]',
-    transactions: [
-      { date: '05-27', party: '"小镇图书室"项目 · 阶段拨付', amount: '28,000' },
-      { date: '05-23', party: '乡村美育志愿者 · 差旅补贴', amount: '14,500' },
-      { date: '05-18', party: '流动儿童工作坊 · 物资采购', amount: '8,800' },
-      { date: '05-12', party: '山区医疗服务 · 月度支持', amount: '22,000' },
-    ],
-    moreCount: 38,
-  },
-  {
-    name: '公益组织支持',
-    subtitle: '68 家组织 · 月度补助',
-    amount: 12.86,
-    share: 30.5,
-    swatch: 'bg-[#ec6b4f]',
-    barClass: 'bg-gradient-to-r from-[#ec6b4f] to-[#f3936f]',
-    transactions: [
-      { date: '05-30', party: '某教育机构 · 季度运营补助', amount: '35,000' },
-      { date: '05-21', party: '某残障服务中心 · 项目款', amount: '28,600' },
-      { date: '05-14', party: '某环保组织 · 设备采购', amount: '22,000' },
-    ],
-  },
-  {
-    name: '技术与产品',
-    subtitle: '服务器 · 开发外包 · 工具',
-    amount: 5.68,
-    share: 13.5,
-    swatch: 'bg-[#d95f45]',
-    barClass: 'bg-gradient-to-r from-[#d95f45] to-[#e6886a]',
-    transactions: [
-      { date: '05-28', party: '云服务器及 CDN 月费', amount: '12,800' },
-      { date: '05-15', party: '前端开发外包 · 阶段款', amount: '28,000' },
-      { date: '05-08', party: '设计协作工具年费分摊', amount: '4,200' },
-    ],
-  },
-  {
-    name: '运营与传播',
-    subtitle: '内容生产 · 活动 · 物流',
-    amount: 4.22,
-    share: 10.0,
-    swatch: 'bg-[#c2553d]',
-    barClass: 'bg-gradient-to-r from-[#c2553d] to-[#d27d65]',
-    transactions: [
-      { date: '05-25', party: '月度故事栏目稿费', amount: '12,000' },
-      { date: '05-18', party: '线下共创日活动开支', amount: '18,800' },
-      { date: '05-10', party: '物资寄送与回访', amount: '5,800' },
-    ],
-  },
-  {
-    name: '行政管理',
-    subtitle: '合规 · 审计 · 办公',
-    amount: 2.09,
-    share: 4.9,
-    swatch: 'bg-[#a64a37]',
-    barClass: 'bg-gradient-to-r from-[#a64a37] to-[#bd7560]',
-    transactions: [
-      { date: '05-26', party: '月度财务审计服务', amount: '12,000' },
-      { date: '05-12', party: '办公基础开支', amount: '5,400' },
-      { date: '05-05', party: '合规与法务咨询', amount: '3,500' },
-    ],
-  },
-];
+function toEntries(items: CashFlowItem[], total: number, palette: typeof IN_PALETTE): CashFlowEntry[] {
+  return items.map((it, i) => ({
+    ...it,
+    share: total > 0 ? (it.amount / total) * 100 : 0,
+    ...palette[i % palette.length],
+  }));
+}
 
-const TOTAL_IN = 128.54;
-const TOTAL_OUT = 42.17;
-const BALANCE = 86.37;
+
+const UNIT_WAN: Bilingual = { zh: '万元', en: 'k' };
 
 // ============================================================
 // 数字滚动动效
@@ -230,6 +103,7 @@ interface RowProps {
 }
 
 function FlowRow({ entry, active, index, tone }: RowProps): JSX.Element {
+  const { t } = useLang();
   const [open, setOpen] = useState<boolean>(false);
   const [barWidth, setBarWidth] = useState<string>('0%');
 
@@ -255,8 +129,8 @@ function FlowRow({ entry, active, index, tone }: RowProps): JSX.Element {
         <div className="flex items-center gap-4 min-w-0">
           <div className={`w-[6px] h-[34px] rounded-[3px] ${entry.swatch} opacity-85 flex-shrink-0`} />
           <div className="flex flex-col gap-1 min-w-0 flex-1">
-            <div className="text-[15px] font-semibold text-os-navy truncate">{entry.name}</div>
-            <div className="text-[12px] text-os-muted truncate">{entry.subtitle}</div>
+            <div className="text-[15px] font-semibold text-os-navy truncate">{t(entry.name)}</div>
+            <div className="text-[12px] text-os-muted truncate">{t(entry.subtitle)}</div>
             <div className="relative mt-1 h-[4px] rounded-full bg-os-navy/[0.06] overflow-hidden max-w-[320px]">
               <div
                 className={`h-full rounded-full ${entry.barClass} transition-[width] duration-[1400ms] ease-out`}
@@ -267,7 +141,7 @@ function FlowRow({ entry, active, index, tone }: RowProps): JSX.Element {
         </div>
         <div className={`text-[18px] font-bold ${amountColor} text-right leading-none`}>
           <Num value={entry.amount} active={active} className="tracking-[-0.01em]" />
-          <span className="text-[11px] text-os-muted font-medium ml-1">万元</span>
+          <span className="text-[11px] text-os-muted font-medium ml-1">{t(UNIT_WAN)}</span>
         </div>
         <div className="text-[13px] text-os-muted text-right tabular-nums">{entry.share.toFixed(1)}%</div>
         <ChevronRight
@@ -283,19 +157,21 @@ function FlowRow({ entry, active, index, tone }: RowProps): JSX.Element {
           <div className="border-l border-dashed border-os-navy/15 pl-5">
             {entry.transactions.map((tx) => (
               <div
-                key={`${tx.date}-${tx.party}`}
+                key={`${tx.date}-${tx.party.zh}`}
                 className="grid grid-cols-[60px_1fr_140px] gap-4 items-baseline py-2.5 text-[13px] text-os-ink border-b border-os-line/50 last:border-b-0"
               >
                 <span className="text-os-muted tabular-nums">{tx.date}</span>
-                <span className="text-os-navy truncate">{tx.party}</span>
+                <span className="text-os-navy truncate">{t(tx.party)}</span>
                 <span className="text-right text-os-navy font-medium tabular-nums">
                   {tx.amount}
-                  <span className="text-os-muted text-[11px] font-normal ml-1">元</span>
+                  <span className="text-os-muted text-[11px] font-normal ml-1">{t({ zh: '元', en: 'CNY' })}</span>
                 </span>
               </div>
             ))}
             {entry.moreCount && (
-              <div className="mt-3 text-[12px] text-os-muted italic">… 还有 {entry.moreCount} 笔，查看完整明细 ›</div>
+              <div className="mt-3 text-[12px] text-os-muted italic">
+                {t({ zh: `… 还有 ${entry.moreCount} 笔，查看完整明细 ›`, en: `… ${entry.moreCount} more — view full detail ›` })}
+              </div>
             )}
           </div>
         </div>
@@ -311,10 +187,12 @@ interface CashFlowPanelProps {
   active: boolean;
 }
 
-const PERIODS = ['2025 年 3 月', '2025 年 4 月', '2025 年 5 月'];
-
 function CashFlowPanel({ active }: CashFlowPanelProps): JSX.Element {
-  const [periodIdx, setPeriodIdx] = useState<number>(PERIODS.length - 1);
+  const { t } = useLang();
+  const data = useCashFlow();
+  const { totalIn, totalOut, balance } = computeTotals(data);
+  const inEntries = toEntries(data.inflows, totalIn, IN_PALETTE);
+  const outEntries = toEntries(data.outflows, totalOut, OUT_PALETTE);
   const [ribbonOn, setRibbonOn] = useState<boolean>(false);
 
   useEffect(() => {
@@ -338,64 +216,37 @@ function CashFlowPanel({ active }: CashFlowPanelProps): JSX.Element {
         <div className="relative flex items-end justify-between mb-7 flex-wrap gap-4">
           <div>
             <div className="text-[11px] text-os-muted tracking-[0.16em] uppercase mb-2 font-semibold">
-              Platform Cash Flow · 月度
+              {t({ zh: 'Platform Cash Flow · 成立以来累计', en: 'Platform Cash Flow · since inception' })}
             </div>
             <h2 className="font-serif-display text-[28px] sm:text-[32px] font-semibold tracking-tight text-os-navy">
-              现金流量表
+              {t({ zh: '现金流量表 · 总表', en: 'Cash Flow Statement · Summary' })}
             </h2>
-          </div>
-          <div className="inline-flex items-center gap-1 px-2 py-1.5 bg-os-mist/60 rounded-full text-[14px] text-os-ink">
-            <button
-              type="button"
-              onClick={() => setPeriodIdx((i) => (i - 1 + PERIODS.length) % PERIODS.length)}
-              className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-os-navy/10 transition-colors"
-              aria-label="上一个月"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="px-2.5 font-semibold text-os-navy">{PERIODS[periodIdx]}</span>
-            <button
-              type="button"
-              onClick={() => setPeriodIdx((i) => (i + 1) % PERIODS.length)}
-              className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-os-navy/10 transition-colors"
-              aria-label="下一个月"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
           </div>
         </div>
 
         {/* metrics */}
         <div className="relative grid grid-cols-2 sm:grid-cols-[1.4fr_24px_1fr_24px_1fr_1.4fr] items-center gap-y-4 sm:gap-y-0">
-          <Metric label="期初余额" value={0} active={active} tone="ink" />
+          <Metric label={t({ zh: '期初余额', en: 'Opening balance' })} value={data.opening} active={active} tone="ink" />
           <Op>＋</Op>
-          <Metric label="本月流入" value={TOTAL_IN} active={active} tone="in" prefix="+" />
+          <Metric label={t({ zh: '累计流入', en: 'Total inflow' })} value={totalIn} active={active} tone="in" prefix="+" />
           <Op>−</Op>
-          <Metric label="本月流出" value={TOTAL_OUT} active={active} tone="out" prefix="−" />
-          <Metric label="期末余额" value={BALANCE} active={active} tone="blue" align="right" />
+          <Metric label={t({ zh: '累计流出', en: 'Total outflow' })} value={totalOut} active={active} tone="out" prefix="−" />
+          <Metric label={t({ zh: '当前结余', en: 'Current balance' })} value={balance} active={active} tone="blue" align="right" />
         </div>
 
         {/* ribbon */}
-        <div className="relative mt-7 pt-6 border-t border-os-line">
-          <div className="flex justify-between text-[12px] text-os-muted mb-2.5">
-            <span>本月资金流向</span>
-            <span>单位 · 万元</span>
-          </div>
+        <div className="relative mt-7 pt-4 border-t border-os-line">
           <div
             className="grid h-[14px] gap-1.5"
-            style={{ gridTemplateColumns: `${TOTAL_IN}fr ${TOTAL_OUT}fr ${BALANCE}fr` }}
+            style={{ gridTemplateColumns: `${totalIn}fr ${totalOut}fr ${balance}fr` }}
           >
             <Ribbon className="bg-gradient-to-br from-[#34c77b] to-[#6cdba0]" on={ribbonOn} delay={0} />
             <Ribbon className="bg-gradient-to-br from-[#ef7a5f] to-[#f5a081]" on={ribbonOn} delay={140} />
             <Ribbon className="bg-gradient-to-br from-os-blue to-[#6c9bff]" on={ribbonOn} delay={280} />
           </div>
-          <div
-            className="grid mt-2 gap-1.5 text-[11px] text-os-muted"
-            style={{ gridTemplateColumns: `${TOTAL_IN}fr ${TOTAL_OUT}fr ${BALANCE}fr` }}
-          >
-            <span>流入 · {TOTAL_IN}</span>
-            <span>流出 · {TOTAL_OUT}</span>
-            <span className="text-right">结余 · {BALANCE}</span>
+          <div className="flex justify-between text-[12px] text-os-muted mt-2.5">
+            <span>{t({ zh: '累计资金流向', en: 'Cumulative fund flow' })}</span>
+            <span>{t({ zh: '单位 · 万元', en: 'Unit · 10k CNY' })}</span>
           </div>
         </div>
       </div>
@@ -403,22 +254,22 @@ function CashFlowPanel({ active }: CashFlowPanelProps): JSX.Element {
       {/* ===== Inflows ===== */}
       <FlowSection
         tone="in"
-        title="流入"
-        meta="5 个来源 · 共 412 笔"
-        total={TOTAL_IN}
+        title={t({ zh: '流入', en: 'Inflow' })}
+        meta={t({ zh: `${data.inflows.length} 类收入`, en: `${data.inflows.length} revenue types` })}
+        total={totalIn}
         prefix="+"
-        entries={INFLOWS}
+        entries={inEntries}
         active={active}
       />
 
       {/* ===== Outflows ===== */}
       <FlowSection
         tone="out"
-        title="流出"
-        meta="5 个去向 · 共 186 笔"
-        total={TOTAL_OUT}
+        title={t({ zh: '流出', en: 'Outflow' })}
+        meta={t({ zh: `${data.outflows.length} 类支出`, en: `${data.outflows.length} spending types` })}
+        total={totalOut}
         prefix="−"
-        entries={OUTFLOWS}
+        entries={outEntries}
         active={active}
       />
 
@@ -429,23 +280,23 @@ function CashFlowPanel({ active }: CashFlowPanelProps): JSX.Element {
           className="absolute -bottom-32 -right-16 w-[360px] h-[360px] rounded-full"
           style={{ background: 'radial-gradient(closest-side, rgba(44,111,208,.10), transparent 70%)' }}
         />
-        <div className="relative grid grid-cols-2 sm:grid-cols-[1fr_24px_1fr_1fr] gap-y-4 sm:gap-y-0 items-center">
-          <ReconcileItem label="本月流入" value={TOTAL_IN} active={active} tone="in" prefix="+" />
+        <div className="relative grid grid-cols-2 sm:grid-cols-[1fr_24px_1fr_24px_1fr_1fr] gap-y-4 sm:gap-y-0 items-center">
+          <ReconcileItem label={t({ zh: '期初余额', en: 'Opening balance' })} value={data.opening} active={active} tone="ink" />
+          <Op>＋</Op>
+          <ReconcileItem label={t({ zh: '累计流入', en: 'Total inflow' })} value={totalIn} active={active} tone="in" prefix="+" />
           <Op>−</Op>
-          <ReconcileItem label="本月流出" value={TOTAL_OUT} active={active} tone="out" prefix="−" />
-          <ReconcileItem label="期末结余" value={BALANCE} active={active} tone="blue" align="right" size="lg" />
+          <ReconcileItem label={t({ zh: '累计流出', en: 'Total outflow' })} value={totalOut} active={active} tone="out" prefix="−" />
+          <ReconcileItem label={t({ zh: '当前结余', en: 'Current balance' })} value={balance} active={active} tone="blue" align="right" size="lg" />
         </div>
       </div>
 
       <div className="px-7 sm:px-10 pb-9 text-center text-[12px] text-os-muted/90 leading-relaxed">
         <span className="inline-flex items-center gap-1.5">
           <Shield className="w-3.5 h-3.5 opacity-60" />
-          数据每月更新，部分来自系统记录，部分经人工核对。
+          {t({ zh: '公司成立以来累计 · 真实数据接入中，当前为示例账目', en: 'Cumulative since inception · real data integration in progress; sample figures shown for now' })}
         </span>
         <span className="mx-2 text-os-line">·</span>
-        <span>个人捐赠金额已脱敏，仅展示部分笔次。</span>
-        <span className="mx-2 text-os-line">·</span>
-        <span>最后更新：2025-05-26</span>
+        <span>{t({ zh: '金额单位：万元', en: 'Unit: 10k CNY' })}</span>
       </div>
     </div>
   );
@@ -465,6 +316,7 @@ interface MetricProps {
 }
 
 function Metric({ label, value, active, tone, prefix, align = 'left' }: MetricProps): JSX.Element {
+  const { t } = useLang();
   const colorMap: Record<MetricProps['tone'], string> = {
     ink: 'text-os-navy',
     in: 'text-[#2bb673]',
@@ -477,7 +329,7 @@ function Metric({ label, value, active, tone, prefix, align = 'left' }: MetricPr
       <div className={`text-[26px] font-bold leading-[1.1] tracking-[-0.01em] ${colorMap[tone]}`}>
         {prefix && <span>{prefix}</span>}
         <Num value={value} active={active} />
-        <span className="text-[12px] text-os-muted font-medium ml-1">万元</span>
+        <span className="text-[12px] text-os-muted font-medium ml-1">{t(UNIT_WAN)}</span>
       </div>
     </div>
   );
@@ -503,6 +355,7 @@ interface FlowSectionProps {
 }
 
 function FlowSection({ tone, title, meta, total, prefix, entries, active }: FlowSectionProps): JSX.Element {
+  const { t } = useLang();
   const totalColor = tone === 'in' ? 'text-[#2bb673]' : 'text-[#ec6b4f]';
   const dotColor = tone === 'in' ? 'bg-[#2bb673]' : 'bg-[#ec6b4f]';
   return (
@@ -516,12 +369,12 @@ function FlowSection({ tone, title, meta, total, prefix, entries, active }: Flow
         <div className={`text-[22px] font-bold ${totalColor} tracking-[-0.01em]`}>
           <span>{prefix}</span>
           <Num value={total} active={active} />
-          <span className="text-[12px] text-os-muted font-medium ml-1">万元</span>
+          <span className="text-[12px] text-os-muted font-medium ml-1">{t(UNIT_WAN)}</span>
         </div>
       </div>
       <div className="py-2">
         {entries.map((e, i) => (
-          <FlowRow key={e.name} entry={e} active={active} index={i} tone={tone} />
+          <FlowRow key={e.name.zh} entry={e} active={active} index={i} tone={tone} />
         ))}
       </div>
     </div>
@@ -532,17 +385,19 @@ interface ReconcileItemProps {
   label: string;
   value: number;
   active: boolean;
-  tone: 'in' | 'out' | 'blue';
+  tone: 'in' | 'out' | 'blue' | 'ink';
   prefix?: string;
   align?: 'left' | 'right';
   size?: 'md' | 'lg';
 }
 
 function ReconcileItem({ label, value, active, tone, prefix, align = 'left', size = 'md' }: ReconcileItemProps): JSX.Element {
+  const { t } = useLang();
   const colorMap: Record<ReconcileItemProps['tone'], string> = {
     in: 'text-[#2bb673]',
     out: 'text-[#ec6b4f]',
     blue: 'text-os-blue',
+    ink: 'text-os-navy',
   };
   const sizeCls = size === 'lg' ? 'text-[26px]' : 'text-[20px]';
   return (
@@ -551,7 +406,7 @@ function ReconcileItem({ label, value, active, tone, prefix, align = 'left', siz
       <div className={`${sizeCls} font-bold tabular-nums tracking-[-0.01em] ${colorMap[tone]}`}>
         {prefix && <span>{prefix}</span>}
         <Num value={value} active={active} />
-        <span className="text-[11px] text-os-muted font-medium ml-1">万元</span>
+        <span className="text-[11px] text-os-muted font-medium ml-1">{t(UNIT_WAN)}</span>
       </div>
     </div>
   );
@@ -574,6 +429,7 @@ interface CashFlowDrawerProps {
 }
 
 export function CashFlowDrawer({ open, onClose }: CashFlowDrawerProps): JSX.Element | null {
+  const { t } = useLang();
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent): void => {
@@ -599,7 +455,7 @@ export function CashFlowDrawer({ open, onClose }: CashFlowDrawerProps): JSX.Elem
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="平台现金流量表"
+      aria-label={t({ zh: '平台现金流量表', en: 'Platform cash flow statement' })}
       className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center p-0 sm:p-8"
     >
       <style>{DRAWER_CSS}</style>
@@ -622,7 +478,7 @@ export function CashFlowDrawer({ open, onClose }: CashFlowDrawerProps): JSX.Elem
         <button
           type="button"
           onClick={onClose}
-          aria-label="关闭"
+          aria-label={t({ zh: '关闭', en: 'Close' })}
           className="sticky top-4 ml-auto mr-4 z-[3] flex h-9 w-9 items-center justify-center rounded-full bg-white text-os-muted ring-1 ring-os-line hover:text-os-navy hover:ring-os-navy/30 transition-all hover:scale-105 float-right"
         >
           <X className="w-4 h-4" />

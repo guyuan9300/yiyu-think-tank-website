@@ -7,6 +7,19 @@ import { ArrowRight, ExternalLink } from 'lucide-react';
 // 阴影轻、留白足、卡片圆角统一 20px、宣言式衬线大标题。
 // ============================================================
 
+// 是否开启了"减少动态效果"（操作系统级无障碍设置）
+export function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const on = (): void => setReduced(mq.matches);
+    on();
+    mq.addEventListener?.('change', on);
+    return () => mq.removeEventListener?.('change', on);
+  }, []);
+  return reduced;
+}
+
 // 滚动进入视口时的轻量淡入（克制，不做大位移强动画）
 export function useReveal(threshold = 0.12) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -39,10 +52,15 @@ export function Reveal({
   className?: string;
 }) {
   const { ref, shown } = useReveal();
+  const reduced = usePrefersReducedMotion();
+  // 减少动态效果: 不做位移/淡入, 直接呈现终态。
+  if (reduced) {
+    return <div className={className}>{children}</div>;
+  }
   return (
     <div
       ref={ref}
-      className={`transition-all duration-700 ease-out ${shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'} ${className}`}
+      className={`transition-[opacity,transform] duration-700 ease-out ${shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'} ${className}`}
       style={{ transitionDelay: `${delay}ms` }}
     >
       {children}
@@ -132,7 +150,7 @@ export function Card({
   return (
     <div
       className={`rounded-[20px] bg-os-paper ring-1 ring-os-line shadow-os ${
-        hoverable ? 'transition-all duration-300 hover:shadow-os-lg hover:-translate-y-0.5' : ''
+        hoverable ? 'transition-[transform,box-shadow] duration-300 hover:shadow-os-lg hover:-translate-y-0.5' : ''
       } ${className}`}
     >
       {children}
@@ -189,7 +207,7 @@ export function Button({
   ariaLabel,
 }: ButtonProps) {
   const base =
-    'group inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 min-h-[44px] text-[15px] font-semibold transition-all duration-300 outline-none focus-visible:ring-2 focus-visible:ring-os-blue/40 focus-visible:ring-offset-2 focus-visible:ring-offset-os-canvas active:scale-[0.98]';
+    'group inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 min-h-[44px] text-[15px] font-semibold transition-[transform,box-shadow,filter,background-color] duration-300 outline-none focus-visible:ring-2 focus-visible:ring-os-blue/40 focus-visible:ring-offset-2 focus-visible:ring-offset-os-canvas active:scale-[0.98]';
   const cls = `${base} ${BTN_VARIANT[variant]} ${className}`;
   const inner = (
     <>

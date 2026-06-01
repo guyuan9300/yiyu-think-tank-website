@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { MessageSquare, Send, User, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { type Comment } from '../lib/dataService';
 import { createCommentApi, fetchCommentsByContent } from '../lib/commentApi';
+import { useLang } from '../lib/i18n';
 
 interface CommentSectionProps {
   contentId: string;
@@ -24,6 +25,7 @@ export function CommentSection({
   userName = '访客',
   userAvatar,
 }: CommentSectionProps) {
+  const { t } = useLang();
   // Global login fallback: if caller didn't wire isLoggedIn, infer from storage.
   // This ensures comment input works consistently across pages.
   const [derivedLoggedIn, setDerivedLoggedIn] = useState<boolean>(isLoggedIn);
@@ -88,7 +90,7 @@ export function CommentSection({
     e.preventDefault();
     
     if (!commentText.trim()) {
-      setMessage({ type: 'error', text: '请输入评论内容' });
+      setMessage({ type: 'error', text: t({ zh: '请输入评论内容', en: 'Please enter a comment' }) });
       return;
     }
 
@@ -106,13 +108,13 @@ export function CommentSection({
         text: commentText.trim(),
       });
       if (!result.ok) {
-        throw new Error(result.error || '提交失败，请稍后重试');
+        throw new Error(result.error || t({ zh: '提交失败，请稍后重试', en: 'Submission failed. Please try again later.' }));
       }
 
       setCommentText('');
-      setMessage({ 
-        type: 'success', 
-        text: '评论已提交，待管理员审核后将显示在评论列表中' 
+      setMessage({
+        type: 'success',
+        text: t({ zh: '评论已提交，待管理员审核后将显示在评论列表中', en: 'Comment submitted. It will appear once approved by an administrator.' })
       });
       window.dispatchEvent(new Event('yiyu_comments_updated'));
 
@@ -122,7 +124,7 @@ export function CommentSection({
       }, 3000);
     } catch (error) {
       console.error('提交评论失败:', error);
-      setMessage({ type: 'error', text: '提交失败，请稍后重试' });
+      setMessage({ type: 'error', text: t({ zh: '提交失败，请稍后重试', en: 'Submission failed. Please try again later.' }) });
     } finally {
       setIsSubmitting(false);
     }
@@ -138,12 +140,12 @@ export function CommentSection({
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
     
-    if (minutes < 1) return '刚刚';
-    if (minutes < 60) return `${minutes}分钟前`;
-    if (hours < 24) return `${hours}小时前`;
-    if (days < 7) return `${days}天前`;
-    
-    return date.toLocaleDateString('zh-CN');
+    if (minutes < 1) return t({ zh: '刚刚', en: 'just now' });
+    if (minutes < 60) return t({ zh: `${minutes}分钟前`, en: `${minutes} min ago` });
+    if (hours < 24) return t({ zh: `${hours}小时前`, en: `${hours} h ago` });
+    if (days < 7) return t({ zh: `${days}天前`, en: `${days} d ago` });
+
+    return date.toLocaleDateString(t({ zh: 'zh-CN', en: 'en-US' }));
   };
 
   return (
@@ -159,7 +161,7 @@ export function CommentSection({
       <div className="flex items-center gap-2 mb-6">
         <MessageSquare className="w-6 h-6 text-purple-600" />
         <h3 className="text-xl font-bold text-gray-900">
-          评论 ({comments.length})
+          {t({ zh: '评论', en: 'Comments' })} ({comments.length})
         </h3>
       </div>
 
@@ -194,7 +196,7 @@ export function CommentSection({
                 data-yiyu-comment-box="true"
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                placeholder={derivedLoggedIn ? '写下你的评论...' : '请登录后发表评论'}
+                placeholder={derivedLoggedIn ? t({ zh: '写下你的评论...', en: 'Write your comment...' }) : t({ zh: '请登录后发表评论', en: 'Please log in to comment' })}
                 disabled={!derivedLoggedIn || isSubmitting}
                 rows={3}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -202,7 +204,7 @@ export function CommentSection({
               
               <div className="flex items-center justify-between mt-3">
                 <span className="text-sm text-gray-500">
-                  {derivedLoggedIn ? '发表评论需经管理员审核' : '请先登录'}
+                  {derivedLoggedIn ? t({ zh: '发表评论需经管理员审核', en: 'Comments require administrator approval' }) : t({ zh: '请先登录', en: 'Please log in first' })}
                 </span>
                 
                 <button
@@ -214,12 +216,12 @@ export function CommentSection({
                   {isSubmitting ? (
                     <>
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      提交中...
+                      {t({ zh: '提交中...', en: 'Submitting...' })}
                     </>
                   ) : (
                     <>
                       <Send className="w-4 h-4" />
-                      发表评论
+                      {t({ zh: '发表评论', en: 'Post comment' })}
                     </>
                   )}
                 </button>
@@ -234,7 +236,7 @@ export function CommentSection({
         {comments.length === 0 ? (
           <div className="text-center py-12">
             <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-            <p className="text-gray-500">暂无评论，快来发表第一条评论吧！</p>
+            <p className="text-gray-500">{t({ zh: '暂无评论，快来发表第一条评论吧！', en: 'No comments yet. Be the first to comment!' })}</p>
           </div>
         ) : (
           comments.map((comment) => (
@@ -268,12 +270,12 @@ export function CommentSection({
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">
                       <img
                         src={`${import.meta.env.BASE_URL}yiyu-avatar.png`}
-                        alt="益语智库"
+                        alt={t({ zh: '益语智库', en: 'Yiyu Institute' })}
                         className="w-full h-full object-cover"
                       />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-purple-900 mb-1">管理员回复：</p>
+                      <p className="text-sm font-medium text-purple-900 mb-1">{t({ zh: '管理员回复：', en: 'Administrator reply:' })}</p>
                       <p className="text-sm text-gray-800 leading-relaxed">{comment.reply}</p>
                     </div>
                   </div>

@@ -22,6 +22,7 @@ import { Award, Sparkles, ArrowUpRight, Briefcase, Compass, Eye, Rocket, ShieldA
 import { AppShell } from './AppShell';
 import { AbilityRadar } from '../ported/AbilityRadar';
 import type { GrowthAbilityScore } from '../ported/growthTypes';
+import { useLang, type Bilingual } from '../../../../lib/i18n';
 
 // 雷达图数据（顺序对应截图3中六边形从顶部顺时针：资源调配 → 组织建设 → 战略判断 → 远见洞察 → 危机决策 → 对外影响）
 const SAMPLE_ABILITIES: GrowthAbilityScore[] = [
@@ -92,6 +93,52 @@ const SAMPLE_ABILITIES: GrowthAbilityScore[] = [
     evidence: '上传/产出文档 501 条，手册条目 21 条，最新「核心管理团队优先对齐彼此的管理边界认知，才能避免因权贵分歧公开争执，进而引发不必要的内部矛盾与团队内」',
   },
 ];
+
+// 能力字段的英文叠加（zh 原文已在 SAMPLE_ABILITIES，这里只补 en，渲染处按 abilityKey 取）
+interface AbilityI18n {
+  label: Bilingual;
+  stage: Bilingual;
+  nextStage: Bilingual;
+  evidence: Bilingual;
+}
+const ABILITY_I18N: Record<string, AbilityI18n> = {
+  resource: {
+    label: { zh: '资源调配', en: 'Resource Allocation' },
+    stage: { zh: '独立', en: 'Independent' },
+    nextStage: { zh: '上手', en: 'Proficient' },
+    evidence: { zh: '完成任务 206 条，最新「今天要把为爱黔行整个工作坊落地」，承诺已履约 20 条，最新「全程跟进推动足球项目落地」，任务复盘 24 条 · 最新', en: '206 tasks completed, latest “Land the full Weiaiqian workshop today”; 20 commitments fulfilled, latest “Drove the football project to landing end-to-end”; 24 task reviews · latest' },
+  },
+  org: {
+    label: { zh: '组织建设', en: 'Org Building' },
+    stage: { zh: '上手', en: 'Proficient' },
+    nextStage: { zh: '稳态', en: 'Steady' },
+    evidence: { zh: '周复盘 7 条，最新「2026-W18 周复盘」，手册条目 21 条，最新「核心管理团队优先对齐彼此的管理边界认知，才能避免因权贵分歧公开争执」', en: '7 weekly reviews, latest “2026-W18 weekly review”; 21 handbook entries, latest “The core management team should first align on each other’s management boundaries to avoid open disputes over authority”' },
+  },
+  strategy: {
+    label: { zh: '战略判断', en: 'Strategic Judgment' },
+    stage: { zh: '稳态', en: 'Steady' },
+    nextStage: { zh: '独立', en: 'Independent' },
+    evidence: { zh: '手册条目 21 条，最新「核心管理团队优先对齐彼此的管理边界认知，才能避免因权贵分歧公开争执，进而引发不必要的内部矛盾与团队内」，周', en: '21 handbook entries, latest “The core management team should first align on management boundaries to avoid open disputes over authority and the resulting internal friction”; weekly' },
+  },
+  foresight: {
+    label: { zh: '远见洞察', en: 'Foresight' },
+    stage: { zh: '稳态', en: 'Steady' },
+    nextStage: { zh: '独立', en: 'Independent' },
+    evidence: { zh: '手册条目 21 条，最新「核心管理团队优先对齐彼此的管理边界认知，才能避免因权贵分歧公开争执，进而引发不必要的内部矛盾与团队内」，客', en: '21 handbook entries, latest “The core management team should first align on management boundaries to avoid open disputes over authority and the resulting internal friction”; client' },
+  },
+  crisis: {
+    label: { zh: '危机决策', en: 'Crisis Decisions' },
+    stage: { zh: '独立', en: 'Independent' },
+    nextStage: { zh: '上手', en: 'Proficient' },
+    evidence: { zh: '接触客户的风险信号 52 条，最新「南沙区 2026 年公益创投新增青少年心理健康服务平台方向」，手册条目 21 条，最新「核心管理团队优先对齐」', en: '52 client risk signals, latest “Nansha 2026 charity venture adds a youth mental-health service platform track”; 21 handbook entries, latest “The core management team should first align”' },
+  },
+  influence: {
+    label: { zh: '对外影响', en: 'External Influence' },
+    stage: { zh: '独立', en: 'Independent' },
+    nextStage: { zh: '上手', en: 'Proficient' },
+    evidence: { zh: '上传/产出文档 501 条，手册条目 21 条，最新「核心管理团队优先对齐彼此的管理边界认知，才能避免因权贵分歧公开争执，进而引发不必要的内部矛盾与团队内」', en: '501 documents uploaded/produced; 21 handbook entries, latest “The core management team should first align on management boundaries to avoid open disputes over authority and the resulting internal friction”' },
+  },
+};
 
 // 能力 icon + 配色（按截图3：六个能力对应不同 tint 底）
 const ABILITY_VIS: Record<string, { icon: typeof Rocket; bg: string; color: string }> = {
@@ -185,8 +232,10 @@ interface AbilityRowProps {
 }
 
 function AbilityRow({ ab, index, reduced }: AbilityRowProps): JSX.Element {
+  const { t } = useLang();
   const vis = ABILITY_VIS[ab.abilityKey] || ABILITY_VIS.resource;
   const Icon = vis.icon;
+  const i18n = ABILITY_I18N[ab.abilityKey];
   const badge = STATE_BADGE_STYLE[ab.stage] || STATE_BADGE_STYLE['独立'];
   const trendDelta = Math.max(1, Math.round(ab.weeklyXp / 15));
   const rowDelay = 0.3 + index * 0.12;
@@ -208,9 +257,9 @@ function AbilityRow({ ab, index, reduced }: AbilityRowProps): JSX.Element {
           <div className="rounded-lg flex items-center justify-center shrink-0" style={{ width: 26, height: 26, background: vis.bg }}>
             <Icon size={13} color={vis.color} />
           </div>
-          <span className="font-semibold text-[#1E293B]" style={{ fontSize: 13 }}>{ab.label}</span>
+          <span className="font-semibold text-[#1E293B]" style={{ fontSize: 13 }}>{i18n ? t(i18n.label) : ab.label}</span>
           <span className="rounded-full font-bold" style={{ padding: '2px 8px', fontSize: 10, background: badge.bg, color: badge.color }}>
-            {ab.stage}
+            {i18n ? t(i18n.stage) : ab.stage}
           </span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -239,7 +288,7 @@ function AbilityRow({ ab, index, reduced }: AbilityRowProps): JSX.Element {
         />
       </div>
       {/* 证据 */}
-      <div className="text-[#94A3B8] truncate" style={{ fontSize: 10.5, marginTop: 4 }}>{ab.evidence}</div>
+      <div className="text-[#94A3B8] truncate" style={{ fontSize: 10.5, marginTop: 4 }}>{i18n ? t(i18n.evidence) : ab.evidence}</div>
     </div>
   );
 }
@@ -254,10 +303,11 @@ function AbilityRow({ ab, index, reduced }: AbilityRowProps): JSX.Element {
 //   - 同强度内加少量伪随机 jitter（基于格子的 grid 坐标），避免齐刷刷
 //   - 视觉效果：背景网格先在，活动数据从淡到深累积进来 = "工作逐渐填满日历"
 function RhythmHeatmap({ reduced }: { reduced: boolean }): JSX.Element {
-  const months = [
-    { label: '3月', year: 2026, monthIdx: 2 },
-    { label: '4月', year: 2026, monthIdx: 3 },
-    { label: '5月', year: 2026, monthIdx: 4 },
+  const { t } = useLang();
+  const months: Array<{ label: Bilingual; year: number; monthIdx: number }> = [
+    { label: { zh: '3月', en: 'Mar' }, year: 2026, monthIdx: 2 },
+    { label: { zh: '4月', en: 'Apr' }, year: 2026, monthIdx: 3 },
+    { label: { zh: '5月', en: 'May' }, year: 2026, monthIdx: 4 },
   ];
 
   // 简易 PRNG (mulberry32) — 让强度可复现
@@ -309,8 +359,8 @@ function RhythmHeatmap({ reduced }: { reduced: boolean }): JSX.Element {
           grid.push(col);
         }
         return (
-          <div key={m.label}>
-            <div className="text-[#94A3B8] font-medium mb-2" style={{ fontSize: 11 }}>{m.label}</div>
+          <div key={m.label.zh}>
+            <div className="text-[#94A3B8] font-medium mb-2" style={{ fontSize: 11 }}>{t(m.label)}</div>
             <div className="flex gap-[3px]">
               {grid.map((col, ci) => (
                 <div key={ci} className="flex flex-col gap-[3px]">
@@ -349,8 +399,14 @@ function RhythmHeatmap({ reduced }: { reduced: boolean }): JSX.Element {
 
 function GrowthMain(): JSX.Element {
   const reduced = useReducedMotion();
+  const { t } = useLang();
   // 顶部 / 排名卡共用同一个计数 —— 1.2s 内从 0 → 2,793
   const xpCount = useCountUp(2793, 1200, 200, reduced);
+  // 雷达图标签按当前语言翻译（不可变拷贝，不改原数据）
+  const radarAbilities = SAMPLE_ABILITIES.map((ab) => {
+    const i18n = ABILITY_I18N[ab.abilityKey];
+    return i18n ? { ...ab, label: t(i18n.label) } : ab;
+  });
 
   return (
     <div className="h-full overflow-hidden" style={{ padding: '24px 30px' }}>
@@ -363,14 +419,14 @@ function GrowthMain(): JSX.Element {
             GROWTH CENTER
           </div>
           <h1 className="font-bold tracking-tight text-[#0F172A] mb-1" style={{ fontSize: 26 }}>
-            成长中心
+            {t({ zh: '成长中心', en: 'Growth Center' })}
           </h1>
-          <div className="text-[#64748B]" style={{ fontSize: 13 }}>把工作经验变成组织资产</div>
+          <div className="text-[#64748B]" style={{ fontSize: 13 }}>{t({ zh: '把工作经验变成组织资产', en: 'Turn work experience into organizational assets' })}</div>
         </div>
         <div className="flex items-start gap-4">
           <div className="flex items-center gap-1.5 rounded-full border border-[#E5E7EB] bg-white text-[#475569]" style={{ padding: '7px 14px', fontSize: 12.5 }}>
             <Sparkles size={13} color="#3A4FB5" />
-            <span className="font-medium">增长参谋 · 一阶</span>
+            <span className="font-medium">{t({ zh: '增长参谋 · 一阶', en: 'Growth Advisor · Tier 1' })}</span>
           </div>
           <div className="text-right">
             <div className="font-bold text-[#0F172A] tracking-tight tabular-nums" style={{ fontSize: 26 }}>
@@ -383,11 +439,11 @@ function GrowthMain(): JSX.Element {
 
       {/* tabs */}
       <div className="flex items-center gap-7 border-b border-[#F1F5F9] mb-5">
-        <div className="text-[#94A3B8]" style={{ paddingBottom: 10, fontSize: 13 }}>经验墙</div>
+        <div className="text-[#94A3B8]" style={{ paddingBottom: 10, fontSize: 13 }}>{t({ zh: '经验墙', en: 'Experience Wall' })}</div>
         <div className="text-[#3A4FB5] font-semibold border-b-2 border-[#3A4FB5]" style={{ paddingBottom: 10, fontSize: 13 }}>
-          能力成长
+          {t({ zh: '能力成长', en: 'Ability Growth' })}
         </div>
-        <div className="text-[#94A3B8]" style={{ paddingBottom: 10, fontSize: 13 }}>徽章与排行</div>
+        <div className="text-[#94A3B8]" style={{ paddingBottom: 10, fontSize: 13 }}>{t({ zh: '徽章与排行', en: 'Badges & Ranking' })}</div>
       </div>
 
       {/* 卡片1: 雷达 + 能力列表 */}
@@ -397,11 +453,11 @@ function GrowthMain(): JSX.Element {
           <div className="flex flex-col items-center" style={{ width: 400, paddingRight: 28 }}>
             <div className="w-full rounded-2xl flex items-center justify-between mb-4" style={{ padding: '14px 18px', background: '#F8FAFC' }}>
               <div>
-                <div className="text-[#94A3B8] font-medium" style={{ fontSize: 11 }}>成长速度 · 机构成长榜</div>
+                <div className="text-[#94A3B8] font-medium" style={{ fontSize: 11 }}>{t({ zh: '成长速度 · 机构成长榜', en: 'Growth Pace · Org Leaderboard' })}</div>
                 <div className="flex items-baseline gap-1.5 mt-1">
-                  <span className="text-[#64748B]" style={{ fontSize: 12 }}>排</span>
-                  <span className="font-bold text-[#0F172A]" style={{ fontSize: 22 }}>第 1</span>
-                  <span className="text-[#94A3B8]" style={{ fontSize: 11 }}>/ 共 3 人</span>
+                  <span className="text-[#64748B]" style={{ fontSize: 12 }}>{t({ zh: '排', en: 'Rank' })}</span>
+                  <span className="font-bold text-[#0F172A]" style={{ fontSize: 22 }}>{t({ zh: '第 1', en: '#1' })}</span>
+                  <span className="text-[#94A3B8]" style={{ fontSize: 11 }}>{t({ zh: '/ 共 3 人', en: '/ of 3' })}</span>
                 </div>
               </div>
               <div className="text-right">
@@ -422,12 +478,12 @@ function GrowthMain(): JSX.Element {
                     }
               }
             >
-              <AbilityRadar abilities={SAMPLE_ABILITIES} />
+              <AbilityRadar abilities={radarAbilities} />
             </div>
             <div className="flex items-center gap-4 text-[#94A3B8] mt-2" style={{ fontSize: 11 }}>
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: '#5B7BFE' }} />当前</span>
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: '#CBD5E1' }} />上期</span>
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: '#F59E0B' }} />要求</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: '#5B7BFE' }} />{t({ zh: '当前', en: 'Current' })}</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: '#CBD5E1' }} />{t({ zh: '上期', en: 'Previous' })}</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: '#F59E0B' }} />{t({ zh: '要求', en: 'Target' })}</span>
             </div>
           </div>
 
@@ -443,20 +499,20 @@ function GrowthMain(): JSX.Element {
       {/* 卡片2: 工作节奏热力图 */}
       <div className="rounded-[20px] border border-[#E0E7FF] bg-white" style={{ padding: '20px 28px', boxShadow: '0 18px 40px rgba(148,163,184,0.06)' }}>
         <div className="flex items-baseline justify-between mb-4">
-          <div className="font-bold text-[#0F172A]" style={{ fontSize: 14 }}>工作节奏</div>
+          <div className="font-bold text-[#0F172A]" style={{ fontSize: 14 }}>{t({ zh: '工作节奏', en: 'Work Rhythm' })}</div>
           <div className="text-[#94A3B8]" style={{ fontSize: 11 }}>
-            近 85 天 · 活跃 33 天（39%）· 最长连续 6 天
+            {t({ zh: '近 85 天 · 活跃 33 天（39%）· 最长连续 6 天', en: 'Last 85 days · 33 active (39%) · longest streak 6 days' })}
           </div>
         </div>
         <RhythmHeatmap reduced={reduced} />
         <div className="flex items-center justify-between mt-3.5">
-          <div className="text-[#94A3B8] font-medium" style={{ fontSize: 11 }}>634 分产出 / 2026 年</div>
+          <div className="text-[#94A3B8] font-medium" style={{ fontSize: 11 }}>{t({ zh: '634 分产出 / 2026 年', en: '634 output points / 2026' })}</div>
           <div className="flex items-center gap-1.5 text-[#94A3B8]" style={{ fontSize: 11 }}>
-            <span>清闲</span>
+            <span>{t({ zh: '清闲', en: 'Light' })}</span>
             {['#F1F5F9', '#DBEAFE', '#93C5FD', '#3B82F6', '#1D4ED8'].map((c) => (
               <div key={c} style={{ width: 10, height: 10, borderRadius: 2, background: c }} />
             ))}
-            <span>工作多</span>
+            <span>{t({ zh: '工作多', en: 'Busy' })}</span>
           </div>
         </div>
       </div>
