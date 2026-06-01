@@ -1,10 +1,11 @@
-import { ArrowRight, ArrowUpRight } from 'lucide-react';
+import { ArrowRight, ChevronRight } from 'lucide-react';
+import { type ReactNode } from 'react';
 import { MobileAppShell } from '../MobileAppShell';
 import { CAPABILITY_ICONS } from '../icons/CapabilityIcons';
 
-// 移动端 App 化首页 = 价值展示页 · 极简风格 (对齐网页极简调性)。
-// 原则: 字型主导 / 大留白 / 发丝线分隔 / 不用复杂卡片 / 藏蓝仅作单点强调 / 竖向滚动为主轴。
-// 不放产品图(益语AI有专门介绍页), 首页只讲战略咨询的「价值」。意图分析见 docs/MOBILE_APP_REDESIGN_PLAN.md。
+// 移动端 App 化首页 = 价值展示页。风格: 极简 + iOS inset-grouped「App 感」。
+// 关键: 极简不等于纯文字流(那是网页) —— 用「带色底 + 白色圆角分组面 + 分组标签」建立结构感,
+// 既克制留白, 又一眼是 App。不放产品图。意图分析见 docs/MOBILE_APP_REDESIGN_PLAN.md。
 
 interface ScreenProps {
   onNavigate: (page: string, id?: string) => void;
@@ -27,128 +28,127 @@ const PHASES = [
 ];
 
 const CAPABILITIES = [
-  '战略路径清晰化',
-  '组织效能重构',
-  '数字化与 AI 落地',
-  '公益与社会创新',
-  '商业增长与战略慈善',
-  '内容 · 工具 · 知识沉淀',
+  '战略路径清晰化', '组织效能重构', '数字化与 AI 落地',
+  '公益与社会创新', '商业增长与战略慈善', '内容 · 工具 · 知识沉淀',
 ];
 
 const PATHS = [
-  { title: '深度战略陪伴', desc: '企业 / 组织 leader · 从战略到落地全程', page: 'consult-apply' },
-  { title: '益语智库 AI（开源）', desc: '行动者 / 公益 / 小团队 · 低成本用上后台能力', page: 'workbench' },
+  { title: '深度战略陪伴', desc: '企业 / 组织 leader · 全程陪伴', page: 'consult-apply' },
+  { title: '益语智库 AI（开源）', desc: '行动者 / 公益 / 小团队', page: 'workbench' },
 ];
 
-function Eyebrow({ children }: { children: string }) {
-  return <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-os-blue">{children}</p>;
+/** iOS 式分组: 小标签 + 白色圆角面 */
+function Group({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <section>
+      <p className="px-1 mb-2.5 text-[12px] font-semibold tracking-wide text-os-muted">{label}</p>
+      <div className="rounded-[20px] bg-white ring-1 ring-os-line/70 shadow-[0_1px_2px_rgba(22,38,94,0.04)] overflow-hidden">
+        {children}
+      </div>
+    </section>
+  );
 }
 
 export function MobileHomeScreen({ onNavigate }: ScreenProps) {
   return (
     <MobileAppShell onNavigate={onNavigate}>
-      <div className="pb-20">
-        {/* ── 价值钩子 (字型主导, 大留白) ── */}
-        <section className="pt-10 pb-4">
-          <p className="text-[12px] tracking-[0.04em] text-os-muted">益语智库 · 助力组织持续增长的战略陪伴者</p>
-          <h1 className="mt-6 font-serif-display text-[42px] leading-[1.12] font-semibold text-os-ink">
+      <div className="pb-16">
+        {/* ── 大标题 Hero (坐落于带色底) ── */}
+        <section className="pt-8 pb-9">
+          <p className="text-[12px] tracking-[0.04em] text-os-muted">益语智库 · 战略陪伴者</p>
+          <h1 className="mt-4 font-serif-display text-[40px] leading-[1.1] font-semibold text-os-ink">
             可落地的<br />增长咨询
           </h1>
-          <p className="mt-7 font-serif-display text-[23px] leading-[1.4] text-os-navy">
-            别人给观点，<br />我们交结果。
+          <p className="mt-6 font-serif-display text-[22px] leading-[1.4] text-os-navy">
+            别人给观点，我们交结果。
           </p>
-          <p className="mt-5 text-[14px] leading-[1.85] text-os-muted">
+          <p className="mt-4 text-[13.5px] leading-[1.8] text-os-muted">
             把方向变成机制，把机制变成行动，把行动沉淀为组织能持续使用的能力。
           </p>
           <button onClick={() => onNavigate('consult-apply')}
-            className="mt-9 inline-flex items-center gap-2 rounded-full bg-os-navy text-white text-[15px] font-semibold px-7 py-3.5 active:scale-[0.97] transition-transform">
-            申请深度战略陪伴 <ArrowRight size={16} />
+            className="mt-7 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-os-navy text-white text-[15.5px] font-semibold py-4 shadow-[0_10px_24px_-12px_rgba(22,38,94,0.6)] active:scale-[0.98] transition-transform">
+            申请深度战略陪伴 <ArrowRight size={17} />
           </button>
         </section>
 
-        {/* ── 痛点共鸣 ── */}
-        <section className="pt-20">
-          <Eyebrow>什么叫「可落地」</Eyebrow>
-          <h2 className="mt-4 font-serif-display text-[28px] leading-tight font-semibold text-os-ink">
-            你是不是<br />也卡在这里？
-          </h2>
-          <p className="mt-5 text-[13px] leading-relaxed text-os-muted">
-            我们说的「增长」，不只是收入——
-            <span className="text-os-ink/70">{DIMENSIONS.join(' · ')}</span>
-          </p>
-          <div className="mt-7 divide-y divide-os-line border-t border-os-line">
-            {SHIFTS.map((s, i) => (
-              <div key={i} className="py-5">
-                <p className="text-[13px] text-os-muted/90 line-through decoration-os-muted/30">{s.pain}</p>
-                <p className="mt-1.5 text-[16px] font-medium text-os-ink leading-snug">{s.after}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ── 怎么陪你 (三段) ── */}
-        <section className="pt-20">
-          <Eyebrow>我们怎么陪你落地</Eyebrow>
-          <h2 className="mt-4 font-serif-display text-[26px] leading-tight font-semibold text-os-ink">
-            不做完方案就离场，<br />做你身边的成长合伙人
-          </h2>
-          <div className="mt-9 space-y-9">
-            {PHASES.map((p, i) => (
-              <div key={i} className="flex gap-5">
-                <span className="font-serif-display text-[26px] leading-none text-os-navy/25 tabular-nums pt-0.5">0{i + 1}</span>
-                <div className="flex-1">
-                  <h3 className="text-[16.5px] font-semibold text-os-ink">{p.tag}</h3>
-                  <p className="mt-1.5 text-[13.5px] leading-relaxed text-os-muted">{p.desc}</p>
+        <div className="space-y-9">
+          {/* ── 痛点共鸣 ── */}
+          <div>
+            <div className="px-1 mb-4">
+              <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-os-blue">什么叫「可落地」</p>
+              <h2 className="mt-2.5 font-serif-display text-[26px] leading-tight font-semibold text-os-ink">你是不是也卡在这里？</h2>
+              <p className="mt-2.5 text-[12.5px] leading-relaxed text-os-muted">
+                我们说的「增长」不只是收入 · <span className="text-os-ink/65">{DIMENSIONS.join(' · ')}</span>
+              </p>
+            </div>
+            <div className="rounded-[20px] bg-white ring-1 ring-os-line/70 shadow-[0_1px_2px_rgba(22,38,94,0.04)] divide-y divide-os-line/80">
+              {SHIFTS.map((s, i) => (
+                <div key={i} className="px-4 py-3.5 flex items-center gap-3">
+                  <span className="flex-1 text-[12.5px] text-os-muted/90 line-through decoration-os-muted/30">{s.pain}</span>
+                  <ArrowRight size={14} className="text-os-blue/45 shrink-0" />
+                  <span className="flex-1 text-[13.5px] font-medium text-os-ink text-right">{s.after}</span>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </section>
 
-        {/* ── 能力广度 (极简列表 + 细图标) ── */}
-        <section className="pt-20">
-          <Eyebrow>从战略切入</Eyebrow>
-          <h2 className="mt-4 font-serif-display text-[26px] leading-tight font-semibold text-os-ink">
-            把每件大事<br />想清楚、做出来
-          </h2>
-          <div className="mt-7 divide-y divide-os-line border-y border-os-line">
-            {CAPABILITIES.map((c, i) => {
-              const Icon = CAPABILITY_ICONS[i];
-              return (
-                <div key={c} className="flex items-center gap-4 py-4">
-                  <Icon size={21} className="text-os-navy/70 shrink-0" strokeWidth={1.5} />
-                  <span className="text-[15.5px] text-os-ink">{c}</span>
+          {/* ── 怎么陪你 ── */}
+          <Group label="我们怎么陪你落地">
+            <div className="divide-y divide-os-line/80">
+              {PHASES.map((p, i) => (
+                <div key={i} className="px-4 py-4 flex gap-3.5">
+                  <span className="font-serif-display text-[20px] leading-none text-os-navy/30 tabular-nums pt-0.5">0{i + 1}</span>
+                  <div className="flex-1">
+                    <h3 className="text-[15px] font-semibold text-os-ink">{p.tag}</h3>
+                    <p className="mt-1 text-[12.5px] leading-relaxed text-os-muted">{p.desc}</p>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-          <p className="mt-7 text-[12.5px] leading-relaxed text-os-muted">
+              ))}
+            </div>
+          </Group>
+
+          {/* ── 能力领域 ── */}
+          <Group label="从战略切入 · 能力领域">
+            <div className="divide-y divide-os-line/80">
+              {CAPABILITIES.map((c, i) => {
+                const Icon = CAPABILITY_ICONS[i];
+                return (
+                  <div key={c} className="px-4 py-3.5 flex items-center gap-3.5">
+                    <Icon size={20} className="text-os-navy/65 shrink-0" strokeWidth={1.6} />
+                    <span className="text-[15px] text-os-ink">{c}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </Group>
+
+          {/* ── 正在陪伴的组织 ── */}
+          <p className="px-1 text-[12px] leading-relaxed text-os-muted">
             正在陪伴 · 公益基金会 / 品牌咨询机构 / 创业公司 / 行业领军企业 / 社会创新组织
           </p>
-        </section>
 
-        {/* ── 两条路径 (极简行) ── */}
-        <section className="pt-20">
-          <Eyebrow>选择适合你的方式</Eyebrow>
-          <div className="mt-6 divide-y divide-os-line border-y border-os-line">
-            {PATHS.map((p) => (
-              <button key={p.title} onClick={() => onNavigate(p.page)}
-                className="w-full flex items-center gap-4 py-5 text-left active:opacity-60 transition-opacity">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-[16.5px] font-semibold text-os-ink">{p.title}</h3>
-                  <p className="mt-1 text-[13px] text-os-muted">{p.desc}</p>
-                </div>
-                <ArrowUpRight size={20} className="text-os-navy/50 shrink-0" />
-              </button>
-            ))}
-          </div>
-        </section>
+          {/* ── 两条路径 ── */}
+          <Group label="选择适合你的方式">
+            <div className="divide-y divide-os-line/80">
+              {PATHS.map((p) => (
+                <button key={p.title} onClick={() => onNavigate(p.page)}
+                  className="w-full px-4 py-4 flex items-center gap-3 text-left active:bg-os-mist/40 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-[15.5px] font-semibold text-os-ink">{p.title}</h3>
+                    <p className="mt-0.5 text-[12.5px] text-os-muted">{p.desc}</p>
+                  </div>
+                  <ChevronRight size={19} className="text-os-muted/50 shrink-0" />
+                </button>
+              ))}
+            </div>
+          </Group>
 
-        {/* ── 收束金句 ── */}
-        <section className="pt-20 text-center">
-          <p className="font-serif-display text-[22px] leading-[1.5] text-os-ink">“技术是思想的延伸。”</p>
-          <p className="mt-3 text-[12.5px] text-os-muted">益语智库，是管理思想与人工智能结合的一次表达。</p>
-        </section>
+          {/* ── 金句 ── */}
+          <section className="pt-6 pb-2 text-center">
+            <p className="font-serif-display text-[20px] leading-[1.5] text-os-ink">“技术是思想的延伸。”</p>
+            <p className="mt-2.5 text-[12px] text-os-muted">益语智库，是管理思想与人工智能结合的一次表达。</p>
+          </section>
+        </div>
       </div>
     </MobileAppShell>
   );
