@@ -77,6 +77,27 @@ body.has-mobile-tabbar {
   display: none;
 }
 
+/* 噪点质感叠层 (移动端深色区高级感; 极淡, 仅作肌理) */
+.tex-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+}
+
+/* 关键强调竖条: 揭示时由 0 生长 (交互惊喜) */
+@keyframes barGrow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+.bar-grow {
+  transform-origin: top;
+  animation: barGrow 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.25s both;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
