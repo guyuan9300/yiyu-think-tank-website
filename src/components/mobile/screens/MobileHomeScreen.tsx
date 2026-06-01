@@ -2,6 +2,7 @@ import { ArrowRight, ChevronRight, Check, Rocket, Code2, Heart, Store } from 'lu
 import { type ReactNode } from 'react';
 import { MobileAppShell } from '../MobileAppShell';
 import { Reveal } from '../Reveal';
+import { CountUp, useScrollProgress } from '../scrollMotion';
 import { CAPABILITY_ICONS } from '../icons/CapabilityIcons';
 import { DEFAULT_CASH_FLOW, computeTotals } from '../../../lib/cashFlowData';
 import { DEFAULT_SUPPORT_POOL } from '../../../lib/supportPoolData';
@@ -43,10 +44,10 @@ const PATHS = [
 // 平台总账 (取自数据层, 与桌面同源, 万元单位)
 const cf = computeTotals(DEFAULT_CASH_FLOW);
 const LEDGER_STATS = [
-  { label: '平台结余', value: cf.balance.toFixed(2), unit: '万元' },
-  { label: '行动者支持池', value: DEFAULT_SUPPORT_POOL.stats.balance.toFixed(2), unit: '万元' },
-  { label: '共建参与', value: '1,246', unit: '人次' },
-  { label: '行动者影响', value: '132.6', unit: '万人次' },
+  { label: '平台结余', end: cf.balance, decimals: 2, comma: false, unit: '万元' },
+  { label: '行动者支持池', end: DEFAULT_SUPPORT_POOL.stats.balance, decimals: 2, comma: false, unit: '万元' },
+  { label: '共建参与', end: 1246, decimals: 0, comma: true, unit: '人次' },
+  { label: '行动者影响', end: 132.6, decimals: 1, comma: false, unit: '万人次' },
 ];
 
 // 行动者参与入口 (桌面 Join 四类角色)
@@ -69,6 +70,9 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export function MobileHomeScreen({ onNavigate }: ScreenProps) {
+  const phase = useScrollProgress<HTMLDivElement>();
+  const glow = useScrollProgress<HTMLDivElement>();
+
   return (
     <MobileAppShell onNavigate={onNavigate} scrollTitle="可落地的增长咨询">
       <div className="pb-14">
@@ -118,7 +122,7 @@ export function MobileHomeScreen({ onNavigate }: ScreenProps) {
             </Reveal>
             <div className={`${SURFACE} divide-y divide-os-line/70`}>
               {SHIFTS.map((s, i) => (
-                <Reveal key={i} delay={i * 70}>
+                <Reveal key={i} delay={i * 70} variant="left">
                   <div className="px-4 py-4">
                     <p className="text-[11.5px] text-os-muted/75 line-through decoration-os-muted/30">{s.pain}</p>
                     <p className="mt-1.5 flex items-start gap-2 text-[14.5px] font-medium text-os-ink leading-snug">
@@ -131,21 +135,32 @@ export function MobileHomeScreen({ onNavigate }: ScreenProps) {
             </div>
           </div>
 
-          {/* ── 怎么陪你 ── */}
+          {/* ── 怎么陪你 (时间线随滑动填充) ── */}
           <Reveal>
-            <Group label="我们怎么陪你落地">
-              <div className="divide-y divide-os-line/70">
-                {PHASES.map((p, i) => (
-                  <div key={i} className="px-4 py-4 flex gap-4">
-                    <span className="font-serif-display text-[21px] leading-none text-os-navy/25 tabular-nums pt-0.5">0{i + 1}</span>
-                    <div className="flex-1">
-                      <h3 className="text-[15px] font-semibold text-os-ink">{p.tag}</h3>
-                      <p className="mt-1 text-[12.5px] leading-relaxed text-os-muted">{p.desc}</p>
+            <p className="px-1 mb-2.5 text-[11px] font-semibold tracking-[0.14em] uppercase text-os-muted">我们怎么陪你落地</p>
+            <div className={`${SURFACE} overflow-hidden`}>
+              <div ref={phase.ref} className="relative px-5 py-6">
+                {/* 轨道 + 填充 (穿过编号圆心) */}
+                <span className="absolute left-[35px] top-[38px] bottom-[38px] w-[2px] bg-os-line/80 rounded-full" />
+                <span
+                  className="absolute left-[35px] top-[38px] w-[2px] bg-gradient-to-b from-os-blue to-os-navy rounded-full"
+                  style={{ height: `calc((100% - 76px) * ${phase.progress})` }}
+                />
+                <div className="space-y-6">
+                  {PHASES.map((p, i) => (
+                    <div key={i} className="relative flex gap-4">
+                      <span className="relative z-10 w-8 h-8 rounded-full bg-os-navy text-white text-[13px] font-semibold flex items-center justify-center ring-4 ring-white shrink-0">
+                        {i + 1}
+                      </span>
+                      <div className="flex-1 pt-1">
+                        <h3 className="text-[15px] font-semibold text-os-ink">{p.tag}</h3>
+                        <p className="mt-1 text-[12.5px] leading-relaxed text-os-muted">{p.desc}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </Group>
+            </div>
           </Reveal>
 
           {/* ── 能力领域 (逐行级联) ── */}
@@ -155,7 +170,7 @@ export function MobileHomeScreen({ onNavigate }: ScreenProps) {
               {CAPABILITIES.map((c, i) => {
                 const Icon = CAPABILITY_ICONS[i];
                 return (
-                  <Reveal key={c} delay={i * 55}>
+                  <Reveal key={c} delay={i * 55} variant="scale">
                     <div className="px-4 py-3.5 flex items-center gap-3.5">
                       <span className="inline-flex w-9 h-9 rounded-xl bg-gradient-to-br from-os-mist/80 to-os-mist/30 items-center justify-center text-os-navy/75 shrink-0">
                         <Icon size={19} strokeWidth={1.6} />
@@ -210,7 +225,8 @@ export function MobileHomeScreen({ onNavigate }: ScreenProps) {
                     <div key={s.label} className="bg-gradient-to-b from-white to-[#fafbfe] px-4 py-4">
                       <p className="text-[11.5px] text-os-muted">{s.label}</p>
                       <p className="mt-1 text-os-navy">
-                        <span className="text-[21px] font-bold tracking-tight tabular-nums">{s.value}</span>
+                        <CountUp end={s.end} decimals={s.decimals} withComma={s.comma}
+                          className="text-[21px] font-bold tracking-tight tabular-nums" />
                         <span className="ml-1 text-[12px] text-os-muted font-medium">{s.unit}</span>
                       </p>
                     </div>
@@ -220,14 +236,15 @@ export function MobileHomeScreen({ onNavigate }: ScreenProps) {
             </Reveal>
           </div>
 
-          {/* ── 行动者参与入口 ── */}
-          <Reveal>
-            <Group label="与行动者同行 · 参与入口">
-              <div className="divide-y divide-os-line/70">
-                {ROLES.map((r) => {
-                  const Icon = r.icon;
-                  return (
-                    <button key={r.title} onClick={() => onNavigate(r.page)}
+          {/* ── 行动者参与入口 (逐行右滑) ── */}
+          <div>
+            <Reveal><p className="px-1 mb-2.5 text-[11px] font-semibold tracking-[0.14em] uppercase text-os-muted">与行动者同行 · 参与入口</p></Reveal>
+            <div className={`${SURFACE} divide-y divide-os-line/70`}>
+              {ROLES.map((r, i) => {
+                const Icon = r.icon;
+                return (
+                  <Reveal key={r.title} delay={i * 60} variant="right">
+                    <button onClick={() => onNavigate(r.page)}
                       className="w-full px-4 py-3.5 flex items-center gap-3.5 text-left active:bg-os-mist/40 transition-colors">
                       <span className="inline-flex w-9 h-9 rounded-xl bg-gradient-to-br from-os-mist/80 to-os-mist/30 items-center justify-center text-os-navy/75 shrink-0">
                         <Icon size={18} strokeWidth={1.9} />
@@ -238,17 +255,20 @@ export function MobileHomeScreen({ onNavigate }: ScreenProps) {
                       </span>
                       <ChevronRight size={18} className="text-os-muted/45 shrink-0" />
                     </button>
-                  );
-                })}
-              </div>
-            </Group>
-          </Reveal>
+                  </Reveal>
+                );
+              })}
+            </div>
+          </div>
 
-          {/* ── 深色收束金句 (满幅 · 噪点 · 光晕) ── */}
-          <Reveal>
-            <section className="tex-grain relative -mx-5 mt-2 px-8 py-14 overflow-hidden text-center
+          {/* ── 深色收束金句 (满幅 · 噪点 · 光晕视差) ── */}
+          <Reveal variant="scale">
+            <section ref={glow.ref} className="tex-grain relative -mx-5 mt-2 px-8 py-16 overflow-hidden text-center
               bg-[radial-gradient(130%_120%_at_50%_-10%,#22417f_0%,#16265E_50%,#0d1a40_100%)]">
-              <div className="pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 w-56 h-40 rounded-full bg-os-blue/25 blur-3xl" />
+              <div
+                className="pointer-events-none absolute left-1/2 w-60 h-44 rounded-full bg-os-blue/25 blur-3xl"
+                style={{ transform: `translate(-50%, ${-40 + glow.progress * 80}px)` }}
+              />
               <p className="relative font-serif-display text-[23px] leading-[1.5] text-white">“技术是思想的延伸。”</p>
               <p className="relative mt-3.5 text-[12.5px] leading-relaxed text-white/60">益语智库，是管理思想与人工智能结合的一次表达。</p>
             </section>

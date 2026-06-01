@@ -1,33 +1,39 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-// 滚动入场揭示: 元素进入视口时淡入 + 上浮一次。尊重 prefers-reduced-motion。
-// 给移动端 App 带来"内容随滚动呼吸"的高级感。
+// 滚动入场揭示: 元素进入视口时按 variant 动画一次。尊重 prefers-reduced-motion。
+// 多变体让每个模块有各自质感的「炫酷滑动」入场。
+
+type Variant = 'up' | 'left' | 'right' | 'scale' | 'blur';
 
 interface RevealProps {
   children: ReactNode;
-  /** 延迟毫秒, 用于同组元素错峰 */
   delay?: number;
+  variant?: Variant;
   className?: string;
 }
 
-export function Reveal({ children, delay = 0, className }: RevealProps) {
+const HIDDEN: Record<Variant, string> = {
+  up: 'translateY(18px)',
+  left: 'translateX(-26px)',
+  right: 'translateX(26px)',
+  scale: 'scale(0.93)',
+  blur: 'translateY(12px)',
+};
+
+export function Reveal({ children, delay = 0, variant = 'up', className }: RevealProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [shown, setShown] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-
     const reduce = typeof window !== 'undefined'
       && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     if (reduce) { setShown(true); return; }
 
     const io = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting) {
-          setShown(true);
-          io.disconnect();
-        }
+        if (entries[0]?.isIntersecting) { setShown(true); io.disconnect(); }
       },
       { threshold: 0.12, rootMargin: '0px 0px -8% 0px' },
     );
@@ -35,14 +41,16 @@ export function Reveal({ children, delay = 0, className }: RevealProps) {
     return () => io.disconnect();
   }, []);
 
+  const ease = 'cubic-bezier(0.22,1,0.36,1)';
   return (
     <div
       ref={ref}
       className={className}
       style={{
         opacity: shown ? 1 : 0,
-        transform: shown ? 'none' : 'translateY(16px)',
-        transition: `opacity 0.66s cubic-bezier(0.22,1,0.36,1) ${delay}ms, transform 0.66s cubic-bezier(0.22,1,0.36,1) ${delay}ms`,
+        transform: shown ? 'none' : HIDDEN[variant],
+        filter: variant === 'blur' && !shown ? 'blur(9px)' : 'none',
+        transition: `opacity 0.7s ${ease} ${delay}ms, transform 0.7s ${ease} ${delay}ms, filter 0.7s ${ease} ${delay}ms`,
         willChange: 'opacity, transform',
       }}
     >
