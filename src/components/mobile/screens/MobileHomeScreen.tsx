@@ -1,8 +1,10 @@
-import { ArrowRight, ChevronRight, Check } from 'lucide-react';
+import { ArrowRight, ChevronRight, Check, Rocket, Code2, Heart, Store } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { MobileAppShell } from '../MobileAppShell';
 import { Reveal } from '../Reveal';
 import { CAPABILITY_ICONS } from '../icons/CapabilityIcons';
+import { DEFAULT_CASH_FLOW, computeTotals } from '../../../lib/cashFlowData';
+import { DEFAULT_SUPPORT_POOL } from '../../../lib/supportPoolData';
 
 // 移动端 App 化首页 = 价值展示页。风格: 极简 + iOS 分组 + 灰度质感过渡 + 滚动惊喜。
 // 反「单调」: 分组面微渐变/深色收束区/噪点肌理 制造节奏; 逐行级联 + 强调条生长 制造惊喜。
@@ -36,6 +38,23 @@ const CAPABILITIES = [
 const PATHS = [
   { title: '深度战略陪伴', desc: '企业 / 组织 leader · 全程陪伴', page: 'consult-apply' },
   { title: '益语智库 AI（开源）', desc: '行动者 / 公益 / 小团队', page: 'workbench' },
+];
+
+// 平台总账 (取自数据层, 与桌面同源, 万元单位)
+const cf = computeTotals(DEFAULT_CASH_FLOW);
+const LEDGER_STATS = [
+  { label: '平台结余', value: cf.balance.toFixed(2), unit: '万元' },
+  { label: '行动者支持池', value: DEFAULT_SUPPORT_POOL.stats.balance.toFixed(2), unit: '万元' },
+  { label: '共建参与', value: '1,246', unit: '人次' },
+  { label: '行动者影响', value: '132.6', unit: '万人次' },
+];
+
+// 行动者参与入口 (桌面 Join 四类角色)
+const ROLES = [
+  { icon: Rocket, title: '我是行动者', desc: '提交真实需求 · 申请开源版', page: 'consult-apply' },
+  { icon: Code2, title: '我是开发者', desc: '认领模块 · 提交 PR 共建', page: 'workbench' },
+  { icon: Heart, title: '我是支持者', desc: '提供算力 · 资助使用计划', page: 'consult-apply' },
+  { icon: Store, title: '我是服务伙伴', desc: '提供资源 · 模块试点机会', page: 'consult-apply' },
 ];
 
 const SURFACE = 'rounded-[20px] bg-gradient-to-b from-white to-[#fafbfe] ring-1 ring-os-line/70 shadow-[0_1px_2px_rgba(22,38,94,0.04),0_18px_36px_-26px_rgba(22,38,94,0.28)]';
@@ -170,6 +189,57 @@ export function MobileHomeScreen({ onNavigate }: ScreenProps) {
                     <ChevronRight size={19} className="text-os-muted/45 shrink-0" />
                   </button>
                 ))}
+              </div>
+            </Group>
+          </Reveal>
+
+          {/* ── 平台总账 (真实数字 · 公开透明) ── */}
+          <div>
+            <Reveal>
+              <div className="px-1 mb-2.5 flex items-center justify-between">
+                <p className="text-[11px] font-semibold tracking-[0.14em] uppercase text-os-muted">平台总账 · 公开透明</p>
+                <span className="flex items-center gap-1.5 text-[10.5px] text-os-muted">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_7px_rgba(16,185,129,0.7)]" />更新于 2025-05
+                </span>
+              </div>
+            </Reveal>
+            <Reveal delay={60}>
+              <div className={`${SURFACE} overflow-hidden`}>
+                <div className="grid grid-cols-2 gap-px bg-os-line/60">
+                  {LEDGER_STATS.map((s) => (
+                    <div key={s.label} className="bg-gradient-to-b from-white to-[#fafbfe] px-4 py-4">
+                      <p className="text-[11.5px] text-os-muted">{s.label}</p>
+                      <p className="mt-1 text-os-navy">
+                        <span className="text-[21px] font-bold tracking-tight tabular-nums">{s.value}</span>
+                        <span className="ml-1 text-[12px] text-os-muted font-medium">{s.unit}</span>
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Reveal>
+          </div>
+
+          {/* ── 行动者参与入口 ── */}
+          <Reveal>
+            <Group label="与行动者同行 · 参与入口">
+              <div className="divide-y divide-os-line/70">
+                {ROLES.map((r) => {
+                  const Icon = r.icon;
+                  return (
+                    <button key={r.title} onClick={() => onNavigate(r.page)}
+                      className="w-full px-4 py-3.5 flex items-center gap-3.5 text-left active:bg-os-mist/40 transition-colors">
+                      <span className="inline-flex w-9 h-9 rounded-xl bg-gradient-to-br from-os-mist/80 to-os-mist/30 items-center justify-center text-os-navy/75 shrink-0">
+                        <Icon size={18} strokeWidth={1.9} />
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-[14.5px] font-semibold text-os-ink">{r.title}</span>
+                        <span className="block text-[12px] text-os-muted truncate">{r.desc}</span>
+                      </span>
+                      <ChevronRight size={18} className="text-os-muted/45 shrink-0" />
+                    </button>
+                  );
+                })}
               </div>
             </Group>
           </Reveal>
