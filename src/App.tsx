@@ -48,6 +48,7 @@ import { PaymentIntroPage } from './components/PaymentIntroPage';
 import { PaymentCheckoutPage } from './components/PaymentCheckoutPage';
 import { PaymentResultPage } from './components/PaymentResultPage';
 import { YiyuTongAssistant } from './components/YiyuTongAssistant';
+import { MobileTabBar } from './components/mobile/MobileTabBar';
 
 function AdminRouteRedirect({ target }: { target: string }) {
   useEffect(() => {
@@ -329,6 +330,7 @@ export default function App() {
     <>
       {content}
       {shouldShowYiyuTong ? <YiyuTongAssistant currentPage={assistantPage} /> : null}
+      <MobileTabBar currentPage={currentPage} onNavigate={(page) => handleNavigate(page as any)} />
     </>
   );
 
@@ -753,7 +755,12 @@ export default function App() {
 
   // 2026-05-28 砍掉 open-source-workbench (新版整页转作首页) + demand-* 4 个
   if (currentPage === 'open-source-home') {
-    return <OpenSourceHomePage onNavigate={(page, id) => handleNavigate(page as any, id)} />;
+    return (
+      <>
+        <OpenSourceHomePage onNavigate={(page, id) => handleNavigate(page as any, id)} />
+        <MobileTabBar currentPage={currentPage} onNavigate={(page) => handleNavigate(page as any)} />
+      </>
+    );
   }
 
   // 「益语的朋友们 · 直播讨论」介绍页(占位, 入口来自付费弹窗权益)
@@ -763,7 +770,12 @@ export default function App() {
 
   // 独角兽战略陪伴项目 · 金句型详情页(入口来自首页项目卡片)
   if (currentPage === 'workbench') {
-    return <WorkbenchPage onNavigate={(page) => handleNavigate(page as any)} />;
+    return (
+      <>
+        <WorkbenchPage onNavigate={(page) => handleNavigate(page as any)} />
+        <MobileTabBar currentPage={currentPage} onNavigate={(page) => handleNavigate(page as any)} />
+      </>
+    );
   }
 
   if (currentPage === 'unicorn-companion') {
@@ -821,6 +833,9 @@ export default function App() {
   // 老 HomePage 在 Step 10 物理删除前先保留 import 以便回滚;新首页不包 yiyuTong,
   // 与 line 782 open-source-home 分支一致.
   return (
-    <OpenSourceHomePage onNavigate={(page, id) => handleNavigate(page as any, id)} />
+    <>
+      <OpenSourceHomePage onNavigate={(page, id) => handleNavigate(page as any, id)} />
+      <MobileTabBar currentPage={currentPage} onNavigate={(page) => handleNavigate(page as any)} />
+    </>
   );
 }

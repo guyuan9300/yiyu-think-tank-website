@@ -703,8 +703,8 @@ export function CommunityBoardDrawer({ open, onClose }: CommunityBoardDrawerProp
         {/* 提交成功 toast */}
         {toast && (
           <div
-            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[6] bg-white rounded-full ring-1 ring-os-line px-5 py-2.5 text-[13.5px] font-medium text-os-navy shadow-[0_12px_28px_-8px_rgba(15,23,42,0.25)]"
-            style={{ animation: 'cbToastIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both' }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[61] bg-white rounded-full ring-1 ring-os-line px-5 py-2.5 text-[13.5px] font-medium text-os-navy shadow-[0_12px_28px_-8px_rgba(15,23,42,0.25)]"
+            style={{ animation: 'cbToastIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both', bottom: 'calc(2rem + var(--mobile-tabbar-h, 0px))' }}
           >
             <span className="inline-flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: ACCENT }} />

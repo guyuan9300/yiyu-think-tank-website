@@ -57,6 +57,17 @@ p {
   padding-top: max(0px, env(safe-area-inset-top));
 }
 
+/* 移动端 App 化底部 Tab 栏 (见 docs/MOBILE_APP_SHELL_PLAN.md) */
+/* 默认 0; MobileTabBar 可见时给 body 挂 .has-mobile-tabbar, 撑出正文底部留白防遮挡, */
+/* 同时浮球 (益语通/社区条) 据 --mobile-tabbar-h 上移避让。 */
+:root {
+  --mobile-tabbar-h: 0px;
+}
+body.has-mobile-tabbar {
+  --mobile-tabbar-h: calc(64px + env(safe-area-inset-bottom));
+  padding-bottom: var(--mobile-tabbar-h);
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

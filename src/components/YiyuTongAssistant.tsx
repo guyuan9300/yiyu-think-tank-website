@@ -822,6 +822,7 @@ export function YiyuTongAssistant({ currentPage }: { currentPage: string }) {
         data-page-agent-ignore="true"
         onClick={() => setIsOpen((prev) => !prev)}
         className="fixed bottom-6 right-6 z-[70] inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-3 text-sm font-medium text-white shadow-[0_20px_60px_-30px_rgba(15,23,42,0.6)] hover:bg-foreground/90"
+        style={{ bottom: 'calc(1.5rem + var(--mobile-tabbar-h, 0px))' }}
       >
         {isOpen ? <X className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
         {t({ zh: '益语通', en: 'Yiyu Assistant' })}
