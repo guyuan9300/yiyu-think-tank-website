@@ -27,7 +27,7 @@ html {
    仅在挂了 .snap-on 的页面生效(内容页/手机不挂,天然不磁吸)。
    .os-section(由 Section 组件标记)= min-h 一屏 + 垂直居中,内容超屏自然增高不裁切。 */
 html.snap-on {
-  scroll-snap-type: y proximity;
+  scroll-snap-type: y mandatory;
 }
 html.snap-on .os-section {
   min-height: 100vh;
