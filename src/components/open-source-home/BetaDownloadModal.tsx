@@ -2,7 +2,16 @@ import { useEffect, useState } from 'react';
 import { X, Laptop, KeyRound, CheckCircle2, ArrowRight, Github, Heart } from 'lucide-react';
 import { useLang } from '../../lib/i18n';
 import { isValidBetaCode, MAC_DMG_URL } from './betaDownload';
-import { submitBetaApplication, isApprovedBetaCode, BETA_USER_TYPE_LABEL, type BetaUserType } from '../../lib/betaApplications';
+import { isApprovedBetaCode } from '../../lib/betaApplications';
+import {
+  submitBetaApplication,
+  BETA_HEADCOUNT_OPTIONS,
+  BETA_CLOUD_CREDIT_LABEL,
+  BETA_CLOUD_CREDIT_EXCLUSIVE,
+  type BetaUserType,
+  type BetaHeadcount,
+  type BetaCloudCredit,
+} from '../../lib/betaApi';
 
 // 益语智库 AI · 内测下载弹窗 (第一期)
 //   主视图: ① 输入内测码下载  ② 申请内测(须登录)
@@ -29,16 +38,34 @@ export function BetaDownloadModal({ open, onClose, onNavigate }: {
   const [userType, setUserType] = useState<BetaUserType>('nonprofit');
   const [orgName, setOrgName] = useState('');
   const [purpose, setPurpose] = useState('');
+  const [email, setEmail] = useState('');
+  const [emailTouched, setEmailTouched] = useState(false);
+  const [headcount, setHeadcount] = useState<BetaHeadcount>(BETA_HEADCOUNT_OPTIONS[0]);
+  const [focusIssue, setFocusIssue] = useState('');
+  const [beneficiaryCount, setBeneficiaryCount] = useState('');
+  const [cloudCredit, setCloudCredit] = useState<BetaCloudCredit[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   const [formErr, setFormErr] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open) { setView('main'); setCode(''); setCodeState('idle'); setOrgName(''); setPurpose(''); setFormErr(null); setUserType('nonprofit'); return; }
+    if (!open) {
+      setView('main'); setCode(''); setCodeState('idle'); setOrgName(''); setPurpose(''); setFormErr(null); setUserType('nonprofit');
+      setEmail(''); setEmailTouched(false); setHeadcount(BETA_HEADCOUNT_OPTIONS[0]); setFocusIssue(''); setBeneficiaryCount(''); setCloudCredit([]); setSubmitting(false);
+      return;
+    }
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
   }, [open, onClose]);
+
+  // 进入申请视图时,默认预填登录邮箱(用户未手动改过才填)。
+  useEffect(() => {
+    if (view !== 'apply' || emailTouched) return;
+    const u = getCurrentUser();
+    if (u?.email) setEmail(u.email);
+  }, [view, emailTouched]);
 
   if (!open) return null;
 
@@ -53,18 +80,44 @@ export function BetaDownloadModal({ open, onClose, onNavigate }: {
     }
   };
 
-  const submitForm = () => {
-    if (!user) return;
+  // 云算力多选互斥:勾「已自有」或「暂无」(排他项)→ 仅留它自己;勾「腾讯/火山」→ 取消所有排他项。
+  const toggleCloudCredit = (val: BetaCloudCredit) => {
+    setFormErr(null);
+    setCloudCredit((prev) => {
+      const has = prev.includes(val);
+      if (has) return prev.filter((v) => v !== val);
+      if (BETA_CLOUD_CREDIT_EXCLUSIVE.includes(val)) return [val];
+      return [...prev.filter((v) => !BETA_CLOUD_CREDIT_EXCLUSIVE.includes(v)), val];
+    });
+  };
+
+  const submitForm = async () => {
+    if (!user || submitting) return;
+    const mail = email.trim();
+    if (!mail) { setFormErr('请填写邮箱'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) { setFormErr('邮箱格式不正确'); return; }
     if (isOrg && !orgName.trim()) { setFormErr('请填写机构名称'); return; }
     if (!isOrg && !purpose.trim()) { setFormErr('请填写使用用途'); return; }
-    submitBetaApplication({
-      userName: user.name,
-      userEmail: user.email,
-      userType,
-      orgName: isOrg ? orgName.trim() : undefined,
-      purpose: !isOrg ? purpose.trim() : undefined,
-    });
-    setView('applied');
+    setSubmitting(true);
+    setFormErr(null);
+    try {
+      await submitBetaApplication({
+        userName: user.name,
+        userEmail: mail,
+        userType,
+        orgName: isOrg ? orgName.trim() : undefined,
+        purpose: !isOrg ? purpose.trim() : undefined,
+        headcount: isOrg ? headcount : undefined,
+        focusIssue: focusIssue.trim() || undefined,
+        beneficiaryCount: isOrg ? (beneficiaryCount.trim() || undefined) : undefined,
+        cloudCredit,
+      });
+      setView('applied');
+    } catch (err) {
+      setFormErr(err instanceof Error ? err.message : '提交失败，请稍后重试');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const inputCls = 'w-full rounded-xl ring-1 ring-os-line bg-os-canvas px-3 py-2.5 text-[14px] text-os-ink focus:outline-none focus:ring-2 focus:ring-os-navy/30';
@@ -137,21 +190,69 @@ export function BetaDownloadModal({ open, onClose, onNavigate }: {
                 </div>
 
                 {isOrg ? (
-                  <div>
-                    <label className="block text-[12px] font-semibold text-os-navy mb-1.5">{t({ zh: '机构名称', en: 'Organization name' })}</label>
-                    <input value={orgName} onChange={(e) => { setOrgName(e.target.value); setFormErr(null); }} placeholder={t({ zh: userType === 'nonprofit' ? '如 XX 公益基金会' : '如 XX 科技有限公司', en: 'Organization name' })} className={inputCls} />
-                  </div>
+                  <>
+                    <div>
+                      <label className="block text-[12px] font-semibold text-os-navy mb-1.5">{userType === 'enterprise' ? t({ zh: '企业名称', en: 'Company name' }) : t({ zh: '机构名称', en: 'Organization name' })}</label>
+                      <input value={orgName} onChange={(e) => { setOrgName(e.target.value); setFormErr(null); }} placeholder={t({ zh: userType === 'nonprofit' ? '如 XX 公益基金会' : '如 XX 科技有限公司', en: 'Organization name' })} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className="block text-[12px] font-semibold text-os-navy mb-1.5">{t({ zh: '全职人数', en: 'Full-time headcount' })}</label>
+                      <select value={headcount} onChange={(e) => { setHeadcount(e.target.value as BetaHeadcount); setFormErr(null); }} className={inputCls}>
+                        {BETA_HEADCOUNT_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[12px] font-semibold text-os-navy mb-1.5">{userType === 'enterprise' ? t({ zh: '业务覆盖用户 / 客户规模', en: 'Users / customers served' }) : t({ zh: '项目覆盖受益人数', en: 'Beneficiaries reached' })}</label>
+                      <input value={beneficiaryCount} onChange={(e) => { setBeneficiaryCount(e.target.value); setFormErr(null); }} placeholder={t({ zh: userType === 'enterprise' ? '如 1 万活跃用户 / 暂无统计' : '如 500 人 / 暂无统计', en: 'e.g. 500 / not tracked yet' })} className={inputCls} />
+                    </div>
+                  </>
                 ) : (
                   <div>
                     <label className="block text-[12px] font-semibold text-os-navy mb-1.5">{t({ zh: '使用用途', en: 'Intended use' })}</label>
-                    <textarea value={purpose} onChange={(e) => { setPurpose(e.target.value); setFormErr(null); }} rows={3} placeholder={t({ zh: '随便写写你想用它做什么', en: 'Tell us what you want to use it for' })} className={inputCls} />
+                    <textarea value={purpose} onChange={(e) => { setPurpose(e.target.value); setFormErr(null); }} rows={3} placeholder={t({ zh: '随便写写你想用它做什么，比如想解决的问题、想用 AI 帮你做什么', en: 'Tell us what you want to use it for' })} className={inputCls} />
                   </div>
                 )}
+
+                {/* 邮箱(默认预填登录邮箱,可改) · 通用 */}
+                <div>
+                  <label className="block text-[12px] font-semibold text-os-navy mb-1.5">{t({ zh: '邮箱', en: 'Email' })}</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setEmailTouched(true); setFormErr(null); }}
+                    placeholder={t({ zh: '用于接收内测邀请码', en: 'For receiving your invite code' })}
+                    className={inputCls}
+                  />
+                </div>
+
+                {/* 关注领域与议题 · 通用 */}
+                <div>
+                  <label className="block text-[12px] font-semibold text-os-navy mb-1.5">{t({ zh: '关注领域与议题', en: 'Focus areas & issues' })}</label>
+                  <textarea value={focusIssue} onChange={(e) => { setFocusIssue(e.target.value); setFormErr(null); }} rows={2} placeholder={t({ zh: userType === 'individual' ? '如你关注的方向、想解决的问题' : '如乡村教育、环境保护、儿童福利等', en: 'e.g. rural education, environment, children…' })} className={inputCls} />
+                </div>
+
+                {/* 是否已申请免费云算力(多选) */}
+                <div>
+                  <label className="block text-[12px] font-semibold text-os-navy mb-1.5">{t({ zh: '是否已申请免费云算力', en: 'Applied for free cloud credits?' })}</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(Object.keys(BETA_CLOUD_CREDIT_LABEL) as BetaCloudCredit[]).map((val) => {
+                      const checked = cloudCredit.includes(val);
+                      return (
+                        <label key={val} className={`flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] cursor-pointer ring-1 transition ${checked ? 'bg-os-navy/5 ring-os-navy/40 text-os-ink' : 'bg-os-canvas ring-os-line text-os-muted hover:ring-os-navy/25'}`}>
+                          <input type="checkbox" checked={checked} onChange={() => toggleCloudCredit(val)} className="w-4 h-4 rounded border-os-line accent-os-navy shrink-0" />
+                          <span>{BETA_CLOUD_CREDIT_LABEL[val]}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 {formErr && <p className="text-[12.5px] text-rose-600">{formErr}</p>}
 
                 <div className="flex items-center gap-2 pt-1">
-                  <button onClick={submitForm} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-os-navy to-os-indigo px-5 py-2.5 text-[14px] font-semibold text-white shadow-os hover:brightness-110">{t({ zh: '提交申请', en: 'Submit' })}<ArrowRight className="w-4 h-4" /></button>
+                  <button onClick={() => void submitForm()} disabled={submitting} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-os-navy to-os-indigo px-5 py-2.5 text-[14px] font-semibold text-white shadow-os hover:brightness-110 disabled:opacity-60">{submitting ? t({ zh: '提交中…', en: 'Submitting…' }) : t({ zh: '提交申请', en: 'Submit' })}{!submitting && <ArrowRight className="w-4 h-4" />}</button>
                   <button onClick={() => setView('main')} className="px-4 py-2.5 rounded-xl text-[13px] font-medium text-os-navy ring-1 ring-os-line hover:bg-os-mist/50">{t({ zh: '返回', en: 'Back' })}</button>
                 </div>
                 <p className="text-[11px] text-os-muted/70">{t({ zh: '当前登录：', en: 'Logged in as: ' })}{user.name}{user.email ? `（${user.email}）` : ''}</p>

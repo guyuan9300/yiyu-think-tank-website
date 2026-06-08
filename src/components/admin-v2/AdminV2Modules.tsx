@@ -14,7 +14,14 @@ import { getReports, getInsights, deleteReport, saveReport, bootstrapFromPgApi, 
 import { parseFrontmatter } from '../../lib/reportMarkdown';
 import { savePdf, deletePdf, isIdbPdf, IDB_PDF_PREFIX } from '../../lib/reportPdfStore';
 import { clearPdfCoverCache } from '../PdfCoverImage';
-import { useBetaApplications, deleteBetaApplication, getBetaApplicationByEmail, markBetaInviteSent, BETA_USER_TYPE_LABEL, type BetaApplication } from '../../lib/betaApplications';
+import { useBetaApplications, getBetaApplicationByEmail, BETA_USER_TYPE_LABEL } from '../../lib/betaApplications';
+import {
+  adminListBetaApplications,
+  adminReviewBetaApplication,
+  BETA_CLOUD_CREDIT_LABEL,
+  type BetaApplication,
+  type BetaCloudCredit,
+} from '../../lib/betaApi';
 
 // ============================================================
 // admin-v2 · 后台模块实现.
@@ -842,12 +849,42 @@ function ReportEditModal({ report, onClose, onSaved }: { report: Report | null; 
 // 能力: 全字段列表 + 行内勾选(批量) + 一键直接发送邀请码邮件(无弹窗) + 详情。
 // ⚠️ 第一期"发送"=生成邀请码+标记已发送(本地); 第二期接 cloud_backend SMTP 后变真实投递。
 
+// 云算力枚举 → 中文标签(后端返回字符串数组;未知值原样显示)
+function formatCloudCredit(vals?: (BetaCloudCredit | string)[]): string {
+  if (!vals || vals.length === 0) return '—';
+  return vals.map(v => BETA_CLOUD_CREDIT_LABEL[v as BetaCloudCredit] || v).join('、');
+}
+
 export function BetaApplicationsPanel() {
-  const apps = useBetaApplications();
+  const [apps, setApps] = useState<BetaApplication[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
   const [detail, setDetail] = useState<BetaApplication | null>(null);
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sending, setSending] = useState(false);
   const pending = apps.filter(a => a.status === 'pending').length;
+
+  const reload = useCallback(async () => {
+    setLoading(true);
+    setLoadErr(null);
+    try {
+      const list = await adminListBetaApplications();
+      setApps(list);
+    } catch (err) {
+      setLoadErr(err instanceof Error ? err.message : '加载内测申请失败');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void reload(); }, [reload]);
+
+  // 把后端返回的最新对象合并进列表(同步详情弹窗)
+  const applyUpdated = (updated: BetaApplication) => {
+    setApps(prev => prev.map(a => (a.id === updated.id ? updated : a)));
+    setDetail(prev => (prev && prev.id === updated.id ? updated : prev));
+  };
 
   // 已选申请(仅保留仍存在的)
   const selectedApps = apps.filter(a => selected.has(a.id));
@@ -864,41 +901,69 @@ export function BetaApplicationsPanel() {
     setSelected(allChecked ? new Set() : new Set(apps.map(a => a.id)));
   };
 
-  // 单个: 一键直接发送邀请码邮件(无弹窗) — 生成码 + 标记已发送
-  const sendOne = (a: BetaApplication) => {
+  // 单个: 审核发码 + 触发后端 SMTP 真实发邀请码邮件
+  const sendOne = async (a: BetaApplication) => {
     if (!a.userEmail) { setMsg({ type: 'error', text: `${a.userName} 没有邮箱，无法发送邮件` }); return; }
-    const r = markBetaInviteSent(a.id);
-    if (r) setMsg({ type: 'success', text: `已向 ${r.userName}（${r.userEmail}）发送邀请码邮件：${r.code}` });
+    if (sending) return;
+    setSending(true);
+    try {
+      const r = await adminReviewBetaApplication(a.id, { sent: true });
+      applyUpdated(r);
+      setMsg({ type: 'success', text: `已向 ${r.userName}（${r.userEmail}）发送邀请码邮件：${r.code || '—'}` });
+    } catch (err) {
+      setMsg({ type: 'error', text: err instanceof Error ? err.message : '发送失败' });
+    } finally {
+      setSending(false);
+    }
   };
 
-  // 批量: 所选全部一键直接发送(无弹窗)
-  const sendBatch = () => {
+  // 批量: 所选全部审核发码并真实投递
+  const sendBatch = async () => {
     const targets = selectedApps.filter(a => a.userEmail);
     const skipped = selectedApps.length - targets.length;
     if (targets.length === 0) { setMsg({ type: 'error', text: '所选申请均无邮箱，无法发送' }); return; }
-    targets.forEach(a => markBetaInviteSent(a.id));
+    if (sending) return;
+    setSending(true);
+    let ok = 0;
+    const errs: string[] = [];
+    for (const a of targets) {
+      try {
+        const r = await adminReviewBetaApplication(a.id, { sent: true });
+        applyUpdated(r);
+        ok += 1;
+      } catch (err) {
+        errs.push(`${a.userName}: ${err instanceof Error ? err.message : '失败'}`);
+      }
+    }
     setSelected(new Set());
-    setMsg({ type: 'success', text: `已向 ${targets.length} 位申请人发送邀请码邮件${skipped > 0 ? `（${skipped} 位无邮箱已跳过）` : ''}` });
-  };
-
-  const onDelete = (a: BetaApplication) => {
-    if (!window.confirm(`删除 ${a.userName} 的软件申请？`)) return;
-    deleteBetaApplication(a.id);
-    if (detail?.id === a.id) setDetail(null);
-    setSelected(prev => { const n = new Set(prev); n.delete(a.id); return n; });
-    setMsg({ type: 'success', text: '已删除' });
+    setSending(false);
+    if (errs.length === 0) {
+      setMsg({ type: 'success', text: `已向 ${ok} 位申请人发送邀请码邮件${skipped > 0 ? `（${skipped} 位无邮箱已跳过）` : ''}` });
+    } else {
+      setMsg({ type: 'error', text: `成功 ${ok} 位，失败 ${errs.length} 位：${errs.join('；')}` });
+    }
   };
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <SectionTitle hint={`共 ${apps.length} 份软件申请 · 待审核 ${pending} · 优先公益慈善组织`}>软件申请 · 益语智库 AI</SectionTitle>
-        <button
-          onClick={sendBatch}
-          disabled={selectedApps.length === 0}
-          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-semibold transition ${selectedApps.length === 0 ? 'bg-os-canvas text-os-muted/60 cursor-not-allowed ring-1 ring-os-line' : 'bg-gradient-to-r from-os-navy to-os-indigo text-white hover:brightness-110 shadow-os'}`}
-        ><Mail className="w-3.5 h-3.5" />批量发送邀请码邮件{selectedApps.length > 0 ? `（${selectedApps.length}）` : ''}</button>
+        <SectionTitle hint={loading ? '正在从 cloud_backend 加载内测申请…' : `共 ${apps.length} 份软件申请 · 待审核 ${pending} · 优先公益慈善组织`}>软件申请 · 益语智库 AI</SectionTitle>
+        <div className="flex items-center gap-2">
+          <ToolbarButton variant="ghost" onClick={() => void reload()}><RefreshCw className="w-3.5 h-3.5" />刷新</ToolbarButton>
+          <button
+            onClick={() => void sendBatch()}
+            disabled={selectedApps.length === 0 || sending}
+            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-semibold transition ${selectedApps.length === 0 || sending ? 'bg-os-canvas text-os-muted/60 cursor-not-allowed ring-1 ring-os-line' : 'bg-gradient-to-r from-os-navy to-os-indigo text-white hover:brightness-110 shadow-os'}`}
+          ><Mail className="w-3.5 h-3.5" />批量发送邀请码邮件{selectedApps.length > 0 ? `（${selectedApps.length}）` : ''}</button>
+        </div>
       </div>
+
+      {loadErr && (
+        <div className="rounded-[12px] bg-rose-50 ring-1 ring-rose-200/60 px-4 py-2.5 text-[12.5px] text-rose-700 flex items-center justify-between gap-3 flex-wrap">
+          <span>加载内测申请失败：{loadErr}</span>
+          <button onClick={() => void reload()} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-os-paper ring-1 ring-os-line text-[12px] font-semibold text-os-navy hover:ring-os-navy/40"><RefreshCw className="w-3 h-3" />重试</button>
+        </div>
+      )}
 
       {msg && (
         <div className={`rounded-[12px] px-4 py-2.5 text-[13px] ${msg.type === 'success' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/60' : 'bg-rose-50 text-rose-700 ring-1 ring-rose-200/60'}`}>{msg.text}</div>
@@ -914,6 +979,8 @@ export function BetaApplicationsPanel() {
               <th className="px-3 py-3 font-semibold">申请人</th>
               <th className="px-3 py-3 font-semibold">类型</th>
               <th className="px-3 py-3 font-semibold">机构 / 用途</th>
+              <th className="px-3 py-3 font-semibold">全职人数</th>
+              <th className="px-3 py-3 font-semibold">云算力</th>
               <th className="px-3 py-3 font-semibold">邮箱</th>
               <th className="px-3 py-3 font-semibold">状态</th>
               <th className="px-3 py-3 font-semibold">邀请码</th>
@@ -922,8 +989,10 @@ export function BetaApplicationsPanel() {
             </tr>
           </thead>
           <tbody>
-            {apps.length === 0 ? (
-              <EmptyRow colSpan={9} label="暂无软件申请" />
+            {loading ? (
+              <EmptyRow colSpan={11} label="加载中…" />
+            ) : apps.length === 0 ? (
+              <EmptyRow colSpan={11} label="暂无软件申请" />
             ) : apps.map(a => {
               const checked = selected.has(a.id);
               return (
@@ -935,15 +1004,16 @@ export function BetaApplicationsPanel() {
                   <td className="px-3 py-3">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ring-1 ${a.userType === 'nonprofit' ? 'bg-emerald-50 text-emerald-700 ring-emerald-200/60' : 'bg-os-mist text-os-navy ring-os-line'}`}>{BETA_USER_TYPE_LABEL[a.userType]}</span>
                   </td>
-                  <td className="px-3 py-3 text-os-muted max-w-[220px] truncate" title={a.orgName || a.purpose || ''}>{a.orgName || a.purpose || '—'}</td>
+                  <td className="px-3 py-3 text-os-muted max-w-[200px] truncate" title={a.orgName || a.purpose || ''}>{a.orgName || a.purpose || '—'}</td>
+                  <td className="px-3 py-3 text-os-muted whitespace-nowrap">{a.headcount || '—'}</td>
+                  <td className="px-3 py-3 text-os-muted max-w-[160px] truncate" title={formatCloudCredit(a.cloudCredit)}>{formatCloudCredit(a.cloudCredit)}</td>
                   <td className="px-3 py-3 text-os-muted">{a.userEmail || '—'}</td>
                   <td className="px-3 py-3"><StatusBadge status={a.status === 'approved' ? 'published' : 'pending'} /></td>
                   <td className="px-3 py-3 font-mono text-[12px] text-os-blue">{a.code || '—'}</td>
                   <td className="px-3 py-3 text-os-muted whitespace-nowrap">{a.createdAt.slice(0, 10)}</td>
                   <td className="px-5 py-3 text-right whitespace-nowrap">
-                    <button onClick={() => sendOne(a)} disabled={!a.userEmail} className={`inline-flex items-center gap-1 text-[12px] font-semibold mr-3 ${!a.userEmail ? 'text-os-muted/50 cursor-not-allowed' : a.status === 'approved' ? 'text-emerald-700 hover:text-emerald-900' : 'text-os-blue hover:text-os-navy'}`} title={a.userEmail ? '直接发送邀请码邮件' : '无邮箱'}><Mail className="w-3.5 h-3.5" />{a.status === 'approved' ? '重发邮件' : '发送邀请码'}</button>
-                    <button onClick={() => setDetail(a)} className="text-os-blue hover:text-os-navy text-[12px] font-semibold mr-3">详情</button>
-                    <button onClick={() => onDelete(a)} className="text-os-muted hover:text-rose-600" title="删除"><Trash2 className="w-3.5 h-3.5 inline" /></button>
+                    <button onClick={() => void sendOne(a)} disabled={!a.userEmail || sending} className={`inline-flex items-center gap-1 text-[12px] font-semibold mr-3 ${!a.userEmail || sending ? 'text-os-muted/50 cursor-not-allowed' : a.status === 'approved' ? 'text-emerald-700 hover:text-emerald-900' : 'text-os-blue hover:text-os-navy'}`} title={a.userEmail ? '审核发码并发送邀请码邮件' : '无邮箱'}><Mail className="w-3.5 h-3.5" />{a.status === 'approved' ? '重发邮件' : '发送邀请码'}</button>
+                    <button onClick={() => setDetail(a)} className="text-os-blue hover:text-os-navy text-[12px] font-semibold">详情</button>
                   </td>
                 </tr>
               );
@@ -953,8 +1023,7 @@ export function BetaApplicationsPanel() {
       </Card>
 
       <p className="text-[12px] text-os-muted leading-6">
-        点「发送邀请码」即一键直接发送（自动生成邀请码并标记已发送，无需再确认）；勾选多行后用右上角「批量发送」群发。
-        <b className="text-os-navy">第二期</b>接入 cloud_backend 后由服务端 SMTP 真实投递。
+        点「发送邀请码」即审核通过并由 cloud_backend 服务端 SMTP <b className="text-os-navy">真实投递</b>邀请码邮件（自动生成邀请码，无需再确认）；勾选多行后用右上角「批量发送」群发。
       </p>
 
       {/* 申请详情弹窗 */}
@@ -970,12 +1039,17 @@ export function BetaApplicationsPanel() {
               <div className="flex gap-3"><dt className="w-20 shrink-0 text-os-muted">用户类型</dt><dd className="text-os-ink">{BETA_USER_TYPE_LABEL[detail.userType]}{detail.userType === 'nonprofit' ? '（优先）' : ''}</dd></div>
               {detail.orgName && <div className="flex gap-3"><dt className="w-20 shrink-0 text-os-muted">机构名称</dt><dd className="text-os-ink">{detail.orgName}</dd></div>}
               {detail.purpose && <div className="flex gap-3"><dt className="w-20 shrink-0 text-os-muted">使用用途</dt><dd className="text-os-ink leading-6">{detail.purpose}</dd></div>}
+              {detail.headcount && <div className="flex gap-3"><dt className="w-20 shrink-0 text-os-muted">全职人数</dt><dd className="text-os-ink">{detail.headcount}</dd></div>}
+              {detail.focusIssue && <div className="flex gap-3"><dt className="w-20 shrink-0 text-os-muted">关注领域</dt><dd className="text-os-ink leading-6">{detail.focusIssue}</dd></div>}
+              {detail.beneficiaryCount && <div className="flex gap-3"><dt className="w-20 shrink-0 text-os-muted">受益人数</dt><dd className="text-os-ink">{detail.beneficiaryCount}</dd></div>}
+              {detail.cloudCredit && detail.cloudCredit.length > 0 && <div className="flex gap-3"><dt className="w-20 shrink-0 text-os-muted">云算力</dt><dd className="text-os-ink">{formatCloudCredit(detail.cloudCredit)}</dd></div>}
               <div className="flex gap-3"><dt className="w-20 shrink-0 text-os-muted">申请时间</dt><dd className="text-os-muted">{detail.createdAt.slice(0, 16).replace('T', ' ')}</dd></div>
               <div className="flex gap-3"><dt className="w-20 shrink-0 text-os-muted">状态</dt><dd><StatusBadge status={detail.status === 'approved' ? 'published' : 'pending'} /></dd></div>
               {detail.code && <div className="flex gap-3"><dt className="w-20 shrink-0 text-os-muted">邀请码</dt><dd className="font-mono text-os-blue font-semibold">{detail.code}</dd></div>}
+              {detail.sentAt && <div className="flex gap-3"><dt className="w-20 shrink-0 text-os-muted">发码时间</dt><dd className="text-os-muted">{detail.sentAt.slice(0, 16).replace('T', ' ')}</dd></div>}
             </dl>
             <div className="mt-5 flex gap-2">
-              <button onClick={() => { sendOne(detail); setDetail(null); }} disabled={!detail.userEmail} className={`inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-semibold ${!detail.userEmail ? 'bg-os-canvas text-os-muted/60 cursor-not-allowed ring-1 ring-os-line' : detail.status === 'approved' ? 'bg-emerald-600 text-white hover:brightness-110 shadow-os' : 'bg-os-blue text-white hover:brightness-110 shadow-os'}`}><Mail className="w-3.5 h-3.5" />{detail.status === 'approved' ? '重发邀请码邮件' : '发送邀请码邮件'}</button>
+              <button onClick={() => { void sendOne(detail); }} disabled={!detail.userEmail || sending} className={`inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-semibold ${!detail.userEmail || sending ? 'bg-os-canvas text-os-muted/60 cursor-not-allowed ring-1 ring-os-line' : detail.status === 'approved' ? 'bg-emerald-600 text-white hover:brightness-110 shadow-os' : 'bg-os-blue text-white hover:brightness-110 shadow-os'}`}><Mail className="w-3.5 h-3.5" />{detail.status === 'approved' ? '重发邀请码邮件' : '发送邀请码邮件'}</button>
               <button onClick={() => setDetail(null)} className="px-5 py-2.5 rounded-full text-[13px] font-semibold bg-os-paper text-os-navy ring-1 ring-os-line hover:ring-os-navy/30">关闭</button>
             </div>
           </div>
