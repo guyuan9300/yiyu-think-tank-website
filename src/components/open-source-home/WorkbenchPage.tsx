@@ -53,6 +53,13 @@ export function WorkbenchPage({ onNavigate }: { onNavigate?: (page: string) => v
     };
   }, [t]);
 
+  // 营销页轻磁吸:仅本页挂 snap-on(尊重 prefers-reduced-motion);离开自动摘除
+  useEffect(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    document.documentElement.classList.add('snap-on');
+    return () => document.documentElement.classList.remove('snap-on');
+  }, []);
+
   return (
     <div className="min-h-screen bg-os-canvas text-os-ink antialiased font-sans selection:bg-os-navy selection:text-white">
       <ScrollProgress />
