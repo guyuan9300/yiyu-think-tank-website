@@ -1,4 +1,4 @@
-import { ArrowRight, ChevronRight, Check, Rocket, Code2, Heart, Store } from 'lucide-react';
+import { ArrowRight, ChevronRight, Check, Rocket, Code2, Heart, Store, Crown } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { MobileAppShell } from '../MobileAppShell';
 import { Reveal } from '../Reveal';
@@ -42,6 +42,13 @@ const PATHS = [
   { title: '深度战略陪伴', desc: '企业 / 组织 leader · 全程陪伴', page: 'consult-apply' },
   { title: '益语智库 AI（开源）', desc: '行动者 / 公益 / 小团队', page: 'workbench' },
 ];
+
+// 益语智库出品的两本书 (与网页版 BooksShowcase 同源, 点击进 book-detail 购买)
+const BOOKS = [
+  { cover: '/images/books/book-51-questions-cover.png', title: '创业者应该回答的51个问题', tagline: '看机会 · 找对人 · 通模式 · 能增长', price: 198, planId: 'book_51' },
+  { cover: '/images/books/book-learning-org.png', title: '学习型组织笔记', tagline: '让组织持续学习 · 让战略自驱生长', price: 138, planId: 'book_org' },
+];
+const BOOK_BUNDLE_PRICE = 198 + 138 - 50; // 286
 
 // 平台总账元信息 (数值在组件内取 useCashFlow/useSupportPool 实时计算, 与抽屉/桌面同源)
 type LedgerStat = { label: string; end: number; decimals: number; comma: boolean; unit: string; action?: 'cashflow' | 'pool' };
@@ -122,7 +129,7 @@ export function MobileHomeScreen({ onNavigate }: ScreenProps) {
             <Reveal>
               <div className="px-1 mb-4">
                 <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-os-blue">什么叫「可落地」</p>
-                <h2 className="mt-2.5 font-serif-display text-[27px] leading-tight font-semibold text-os-ink">你是不是也卡在这里？</h2>
+                <h2 className="mt-2.5 font-serif-display text-[27px] leading-tight font-semibold text-os-ink">益语智库，陪你改变</h2>
                 <p className="mt-3 text-[12.5px] leading-relaxed text-os-muted">
                   我们说的「增长」不只是收入 · <span className="text-os-ink/65">{DIMENSIONS.join(' · ')}</span>
                 </p>
@@ -197,6 +204,40 @@ export function MobileHomeScreen({ onNavigate }: ScreenProps) {
               <span className="text-os-ink/55">正在陪伴 ·</span> 公益基金会 / 品牌咨询机构 / 创业公司 / 行业领军企业 / 社会创新组织
             </p>
           </Reveal>
+
+          {/* ── 益语出品 · 两本好书 (放在"选择方式"上方) ── */}
+          <div>
+            <Reveal>
+              <p className="px-1 mb-2.5 text-[11px] font-semibold tracking-[0.14em] uppercase text-os-muted">益语智库出品 · 两本好书</p>
+            </Reveal>
+            <Reveal delay={60}>
+              <div className={`${SURFACE} overflow-hidden`}>
+                <div className="grid grid-cols-2 gap-3.5 p-4">
+                  {BOOKS.map((b) => (
+                    <button key={b.planId} onClick={() => onNavigate('book-detail', b.planId)}
+                      className="group text-left active:scale-[0.98] transition-transform">
+                      <div className="relative aspect-[3/4.1] overflow-hidden rounded-r-[8px] rounded-l-[2px] ring-1 ring-os-line shadow-[0_16px_32px_-20px_rgba(22,38,94,0.5)]">
+                        <img src={b.cover} alt={b.title} loading="lazy" className="h-full w-full object-cover object-top" />
+                        <span className="pointer-events-none absolute inset-y-0 left-0 w-[8px] bg-gradient-to-r from-black/25 via-black/8 to-transparent" />
+                      </div>
+                      <h3 className="mt-2.5 text-[13px] font-semibold leading-snug text-os-ink">{b.title}</h3>
+                      <p className="mt-0.5 text-[11px] leading-snug text-os-muted/80">{b.tagline}</p>
+                      <p className="mt-1 text-[12px] font-semibold text-os-navy">¥{b.price}<span className="ml-1 text-[10.5px] font-normal text-os-muted">含终身会员</span></p>
+                    </button>
+                  ))}
+                </div>
+                <p className="px-4 pb-3 text-[11.5px] leading-relaxed text-os-muted">
+                  购买任意一本即成为益语智库<span className="font-medium text-os-ink/70">终身会员</span>，畅读全部文章与报告。
+                </p>
+                <button onClick={() => onNavigate('book-detail', 'book_bundle')}
+                  className="w-full flex items-center gap-2 border-t border-os-line/70 px-4 py-3.5 text-left active:bg-os-mist/40 transition-colors bg-gradient-to-r from-os-mist/30 to-transparent">
+                  <Crown size={16} className="text-os-blue shrink-0" />
+                  <span className="flex-1 text-[13px] font-semibold text-os-ink">两本合购 ¥{BOOK_BUNDLE_PRICE}<span className="ml-1.5 text-[11.5px] font-normal text-os-muted">再省 50 元</span></span>
+                  <ChevronRight size={18} className="text-os-muted/45 shrink-0" />
+                </button>
+              </div>
+            </Reveal>
+          </div>
 
           {/* ── 两条路径 ── */}
           <Reveal>

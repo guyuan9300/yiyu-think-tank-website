@@ -5,6 +5,7 @@ import { ScrollProgress } from './ScrollProgress';
 import { Hero } from './sections/Hero';
 import { Features } from './sections/Features';
 import { Stories } from './sections/Stories';
+import { Join } from './sections/Join';
 import { FinalCta } from './sections/FinalCta';
 import { BetaDownloadModal } from './BetaDownloadModal';
 import { BETA_DOWNLOAD_EVENT } from './betaDownload';
@@ -61,6 +62,7 @@ export function WorkbenchPage({ onNavigate }: { onNavigate?: (page: string) => v
         <Hero />
         <Features />
         <Stories />
+        <Join />
         <FinalCta />
       </main>
       <OpenSourceFooter />

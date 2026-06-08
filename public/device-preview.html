@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>益语官网 · 手机模拟器</title>
+<style>
+  :root { --bg:#0f1115; --panel:#1a1d24; --line:#2a2e38; --txt:#e8eaf0; --muted:#8b90a0; --accent:#6d5efc; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: radial-gradient(1200px 600px at 50% -10%, #1c2030, var(--bg)); color:var(--txt);
+    min-height:100vh; display:flex; flex-direction:column; align-items:center; }
+  header { width:100%; padding:18px 24px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    border-bottom:1px solid var(--line); background:rgba(20,22,28,.6); backdrop-filter:blur(8px); position:sticky; top:0; z-index:10; }
+  header h1 { font-size:15px; margin:0; font-weight:600; letter-spacing:.3px; }
+  header .dot { width:8px; height:8px; border-radius:50%; background:#3ddc84; box-shadow:0 0 8px #3ddc84; }
+  .group { display:flex; gap:6px; align-items:center; }
+  .group .lbl { font-size:11px; color:var(--muted); margin-right:4px; }
+  button { font:inherit; font-size:12.5px; color:var(--txt); background:var(--panel); border:1px solid var(--line);
+    padding:6px 12px; border-radius:9px; cursor:pointer; transition:.15s; white-space:nowrap; }
+  button:hover { border-color:var(--accent); }
+  button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .spacer { flex:1; }
+  main { flex:1; display:flex; align-items:center; justify-content:center; padding:32px 16px; }
+  /* 手机外壳 */
+  .phone { position:relative; background:#0b0c10; border-radius:46px; padding:14px;
+    box-shadow:0 0 0 2px #2c2f3a, 0 30px 80px -20px rgba(0,0,0,.8), inset 0 0 0 1px #000;
+    transition:width .25s, height .25s; }
+  .phone .screen { position:relative; width:100%; height:100%; border-radius:34px; overflow:hidden; background:#fff; }
+  .phone .notch { position:absolute; top:0; left:50%; transform:translateX(-50%); width:46%; height:26px;
+    background:#0b0c10; border-radius:0 0 18px 18px; z-index:5; pointer-events:none; }
+  .phone iframe { width:100%; height:100%; border:0; display:block; }
+  .meta { text-align:center; margin-top:14px; color:var(--muted); font-size:12px; }
+  .hint { color:var(--muted); font-size:12px; max-width:280px; line-height:1.6; }
+  a.plain { color:var(--accent); text-decoration:none; }
+</style>
+</head>
+<body>
+<header>
+  <span class="dot"></span>
+  <h1>益语官网 · 手机模拟器</h1>
+  <div class="group"><span class="lbl">机型</span>
+    <button data-dev="390,844" class="active">iPhone 12 / 13</button>
+    <button data-dev="375,667">iPhone SE</button>
+    <button data-dev="393,852">Pixel 7</button>
+    <button data-dev="430,932">iPhone Pro Max</button>
+  </div>
+  <div class="group"><span class="lbl">页面</span>
+    <button data-go="/">首页</button>
+    <button data-go="/?page=articles">文章</button>
+    <button data-go="/?page=reports">报告</button>
+    <button data-go="/?page=workbench">益语AI</button>
+  </div>
+  <div class="group">
+    <button id="rotate">⟲ 横竖屏</button>
+    <button id="reload">↻ 刷新</button>
+  </div>
+  <div class="spacer"></div>
+  <span class="hint">内嵌 <a class="plain" href="http://localhost:5173/" target="_blank">localhost:5173</a>（dev server 须在运行）</span>
+</header>
+<main>
+  <div style="display:flex;flex-direction:column;align-items:center;">
+    <div class="phone" id="phone">
+      <div class="notch"></div>
+      <div class="screen"><iframe id="frame" src="http://localhost:5173/"></iframe></div>
+    </div>
+    <div class="meta" id="meta">iPhone 12 / 13 · 390 × 844</div>
+  </div>
+</main>
+<script>
+  const phone = document.getElementById('phone');
+  const screen = phone.querySelector('.screen');
+  const frame = document.getElementById('frame');
+  const meta = document.getElementById('meta');
+  let w = 390, h = 844, landscape = false, devName = 'iPhone 12 / 13';
+  const BASE = 'http://localhost:5173';
+
+  function apply() {
+    const vw = landscape ? h : w, vh = landscape ? w : h;
+    screen.style.width = vw + 'px';
+    screen.style.height = vh + 'px';
+    meta.textContent = `${devName} · ${vw} × ${vh}${landscape ? ' (横屏)' : ''}`;
+  }
+  document.querySelectorAll('[data-dev]').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('[data-dev]').forEach((x) => x.classList.remove('active'));
+    b.classList.add('active');
+    [w, h] = b.dataset.dev.split(',').map(Number);
+    devName = b.textContent; apply();
+  }));
+  document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
+    frame.src = BASE + b.dataset.go;
+  }));
+  document.getElementById('rotate').addEventListener('click', () => { landscape = !landscape; apply(); });
+  document.getElementById('reload').addEventListener('click', () => { frame.src = frame.src; });
+  apply();
+</script>
+</body>
+</html>

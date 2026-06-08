@@ -65,16 +65,19 @@ export function Hero() {
             </Reveal>
 
             <Reveal delay={300}>
-              <div className="mt-9 flex flex-wrap items-center gap-3">
-                <Button onClick={openBetaDownload} variant="primary" withArrow>
+              {/* 一主两次: 主 CTA(实心) + 两个平级次按钮(统一描边)。手机主按钮全宽、两次按钮等宽并排; 桌面三个一行 */}
+              <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <Button onClick={openBetaDownload} variant="primary" withArrow className="w-full sm:w-auto">
                   {t({ zh: '下载开源版', en: 'Download Open Source' })}
                 </Button>
-                <Button href={ANCHORS.features} variant="secondary">
-                  {t({ zh: '查看平台能力', en: 'Explore Capabilities' })}
-                </Button>
-                <Button href={ANCHORS.join} variant="ghost">
-                  {t({ zh: '参与行动者生态', en: 'Join the Ecosystem' })}
-                </Button>
+                <div className="grid grid-cols-2 gap-3 sm:contents">
+                  <Button href={ANCHORS.features} variant="secondary" className="w-full sm:w-auto">
+                    {t({ zh: '查看平台能力', en: 'Explore Capabilities' })}
+                  </Button>
+                  <Button href={ANCHORS.join} variant="secondary" className="w-full sm:w-auto">
+                    {t({ zh: '参与行动者生态', en: 'Join the Ecosystem' })}
+                  </Button>
+                </div>
               </div>
             </Reveal>
 
