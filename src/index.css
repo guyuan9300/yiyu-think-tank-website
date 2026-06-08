@@ -23,24 +23,6 @@ html {
   scroll-behavior: smooth;
 }
 
-/* 营销页(首页/益语AI)轻磁吸:proximity = 滚动停下时轻轻吸附到区块,不劫持滚轮。
-   仅在挂了 .snap-on 的页面生效(内容页/手机不挂,天然不磁吸)。
-   .os-section(由 Section 组件标记)= min-h 一屏 + 垂直居中,内容超屏自然增高不裁切。 */
-html.snap-on {
-  scroll-snap-type: y mandatory;
-}
-html.snap-on .os-section {
-  min-height: 100vh;
-  scroll-snap-align: start;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-@media (prefers-reduced-motion: reduce) {
-  html.snap-on { scroll-snap-type: none; }
-  html.snap-on .os-section { min-height: 0; display: block; }
-}
-
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background-color: var(--color-background);
