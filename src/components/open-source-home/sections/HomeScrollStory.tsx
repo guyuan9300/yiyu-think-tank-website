@@ -214,13 +214,28 @@ export function HomeScrollStory({ onNavigate }: HomeScrollStoryProps) {
 
           <div className="relative mt-16 grid md:grid-cols-3 gap-10 md:gap-6">
             <div className="hidden md:block absolute top-7 left-[16.6%] right-[16.6%] h-px bg-gradient-to-r from-os-line via-os-blue/45 to-os-line" aria-hidden="true" />
+            <style>{`
+              @keyframes hpZoom{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+              @keyframes hpSpin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+              @keyframes hpConnect{to{stroke-dashoffset:0}}
+            `}</style>
             {STEPS.map((s, i) => {
               const Icon = s.icon;
               return (
                 <Reveal key={s.stage.zh} delay={i * 120}>
-                  <div className="relative text-center md:text-left">
+                  <div className="group relative text-center md:text-left">
                     <div className="relative z-[1] w-14 h-14 rounded-full bg-os-navy text-white flex items-center justify-center mx-auto md:mx-0 mb-5 shadow-os ring-4 ring-os-canvas">
-                      <Icon className="w-[22px] h-[22px]" strokeWidth={1.7} />
+                      {i === 1 ? (
+                        // 中期:从断开到连接 —— 两节点默认无连线,hover 时连线 draw-in
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" className="w-[22px] h-[22px]" aria-hidden="true">
+                          <circle cx="6" cy="12" r="2.4" />
+                          <circle cx="18" cy="12" r="2.4" />
+                          <path d="M8.4 12H15.6" strokeDasharray="7.2" strokeDashoffset="7.2" className="group-hover:[animation:hpConnect_0.55s_ease-out_forwards]" />
+                        </svg>
+                      ) : (
+                        // 前期放大镜:缩放循环;后期循环箭头:转一圈停
+                        <Icon className={`w-[22px] h-[22px] ${i === 0 ? 'group-hover:[animation:hpZoom_0.9s_ease-in-out_infinite]' : 'group-hover:[animation:hpSpin_0.9s_ease-in-out_1]'}`} strokeWidth={1.7} />
+                      )}
                     </div>
                     <div className="text-[12px] font-semibold tracking-[0.16em] text-os-blue mb-1.5">{t(s.stage)}</div>
                     <h3 className="font-serif-display text-[20px] font-semibold text-os-navy mb-2.5">{t(s.title)}</h3>

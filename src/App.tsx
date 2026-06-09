@@ -313,21 +313,8 @@ export default function App() {
   const [selectedBookId, setSelectedBookId] = useState<string>(initialParams.get('id') || initialParams.get('bookId') || 'shimeshiquanli');
   const [selectedDetailId, setSelectedDetailId] = useState<string>(initialParams.get('id') || '');
   const [selectedCaseId, setSelectedCaseId] = useState<string>(initialParams.get('id') || 'case-1');
-  const shouldShowYiyuTong = ![
-    'admin',
-    'admin-legacy',
-    'admin-strategy-companion',
-    'login',
-    'register',
-    'forgot-password',
-    'reset-password',
-    'terms-of-service',
-    'privacy-policy',
-    'payment-checkout',
-    'payment-result',
-    'strategy-companion',
-    '404',
-  ].includes(currentPage);
+  // 益语通浮动助手已从网页下线(应产品要求);保留组件与挂载分支,需要时把此处改回条件即可恢复。
+  const shouldShowYiyuTong = false;
 
   const renderWithYiyuTong = (content: ReactNode, assistantPage = currentPage) => (
     <>
