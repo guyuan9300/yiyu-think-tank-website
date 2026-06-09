@@ -8,7 +8,6 @@ import { BooksShowcase } from './sections/BooksShowcase';
 import { QuoteBand } from './sections/QuoteBand';
 import { Ledger } from './sections/Ledger';
 import { Join } from './sections/Join';
-import { FinalCta } from './sections/FinalCta';
 import { useLang } from '../../lib/i18n';
 
 function setMeta(name: string, content: string) {
@@ -52,7 +51,6 @@ export function OpenSourceHomePage({ onNavigate }: { onNavigate?: (page: string,
         <QuoteBand />
         <Ledger />
         <Join />
-        <FinalCta />
       </main>
       <OpenSourceFooter />
     </div>

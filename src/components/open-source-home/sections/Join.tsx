@@ -1,71 +1,206 @@
-import { Megaphone, Code, HeartHandshake, Zap, type LucideIcon } from 'lucide-react';
-import { Container, Section, SectionHeading, Card, Badge, Button, Reveal } from '../ui';
+import { useRef, useState, type CSSProperties, type MouseEvent } from 'react';
+import { Container, Section, SectionHeading, Button, Reveal } from '../ui';
 import { PARTICIPATE } from '../links';
 import { useLang, type Bilingual } from '../../../lib/i18n';
+import { ActionerModal } from './ActionerModal';
+import { DeveloperModal } from './DeveloperModal';
+import { SupporterModal } from './SupporterModal';
+import { FunderModal } from './FunderModal';
+
+type GlyphProps = { className?: string };
+const SVG = (props: { className?: string; children: React.ReactNode }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className={props.className} aria-hidden="true">
+    {props.children}
+  </svg>
+);
+// 4 个定制线性图标(品牌细线风格);hover 各有贴合且细致的动画(keyframes 在 Join 的 <style>)
+const ActionerGlyph = ({ className }: GlyphProps) => ( // 纸飞机:hover 飞走 + 三道尾流流动
+  <SVG className={className}>
+    <g>
+      <path d="M6.2 14.5 3.8 16.9" className="opacity-0 group-hover:[animation:joinTrail_1.1s_ease-in-out_infinite]" />
+      <path d="M8.4 13 6 15.4" className="opacity-0 group-hover:[animation:joinTrail_1.1s_ease-in-out_infinite] [animation-delay:0.14s]" />
+      <path d="M4.4 16.6 2.4 18.6" className="opacity-0 group-hover:[animation:joinTrail_1.1s_ease-in-out_infinite] [animation-delay:0.28s]" />
+    </g>
+    <g className="origin-center [transform-box:fill-box] group-hover:[animation:joinFly_1.2s_ease-in-out_infinite]">
+      <path d="M21 3 10.3 13.7" /><path d="M21 3 14.4 21 10.3 13.7 3 9.6 21 3Z" />
+    </g>
+  </SVG>
+);
+const DeveloperGlyph = ({ className }: GlyphProps) => ( // 代码 </> + 光标:hover 光标闪烁(写代码)
+  <SVG className={className}>
+    <path d="M8 8 4.5 12 8 16" /><path d="M16 8 19.5 12 16 16" /><path d="M13.2 6.8 10.8 17.2" />
+    <path d="M21 8.5v7" className="opacity-0 group-hover:[animation:joinBlink_0.9s_steps(1,end)_infinite]" />
+  </SVG>
+);
+const SupporterGlyph = ({ className }: GlyphProps) => ( // 两个并肩的人 = 同行者;hover 交替迈步
+  <SVG className={className}>
+    <g className="group-hover:[animation:joinStep_0.7s_ease-in-out_infinite]"><circle cx="8.4" cy="7" r="2.1" /><path d="M5.2 18v-1.7a3.2 3.2 0 0 1 6.4 0V18" /></g>
+    <g className="group-hover:[animation:joinStep_0.7s_ease-in-out_infinite] [animation-delay:0.35s]"><circle cx="15.6" cy="7" r="2.1" /><path d="M12.4 18v-1.7a3.2 3.2 0 0 1 6.4 0V18" /></g>
+  </SVG>
+);
+const FunderGlyph = ({ className }: GlyphProps) => ( // 电池 + 三格:hover 一格→二格→三格逐格充满
+  <SVG className={className}>
+    <rect x="2.5" y="7.5" width="15" height="9" rx="2.5" /><path d="M20.5 11v2" />
+    <rect x="5" y="9.8" width="2.4" height="4.4" rx="0.6" fill="currentColor" stroke="none" className="opacity-[0.18] group-hover:[animation:joinChargeBar_1.6s_ease-in-out_infinite]" />
+    <rect x="8.6" y="9.8" width="2.4" height="4.4" rx="0.6" fill="currentColor" stroke="none" className="opacity-[0.18] group-hover:[animation:joinChargeBar_1.6s_ease-in-out_infinite] [animation-delay:0.32s]" />
+    <rect x="12.2" y="9.8" width="2.4" height="4.4" rx="0.6" fill="currentColor" stroke="none" className="opacity-[0.18] group-hover:[animation:joinChargeBar_1.6s_ease-in-out_infinite] [animation-delay:0.64s]" />
+  </SVG>
+);
 
 type Variant = 'primary' | 'secondary' | 'spark';
-// 4 个角色组成一条价值链:行动者出题 → 开发者造工具 → 支持方供资源 → 资助方供能。
-const ENTRIES: {
+type Entry = {
   role: Bilingual;
-  icon: LucideIcon;
+  Glyph: (props: GlyphProps) => JSX.Element;
   fit: Bilingual;
-  can: Bilingual;
+  lead?: boolean; // true: fit 是一句开放邀请语(不加「适合：」前缀,且作为卡片主体,无 can 明细)
+  can?: Bilingual;
   cta: Bilingual;
   variant: Variant;
   link: { href: string; external?: boolean };
-}[] = [
+};
+// 4 个角色组成一条价值链:行动者出题 → 开发者造工具 → 支持方供资源 → 资助方供能。
+const ENTRIES: Entry[] = [
   {
     role: { zh: '我是行动者', en: 'I am an Actioner' },
-    icon: Megaphone,
-    fit: { zh: '任何有真实行动要推进的人或团队 —— 青年行动者、公益组织、学生社群、小企业团队、独立创作者，以及战略咨询与基金会运营者。', en: 'Anyone with a real action to push — young actioners, nonprofits, student groups, small-business teams, independent creators, and strategy consultants or foundation operators.' },
-    can: { zh: '提出你要做的真实需求、申请使用开源版、申请算力/模块支持、提交行动故事、参与产品内测。', en: 'Raise the real need you want to push, apply for the open-source edition, request compute/module support, share action stories, and join the beta.' },
-    cta: { zh: '提出我的需求', en: 'Raise My Need' },
+    Glyph: ActionerGlyph,
+    lead: true,
+    fit: { zh: '如果你有一个改变世界、让社会变得更好的梦想，而且已经付诸行动 —— 告诉我们，我们会尽其所能支持你。', en: 'If you have a dream to make the world better, and you’ve already taken action — tell us, and we’ll do everything we can to back you.' },
+    cta: { zh: '提交我的行动方案', en: 'Submit My Action Plan' },
     variant: 'primary',
     link: PARTICIPATE.actioner,
   },
   {
     role: { zh: '我是开发者 · 技术伙伴', en: 'I am a Developer · Tech Partner' },
-    icon: Code,
-    fit: { zh: '前端、后端、AI 工程师、产品、测试、设计、技术志愿者、技术服务商 —— 门槛不在「大神」，在「愿意动手」。', en: 'Frontend, backend, AI engineers, product, QA, design, tech volunteers, tech vendors — the bar is not “genius,” it’s “willing to build.”' },
-    can: { zh: '认领一个真实模块、优化功能、提交 PR、写文档、做测试，把行动者的需求变成能用的工具。', en: 'Claim a real module, improve features, submit PRs, write docs, and test — turning actioners’ needs into usable tools.' },
+    Glyph: DeveloperGlyph,
+    lead: true,
+    fit: { zh: '有非常多的公益组织和有理想的年轻人，希望用更有效率、更现代的技术去解决社会问题、让社会变得更美好。如果你愿意支持他们，来看看可以和我们一起做什么。', en: 'So many nonprofits and idealistic young people want to use more efficient, more modern technology to solve social problems and make society better. If you’re willing to support them, come see what we can build together.' },
     cta: { zh: '认领一个模块', en: 'Claim a Module' },
     variant: 'secondary',
     link: PARTICIPATE.developer,
   },
   {
     role: { zh: '我是支持方', en: 'I am a Supporter' },
-    icon: HeartHandshake,
-    fit: { zh: '企业 CSR、软件/服务供应商、培训机构、空间提供方、行业专家与咨询顾问。', en: 'Corporate CSR, software/service vendors, training providers, space providers, industry experts and consultants.' },
-    can: { zh: '提供场地与免费服务资源、贡献领域方法论、给行动者真实应用场景、参与模块试点 —— 不一定是钱。', en: 'Offer space and free service resources, contribute domain methodology, give actioners real use cases, and join module pilots — money is not required.' },
-    cta: { zh: '贡献我的资源', en: 'Contribute Resources' },
+    Glyph: SupporterGlyph,
+    lead: true,
+    fit: { zh: '改变世界，常常是很孤单的一件事。如果你能提供一些资源、场地，或任何能帮勇敢者加速向前的东西 —— 非常欢迎你成为同行者。', en: 'Changing the world is often a lonely thing. If you can offer some resources, a space, or anything that helps the brave move forward faster — you’re warmly welcome to walk alongside us.' },
+    cta: { zh: '成为同行者', en: 'Walk Alongside Us' },
     variant: 'secondary',
     link: PARTICIPATE.merchant,
   },
   {
     role: { zh: '我是资助方', en: 'I am a Funder' },
-    icon: Zap,
-    fit: { zh: '基金会、资助型组织、影响力投资机构、企业、个人资助者。', en: 'Foundations, grantmakers, impact investors, companies, and individual funders.' },
-    can: { zh: '资助算力、资助一个公共模块、资助一个行动者使用计划、支持公益数字化能力建设。', en: 'Fund compute, fund a shared public module, sponsor an actioner’s usage plan, and back nonprofit digital capability.' },
+    Glyph: FunderGlyph,
+    lead: true,
+    fit: { zh: '益语智库社区和勇敢的行动者，都需要更多人一起来加电。我们要的不只是出钱的人 —— 我们希望每个人都能在一件真实的事里，获得共赢。', en: 'The Yiyu community and its brave actioners need more people to power them up. We don’t just need people who write cheques — we hope everyone wins together inside something real.' },
     cta: { zh: '为社区加电', en: 'Power Up the Community' },
     variant: 'spark',
     link: PARTICIPATE.supporter,
   },
 ];
 
-// 加电透明看板：不做假数据，没有真实数字时用状态标签
-const BOARD: { label: Bilingual; status: Bilingual }[] = [
-  { label: { zh: '可申请加电名额', en: 'Power-Up Slots Open' }, status: { zh: '首批招募中', en: 'First Cohort Recruiting' } },
-  { label: { zh: '待认领需求', en: 'Needs to Claim' }, status: { zh: '社区共建中', en: 'Community Building' } },
-  { label: { zh: '共建模块', en: 'Co-Built Modules' }, status: { zh: '内测中', en: 'In Beta' } },
-  { label: { zh: '支持 / 加电记录', en: 'Support Records' }, status: { zh: '即将开放', en: 'Coming Soon' } },
-  { label: { zh: '行动者故事', en: 'Actioner Stories' }, status: { zh: '征集中', en: 'Collecting Now' } },
-];
+function RoleCard({ entry, index, onCta }: { entry: Entry; index: number; onCta?: () => void }) {
+  const { t } = useLang();
+  const Glyph = entry.Glyph;
+  const ref = useRef<HTMLDivElement>(null);
+  const spark = entry.variant === 'spark';
+
+  // 鼠标光斑跟随:把指针坐标写进 CSS 变量,叠加层用它定位 radial 光斑
+  const onMove = (e: MouseEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty('--mx', `${e.clientX - r.left}px`);
+    el.style.setProperty('--my', `${e.clientY - r.top}px`);
+  };
+
+  return (
+    <div
+      ref={ref}
+      onMouseMove={onMove}
+      style={{ '--mx': '50%', '--my': '0%' } as CSSProperties}
+      className="group relative h-full overflow-hidden rounded-[22px] bg-os-paper ring-1 ring-os-line shadow-os transition-[transform,box-shadow,border-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-[6px] hover:shadow-os-lg hover:ring-os-navy/15"
+    >
+      {/* 顶部渐变发丝线:hover 亮起 */}
+      <span
+        aria-hidden
+        className={`absolute inset-x-0 top-0 h-px opacity-0 transition-opacity duration-500 group-hover:opacity-100 ${
+          spark ? 'bg-gradient-to-r from-transparent via-os-spark/55 to-transparent' : 'bg-gradient-to-r from-transparent via-os-blue/45 to-transparent'
+        }`}
+      />
+      {/* 鼠标光斑:仅 hover 可见,跟随指针 */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -inset-px opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+        style={{
+          background: `radial-gradient(360px circle at var(--mx) var(--my), ${spark ? 'rgba(124,58,237,0.10)' : 'rgba(44,111,208,0.09)'}, transparent 62%)`,
+        }}
+      />
+      {/* 角标序号:编辑感留白 */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute right-6 top-5 select-none font-serif-display text-[40px] leading-none text-os-navy/[0.05] transition-colors duration-500 group-hover:text-os-navy/[0.09]"
+      >
+        0{index + 1}
+      </span>
+
+      <div className="relative flex h-full flex-col p-7">
+        {/* 图标牌:横向长方形(矮一些,卡片不显长),hover 微浮 + 柔光;图标各有专属动画 */}
+        <div
+          className={`mb-6 flex h-[42px] w-[60px] items-center justify-center rounded-[13px] ring-1 transition-[transform,box-shadow] duration-500 group-hover:-translate-y-0.5 ${
+            spark
+              ? 'bg-os-spark-soft text-os-spark ring-os-spark/20 group-hover:shadow-[0_12px_24px_-10px_rgba(124,58,237,0.50)]'
+              : 'bg-os-mist text-os-blue ring-os-blue/15 group-hover:shadow-[0_12px_24px_-10px_rgba(44,111,208,0.45)]'
+          }`}
+        >
+          <Glyph className="h-[26px] w-[26px]" />
+        </div>
+
+        <h3 className="mb-3 font-serif-display text-[20px] font-semibold tracking-tight text-os-navy">{t(entry.role)}</h3>
+
+        {entry.lead ? (
+          <p className="flex-1 text-[14px] leading-[1.85] text-os-muted">{t(entry.fit)}</p>
+        ) : (
+          <>
+            <p className="mb-3 text-[12.5px] leading-relaxed text-os-muted/90">
+              <span className="font-semibold text-os-ink/70">{t({ zh: '适合：', en: 'For: ' })}</span>
+              {t(entry.fit)}
+            </p>
+            <p className="flex-1 text-[14px] leading-[1.75] text-os-muted">{entry.can ? t(entry.can) : ''}</p>
+          </>
+        )}
+
+        <div className="mt-7">
+          {onCta ? (
+            <Button onClick={onCta} variant={entry.variant} className="w-full">
+              {t(entry.cta)}
+            </Button>
+          ) : (
+            <Button href={entry.link.href} external={entry.link.external} variant={entry.variant} className="w-full">
+              {t(entry.cta)}
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function Join() {
   const { t } = useLang();
+  const [actionerOpen, setActionerOpen] = useState(false);
+  const [developerOpen, setDeveloperOpen] = useState(false);
+  const [supporterOpen, setSupporterOpen] = useState(false);
+  const [funderOpen, setFunderOpen] = useState(false);
   return (
     <Section id="join" tone="canvas">
       <Container>
+        <style>{`
+          @keyframes joinFly {0%{transform:translate(0,0) rotate(0);opacity:1}55%{transform:translate(8px,-9px) rotate(14deg);opacity:0}56%{transform:translate(-8px,8px) rotate(0);opacity:0}100%{transform:translate(0,0) rotate(0);opacity:1}}
+          @keyframes joinTrail {0%{opacity:0;transform:translate(0,0)}35%{opacity:0.6}100%{opacity:0;transform:translate(-3px,3px)}}
+          @keyframes joinBlink {0%,49%{opacity:1}50%,100%{opacity:0}}
+          @keyframes joinStep {0%,100%{transform:translateY(0)}50%{transform:translateY(-1.6px)}}
+          @keyframes joinChargeBar {0%{opacity:0.18}25%{opacity:1}85%{opacity:1}100%{opacity:0.18}}
+        `}</style>
         <SectionHeading
           eyebrow={t({ zh: '加入我们', en: 'Join Us' })}
           title={t({ zh: '一起为行动者加电', en: 'Power up actioners, together' })}
@@ -73,36 +208,14 @@ export function Join() {
         />
 
         <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {ENTRIES.map((e, i) => {
-            const Icon = e.icon;
-            return (
-              <Reveal key={e.role.zh} delay={(i % 4) * 80}>
-                <Card className="h-full p-7 flex flex-col">
-                  <div
-                    className={`w-11 h-11 rounded-[13px] flex items-center justify-center mb-5 ${
-                      e.variant === 'spark' ? 'bg-os-spark-soft text-os-spark' : 'bg-os-mist text-os-blue'
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <h3 className="font-serif-display text-[19px] font-semibold text-os-navy mb-2">{t(e.role)}</h3>
-                  <p className="text-[12.5px] leading-relaxed text-os-muted/90 mb-3">
-                    <span className="font-semibold text-os-ink/70">{t({ zh: '适合：', en: 'For: ' })}</span>
-                    {t(e.fit)}
-                  </p>
-                  <p className="text-[14px] leading-[1.75] text-os-muted flex-1">{t(e.can)}</p>
-                  <div className="mt-6">
-                    <Button href={e.link.href} external={e.link.external} variant={e.variant} className="w-full">
-                      {t(e.cta)}
-                    </Button>
-                  </div>
-                </Card>
-              </Reveal>
-            );
-          })}
+          {ENTRIES.map((e, i) => (
+            <Reveal key={e.role.zh} delay={(i % 4) * 80}>
+              <RoleCard entry={e} index={i} onCta={i === 0 ? () => setActionerOpen(true) : i === 1 ? () => setDeveloperOpen(true) : i === 2 ? () => setSupporterOpen(true) : () => setFunderOpen(true)} />
+            </Reveal>
+          ))}
         </div>
 
-        {/* 价值宣言：整宽 navy 带，承接到透明看板 */}
+        {/* 价值宣言：整宽 navy 带（收尾） */}
         <Reveal delay={120}>
           <div className="mt-8 rounded-[20px] bg-os-navy text-white p-7 sm:p-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <p className="font-serif-display text-[20px] leading-[1.5] shrink-0">
@@ -113,26 +226,12 @@ export function Join() {
             </p>
           </div>
         </Reveal>
-
-        {/* 透明看板 */}
-        <Reveal delay={160}>
-          <div className="mt-6 rounded-[20px] bg-os-paper ring-1 ring-os-line shadow-os p-6 sm:p-7">
-            <div className="flex items-center gap-2 mb-5">
-              <span className="h-px w-7 bg-os-spark/70" />
-              <span className="text-[12px] font-semibold tracking-[0.16em] text-os-spark">{t({ zh: '加电透明看板', en: 'Transparency Board' })}</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-              {BOARD.map((b) => (
-                <div key={b.label.zh} className="rounded-[14px] bg-os-canvas ring-1 ring-os-line px-4 py-4">
-                  <div className="text-[13px] text-os-muted mb-2">{t(b.label)}</div>
-                  <Badge tone="recruit">{t(b.status)}</Badge>
-                </div>
-              ))}
-            </div>
-            <p className="mt-4 text-[12px] text-os-muted/80">{t({ zh: '看板只展示真实状态，不展示虚构数字。功能上线后会替换为真实进展。', en: 'The board shows real status only, never made-up numbers. It will be replaced with real progress once the feature launches.' })}</p>
-          </div>
-        </Reveal>
       </Container>
+
+      <ActionerModal open={actionerOpen} onClose={() => setActionerOpen(false)} />
+      <DeveloperModal open={developerOpen} onClose={() => setDeveloperOpen(false)} />
+      <SupporterModal open={supporterOpen} onClose={() => setSupporterOpen(false)} />
+      <FunderModal open={funderOpen} onClose={() => setFunderOpen(false)} />
     </Section>
   );
 }
