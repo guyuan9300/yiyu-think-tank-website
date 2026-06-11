@@ -23,6 +23,8 @@ create table if not exists reports (
   cover_image text,
   file_url text,
   file_size bigint,
+  markdown_content text,
+  markdown_url text,
   pages int,
   publish_date date,
   status text default 'draft',

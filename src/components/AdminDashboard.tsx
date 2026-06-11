@@ -125,6 +125,15 @@ const validateAdminUploadSize = (
   return true;
 };
 
+const isValidMarkdownFile = (file: File) => {
+  const name = file.name.toLowerCase();
+  return file.type === 'text/markdown'
+    || file.type === 'text/plain'
+    || name.endsWith('.md')
+    || name.endsWith('.markdown')
+    || name.endsWith('.txt');
+};
+
 // Props
 interface AdminDashboardProps {
   onLogout?: () => void;
@@ -259,10 +268,12 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const [bookPages, setBookPages] = useState<number>(0);
   const [calculatedReadTime, setCalculatedReadTime] = useState<string>('');
   const [reportFile, setReportFile] = useState<File | null>(null);
+  const [reportMarkdownFile, setReportMarkdownFile] = useState<File | null>(null);
   const [bookFile, setBookFile] = useState<File | null>(null);
   const [insightFile, setInsightFile] = useState<File | null>(null);
   const [methodologyFile, setMethodologyFile] = useState<File | null>(null);
   const [uploadedReportAsset, setUploadedReportAsset] = useState<{ url: string; size: number; filename: string } | null>(null);
+  const [uploadedReportMarkdownAsset, setUploadedReportMarkdownAsset] = useState<{ url: string; size: number; filename: string } | null>(null);
   const [uploadedBookAsset, setUploadedBookAsset] = useState<{ url: string; size: number; filename: string } | null>(null);
   const [uploadedInsightAsset, setUploadedInsightAsset] = useState<{ url: string; size: number; filename: string } | null>(null);
   const [uploadedMethodologyAsset, setUploadedMethodologyAsset] = useState<{ url: string; size: number; filename: string } | null>(null);
@@ -274,6 +285,7 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
   const coverInputRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const reportFileInputRef = useRef<HTMLInputElement>(null);
+  const reportMarkdownFileInputRef = useRef<HTMLInputElement>(null);
   const bookCoverFileInputRef = useRef<HTMLInputElement>(null);
   const bookFileInputRef = useRef<HTMLInputElement>(null);
   const insightFileInputRef = useRef<HTMLInputElement>(null);
@@ -748,6 +760,27 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
     }
   };
 
+  const handleReportMarkdownFileButtonClick = () => {
+    reportMarkdownFileInputRef.current?.click();
+  };
+
+  const handleReportMarkdownFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!isValidMarkdownFile(file)) {
+        alert('请选择 Markdown 或 TXT 格式的文件');
+        e.target.value = '';
+        return;
+      }
+      if (!validateAdminUploadSize(file, setMessage)) {
+        e.target.value = '';
+        return;
+      }
+      setUploadedReportMarkdownAsset(null);
+      setReportMarkdownFile(file);
+    }
+  };
+
   const handleBookFileButtonClick = () => {
     bookFileInputRef.current?.click();
   };
@@ -1159,6 +1192,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       const current = editingItem as Report | null;
       let nextFileUrl = current?.fileUrl;
       let nextFileSize = current?.fileSize;
+      let nextMarkdownUrl = current?.markdownUrl;
+      let nextMarkdownContent = current?.markdownContent;
 
       if (uploadedReportAsset?.url) {
         nextFileUrl = uploadedReportAsset.url;
@@ -1177,6 +1212,28 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         });
       }
 
+      if (uploadedReportMarkdownAsset?.url) {
+        nextMarkdownUrl = uploadedReportMarkdownAsset.url;
+        nextMarkdownContent = undefined;
+      } else if (reportMarkdownFile) {
+        const uploaded = await uploadAdminAsset(reportMarkdownFile, 'report');
+        if (!uploaded.ok || !uploaded.data) {
+          throw new Error(uploaded.error || 'Markdown 解读稿上传失败');
+        }
+        nextMarkdownUrl = uploaded.data.url;
+        nextMarkdownContent = undefined;
+        setUploadedReportMarkdownAsset({
+          url: uploaded.data.url,
+          size: uploaded.data.size,
+          filename: uploaded.data.filename,
+        });
+      }
+
+      const hasMarkdown = Boolean(nextMarkdownContent || nextMarkdownUrl);
+      if (reportStatus === 'published' && !hasMarkdown) {
+        throw new Error('请上传 Markdown 解读稿后再发布。前台报告页依赖 Markdown 渲染正文和 AI 上下文。');
+      }
+
       const reportData: Partial<Report> = {
         id: current ? current.id : undefined,
         // 必填项缺失时先用“待补充”占位
@@ -1186,7 +1243,10 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         topics: selectedTopics.length > 0 ? (selectedTopics as any) : (current?.topics || ['战略']),
         summary: (formData.get('summary') as string) || current?.summary || '待补充',
         version: current?.version || '',
-        format: ['PDF'],
+        format: [
+          ...(nextFileUrl ? ['PDF'] : []),
+          ...(hasMarkdown ? ['Markdown'] : []),
+        ],
         // 必填项：封面缺失时用占位
         coverImage: coverImage || current?.coverImage || 'images/placeholders/document.svg',
         pages: reportPages || current?.pages,
@@ -1197,6 +1257,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
         // 报告文件信息
         fileUrl: nextFileUrl,
         fileSize: nextFileSize,
+        markdownUrl: nextMarkdownUrl,
+        markdownContent: nextMarkdownContent,
       };
 
       const saved = await saveReportDirect(reportData);
@@ -1222,6 +1284,8 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
       setCalculatedReadTime('');
       setReportFile(null);
       setUploadedReportAsset(null);
+      setReportMarkdownFile(null);
+      setUploadedReportMarkdownAsset(null);
       setReportStatus('published');
       setMessage({ type: 'success', text: '报告已发布，前台报告库可见！' });
     } catch (error) {
@@ -1982,7 +2046,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                       setReportPages(0);
                       setCalculatedReadTime('');
                       setReportFile(null);
+                      setReportMarkdownFile(null);
                       setUploadedReportAsset(null);
+                      setUploadedReportMarkdownAsset(null);
                       setReportStatus('published');
                       setSyncClientIds([]);
                       setShowReportForm(true);
@@ -2037,10 +2103,11 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                               report.status === 'published' ? 'bg-green-100 text-green-700' :
+                              report.status === 'parsed' ? 'bg-blue-100 text-blue-700' :
                               report.status === 'draft' ? 'bg-amber-100 text-amber-700' :
                               'bg-gray-100 text-gray-600'
                             }`}>
-                              {report.status === 'published' ? '已发布' : report.status === 'draft' ? '草稿' : '已归档'}
+                              {report.status === 'published' ? '已发布' : report.status === 'parsed' ? '已解析' : report.status === 'draft' ? '草稿' : '已归档'}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -2053,7 +2120,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                                   setReportPages(report.pages || 0);
                                   setCalculatedReadTime(report.pages ? calculateReadTime(report.pages) : '');
                                   setReportFile(null);
+                                  setReportMarkdownFile(null);
                                   setUploadedReportAsset(null);
+                                  setUploadedReportMarkdownAsset(null);
                                   setSyncClientIds([]);
                                   (async () => {
                                     try {
@@ -2797,7 +2866,9 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
                 setReportPages(0);
                 setCalculatedReadTime('');
                 setReportFile(null);
+                setReportMarkdownFile(null);
                 setUploadedReportAsset(null);
+                setUploadedReportMarkdownAsset(null);
                 setReportStatus('published');
               }}
               onSave={handleSaveReport}
@@ -2812,12 +2883,18 @@ export function AdminDashboard({ onLogout, onNavigateHome }: AdminDashboardProps
               reportFile={reportFile}
               setReportFile={setReportFile}
               clearUploadedAsset={() => setUploadedReportAsset(null)}
+              reportMarkdownFile={reportMarkdownFile}
+              setReportMarkdownFile={setReportMarkdownFile}
+              clearUploadedMarkdownAsset={() => setUploadedReportMarkdownAsset(null)}
               setCalculatedReadTime={setCalculatedReadTime}
               reportStatus={reportStatus}
               setReportStatus={setReportStatus}
               reportFileInputRef={reportFileInputRef}
               handleReportFileButtonClick={handleReportFileButtonClick}
               handleReportFileSelect={handleReportFileSelect}
+              reportMarkdownFileInputRef={reportMarkdownFileInputRef}
+              handleReportMarkdownFileButtonClick={handleReportMarkdownFileButtonClick}
+              handleReportMarkdownFileSelect={handleReportMarkdownFileSelect}
               onAiPrefill={handleReportAiPrefill}
               isAiFilling={isReportAiFilling}
             />
@@ -3238,6 +3315,12 @@ interface ReportFormModalProps {
   reportFileInputRef: React.RefObject<HTMLInputElement>;
   handleReportFileButtonClick: () => void;
   handleReportFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  reportMarkdownFile: File | null;
+  setReportMarkdownFile: React.Dispatch<React.SetStateAction<File | null>>;
+  clearUploadedMarkdownAsset: () => void;
+  reportMarkdownFileInputRef: React.RefObject<HTMLInputElement>;
+  handleReportMarkdownFileButtonClick: () => void;
+  handleReportMarkdownFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onAiPrefill: (draft: {
     title: string;
     publisher: string;
@@ -3279,6 +3362,12 @@ function ReportFormModal({
   reportFileInputRef,
   handleReportFileButtonClick,
   handleReportFileSelect,
+  reportMarkdownFile,
+  setReportMarkdownFile,
+  clearUploadedMarkdownAsset,
+  reportMarkdownFileInputRef,
+  handleReportMarkdownFileButtonClick,
+  handleReportMarkdownFileSelect,
   onAiPrefill,
   isAiFilling,
   showProjectSync,
@@ -3383,6 +3472,14 @@ function ReportFormModal({
             type="file"
             accept="application/pdf"
             onChange={handleReportFileSelect}
+            className="hidden"
+          />
+
+          <input
+            ref={reportMarkdownFileInputRef}
+            type="file"
+            accept=".md,.markdown,.txt,text/markdown,text/plain"
+            onChange={handleReportMarkdownFileSelect}
             className="hidden"
           />
 
@@ -3532,6 +3629,86 @@ function ReportFormModal({
                   </button>
                   
                   <p className="text-xs mt-4 text-gray-500">上传后会随报告一起保存到后台记录中。{getAdminUploadHint('PDF')}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Markdown 解读稿上传 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Markdown 解读稿 <span className="text-red-500">*</span>
+              <span className="text-gray-400 text-xs ml-2">({getAdminUploadHint('MD / Markdown / TXT')})</span>
+            </label>
+
+            {reportMarkdownFile ? (
+              <div className="border-2 border-blue-500 bg-blue-50 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-10 h-10 text-blue-600" />
+                    <div>
+                      <p className="font-medium text-gray-900">{reportMarkdownFile.name}</p>
+                      <p className="text-sm text-gray-500">
+                        {formatFileSize(reportMarkdownFile.size)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded-full">
+                      已选择
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReportMarkdownFile(null);
+                        clearUploadedMarkdownAsset();
+                      }}
+                      className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-500"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (editingItem?.markdownUrl || editingItem?.markdownContent) ? (
+              <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileText className="w-10 h-10 text-blue-600 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 truncate">
+                        {editingItem.markdownUrl
+                          ? decodeURIComponent(editingItem.markdownUrl.split('/').pop() || editingItem.markdownUrl)
+                          : '已保存 Markdown 正文'}
+                      </p>
+                      <p className="text-sm text-gray-500">前台报告正文和 AI 上下文已具备</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleReportMarkdownFileButtonClick}
+                    className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium"
+                  >
+                    重新上传
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center transition-colors hover:border-blue-500">
+                <div className="flex flex-col items-center justify-center text-gray-400">
+                  <Upload className="w-12 h-12 mb-2" />
+                  <p className="text-sm mb-4">上传与 PDF 一一对应的 Markdown 解读稿</p>
+                  <button
+                    type="button"
+                    onClick={handleReportMarkdownFileButtonClick}
+                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    <Upload className="w-5 h-5" />
+                    选择Markdown文件
+                  </button>
+                  <p className="text-xs mt-4 text-gray-500">
+                    已发布报告必须包含 Markdown；前台只展示带解读稿的报告。
+                  </p>
                 </div>
               </div>
             )}

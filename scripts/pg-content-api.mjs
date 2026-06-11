@@ -1,5 +1,10 @@
 import http from 'node:http';
 import { spawn } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import crypto from 'node:crypto';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { promisify } from 'node:util';
 
 const PORT = Number(process.env.PG_API_PORT || 8790);
 const PGHOST = process.env.PGHOST || '127.0.0.1';
@@ -7,6 +12,9 @@ const PGPORT = process.env.PGPORT || '5432';
 const PGUSER = process.env.PGUSER || '';
 const PGPASSWORD = process.env.PGPASSWORD || '';
 const PGDATABASE = process.env.PGDATABASE || 'postgres';
+const SITE_PUBLIC_ROOT = process.env.YIYU_SITE_ROOT || '/var/www/yiyu-site';
+const ADMIN_UPLOAD_ROOT = process.env.YIYU_UPLOAD_ROOT || path.join(SITE_PUBLIC_ROOT, 'uploads');
+const execFileAsync = promisify(execFile);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -135,6 +143,72 @@ function rHasValue(rows, key) {
   return rows.some((r) => r && r[key] !== undefined);
 }
 
+function hasPlaceholderCover(coverImage) {
+  const value = String(coverImage || '').trim();
+  return !value || value === 'images/placeholders/document.svg' || value.endsWith('/images/placeholders/document.svg');
+}
+
+function resolveUploadPath(fileUrl) {
+  const raw = String(fileUrl || '').trim();
+  if (!raw) return '';
+
+  let pathname = raw;
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      pathname = new URL(raw).pathname;
+    } catch {
+      return '';
+    }
+  }
+
+  if (!pathname.startsWith('/uploads/') || !pathname.toLowerCase().endsWith('.pdf')) return '';
+
+  const uploadRoot = path.resolve(ADMIN_UPLOAD_ROOT);
+  const resolved = path.resolve(path.join(uploadRoot, decodeURIComponent(pathname.slice('/uploads/'.length))));
+  if (resolved !== uploadRoot && !resolved.startsWith(`${uploadRoot}${path.sep}`)) return '';
+  return resolved;
+}
+
+async function ensureReadableFile(filePath) {
+  const stat = await fs.stat(filePath);
+  if (!stat.isFile() || stat.size <= 0) throw new Error(`file not readable: ${filePath}`);
+}
+
+async function renderPdfFirstPageCover(filePath) {
+  const coverDir = path.join(ADMIN_UPLOAD_ROOT, 'ai-covers', 'report');
+  await fs.mkdir(coverDir, { recursive: true });
+
+  const baseName = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+  const outputPrefix = path.join(coverDir, baseName);
+  await execFileAsync('pdftoppm', ['-png', '-f', '1', '-singlefile', filePath, outputPrefix], {
+    maxBuffer: 16 * 1024 * 1024,
+  });
+
+  const coverPath = `${outputPrefix}.png`;
+  await ensureReadableFile(coverPath);
+  return `/uploads/ai-covers/report/${path.basename(coverPath)}`;
+}
+
+async function ensureReportCover(row) {
+  if (!row || !hasPlaceholderCover(row.coverImage)) return row;
+
+  const filePath = resolveUploadPath(row.fileUrl);
+  if (!filePath) return row;
+
+  try {
+    await ensureReadableFile(filePath);
+    return {
+      ...row,
+      coverImage: await renderPdfFirstPageCover(filePath),
+    };
+  } catch (error) {
+    console.warn(
+      `[pg-content-api-lite] failed to render report cover for ${row.id}: ${error instanceof Error ? error.message : String(error)}`
+    );
+    return row;
+  }
+}
+
 async function syncKey(key, data) {
   const map = {
     yiyu_reports: 'reports',
@@ -177,7 +251,10 @@ async function syncKey(key, data) {
   const table = map[key];
   if (!table) throw new Error(`unsupported key: ${key}`);
   const rows = Array.isArray(data) ? data : [];
-  const validRows = rows.filter((row) => row && row.id);
+  let validRows = rows.filter((row) => row && row.id);
+  if (table === 'reports') {
+    validRows = await Promise.all(validRows.map(ensureReportCover));
+  }
 
   if (validRows.length === 0) {
     await runSql(`DELETE FROM ${table};`);
@@ -194,7 +271,7 @@ async function syncKey(key, data) {
 
 async function loadSnapshot() {
   const [reports, insights, books, categories, tags, settings, methodologies] = await Promise.all([
-    psqlJson("select id,title,publisher,summary,topics,version,format,cover_image as \"coverImage\",file_url as \"fileUrl\",file_size as \"fileSize\",pages,to_char(publish_date,'YYYY-MM-DD') as \"publishDate\",status,show_on_home as \"showOnHome\",views,downloads,coalesce(likes,0) as likes,coalesce(favorites_count,0) as \"favoritesCount\",created_at as \"createdAt\",updated_at as \"updatedAt\" from reports where status='published' order by publish_date desc nulls last, created_at desc"),
+    psqlJson("select id,title,publisher,summary,topics,version,format,cover_image as \"coverImage\",file_url as \"fileUrl\",file_size as \"fileSize\",markdown_content as \"markdownContent\",markdown_url as \"markdownUrl\",pages,to_char(publish_date,'YYYY-MM-DD') as \"publishDate\",status,show_on_home as \"showOnHome\",views,downloads,coalesce(likes,0) as likes,coalesce(favorites_count,0) as \"favoritesCount\",created_at as \"createdAt\",updated_at as \"updatedAt\" from reports where status in ('published','parsed') order by publish_date desc nulls last, created_at desc"),
     psqlJson("select id,title,excerpt,content,content_json as \"contentJson\",content_html as \"contentHtml\",content_text as \"contentText\",file_url as \"fileUrl\",file_size as \"fileSize\",topics,cover_image as \"coverImage\",cover_preset_id as \"coverPresetId\",to_char(publish_date,'YYYY-MM-DD') as \"publishDate\",status,show_on_home as \"showOnHome\",views,likes,coalesce(favorites_count,0) as \"favoritesCount\",created_at as \"createdAt\",updated_at as \"updatedAt\" from insights where status='published' order by publish_date desc nulls last, created_at desc"),
     psqlJson("select id,title,author,description,abstract,topics,pages,duration,rating,cover_image as \"coverImage\",cover_color as \"coverColor\",file_url as \"fileUrl\",file_size as \"fileSize\",to_char(publish_date,'YYYY-MM-DD') as \"publishDate\",status,show_on_home as \"showOnHome\",views,reviews,coalesce(likes,0) as likes,coalesce(favorites_count,0) as \"favoritesCount\",created_at as \"createdAt\",updated_at as \"updatedAt\" from books where status='published' order by publish_date desc nulls last, created_at desc"),
     psqlJson('select id,name,type,parent_id as \"parentId\",sort from categories order by sort asc, id asc'),

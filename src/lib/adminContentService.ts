@@ -39,6 +39,19 @@ const numberOr = (value: unknown, fallback: number) => {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 };
 
+const normalizeReportFormat = (report: Partial<Report>): string[] => {
+  const next = new Set(
+    Array.isArray(report.format)
+      ? report.format.map((item) => String(item).trim()).filter(Boolean)
+      : []
+  );
+
+  if (report.fileUrl) next.add('PDF');
+  if (report.markdownContent || report.markdownUrl) next.add('Markdown');
+
+  return next.size > 0 ? Array.from(next) : ['PDF'];
+};
+
 export const saveReportDirect = async (report: Partial<Report> | Report): Promise<Report> => {
   await refreshContentCacheFromApi();
   const reports = getReports();
@@ -55,15 +68,19 @@ export const saveReportDirect = async (report: Partial<Report> | Report): Promis
   if ('id' in normalizedReport && normalizedReport.id) {
     const index = reports.findIndex(r => r.id === normalizedReport.id);
     if (index !== -1) {
-      reports[index] = {
+      const mergedReport = {
         ...reports[index],
         ...normalizedReport,
         topics: normalizeTopics((normalizedReport as any).topics ?? reports[index].topics),
         updatedAt: now,
       };
+      reports[index] = {
+        ...mergedReport,
+        format: normalizeReportFormat(mergedReport),
+      };
       saved = reports[index];
     } else {
-      saved = {
+      const draftReport: Report = {
         id: normalizedReport.id,
         title: normalizedReport.title || '无标题报告',
         publisher: normalizedReport.publisher || '',
@@ -76,6 +93,8 @@ export const saveReportDirect = async (report: Partial<Report> | Report): Promis
         favoritesCount: numberOr((normalizedReport as any).favoritesCount, 0),
         fileUrl: normalizedReport.fileUrl,
         fileSize: normalizedReport.fileSize,
+        markdownContent: (normalizedReport as any).markdownContent,
+        markdownUrl: (normalizedReport as any).markdownUrl,
         pages: normalizedReport.pages,
         publishDate: normalizedReport.publishDate || new Date().toISOString().split('T')[0],
         status: normalizedReport.status || 'draft',
@@ -85,10 +104,14 @@ export const saveReportDirect = async (report: Partial<Report> | Report): Promis
         createdAt: normalizedReport.createdAt || now,
         updatedAt: now,
       };
+      saved = {
+        ...draftReport,
+        format: normalizeReportFormat(draftReport),
+      };
       reports.unshift(saved);
     }
   } else {
-    saved = {
+    const draftReport: Report = {
       id: `report_${Date.now()}`,
       title: normalizedReport.title || '无标题报告',
       publisher: normalizedReport.publisher || '',
@@ -101,6 +124,8 @@ export const saveReportDirect = async (report: Partial<Report> | Report): Promis
       favoritesCount: numberOr((normalizedReport as any).favoritesCount, 0),
       fileUrl: normalizedReport.fileUrl,
       fileSize: normalizedReport.fileSize,
+      markdownContent: (normalizedReport as any).markdownContent,
+      markdownUrl: (normalizedReport as any).markdownUrl,
       pages: normalizedReport.pages,
       publishDate: normalizedReport.publishDate || new Date().toISOString().split('T')[0],
       status: normalizedReport.status || 'draft',
@@ -109,6 +134,10 @@ export const saveReportDirect = async (report: Partial<Report> | Report): Promis
       downloads: numberOr(normalizedReport.downloads, 0),
       createdAt: normalizedReport.createdAt || now,
       updatedAt: now,
+    };
+    saved = {
+      ...draftReport,
+      format: normalizeReportFormat(draftReport),
     };
     reports.unshift(saved);
   }

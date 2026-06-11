@@ -2852,6 +2852,8 @@ async function ensureSchema() {
       ADD COLUMN IF NOT EXISTS cover_preset_id TEXT,
       ADD COLUMN IF NOT EXISTS favorites_count INT NOT NULL DEFAULT 0;
     ALTER TABLE reports
+      ADD COLUMN IF NOT EXISTS markdown_content TEXT,
+      ADD COLUMN IF NOT EXISTS markdown_url TEXT,
       ADD COLUMN IF NOT EXISTS likes INT NOT NULL DEFAULT 0,
       ADD COLUMN IF NOT EXISTS favorites_count INT NOT NULL DEFAULT 0;
     ALTER TABLE books
@@ -7808,6 +7810,7 @@ const server = http.createServer(async (req, res) => {
       const isCoverPreset = kind === 'cover-preset';
       const isCaseLogo = kind === 'case-logo';
       const isCasePpt = kind === 'case-ppt';
+      const isReportAsset = kind === 'report';
       const isInsightAsset = kind === 'insight';
       const isMethodologyAsset = kind === 'methodology';
       const contentType = isCoverPreset ? normalizeCoverPresetContentType(url.searchParams.get('contentType')) : null;
@@ -7832,6 +7835,10 @@ const server = http.createServer(async (req, res) => {
         if (!['.ppt', '.pptx'].includes(ext)) {
           return json(res, 400, { ok: false, error: '案例展示仅支持上传 PPT/PPTX 文件' });
         }
+      } else if (isReportAsset) {
+        if (!['.pdf', '.md', '.markdown', '.txt'].includes(ext)) {
+          return json(res, 400, { ok: false, error: '报告仅支持上传 PDF 或 Markdown/TXT 文件' });
+        }
       } else if (isInsightAsset || isMethodologyAsset) {
         if (!['.pdf', '.docx'].includes(ext)) {
           return json(res, 400, { ok: false, error: '文章与方法论仅支持上传 PDF 或 DOCX 文件' });
@@ -7848,7 +7855,9 @@ const server = http.createServer(async (req, res) => {
       const targetDir = path.join(
         ADMIN_UPLOAD_ROOT,
         kind === 'report'
-          ? 'reports'
+          ? ['.md', '.markdown', '.txt'].includes(ext)
+            ? 'report-markdowns'
+            : 'reports'
           : kind === 'book'
             ? 'books'
             : kind === 'insight'
@@ -7878,7 +7887,9 @@ const server = http.createServer(async (req, res) => {
           slides = await convertPresentationToSlides(targetPath, savedName);
         } else {
           const uploadFolder = kind === 'report'
-            ? 'reports'
+            ? ['.md', '.markdown', '.txt'].includes(ext)
+              ? 'report-markdowns'
+              : 'reports'
             : kind === 'book'
               ? 'books'
               : kind === 'insight'
