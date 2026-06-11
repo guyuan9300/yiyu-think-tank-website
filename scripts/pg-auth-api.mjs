@@ -278,10 +278,24 @@ function resolveSiteFilePath(input) {
   if (!pathname.startsWith('/uploads/') && !pathname.startsWith('/docs/')) {
     throw new Error('当前仅支持解析站内已上传的文件');
   }
-  if (pathname.startsWith('/uploads/')) {
-    return path.join(ADMIN_UPLOAD_ROOT, pathname.replace(/^\/uploads\/+/, ''));
+
+  // 防路径穿越:落地后的绝对路径必须仍在允许的根目录内,
+  // 挡住 /uploads/../../etc/passwd 及 URL 编码(%2e%2e)等逃逸变体。
+  const isUploads = pathname.startsWith('/uploads/');
+  const root = path.resolve(isUploads ? ADMIN_UPLOAD_ROOT : SITE_PUBLIC_ROOT);
+  let rel;
+  try {
+    rel = decodeURIComponent(
+      isUploads ? pathname.replace(/^\/uploads\/+/, '') : pathname.replace(/^\/+/, ''),
+    );
+  } catch {
+    throw new Error('非法的文件路径');
   }
-  return path.join(SITE_PUBLIC_ROOT, pathname.replace(/^\/+/, ''));
+  const resolved = path.resolve(path.join(root, rel));
+  if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) {
+    throw new Error('非法的文件路径');
+  }
+  return resolved;
 }
 
 async function ensureReadableFile(filePath) {
@@ -4158,6 +4172,30 @@ function getClientIp(req) {
   return req.socket.remoteAddress || '127.0.0.1';
 }
 
+// ===== 登录失败限流(内存滑动窗口) =====
+// 按【账号】键(channel:target),不依赖可伪造的 X-Forwarded-For,挡定向暴力破解。
+const LOGIN_FAIL_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_FAIL_MAX = 8;
+const loginFailures = new Map();
+
+function pruneLoginFailures(key, now) {
+  const arr = (loginFailures.get(key) || []).filter((t) => now - t < LOGIN_FAIL_WINDOW_MS);
+  if (arr.length) loginFailures.set(key, arr);
+  else loginFailures.delete(key);
+  return arr;
+}
+function isLoginRateLimited(key, now) {
+  return pruneLoginFailures(key, now).length >= LOGIN_FAIL_MAX;
+}
+function recordLoginFailure(key, now) {
+  const arr = pruneLoginFailures(key, now);
+  arr.push(now);
+  loginFailures.set(key, arr);
+}
+function clearLoginFailures(key) {
+  loginFailures.delete(key);
+}
+
 function buildWechatSignatureMessage(method, pathnameWithQuery, timestamp, nonce, body) {
   return `${method.toUpperCase()}\n${pathnameWithQuery}\n${timestamp}\n${nonce}\n${body}\n`;
 }
@@ -4993,7 +5031,7 @@ async function sendBetaInviteEmail(app) {
   await sendTemplate(fallbackTemplateId);
 }
 
-async function checkSendLimit(db, target, scene) {
+async function checkSendLimit(db, target, scene, ip) {
   const intervalRes = await db.query(
     `SELECT count(*)::int AS c
      FROM auth_verification_codes
@@ -5012,10 +5050,12 @@ async function checkSendLimit(db, target, scene) {
   if ((dayRes.rows[0]?.c || 0) >= MAX_PER_TARGET_PER_DAY) {
     throw new Error('今日发送次数已达上限');
   }
+  // 注:未加 per-IP 上限。本服务在 nginx 之后,request_ip 多为恒定代理 IP,
+  // 按 IP 限会变成全站全局闸门误伤所有用户;待 nginx 配置可信 real-IP 后再补。
 }
 
 async function createCode(db, channel, target, scene, ip) {
-  await checkSendLimit(db, target, scene);
+  await checkSendLimit(db, target, scene, ip);
   const code = generateCode();
   await db.query(
     `INSERT INTO auth_verification_codes(id, channel, target, scene, code_hash, expires_at, request_ip)
@@ -10856,16 +10896,24 @@ const server = http.createServer(async (req, res) => {
       if (!channel || !target || !password) {
         return json(res, 400, { ok: false, error: '参数不完整' });
       }
+      const loginKey = `${channel}:${target}`;
+      const loginNow = Date.now();
+      if (isLoginRateLimited(loginKey, loginNow)) {
+        return json(res, 429, { ok: false, error: '登录尝试过于频繁，请约 15 分钟后再试' });
+      }
       const row = await findUserByChannel(pool, channel, target);
       if (!row) {
+        recordLoginFailure(loginKey, loginNow);
         return json(res, 400, { ok: false, error: '账号或密码错误' });
       }
       if (row.status !== 'active') {
         return json(res, 403, { ok: false, error: '账号不可用，请联系管理员' });
       }
       if (!verifyPassword(password, row.password_hash)) {
+        recordLoginFailure(loginKey, loginNow);
         return json(res, 400, { ok: false, error: '账号或密码错误' });
       }
+      clearLoginFailures(loginKey);
       await pool.query(
         'UPDATE auth_users SET last_login_at=now(), login_count=COALESCE(login_count, 0) + 1 WHERE id=$1',
         [row.id]
