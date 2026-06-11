@@ -119,13 +119,75 @@ function camelToSnake(s) {
   return s.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`);
 }
 
+// 列名只允许小写字母开头的标识符,挡住通过 JSON key 注入 SQL(如 "id)--")。
+function assertSafeIdentifier(name) {
+  if (!/^[a-z][a-z0-9_]*$/.test(String(name))) throw new Error(`非法列名: ${name}`);
+  return name;
+}
+
+// ===== 管理员鉴权(复用 auth-api 同库的 auth_sessions/auth_users) =====
+const DEFAULT_ADMIN_EMAILS = new Set(
+  String(process.env.AUTH_ADMIN_EMAILS || 'guyuan9300@gmail.com')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean),
+);
+
+function hashToken(token) {
+  return crypto.createHash('sha256').update(String(token)).digest('hex');
+}
+
+function parseBearerToken(req) {
+  const auth = String(req.headers.authorization || '');
+  return auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+}
+
+function isAdminRow(row) {
+  const email = String(row?.email || '').toLowerCase();
+  return row?.admin_role === 'admin' || DEFAULT_ADMIN_EMAILS.has(email);
+}
+
+async function findSessionByToken(token) {
+  if (!token) return null;
+  const tokenHash = hashToken(token);
+  if (!/^[0-9a-f]{64}$/.test(tokenHash)) return null; // tokenHash 必为 64 位 hex,可安全内插
+  const rows = await psqlJson(
+    `select u.email as email, u.admin_role as "admin_role"
+     from auth_sessions s join auth_users u on u.id = s.user_id
+     where s.token_hash='${tokenHash}' and s.revoked_at is null
+       and (s.expires_at is null or s.expires_at > now()) limit 1`,
+  );
+  return Array.isArray(rows) && rows[0] ? rows[0] : null;
+}
+
+async function requireAdmin(req) {
+  const token = parseBearerToken(req);
+  if (!token) {
+    const e = new Error('请先登录');
+    e.statusCode = 401;
+    throw e;
+  }
+  const row = await findSessionByToken(token);
+  if (!row) {
+    const e = new Error('登录状态已失效，请重新登录');
+    e.statusCode = 401;
+    throw e;
+  }
+  if (!isAdminRow(row)) {
+    const e = new Error('需要管理员权限');
+    e.statusCode = 403;
+    throw e;
+  }
+  return row;
+}
+
 function buildUpsert(table, rows) {
   if (!Array.isArray(rows) || rows.length === 0) return null;
   const cols = Array.from(
     new Set(rows.flatMap((r) => Object.keys(r || {})).filter((k) => k && rHasValue(rows, k)))
   );
   if (!cols.includes('id')) cols.unshift('id');
-  const dbCols = cols.map(camelToSnake);
+  const dbCols = cols.map(camelToSnake).map(assertSafeIdentifier);
 
   const values = rows
     .map((r) => `(${cols.map((c) => toSql((r && r[c]))).join(',')})`)
@@ -227,7 +289,7 @@ async function syncKey(key, data) {
     if (Array.isArray(row.teamMembers)) row.teamMembers = JSON.stringify(row.teamMembers);
 
     const cols = Object.keys(row);
-    const dbCols = cols.map(camelToSnake);
+    const dbCols = cols.map(camelToSnake).map(assertSafeIdentifier);
 
     const valuesSql = cols
       .map((c) => {
@@ -257,7 +319,8 @@ async function syncKey(key, data) {
   }
 
   if (validRows.length === 0) {
-    await runSql(`DELETE FROM ${table};`);
+    // 安全护栏:空数组不再清空整表(防误发/回流空快照擦库)。如确需清空请走显式接口。
+    console.warn(`[pg-content-api-lite] sync ${table} 收到空数组,已跳过(不清表)`);
     return;
   }
 
@@ -317,7 +380,21 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // 公开的原子下载计数端点:访客下载只 +1 单字段,不再走整集合全量上行覆盖。
+    const downloadMatch = url.pathname.match(/^\/api\/content\/report\/([^/]+)\/download$/);
+    if (downloadMatch && req.method === 'POST') {
+      const reportId = decodeURIComponent(downloadMatch[1]);
+      const rows = await psqlJson(
+        `with u as (update reports set downloads = coalesce(downloads,0)+1 where id=${escStr(reportId)} returning downloads) select downloads from u`,
+      );
+      const downloads = Array.isArray(rows) && rows[0] ? rows[0].downloads : null;
+      res.writeHead(downloads === null ? 404 : 200, { 'Content-Type': 'application/json', ...corsHeaders });
+      res.end(JSON.stringify(downloads === null ? { ok: false, error: 'report not found' } : { ok: true, downloads }));
+      return;
+    }
+
     if (url.pathname === '/api/content-sync' && req.method === 'POST') {
+      await requireAdmin(req); // 仅管理员可全量同步内容(堵死匿名/访客擦库)
       const body = await readJsonBody(req);
       await syncKey((body && body.key), (body && body.data));
       res.writeHead(200, { 'Content-Type': 'application/json', ...corsHeaders });
@@ -328,7 +405,8 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(404, { 'Content-Type': 'application/json', ...corsHeaders });
     res.end(JSON.stringify({ ok: false, error: 'not found' }));
   } catch (err) {
-    res.writeHead(500, { 'Content-Type': 'application/json', ...corsHeaders });
+    const status = (err && err.statusCode) || 500;
+    res.writeHead(status, { 'Content-Type': 'application/json', ...corsHeaders });
     res.end(JSON.stringify({ ok: false, error: err instanceof Error ? err.message : String(err) }));
   }
 });

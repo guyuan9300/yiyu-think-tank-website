@@ -1,45 +1,22 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { LoginPage } from '../LoginPage';
-import { ADMIN_FLAG_KEY, ADMIN_EMAIL_KEY } from '../../lib/storage';
+import { fetchCurrentSession } from '../../lib/authApi';
 
 // ============================================================
-// admin-v2 · 本地超管 Gate (验收期, 不依赖后端 user 表)
+// admin-v2 · 管理员 Gate
 //
-// 判断顺序:
-//   1. localStorage / sessionStorage 里有 yiyu_is_admin = 'true' → 放行
-//   2. yiyu_current_user 解析后 adminRole === 'admin' → 放行 (后端已正经登录)
-//   3. yiyu_current_user.email 在白名单里 → 放行 (本地白名单)
-//   4. 都没有 → 显示 LoginPage
-//
-// 部署生产时, 应该把白名单逻辑移到后端 PG users 表 + adminRole 字段,
-// 然后用 AdminAccessGate (调 fetchCurrentSession) 替换本组件.
+// 身份判定改为【服务端权威校验】:带登录 token 调后端 /session,
+// 由服务端依据 PG users 表 (admin_role / 管理员邮箱白名单) 计算 adminRole。
+// 客户端无法通过改 localStorage(yiyu_is_admin / yiyu_current_user.adminRole)伪造。
+// 仅本地 dev (import.meta.env.DEV) 直通,生产 build 会被 tree-shake。
 // ============================================================
 
-const ADMIN_EMAIL_WHITELIST = ['guyuan9300@gmail.com', 'guyuan@klngo.org'];
-
-function isLocalAdmin(): boolean {
+async function verifyAdmin(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
-  // 本地 dev 直通(免登录), 方便验收期直接进后台用 AI 面板。
-  // ⚠️ 仅 import.meta.env.DEV 生效, 生产 build 会被 tree-shake, 仍走下方正经鉴权。
   if (import.meta.env.DEV) return true;
   try {
-    // flag 已写过
-    const flag = localStorage.getItem(ADMIN_FLAG_KEY) || sessionStorage.getItem(ADMIN_FLAG_KEY);
-    if (flag === 'true') return true;
-    // 解析当前 user
-    const raw = localStorage.getItem('yiyu_current_user') || sessionStorage.getItem('yiyu_current_user');
-    if (!raw) return false;
-    const user = JSON.parse(raw);
-    if (user?.adminRole === 'admin') return true;
-    if (user?.email && ADMIN_EMAIL_WHITELIST.includes(String(user.email).toLowerCase())) {
-      // 同步写一次 flag 以便下次直接放行
-      try {
-        localStorage.setItem(ADMIN_FLAG_KEY, 'true');
-        localStorage.setItem(ADMIN_EMAIL_KEY, user.email);
-      } catch {}
-      return true;
-    }
-    return false;
+    const res = await fetchCurrentSession();
+    return res.ok === true && res.data?.user?.adminRole === 'admin';
   } catch {
     return false;
   }
@@ -55,12 +32,19 @@ export function LocalAdminGate({
   const [allowed, setAllowed] = useState<boolean | null>(null);
 
   useEffect(() => {
-    setAllowed(isLocalAdmin());
-    // 监听 yiyu_user_updated 事件 (登录成功后会触发)
-    const recheck = () => setAllowed(isLocalAdmin());
+    let canceled = false;
+    const check = () => {
+      void verifyAdmin().then((ok) => {
+        if (!canceled) setAllowed(ok);
+      });
+    };
+    check();
+    // 登录成功后会触发 yiyu_user_updated;storage 跨标签页变更也重新校验
+    const recheck = () => check();
     window.addEventListener('yiyu_user_updated', recheck);
     window.addEventListener('storage', recheck);
     return () => {
+      canceled = true;
       window.removeEventListener('yiyu_user_updated', recheck);
       window.removeEventListener('storage', recheck);
     };
@@ -81,12 +65,10 @@ export function LocalAdminGate({
           if (onNavigate) onNavigate(page === 'login' ? 'home' : page);
         }}
         onAdminLogin={() => {
-          // LoginPage 内部已写好 ADMIN_FLAG_KEY, 这里重新校验
-          setAllowed(isLocalAdmin());
+          void verifyAdmin().then(setAllowed);
         }}
         onLoginSuccess={() => {
-          // 普通用户登录成功也重新校验 (可能后端返回 adminRole=admin)
-          setAllowed(isLocalAdmin());
+          void verifyAdmin().then(setAllowed);
         }}
       />
     );

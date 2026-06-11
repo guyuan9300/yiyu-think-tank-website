@@ -12,6 +12,7 @@ import {
   type Report,
   type ResourceTopic,
 } from './dataService';
+import { getSavedAuthToken } from './storage';
 
 const normalizeTopics = (topics: unknown): ResourceTopic[] => {
   const allowed: ResourceTopic[] = ['战略', '业务设计', '组织', 'AI 技术'];
@@ -21,9 +22,12 @@ const normalizeTopics = (topics: unknown): ResourceTopic[] => {
 };
 
 const syncKey = async (key: string, data: unknown) => {
+  const token = getSavedAuthToken();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch('/api/content-sync', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ key, data }),
   });
   if (!res.ok) {

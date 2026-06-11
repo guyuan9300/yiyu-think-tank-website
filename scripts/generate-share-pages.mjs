@@ -10,10 +10,10 @@ const distDir = path.join(repoRoot, 'dist');
 
 const buildBase = process.env.VITE_BASE || '/';
 const spaBasePath = buildBase === '/' ? '' : buildBase.replace(/\/$/, '');
-const shareBaseOrigin = process.env.SHARE_BASE_ORIGIN || (spaBasePath ? 'https://guyuan9300.github.io' : 'http://134.175.96.251');
+const shareBaseOrigin = process.env.SHARE_BASE_ORIGIN || (spaBasePath ? 'https://guyuan9300.github.io' : 'https://yiyu.love');
 const baseUrl = `${shareBaseOrigin.replace(/\/$/, '')}${spaBasePath}`;
 const baseUrlClean = baseUrl.replace(/\/$/, '');
-const contentSnapshotUrl = process.env.CONTENT_SNAPSHOT_URL || 'http://134.175.96.251/api/content-snapshot';
+const contentSnapshotUrl = process.env.CONTENT_SNAPSHOT_URL || 'https://yiyu.love/api/content-snapshot';
 
 const ORG_NAME = '益语智库';
 const SITE_DESC = '益语智库 —— 把战略思想做成 AI 工具的组织陪伴公司，提供战略咨询、组织管理与 AI 工作系统，助力企业持续增长。';

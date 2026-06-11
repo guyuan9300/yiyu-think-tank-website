@@ -44,7 +44,6 @@ type LocalUser = {
   memberType?: MemberType;
   adminRole?: 'admin';
   status?: string;
-  plainPassword?: string;
   paidSource?: 'manual' | 'invite_code' | 'payment' | 'strategy_client';
   paidStartedAt?: string;
   paidExpiresAt?: string;
@@ -299,18 +298,8 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
       const result = await fetchCurrentProfile();
       if (canceled || !result.ok || !result.data?.user) return;
 
-      const raw = getSavedUserRaw();
-      let plainPassword = '';
-      if (raw) {
-        try {
-          plainPassword = JSON.parse(raw)?.plainPassword || '';
-        } catch {}
-      }
-
-      const nextUser = {
-        ...normalizeLoginUser(result.data.user),
-        plainPassword: plainPassword || undefined,
-      } as LocalUser;
+      // 安全:不再从本地恢复明文密码,刷新即清除历史遗留的 plainPassword
+      const nextUser = normalizeLoginUser(result.data.user) as LocalUser;
       persistUser(nextUser);
     };
 
@@ -382,9 +371,7 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
     }
 
     const nextUser = {
-      ...normalizeLoginUser(result.data.user),
-      plainPassword: user.plainPassword,
-    } as LocalUser;
+      ...normalizeLoginUser(result.data.user),    } as LocalUser;
     persistUser(nextUser);
     setProfileMessage({ type: 'success', text: result.message || t({ zh: '个人资料已保存。', en: 'Profile saved.' }) });
   };
@@ -516,9 +503,7 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
     }
 
     const nextUser = {
-      ...normalizeLoginUser(result.data.user),
-      plainPassword: user.plainPassword,
-    } as LocalUser;
+      ...normalizeLoginUser(result.data.user),    } as LocalUser;
     persistUser(nextUser);
     setBindingMessage((prev) => ({
       ...prev,
@@ -553,9 +538,7 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
     }
 
     const nextUser = {
-      ...normalizeLoginUser(result.data.user),
-      plainPassword: newPassword,
-    } as LocalUser;
+      ...normalizeLoginUser(result.data.user),    } as LocalUser;
     persistUser(nextUser);
     setNewPassword('');
     setConfirmPassword('');
@@ -582,9 +565,7 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
     }
 
     const nextUser = {
-      ...normalizeLoginUser(result.data.user),
-      plainPassword: user.plainPassword,
-    } as LocalUser;
+      ...normalizeLoginUser(result.data.user),    } as LocalUser;
     persistUser(nextUser);
     setInviteCodeInput('');
     setInviteMessage({ type: 'success', text: result.message || t({ zh: '邀请码兑换成功。', en: 'Invite code redeemed successfully.' }) });
@@ -925,17 +906,7 @@ export default function UserCenterPage({ onNavigate }: UserCenterPageProps) {
                     {t({ zh: '原密码', en: 'Current password' })}
                   </div>
                   <div className="mt-3 flex items-center gap-2 rounded-xl border border-border/40 px-3 py-2 bg-muted/20">
-                    <span className="text-sm font-mono flex-1">
-                      {user.plainPassword ? (showSavedPassword ? user.plainPassword : '•'.repeat(Math.max(8, user.plainPassword.length))) : t({ zh: '当前会话未保存', en: 'Not saved in this session' })}
-                    </span>
-                    <button
-                      type="button"
-                      className="p-1.5 rounded-lg hover:bg-muted/40"
-                      onClick={() => setShowSavedPassword((v) => !v)}
-                      disabled={!user.plainPassword}
-                    >
-                      {showSavedPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                    <span className="text-sm font-mono flex-1 tracking-widest">••••••••</span>
                   </div>
                 </div>
 
