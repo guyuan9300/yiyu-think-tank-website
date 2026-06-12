@@ -3,6 +3,8 @@
  * 内容主数据优先以腾讯云快照和同步接口为准，浏览器只保留必要缓存。
  */
 
+import { httpRequest } from './httpClient';
+
 // 数据类型定义
 export type ResourceTopic = '战略' | '业务设计' | '组织' | 'AI 技术';
 
@@ -1185,9 +1187,16 @@ export const bootstrapFromPgApi = async (): Promise<boolean> => {
   if (typeof window === 'undefined') return false;
 
   try {
-    const res = await fetch('/api/content-snapshot', { cache: 'no-store' });
+    const res = await httpRequest('/api/content-snapshot', { cache: 'no-store' });
     if (!res.ok) {
-      console.error('content-snapshot request failed:', res.status, await res.text());
+      const body = await res.text();
+      console.error('content-snapshot request failed:', res.status, body.slice(0, 200));
+      return false;
+    }
+
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType && !contentType.includes('application/json')) {
+      console.warn('content-snapshot response is not JSON:', res.status, contentType);
       return false;
     }
 
@@ -1245,6 +1254,11 @@ export const bootstrapFromPgApi = async (): Promise<boolean> => {
 
     return true;
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const name = error instanceof Error ? error.name : '';
+    if (name === 'AbortError' || message.includes('Failed to fetch')) {
+      return false;
+    }
     console.error('bootstrapFromPgApi failed:', error);
     return false;
   }

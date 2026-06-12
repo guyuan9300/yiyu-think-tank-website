@@ -1,6 +1,7 @@
 import { Container } from './ui';
 import { ANCHORS, GITHUB_URL, FUTURE_ROUTES, LEGAL } from './links';
 import { useLang, type Bilingual } from '../../lib/i18n';
+import { SITE_ICP_NUMBER, SITE_ICP_URL } from '../../lib/siteMeta';
 
 type FootLink = { label: Bilingual; href: string; external?: boolean };
 
@@ -98,7 +99,17 @@ export function OpenSourceFooter() {
         </div>
 
         <div className="mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-[12.5px] text-white/45">{t({ zh: '© 2026 益语智库 YiYu ThinkTank · 开源项目', en: '© 2026 Yiyu Institute · Open-source project' })}</p>
+          <div className="text-center sm:text-left">
+            <p className="text-[12.5px] text-white/45">{t({ zh: '© 2026 益语智库 YiYu ThinkTank · 开源项目', en: '© 2026 Yiyu Institute · Open-source project' })}</p>
+            <a
+              href={SITE_ICP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 block text-[12.5px] text-white/45 transition-colors hover:text-white/70"
+            >
+              备案号：{SITE_ICP_NUMBER}
+            </a>
+          </div>
           <p className="text-[12.5px] text-white/45">{t({ zh: 'AI 做整理、找证据、起草材料；人类负责判断、确认和行动。', en: 'AI organizes, finds evidence, and drafts; humans judge, confirm, and act.' })}</p>
         </div>
       </Container>
