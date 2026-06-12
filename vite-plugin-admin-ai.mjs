@@ -410,6 +410,22 @@ export function adminAiPlugin() {
       // 所有 yiyu.love 后端 endpoint 走 plugin (node fetch), 绕过 vite proxy.
       // 注意: /api/admin/ai/* (火山引擎方舟) 仍走 vite proxy (它要注入 ARK_API_KEY).
       server.middlewares.use('/api/auth', makeYiyuForwarder('/api/auth'));
+      // dev 预览兜底: 线上 auth-api 还没部署 GET /api/v1/beta/stats 时返回样例数(响应头标
+      // X-Content-Source: dev-mock), 让内测计数器在本地能看到样式; 线上端点上线后自动透传真数。
+      server.middlewares.use('/api/v1/beta/stats', async (req, res) => {
+        try {
+          const r = await fetch('https://yiyu.love/api/v1/beta/stats', { cache: 'no-store' });
+          if (r.ok) {
+            const buf = Buffer.from(await r.arrayBuffer());
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.end(buf);
+            return;
+          }
+        } catch {}
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.setHeader('X-Content-Source', 'dev-mock');
+        res.end(JSON.stringify({ applicationCount: 0, downloadCount: 0 }));
+      });
       // 发版与反馈控制台:/api/v1/* 转发到同一后端(yiyu.love → cloud_backend)。
       server.middlewares.use('/api/v1', makeYiyuForwarder('/api/v1'));
       server.middlewares.use('/api/content-snapshot', async (req, res, next) => {

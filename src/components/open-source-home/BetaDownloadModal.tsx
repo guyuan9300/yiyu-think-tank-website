@@ -17,7 +17,17 @@ import {
 // 益语智库 AI · 内测下载弹窗 (第二期: 接云后端)
 //   主视图: ① 输入内测码下载(后端 verify-code 换限时 token, 计真实下载)  ② 申请内测(须登录)
 //   申请视图: 用户类型下拉(优先公益) + 条件字段(企业/公益填机构名 / 个人填用途)
-//   头部计数: 申请人数/下载人数来自 GET /api/v1/beta/stats 真实统计, 取不到则整行隐藏(守 ANTI_FAKE)
+//   头部计数: 营销起始基数(顾 2026-06-13 拍板) + GET /api/v1/beta/stats 真实增量;
+//   stats 取不到时只显示基数, 取到后随真实申请/下载继续累加。
+
+// 营销起始基数(只改这里): 展示值 = 基数 + 后端真实统计。
+const BETA_STATS_BASE = { applicationCount: 1200, downloadCount: 177 };
+
+// 1200→"1.2K", 1250→"1.3K", 999 以下原样。保持 K 位一位小数, 整千去掉 ".0"。
+function formatCount(n: number): string {
+  if (n < 1000) return String(n);
+  return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K`;
+}
 function getCurrentUser(): { email: string; name: string } | null {
   try {
     const raw = localStorage.getItem('yiyu_current_user') || sessionStorage.getItem('yiyu_current_user');
@@ -160,20 +170,18 @@ export function BetaDownloadModal({ open, onClose, onNavigate }: {
           <p className="mt-2 text-[13.5px] leading-[1.8] text-os-muted">
             {t({ zh: '产品正在内测中、仍在打磨；要真正用起来还需配置模型与云服务，对刚上手的用户有门槛。所以先以邀请制开放，确保每位内测用户都能被陪着用起来。', en: 'The product is in active beta; using it well also needs model and cloud setup. Downloads are invite-only for now so every beta user gets hands-on guidance.' })}
           </p>
-          {stats && (
-            <div className="mt-3 flex items-center gap-3 text-[12px] text-os-muted">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-os-mist/60 ring-1 ring-os-line px-3 py-1">
-                <Users className="w-3.5 h-3.5 text-os-navy/70" />
-                <span className="font-semibold text-os-navy tabular-nums">{stats.applicationCount}</span>
-                {t({ zh: '人已申请', en: 'applied' })}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-os-mist/60 ring-1 ring-os-line px-3 py-1">
-                <Download className="w-3.5 h-3.5 text-os-navy/70" />
-                <span className="font-semibold text-os-navy tabular-nums">{stats.downloadCount}</span>
-                {t({ zh: '人已下载', en: 'downloaded' })}
-              </span>
-            </div>
-          )}
+          <div className="mt-3 flex items-center gap-3 text-[12px] text-os-muted">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-os-mist/60 ring-1 ring-os-line px-3 py-1">
+              <Users className="w-3.5 h-3.5 text-os-navy/70" />
+              <span className="font-semibold text-os-navy tabular-nums">{formatCount(BETA_STATS_BASE.applicationCount + (stats?.applicationCount ?? 0))}</span>
+              {t({ zh: '人已申请', en: 'applied' })}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-os-mist/60 ring-1 ring-os-line px-3 py-1">
+              <Download className="w-3.5 h-3.5 text-os-navy/70" />
+              <span className="font-semibold text-os-navy tabular-nums">{formatCount(BETA_STATS_BASE.downloadCount + (stats?.downloadCount ?? 0))}</span>
+              {t({ zh: '人已下载', en: 'downloaded' })}
+            </span>
+          </div>
         </div>
 
         {/* ===== 验证通过 ===== */}
