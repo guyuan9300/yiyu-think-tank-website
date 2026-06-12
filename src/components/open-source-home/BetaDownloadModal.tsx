@@ -1,21 +1,23 @@
 import { useEffect, useState } from 'react';
-import { X, Laptop, KeyRound, CheckCircle2, ArrowRight, Github, Heart } from 'lucide-react';
+import { X, Laptop, KeyRound, CheckCircle2, ArrowRight, Github, Heart, Users, Download } from 'lucide-react';
 import { useLang } from '../../lib/i18n';
-import { isValidBetaCode, MAC_DMG_URL } from './betaDownload';
-import { isApprovedBetaCode } from '../../lib/betaApplications';
 import {
   submitBetaApplication,
+  fetchBetaStats,
+  verifyBetaCode,
   BETA_HEADCOUNT_OPTIONS,
   BETA_CLOUD_CREDIT_LABEL,
   BETA_CLOUD_CREDIT_EXCLUSIVE,
+  type BetaStats,
   type BetaUserType,
   type BetaHeadcount,
   type BetaCloudCredit,
 } from '../../lib/betaApi';
 
-// 益语智库 AI · 内测下载弹窗 (第一期)
-//   主视图: ① 输入内测码下载  ② 申请内测(须登录)
+// 益语智库 AI · 内测下载弹窗 (第二期: 接云后端)
+//   主视图: ① 输入内测码下载(后端 verify-code 换限时 token, 计真实下载)  ② 申请内测(须登录)
 //   申请视图: 用户类型下拉(优先公益) + 条件字段(企业/公益填机构名 / 个人填用途)
+//   头部计数: 申请人数/下载人数来自 GET /api/v1/beta/stats 真实统计, 取不到则整行隐藏(守 ANTI_FAKE)
 function getCurrentUser(): { email: string; name: string } | null {
   try {
     const raw = localStorage.getItem('yiyu_current_user') || sessionStorage.getItem('yiyu_current_user');
@@ -33,7 +35,10 @@ export function BetaDownloadModal({ open, onClose, onNavigate }: {
   const { t } = useLang();
   const [view, setView] = useState<'main' | 'apply' | 'applied'>('main');
   const [code, setCode] = useState('');
-  const [codeState, setCodeState] = useState<'idle' | 'error' | 'ok'>('idle');
+  const [codeState, setCodeState] = useState<'idle' | 'verifying' | 'error' | 'ok'>('idle');
+  const [codeErr, setCodeErr] = useState<string | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState('');
+  const [stats, setStats] = useState<BetaStats | null>(null);
   // 申请表单
   const [userType, setUserType] = useState<BetaUserType>('nonprofit');
   const [orgName, setOrgName] = useState('');
@@ -49,7 +54,7 @@ export function BetaDownloadModal({ open, onClose, onNavigate }: {
 
   useEffect(() => {
     if (!open) {
-      setView('main'); setCode(''); setCodeState('idle'); setOrgName(''); setPurpose(''); setFormErr(null); setUserType('nonprofit');
+      setView('main'); setCode(''); setCodeState('idle'); setCodeErr(null); setDownloadUrl(''); setOrgName(''); setPurpose(''); setFormErr(null); setUserType('nonprofit');
       setEmail(''); setEmailTouched(false); setHeadcount(BETA_HEADCOUNT_OPTIONS[0]); setFocusIssue(''); setBeneficiaryCount(''); setCloudCredit([]); setSubmitting(false);
       return;
     }
@@ -67,16 +72,36 @@ export function BetaDownloadModal({ open, onClose, onNavigate }: {
     if (u?.email) setEmail(u.email);
   }, [view, emailTouched]);
 
+  // 打开时拉真实统计;失败静默(计数行隐藏),不挡申请/下载主流程。
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    fetchBetaStats()
+      .then((s) => { if (!cancelled) setStats(s); })
+      .catch(() => { if (!cancelled) setStats(null); });
+    return () => { cancelled = true; };
+  }, [open]);
+
   if (!open) return null;
 
   const user = getCurrentUser();
   const isOrg = userType === 'nonprofit' || userType === 'enterprise';
 
-  const submitCode = () => {
-    if (!isValidBetaCode(code) && !isApprovedBetaCode(code)) { setCodeState('error'); return; }
-    setCodeState('ok');
-    if (MAC_DMG_URL) {
-      const a = document.createElement('a'); a.href = MAC_DMG_URL; a.download = ''; document.body.appendChild(a); a.click(); a.remove();
+  // 换码下载: 后端校验内测码并签发限时下载 token(下载经 /api/v1/downloads/:token 落 used_at, 计入真实下载数)。
+  const submitCode = async () => {
+    if (codeState === 'verifying') return;
+    const c = code.trim();
+    if (!c) { setCodeState('error'); setCodeErr(t({ zh: '请输入内测邀请码', en: 'Please enter your invite code' })); return; }
+    setCodeState('verifying');
+    setCodeErr(null);
+    try {
+      const result = await verifyBetaCode(c, 'mac');
+      setDownloadUrl(result.downloadUrl);
+      setCodeState('ok');
+      const a = document.createElement('a'); a.href = result.downloadUrl; a.download = ''; document.body.appendChild(a); a.click(); a.remove();
+    } catch (err) {
+      setCodeState('error');
+      setCodeErr(err instanceof Error ? err.message : t({ zh: '验证失败，请稍后重试', en: 'Verification failed, please retry' }));
     }
   };
 
@@ -135,6 +160,20 @@ export function BetaDownloadModal({ open, onClose, onNavigate }: {
           <p className="mt-2 text-[13.5px] leading-[1.8] text-os-muted">
             {t({ zh: '产品正在内测中、仍在打磨；要真正用起来还需配置模型与云服务，对刚上手的用户有门槛。所以先以邀请制开放，确保每位内测用户都能被陪着用起来。', en: 'The product is in active beta; using it well also needs model and cloud setup. Downloads are invite-only for now so every beta user gets hands-on guidance.' })}
           </p>
+          {stats && (
+            <div className="mt-3 flex items-center gap-3 text-[12px] text-os-muted">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-os-mist/60 ring-1 ring-os-line px-3 py-1">
+                <Users className="w-3.5 h-3.5 text-os-navy/70" />
+                <span className="font-semibold text-os-navy tabular-nums">{stats.applicationCount}</span>
+                {t({ zh: '人已申请', en: 'applied' })}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-os-mist/60 ring-1 ring-os-line px-3 py-1">
+                <Download className="w-3.5 h-3.5 text-os-navy/70" />
+                <span className="font-semibold text-os-navy tabular-nums">{stats.downloadCount}</span>
+                {t({ zh: '人已下载', en: 'downloaded' })}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* ===== 验证通过 ===== */}
@@ -144,12 +183,10 @@ export function BetaDownloadModal({ open, onClose, onNavigate }: {
               <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
               <div className="text-[15px] font-semibold text-os-ink">{t({ zh: '内测码验证通过', en: 'Invite code verified' })}</div>
               <p className="mt-1.5 text-[12.5px] leading-6 text-os-muted">
-                {MAC_DMG_URL
-                  ? t({ zh: '安装包下载已开始。', en: 'Your download has started.' })
-                  : t({ zh: 'macOS 安装包正在内测发放准备中，我们会通过邮件 / 内测社群发给你安装包和配置指引。', en: 'The macOS build is being prepared; we will send you the installer and setup guide.' })}
+                {t({ zh: '安装包下载已开始；若未自动开始，请点击下方按钮（下载链接限时有效）。', en: 'Your download has started. If not, use the button below (link is time-limited).' })}
               </p>
               <div className="mt-4 flex items-center justify-center gap-2">
-                {MAC_DMG_URL && <a href={MAC_DMG_URL} className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-os-navy to-os-indigo px-5 py-2.5 text-[13px] font-semibold text-white shadow-os hover:brightness-110"><Laptop className="w-4 h-4" />{t({ zh: '下载 macOS 版', en: 'Download' })}</a>}
+                {downloadUrl && <a href={downloadUrl} className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-os-navy to-os-indigo px-5 py-2.5 text-[13px] font-semibold text-white shadow-os hover:brightness-110"><Laptop className="w-4 h-4" />{t({ zh: '下载 macOS 版', en: 'Download' })}</a>}
                 <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-os-paper px-5 py-2.5 text-[13px] font-semibold text-os-navy ring-1 ring-os-line hover:ring-os-navy/40"><Github className="w-4 h-4" />{t({ zh: '查看源码', en: 'Source' })}</a>
               </div>
             </div>
@@ -267,11 +304,11 @@ export function BetaDownloadModal({ open, onClose, onNavigate }: {
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
                   <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-os-muted" />
-                  <input value={code} onChange={(e) => { setCode(e.target.value); if (codeState === 'error') setCodeState('idle'); }} onKeyDown={(e) => { if (e.key === 'Enter') submitCode(); }} placeholder={t({ zh: '请输入内测邀请码', en: 'Beta invite code' })} className="w-full rounded-xl ring-1 ring-os-line bg-os-canvas pl-9 pr-3 py-2.5 text-[14px] text-os-ink focus:outline-none focus:ring-2 focus:ring-os-navy/30" />
+                  <input value={code} onChange={(e) => { setCode(e.target.value); if (codeState === 'error') { setCodeState('idle'); setCodeErr(null); } }} onKeyDown={(e) => { if (e.key === 'Enter') void submitCode(); }} placeholder={t({ zh: '请输入内测邀请码', en: 'Beta invite code' })} className="w-full rounded-xl ring-1 ring-os-line bg-os-canvas pl-9 pr-3 py-2.5 text-[14px] text-os-ink focus:outline-none focus:ring-2 focus:ring-os-navy/30" />
                 </div>
-                <button onClick={submitCode} className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-os-navy to-os-indigo px-5 py-2.5 text-[14px] font-semibold text-white shadow-os hover:brightness-110 shrink-0">{t({ zh: '下载', en: 'Download' })}</button>
+                <button onClick={() => void submitCode()} disabled={codeState === 'verifying'} className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-os-navy to-os-indigo px-5 py-2.5 text-[14px] font-semibold text-white shadow-os hover:brightness-110 disabled:opacity-60 shrink-0">{codeState === 'verifying' ? t({ zh: '验证中…', en: 'Verifying…' }) : t({ zh: '下载', en: 'Download' })}</button>
               </div>
-              {codeState === 'error' && <p className="mt-2 text-[12.5px] text-rose-600">{t({ zh: '内测码无效，请确认后重试，或申请内测。', en: 'Invalid code. Retry or apply for beta.' })}</p>}
+              {codeState === 'error' && <p className="mt-2 text-[12.5px] text-rose-600">{codeErr || t({ zh: '内测码无效，请确认后重试，或申请内测。', en: 'Invalid code. Retry or apply for beta.' })}</p>}
             </div>
 
             <div className="px-7 py-4 flex items-center gap-3 text-[12px] text-os-muted">

@@ -5,13 +5,5 @@ export function openBetaDownload(): void {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(BETA_DOWNLOAD_EVENT));
 }
 
-// 内测码(客户端软门槛, 可随时增改; 大小写/空格不敏感)。上线接后端校验时换成 API。
-const VALID_BETA_CODES = ['YIYU-AI-2026', 'YIYUAI2026', '益语内测'];
-
-export function isValidBetaCode(code: string): boolean {
-  const c = code.trim().toUpperCase().replace(/\s+/g, '');
-  return VALID_BETA_CODES.map((x) => x.toUpperCase().replace(/\s+/g, '')).includes(c);
-}
-
-// macOS 安装包地址(内测准备中, 暂空; 拿到链接后填这里即自动放行下载)
-export const MAC_DMG_URL = '';
+// 内测码校验已全量切到后端 POST /api/v1/beta/verify-code(限时下载 token + 真实下载计数)。
+// 第一期的客户端白名单与静态 DMG 地址已下线, 不要再加回——客户端白名单等于无门槛裸链接。

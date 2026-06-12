@@ -2,6 +2,8 @@
 //
 // 契约镜像 cloud_backend 的 beta 端点(PG beta_applications):
 //   - 提交  POST   /api/v1/beta/applications           (需登录 session)
+//   - 换码  POST   /api/v1/beta/verify-code             (公开; 内测码→限时下载 token)
+//   - 统计  GET    /api/v1/beta/stats                   (公开; 申请人数/下载人数)
 //   - 列表  GET    /api/v1/admin/beta/applications      (需 admin session)
 //   - 审核  PATCH  /api/v1/admin/beta/applications/:id  (需 admin session; sent:true 触发 SMTP 真发码)
 //
@@ -109,6 +111,32 @@ export function submitBetaApplication(payload: BetaApplicationSubmitInput): Prom
   return betaRequest<BetaApplication>('/api/v1/beta/applications', {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+// 公开统计(申请人数 / 真实下载人数,后端按 beta_download_tokens.used_at 去重统计)。
+export interface BetaStats {
+  applicationCount: number;
+  downloadCount: number;
+}
+
+/** 拉取内测公开统计。失败抛错,调用方自行决定降级(计数器隐藏即可,不挡主流程)。 */
+export function fetchBetaStats(): Promise<BetaStats> {
+  return betaRequest<BetaStats>('/api/v1/beta/stats');
+}
+
+// 换码下载返回(镜像线上 /api/v1/beta/verify-code):downloadUrl 是限时 token 链接。
+export interface BetaVerifyCodeResult {
+  ok: boolean;
+  downloadUrl: string;
+  package?: { platform?: string; fileName?: string };
+}
+
+/** 用内测码换限时下载链接(公开端点,后端校验 code 已审核通过)。失败抛错(message=后端 detail)。 */
+export function verifyBetaCode(code: string, platform: 'mac' | 'windows' = 'mac'): Promise<BetaVerifyCodeResult> {
+  return betaRequest<BetaVerifyCodeResult>('/api/v1/beta/verify-code', {
+    method: 'POST',
+    body: JSON.stringify({ code, platform }),
   });
 }
 
