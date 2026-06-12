@@ -3519,6 +3519,26 @@ async function createDownloadTokenForCode(code, platform = 'mac') {
   return { token, package: mapReleasePackage(pkg), application: mapBetaApplication(app.rows[0]) };
 }
 
+// 内测公开统计(官网计数器用): 申请人数=beta_applications 全量; 下载人数=真实领过安装包的人
+// (beta_download_tokens.used_at 非空, 按申请人去重; 申请被删后 token 退化为按 token 计 1 人)。
+// 公开无鉴权端点, 60s 内存缓存挡刷库。
+let betaStatsCache = { at: 0, data: null };
+async function getBetaStats() {
+  if (betaStatsCache.data && Date.now() - betaStatsCache.at < 60_000) return betaStatsCache.data;
+  const q = await pool.query(
+    `SELECT
+       (SELECT count(*) FROM beta_applications) AS application_count,
+       (SELECT count(DISTINCT COALESCE(beta_application_id, id)) FROM beta_download_tokens WHERE used_at IS NOT NULL) AS download_count`
+  );
+  const row = q.rows[0] || {};
+  const data = {
+    applicationCount: Number(row.application_count || 0),
+    downloadCount: Number(row.download_count || 0),
+  };
+  betaStatsCache = { at: Date.now(), data };
+  return data;
+}
+
 function parseByteRange(rangeHeader, size) {
   if (!rangeHeader) return null;
   const match = /^bytes=(\d*)-(\d*)$/.exec(String(rangeHeader).trim());
@@ -10679,6 +10699,10 @@ const server = http.createServer(async (req, res) => {
       await requireAdmin(req);
       await pool.query('DELETE FROM beta_applications WHERE id=$1', [decodeURIComponent(betaAppMatch[1])]);
       return json(res, 200, { ok: true });
+    }
+
+    if (url.pathname === '/api/v1/beta/stats' && req.method === 'GET') {
+      return json(res, 200, await getBetaStats());
     }
 
     if (url.pathname === '/api/v1/beta/verify-code' && req.method === 'POST') {
