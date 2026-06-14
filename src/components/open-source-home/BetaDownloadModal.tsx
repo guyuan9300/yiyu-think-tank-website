@@ -166,7 +166,7 @@ export function BetaDownloadModal({ open, onClose, onNavigate }: {
         {/* 头部 */}
         <div className="px-7 pt-7 pb-5">
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-os-navy to-os-indigo text-white mb-4"><Laptop className="h-5 w-5" /></div>
-          <h3 className="font-serif-display text-[21px] font-semibold tracking-tight text-os-ink">{t({ zh: '益语智库 AI · 内测申请', en: 'Yiyu AI · Beta Access' })}</h3>
+          <h3 className="font-serif-display text-[21px] font-semibold tracking-tight text-os-ink">{t({ zh: '益语智库 AI · 内测预约', en: 'Yiyu AI · Beta Access' })}</h3>
           <p className="mt-2 text-[13.5px] leading-[1.8] text-os-muted">
             {t({ zh: '产品正在内测中、仍在打磨；要真正用起来还需配置模型与云服务，对刚上手的用户有门槛。所以先以邀请制开放，确保每位内测用户都能被陪着用起来。', en: 'The product is in active beta; using it well also needs model and cloud setup. Downloads are invite-only for now so every beta user gets hands-on guidance.' })}
           </p>
@@ -174,7 +174,7 @@ export function BetaDownloadModal({ open, onClose, onNavigate }: {
             <span className="inline-flex items-center gap-1.5 rounded-full bg-os-mist/60 ring-1 ring-os-line px-3 py-1">
               <Users className="w-3.5 h-3.5 text-os-navy/70" />
               <span className="font-semibold text-os-navy tabular-nums">{formatCount(BETA_STATS_BASE.applicationCount + (stats?.applicationCount ?? 0))}</span>
-              {t({ zh: '人已申请', en: 'applied' })}
+              {t({ zh: '人已预约', en: 'reserved' })}
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-os-mist/60 ring-1 ring-os-line px-3 py-1">
               <Download className="w-3.5 h-3.5 text-os-navy/70" />
@@ -204,8 +204,8 @@ export function BetaDownloadModal({ open, onClose, onNavigate }: {
           <div className="px-7 pb-7">
             <div className="rounded-2xl bg-emerald-50 ring-1 ring-emerald-200/60 p-5 text-center">
               <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
-              <div className="text-[15px] font-semibold text-os-ink">{t({ zh: '内测申请已提交', en: 'Application submitted' })}</div>
-              <p className="mt-1.5 text-[12.5px] leading-6 text-os-muted">{t({ zh: '我们会优先审核公益慈善组织的申请，通过后通过邮件 / 站内发放内测码。感谢你的耐心。', en: 'We prioritize nonprofit applications and will send your invite code by email after review. Thank you.' })}</p>
+              <div className="text-[15px] font-semibold text-os-ink">{t({ zh: '内测预约已提交', en: 'Reservation submitted' })}</div>
+              <p className="mt-1.5 text-[12.5px] leading-6 text-os-muted">{t({ zh: '我们会优先审核公益慈善组织的预约，通过后通过邮件 / 站内发放内测码。感谢你的耐心。', en: 'We prioritize nonprofit reservations and will send your invite code by email after review. Thank you.' })}</p>
               <button onClick={onClose} className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-os-navy to-os-indigo px-6 py-2.5 text-[13px] font-semibold text-white shadow-os hover:brightness-110">{t({ zh: '我知道了', en: 'Got it' })}</button>
             </div>
           </div>
@@ -214,7 +214,7 @@ export function BetaDownloadModal({ open, onClose, onNavigate }: {
           <div className="px-7 pb-7">
             {!user ? (
               <div className="rounded-2xl bg-os-mist/50 ring-1 ring-os-line p-5 text-center">
-                <p className="text-[13.5px] leading-7 text-os-ink">{t({ zh: '申请内测需先登录/注册，便于我们审核并向你发放内测码。', en: 'Please log in or sign up to apply, so we can review and send your code.' })}</p>
+                <p className="text-[13.5px] leading-7 text-os-ink">{t({ zh: '预约内测需先登录/注册，便于我们审核并向你发放内测码。', en: 'Please log in or sign up to reserve, so we can review and send your code.' })}</p>
                 <button onClick={() => { onClose(); onNavigate?.('login'); }} className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-os-navy to-os-indigo px-6 py-2.5 text-[13px] font-semibold text-white shadow-os hover:brightness-110">{t({ zh: '去登录 / 注册', en: 'Log in / Sign up' })}</button>
               </div>
             ) : (
@@ -222,7 +222,7 @@ export function BetaDownloadModal({ open, onClose, onNavigate }: {
                 {/* 公益优先提示 */}
                 <div className="flex items-start gap-2 rounded-xl bg-emerald-50 ring-1 ring-emerald-200/50 px-3.5 py-2.5 text-[12.5px] leading-6 text-emerald-800">
                   <Heart className="w-4 h-4 mt-0.5 shrink-0" />
-                  <span>{t({ zh: '目前申请内测的人较多，我们优先向中国境内的公益慈善组织开放试用权限。', en: 'Demand is high — we currently prioritize registered nonprofits in mainland China.' })}</span>
+                  <span>{t({ zh: '目前预约内测的人较多，我们优先向中国境内的公益慈善组织开放试用权限。', en: 'Demand is high — we currently prioritize registered nonprofits in mainland China.' })}</span>
                 </div>
 
                 <div>
@@ -297,7 +297,7 @@ export function BetaDownloadModal({ open, onClose, onNavigate }: {
                 {formErr && <p className="text-[12.5px] text-rose-600">{formErr}</p>}
 
                 <div className="flex items-center gap-2 pt-1">
-                  <button onClick={() => void submitForm()} disabled={submitting} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-os-navy to-os-indigo px-5 py-2.5 text-[14px] font-semibold text-white shadow-os hover:brightness-110 disabled:opacity-60">{submitting ? t({ zh: '提交中…', en: 'Submitting…' }) : t({ zh: '提交申请', en: 'Submit' })}{!submitting && <ArrowRight className="w-4 h-4" />}</button>
+                  <button onClick={() => void submitForm()} disabled={submitting} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-os-navy to-os-indigo px-5 py-2.5 text-[14px] font-semibold text-white shadow-os hover:brightness-110 disabled:opacity-60">{submitting ? t({ zh: '提交中…', en: 'Submitting…' }) : t({ zh: '提交预约', en: 'Submit' })}{!submitting && <ArrowRight className="w-4 h-4" />}</button>
                   <button onClick={() => setView('main')} className="px-4 py-2.5 rounded-xl text-[13px] font-medium text-os-navy ring-1 ring-os-line hover:bg-os-mist/50">{t({ zh: '返回', en: 'Back' })}</button>
                 </div>
                 <p className="text-[11px] text-os-muted/70">{t({ zh: '当前登录：', en: 'Logged in as: ' })}{user.name}{user.email ? `（${user.email}）` : ''}</p>
@@ -316,7 +316,7 @@ export function BetaDownloadModal({ open, onClose, onNavigate }: {
                 </div>
                 <button onClick={() => void submitCode()} disabled={codeState === 'verifying'} className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-os-navy to-os-indigo px-5 py-2.5 text-[14px] font-semibold text-white shadow-os hover:brightness-110 disabled:opacity-60 shrink-0">{codeState === 'verifying' ? t({ zh: '验证中…', en: 'Verifying…' }) : t({ zh: '下载', en: 'Download' })}</button>
               </div>
-              {codeState === 'error' && <p className="mt-2 text-[12.5px] text-rose-600">{codeErr || t({ zh: '内测码无效，请确认后重试，或申请内测。', en: 'Invalid code. Retry or apply for beta.' })}</p>}
+              {codeState === 'error' && <p className="mt-2 text-[12.5px] text-rose-600">{codeErr || t({ zh: '内测码无效，请确认后重试，或预约内测。', en: 'Invalid code. Retry or reserve beta.' })}</p>}
             </div>
 
             <div className="px-7 py-4 flex items-center gap-3 text-[12px] text-os-muted">
@@ -324,8 +324,8 @@ export function BetaDownloadModal({ open, onClose, onNavigate }: {
             </div>
 
             <div className="px-7 pb-7">
-              <button onClick={() => setView('apply')} className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-os-paper px-5 py-3 text-[14px] font-semibold text-os-navy ring-1 ring-os-line hover:ring-os-navy/40 hover:bg-os-mist/50 transition">{t({ zh: '申请内测资格', en: 'Apply for beta' })}<ArrowRight className="w-4 h-4" /></button>
-              <p className="mt-2.5 text-[11.5px] leading-6 text-os-muted/80 text-center">{t({ zh: '提交申请后，我们优先评估公益组织，通过后发放内测码与配置陪伴。', en: 'We prioritize nonprofits; after review we send a code with setup guidance.' })}</p>
+              <button onClick={() => setView('apply')} className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-os-paper px-5 py-3 text-[14px] font-semibold text-os-navy ring-1 ring-os-line hover:ring-os-navy/40 hover:bg-os-mist/50 transition">{t({ zh: '预约内测资格', en: 'Reserve beta' })}<ArrowRight className="w-4 h-4" /></button>
+              <p className="mt-2.5 text-[11.5px] leading-6 text-os-muted/80 text-center">{t({ zh: '提交预约后，我们优先评估公益组织，通过后发放内测码与配置陪伴。', en: 'We prioritize nonprofits; after review we send a code with setup guidance.' })}</p>
             </div>
           </>
         )}

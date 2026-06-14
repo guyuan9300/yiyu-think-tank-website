@@ -10,7 +10,7 @@ import { useLang, type Bilingual } from '../../../lib/i18n';
 type StatusKey = 'available' | 'apply-beta' | 'coming-soon' | 'in-beta';
 const STATUS_LABELS: Record<StatusKey, Bilingual> = {
   available: { zh: '可下载', en: 'Available' },
-  'apply-beta': { zh: '申请内测', en: 'Apply for Beta' },
+  'apply-beta': { zh: '预约内测', en: 'Reserve Beta' },
   'coming-soon': { zh: '即将开放', en: 'Coming Soon' },
   'in-beta': { zh: '内测中', en: 'In Beta' },
 };
