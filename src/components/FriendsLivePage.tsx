@@ -47,7 +47,7 @@ export function FriendsLivePage({ onNavigate }: FriendsLivePageProps) {
                 <Sparkles className="h-3.5 w-3.5" />{t({ zh: '内容筹备中', en: 'Content in Preparation' })}
               </div>
               <p className="mt-4 text-[15px] leading-8 text-os-muted">
-                {t({ zh: '这个栏目的详情页正在设计中。终身会员将可参与每期直播讨论、回看往期内容、并向嘉宾提问。正式上线后，这里会呈现：直播排期、往期回放、嘉宾阵容与报名入口。', en: 'This page is still being designed. Lifetime members will be able to join every live session, watch past episodes, and ask guests questions. Once launched, it will feature the live schedule, recordings, guest lineup, and registration.' })}
+                {t({ zh: '这个栏目的详情页正在设计中。一年会员将可参与每期直播讨论、回看往期内容、并向嘉宾提问。正式上线后，这里会呈现：直播排期、往期回放、嘉宾阵容与报名入口。', en: 'This page is still being designed. One-year members will be able to join every live session, watch past episodes, and ask guests questions. Once launched, it will feature the live schedule, recordings, guest lineup, and registration.' })}
               </p>
             </div>
           </div>

@@ -293,7 +293,7 @@ function HeroScreen({ onBack, onBuy }: { onBack: () => void; onBuy: () => void }
                 <button onClick={onBuy} className="inline-flex items-center justify-center gap-2 rounded-xl bg-os-navy px-7 py-3.5 text-[15px] font-medium text-white shadow-[0_10px_30px_-10px_rgba(22,38,94,0.6)] transition hover:bg-os-navy-700">
                   <Crown className="h-4 w-4" />¥{BOOK_51.priceYuan} · 立即购买
                 </button>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-os-mist px-3 py-1.5 text-[12px] font-medium text-os-blue ring-1 ring-os-blue/20">含益语智库终身会员</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-os-mist px-3 py-1.5 text-[12px] font-medium text-os-blue ring-1 ring-os-blue/20">含益语智库一年会员</span>
               </div>
               <p className="mt-3 text-[12px] text-os-muted/70">{LIFETIME_TAGLINE}</p>
             </Reveal>
@@ -400,7 +400,7 @@ function ClosingScreen({ onBuy, onBundle }: { onBuy: () => void; onBundle: () =>
               <div>
                 <div className="flex items-baseline gap-2">
                   <span className="font-serif-display text-[44px] font-semibold leading-none text-os-ink">¥{BOOK_51.priceYuan}</span>
-                  <span className="inline-flex items-center rounded-full bg-os-mist px-3 py-1 text-[12px] font-medium text-os-blue ring-1 ring-os-blue/20">含终身会员</span>
+                  <span className="inline-flex items-center rounded-full bg-os-mist px-3 py-1 text-[12px] font-medium text-os-blue ring-1 ring-os-blue/20">含一年会员</span>
                 </div>
                 <div className="mt-2 text-[12.5px] text-os-muted/80">{LIFETIME_TAGLINE}</div>
               </div>
@@ -481,7 +481,7 @@ function StickyBuyBar({ visible, onBuy, book }: { visible: boolean; onBuy: () =>
             <div className="text-[13px] sm:text-[14px] font-semibold text-os-navy truncate">{book.title}</div>
             <div className="mt-0.5 flex items-baseline gap-2">
               <span className="font-serif-display text-[20px] sm:text-[22px] font-semibold text-os-ink leading-none">¥{book.priceYuan}</span>
-              <span className="text-[11.5px] text-os-blue">含终身会员</span>
+              <span className="text-[11.5px] text-os-blue">含一年会员</span>
             </div>
           </div>
           <button onClick={onBuy} className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-os-navy px-5 sm:px-6 py-2.5 sm:py-3 text-[13.5px] sm:text-[14px] font-medium text-white shadow-[0_10px_24px_-10px_rgba(22,38,94,0.6)] transition hover:bg-os-navy-700">
@@ -596,7 +596,7 @@ function BookDetailOrgLong({ onNavigate }: { onNavigate: (page: string, id?: str
                       <button onClick={handleBuy} className="inline-flex items-center justify-center gap-2 rounded-xl bg-os-navy px-7 py-3.5 text-[15px] font-medium text-white shadow-[0_10px_30px_-10px_rgba(22,38,94,0.6)] transition hover:bg-os-navy-700">
                         <Crown className="h-4 w-4" />¥{BOOK_ORG.priceYuan} · 立即购买
                       </button>
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-os-mist px-3 py-1.5 text-[12px] font-medium text-os-blue ring-1 ring-os-blue/20">含益语智库终身会员</span>
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-os-mist px-3 py-1.5 text-[12px] font-medium text-os-blue ring-1 ring-os-blue/20">含益语智库一年会员</span>
                     </div>
                     <p className="mt-3 text-[12px] text-os-muted/70">{LIFETIME_TAGLINE}</p>
                   </Reveal>
@@ -841,7 +841,7 @@ function BookDetailOrgLong({ onNavigate }: { onNavigate: (page: string, id?: str
               <Reveal delay={220}>
                 <div className="mt-14 mx-auto max-w-[760px] rounded-[24px] bg-os-paper ring-1 ring-os-line shadow-os-lg p-8 sm:p-10">
                   <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3.5">
-                    {['帮你看清组织问题', '帮你建立团队语言', '帮你沉淀管理方法', '附赠益语智库终身会员'].map((r) => (
+                    {['帮你看清组织问题', '帮你建立团队语言', '帮你沉淀管理方法', '附赠益语智库一年会员'].map((r) => (
                       <div key={r} className="flex items-start gap-2.5 text-[14.5px] leading-7 text-os-ink/85"><Check className="mt-1 h-4 w-4 shrink-0 text-os-blue" /><span>{r}</span></div>
                     ))}
                   </div>
@@ -849,7 +849,7 @@ function BookDetailOrgLong({ onNavigate }: { onNavigate: (page: string, id?: str
                     <div>
                       <div className="flex items-baseline gap-2">
                         <span className="font-serif-display text-[44px] font-semibold leading-none text-os-ink">¥{BOOK_ORG.priceYuan}</span>
-                        <span className="inline-flex items-center rounded-full bg-os-mist px-3 py-1 text-[12px] font-medium text-os-blue ring-1 ring-os-blue/20">含终身会员</span>
+                        <span className="inline-flex items-center rounded-full bg-os-mist px-3 py-1 text-[12px] font-medium text-os-blue ring-1 ring-os-blue/20">含一年会员</span>
                       </div>
                       <div className="mt-2 text-[12.5px] text-os-muted/80">{LIFETIME_TAGLINE}</div>
                     </div>
@@ -937,12 +937,12 @@ function BookDetailSimple({ planId, onNavigate }: { planId: string; onNavigate: 
   const title = isBundle ? '两本合购套装' : book?.title || '书籍';
   const enTitle = isBundle ? 'THE COMPLETE SET · 51 QUESTIONS + LEARNING ORGANIZATIONS' : book?.enTitle || '';
   const price = isBundle ? BUNDLE_PRICE : book?.priceYuan ?? 0;
-  const tagline = isBundle ? '两本一起带走，再省 50 元 · 同样含终身会员' : book?.tagline || '';
+  const tagline = isBundle ? '两本一起带走，再省 50 元 · 同样含一年会员' : book?.tagline || '';
   const intro = isBundle
-    ? '一次拥有益语智库的两本核心著作——《创业者应该回答的51个问题》与《学习型组织笔记》。从找对问题到组织进化，覆盖创业者与管理者最需要的两套底层能力。合购立省 50 元，并附赠终身会员。'
+    ? '一次拥有益语智库的两本核心著作——《创业者应该回答的51个问题》与《学习型组织笔记》。从找对问题到组织进化，覆盖创业者与管理者最需要的两套底层能力。合购立省 50 元，并附赠一年会员。'
     : book?.intro || '';
   const points = isBundle
-    ? ['《创业者应该回答的51个问题》完整收录', '《学习型组织笔记》完整收录', `合购立省 50 元 (¥198 + ¥138 → ¥${BUNDLE_PRICE})`, '附赠益语智库终身会员，畅读全部文章与报告']
+    ? ['《创业者应该回答的51个问题》完整收录', '《学习型组织笔记》完整收录', `合购立省 50 元 (¥198 + ¥138 → ¥${BUNDLE_PRICE})`, '附赠益语智库一年会员，畅读全部文章与报告']
     : book?.points || [];
 
   return (
@@ -992,7 +992,7 @@ function BookDetailSimple({ planId, onNavigate }: { planId: string; onNavigate: 
                 <div>
                   <div className="flex items-baseline gap-2">
                     <span className="font-serif-display text-[40px] font-semibold text-os-ink">¥{price}</span>
-                    <span className="rounded-full bg-os-mist px-3 py-1 text-[12px] font-medium text-os-blue ring-1 ring-os-blue/20">含终身会员</span>
+                    <span className="rounded-full bg-os-mist px-3 py-1 text-[12px] font-medium text-os-blue ring-1 ring-os-blue/20">含一年会员</span>
                   </div>
                   <div className="mt-1 text-[12px] text-os-muted/70">{LIFETIME_TAGLINE}</div>
                 </div>

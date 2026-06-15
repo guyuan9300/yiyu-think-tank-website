@@ -61,7 +61,7 @@ function maskAccount(value: string): string {
 const INPUT =
   'w-full rounded-xl border border-os-line bg-white px-3.5 py-2.5 text-[14px] text-os-ink shadow-[0_1px_2px_rgba(22,38,94,0.04)] outline-none transition placeholder:text-os-muted/45 hover:border-os-navy/30 focus:border-os-navy/60 focus:ring-4 focus:ring-os-navy/10';
 
-// 终身会员权益 (2026-05-30 顾源源定)
+// 一年会员权益 (2026-05-30 顾源源定)
 const MEMBER_BENEFITS: Bilingual[] = [
   { zh: '无限量阅读最新文章', en: 'Unlimited reading of the latest articles' },
   { zh: '无限量下载最新报告', en: 'Unlimited downloads of the latest reports' },
@@ -73,7 +73,7 @@ export function PaymentCheckoutPage({ planId, onNavigate }: PaymentCheckoutPageP
   const { t } = useLang();
   const user = useMemo(() => getCurrentUser(), []);
 
-  // 单一会员模型: 只有「终身会员」, 通过购买书籍开通。
+  // 单一会员模型: 只有「一年会员」, 通过购买书籍开通。
   const orderPlanId = (planId === 'book_51' || planId === 'book_org' || planId === 'book_bundle') ? planId : 'book_51';
   const isBundle = orderPlanId === 'book_bundle';
   const book = getBookByPlanId(orderPlanId);
@@ -172,7 +172,7 @@ export function PaymentCheckoutPage({ planId, onNavigate }: PaymentCheckoutPageP
               <Lock className="h-5 w-5" />
             </div>
             <h1 className="font-serif-display text-[22px] font-semibold text-os-ink">{t({ zh: '请先登录', en: 'Please sign in first' })}</h1>
-            <p className="mt-2 text-[14px] text-os-muted">{t({ zh: '登录后才能下单购买并开通终身会员。', en: 'Sign in to place an order and activate lifetime membership.' })}</p>
+            <p className="mt-2 text-[14px] text-os-muted">{t({ zh: '登录后才能下单购买并开通一年会员。', en: 'Sign in to place an order and activate one-year membership.' })}</p>
             <button
               type="button"
               onClick={() => onNavigate?.('login')}
@@ -246,7 +246,7 @@ export function PaymentCheckoutPage({ planId, onNavigate }: PaymentCheckoutPageP
                       <Crown className="h-4 w-4" />
                     </span>
                     <div>
-                      <div className="text-[13px] font-semibold text-os-ink">{t({ zh: '本单将为此账号开通终身会员', en: 'This order will activate lifetime membership for this account' })}</div>
+                      <div className="text-[13px] font-semibold text-os-ink">{t({ zh: '本单将为此账号开通一年会员', en: 'This order will activate one-year membership for this account' })}</div>
                       <div className="mt-0.5 text-[12.5px] text-os-muted font-mono">
                         {maskAccount(accountValue)}
                         <span className="ml-2 font-sans">（{accountIsPhone ? t({ zh: '手机账号', en: 'Phone account' }) : t({ zh: '邮箱账号', en: 'Email account' })}）</span>
@@ -355,14 +355,14 @@ export function PaymentCheckoutPage({ planId, onNavigate }: PaymentCheckoutPageP
                   <div className="min-w-0">
                     <div className="text-[13.5px] font-semibold leading-snug text-os-ink">{planTitle}</div>
                     <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-os-mist px-2 py-0.5 text-[11px] font-medium text-os-blue ring-1 ring-os-blue/20">
-                      <Crown className="h-3 w-3" />{t({ zh: '含终身会员', en: 'Includes lifetime membership' })}
+                      <Crown className="h-3 w-3" />{t({ zh: '含一年会员', en: 'Includes one-year membership' })}
                     </div>
                   </div>
                 </div>
 
                 {/* 会员权益清单 */}
                 <div className="mt-4 rounded-xl bg-os-mist/40 p-3.5">
-                  <div className="text-[12px] font-semibold text-os-navy">{t({ zh: '终身会员权益', en: 'Lifetime membership benefits' })}</div>
+                  <div className="text-[12px] font-semibold text-os-navy">{t({ zh: '一年会员权益', en: 'One-year membership benefits' })}</div>
                   <ul className="mt-2 space-y-1.5">
                     {MEMBER_BENEFITS.map((b) => (
                       <li key={b.zh} className="flex items-start gap-2 text-[12.5px] leading-5 text-os-ink/80">
@@ -391,7 +391,7 @@ export function PaymentCheckoutPage({ planId, onNavigate }: PaymentCheckoutPageP
                   <span className="text-[13px] text-os-muted">{t({ zh: '应付金额', en: 'Amount due' })}</span>
                   <span className="font-serif-display text-[28px] font-semibold leading-none text-os-ink">¥{payPriceYuan}</span>
                 </div>
-                <div className="mt-1 text-right text-[12px] text-os-muted/70">{t({ zh: '终身会员 · 一次开通永久有效', en: 'Lifetime membership · activate once, valid forever' })}</div>
+                <div className="mt-1 text-right text-[12px] text-os-muted/70">{t({ zh: '一年会员 · 一次开通一年有效', en: 'One-year membership · activate once, valid for one year' })}</div>
 
                 {message && (
                   <div className={`mt-4 rounded-xl px-3.5 py-2.5 text-[13px] ${message.type === 'error' ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-200/70' : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/70'}`}>
@@ -419,7 +419,7 @@ export function PaymentCheckoutPage({ planId, onNavigate }: PaymentCheckoutPageP
 
                 <div className="mt-3 flex items-start gap-2 text-[12px] leading-5 text-os-muted/80">
                   <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                  <span>{t({ zh: '支付成功后自动开通终身会员并安排发货，订单同步进入后台。', en: 'After payment, lifetime membership is activated automatically and shipping is arranged; the order syncs to the backend.' })}{LIFETIME_TAGLINE}。</span>
+                  <span>{t({ zh: '支付成功后自动开通一年会员并安排发货，订单同步进入后台。', en: 'After payment, one-year membership is activated automatically and shipping is arranged; the order syncs to the backend.' })}{LIFETIME_TAGLINE}。</span>
                 </div>
 
                 <button

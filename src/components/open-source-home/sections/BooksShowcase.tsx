@@ -8,7 +8,7 @@ import { useLang, type Bilingual } from '../../../lib/i18n';
 //   鼠标移到左侧书 → 右侧介绍《创业者应该回答的51个问题》
 //   鼠标移到右侧书 → 右侧介绍《学习型组织笔记》
 //   封面已含书名, 介绍面板不重复书名(只放英文副标 + 卖点 + 价格)。
-//   定价均含终身会员; 两本合购再省 50。
+//   定价均含一年会员; 两本合购再省 50。
 // ============================================================
 
 type Side = 'left' | 'right';
@@ -90,7 +90,7 @@ export function BooksShowcase({ onNavigate }: BooksShowcaseProps) {
             </h2>
             <p className="mt-4 text-[15px] leading-7 text-os-muted">
               {t({ zh: '我们把陪伴众多创业者沉淀下来的方法，写成两本书。', en: 'We turned the methods distilled from working with many founders into two books.' })}
-              <span className="font-medium text-os-ink">{t({ zh: '购买任意一本，即成为益语智库终身会员', en: 'Buy either one to become a lifetime member of Yiyu Institute' })}</span>{t({ zh: '，畅读全部文章与报告。', en: ', with full access to all articles and reports.' })}
+              <span className="font-medium text-os-ink">{t({ zh: '购买任意一本，即成为益语智库一年会员', en: 'Buy either one to become a one-year member of Yiyu Institute' })}</span>{t({ zh: '，畅读全部文章与报告。', en: ', with full access to all articles and reports.' })}
             </p>
           </div>
         </Reveal>
@@ -133,7 +133,7 @@ export function BooksShowcase({ onNavigate }: BooksShowcaseProps) {
                       <div className={`text-[13px] font-semibold leading-snug transition-colors ${isActive ? 'text-os-navy' : 'text-os-muted'}`}>
                         {t(b.title)}
                       </div>
-                      <div className="mt-0.5 text-[12px] text-os-muted/70">¥{b.priceYuan} · {t({ zh: '含终身会员', en: 'Lifetime Membership Incl.' })}</div>
+                      <div className="mt-0.5 text-[12px] text-os-muted/70">¥{b.priceYuan} · {t({ zh: '含一年会员', en: 'One-Year Membership Incl.' })}</div>
                     </div>
                   </button>
                 );
@@ -159,7 +159,7 @@ export function BooksShowcase({ onNavigate }: BooksShowcaseProps) {
               </ul>
               <div className="mt-7 flex flex-wrap items-center gap-4">
                 <span className="font-serif-display text-[30px] font-semibold text-os-ink">¥{book.priceYuan}</span>
-                <span className="rounded-full bg-os-mist px-3 py-1 text-[12px] font-medium text-os-blue ring-1 ring-os-blue/20">{t({ zh: '含终身会员', en: 'Lifetime Membership Incl.' })}</span>
+                <span className="rounded-full bg-os-mist px-3 py-1 text-[12px] font-medium text-os-blue ring-1 ring-os-blue/20">{t({ zh: '含一年会员', en: 'One-Year Membership Incl.' })}</span>
                 <button
                   type="button"
                   onClick={() => onNavigate?.('book-detail', book.planId)}
@@ -179,7 +179,7 @@ export function BooksShowcase({ onNavigate }: BooksShowcaseProps) {
               <div className="font-serif-display text-[18px] font-semibold text-os-ink">{t({ zh: '两本一起带走，再省 50 元', en: 'Take both and save another ¥50' })}</div>
               <div className="mt-1 text-[13px] text-os-muted">
                 {t({ zh: '单买', en: 'Bought separately' })} ¥{BOOKS[0].priceYuan} + ¥{BOOKS[1].priceYuan} = ¥{BOOKS[0].priceYuan + BOOKS[1].priceYuan}{t({ zh: '，合购仅', en: '; bundle for only' })}
-                <span className="font-semibold text-os-ink"> ¥{BUNDLE_PRICE}</span> · {t({ zh: '同样含终身会员', en: 'lifetime membership included' })}
+                <span className="font-semibold text-os-ink"> ¥{BUNDLE_PRICE}</span> · {t({ zh: '同样含一年会员', en: 'one-year membership included' })}
               </div>
             </div>
             <button

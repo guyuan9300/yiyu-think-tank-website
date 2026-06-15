@@ -471,8 +471,8 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
                 </h3>
                 <p className="mt-2 text-[14px] leading-7 text-os-muted">
                   {access.reason === 'guest'
-                    ? t({ zh: '登录会员每天可免费读 1 篇文章；成为终身会员则不限篇数。', en: 'Logged-in members can read 1 free article per day; lifetime members read without limit.' })
-                    : t({ zh: '你今天的免费文章已读完。成为终身会员，不限篇数畅读全部文章与报告。', en: "You've read your free article for today. Become a lifetime member for unlimited access to all articles and reports." })}
+                    ? t({ zh: '登录会员每天可免费读 1 篇文章；成为一年会员则不限篇数。', en: 'Logged-in members can read 1 free article per day; one-year members read without limit.' })
+                    : t({ zh: '你今天的免费文章已读完。成为一年会员，不限篇数畅读全部文章与报告。', en: "You've read your free article for today. Become a one-year member for unlimited access to all articles and reports." })}
                 </p>
                 <p className="mt-3 text-[13px] font-medium text-os-violet">{LIFETIME_MEMBER_TAGLINE}</p>
                 <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -488,7 +488,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
                         onClick={() => onNavigate('membership')}
                         className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-os-line bg-os-paper px-6 py-3 text-[14px] font-medium text-os-navy transition hover:border-os-navy/30"
                       >
-                        <Crown className="h-4 w-4" />{t({ zh: '成为终身会员', en: 'Become a lifetime member' })}
+                        <Crown className="h-4 w-4" />{t({ zh: '成为一年会员', en: 'Become a one-year member' })}
                       </button>
                     </>
                   ) : (
@@ -496,7 +496,7 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
                       onClick={() => onNavigate('membership')}
                       className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-os-navy to-os-indigo px-7 py-3 text-[14px] font-medium text-white shadow-[0_10px_30px_-10px_rgba(22,38,94,0.6)] transition hover:brightness-110"
                     >
-                      <Crown className="h-4 w-4" />{t({ zh: '成为终身会员 · 畅读全部', en: 'Become a lifetime member · Read everything' })}
+                      <Crown className="h-4 w-4" />{t({ zh: '成为一年会员 · 畅读全部', en: 'Become a one-year member · Read everything' })}
                     </button>
                   )}
                 </div>

@@ -102,7 +102,7 @@ export function FunderModal({ open, onClose }: { open: boolean; onClose: () => v
             {view === 'main' && (
               <div className="px-7 pb-7 space-y-3">
                 <ChooserRow icon={<Gift className="w-5 h-5" />} title={t({ zh: '无偿为社区捐赠', en: 'Donate to the community' })} desc={t({ zh: '扫码捐赠，金额随意，并写下你想要的世界', en: 'Scan to donate any amount, and share the world you want' })} onClick={() => { setErr(null); setView('donate'); }} />
-                <ChooserRow icon={<BookOpen className="w-5 h-5" />} title={t({ zh: '买一本书支持社区', en: 'Buy a book to support us' })} desc={t({ zh: '用阅读给社区加电，还附赠终身会员', en: 'Power us up by reading — lifetime membership included' })} onClick={() => { setErr(null); setView('book'); }} />
+                <ChooserRow icon={<BookOpen className="w-5 h-5" />} title={t({ zh: '买一本书支持社区', en: 'Buy a book to support us' })} desc={t({ zh: '用阅读给社区加电，还附赠一年会员', en: 'Power us up by reading — one-year membership included' })} onClick={() => { setErr(null); setView('book'); }} />
                 <ChooserRow icon={<Briefcase className="w-5 h-5" />} title={t({ zh: '洽谈大额资助', en: 'Discuss major funding' })} desc={t({ zh: '留下联系方式，我们和你深聊共赢方案', en: 'Leave your contact and we’ll talk through a win-win' })} onClick={() => { setErr(null); setView('contact'); }} />
               </div>
             )}
@@ -140,7 +140,7 @@ export function FunderModal({ open, onClose }: { open: boolean; onClose: () => v
             {view === 'book' && (
               <div className="px-7 pb-7">
                 {backBtn}
-                <p className="text-[13px] leading-[1.8] text-os-muted mb-4">{t({ zh: '买一本顾源源的书，就是用另一种方式给社区加电 —— 还会附赠益语智库终身会员。', en: 'Buying one of Guyuan’s books is another way to power up the community — lifetime membership included.' })}</p>
+                <p className="text-[13px] leading-[1.8] text-os-muted mb-4">{t({ zh: '买一本顾源源的书，就是用另一种方式给社区加电 —— 还会附赠益语智库一年会员。', en: 'Buying one of Guyuan’s books is another way to power up the community — one-year membership included.' })}</p>
                 <div className="space-y-3">
                   {BOOKS.map((b) => (
                     <a
@@ -154,7 +154,7 @@ export function FunderModal({ open, onClose }: { open: boolean; onClose: () => v
                         <p className="text-[12px] text-os-muted mt-0.5 line-clamp-1">{b.tagline}</p>
                         <div className="mt-1.5 flex items-center gap-2">
                           <span className="font-serif-display text-[18px] font-semibold text-os-ink">¥{b.priceYuan}</span>
-                          <span className="text-[11px] text-os-spark">{t({ zh: '含终身会员', en: 'Lifetime member' })}</span>
+                          <span className="text-[11px] text-os-spark">{t({ zh: '含一年会员', en: 'One-year member' })}</span>
                         </div>
                       </div>
                       <span className="shrink-0 inline-flex items-center gap-0.5 text-[13px] font-semibold text-os-navy group-hover:text-os-blue transition">{t({ zh: '去了解', en: 'View' })}<ChevronRight className="w-4 h-4" /></span>

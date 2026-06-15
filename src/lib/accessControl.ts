@@ -2,9 +2,9 @@
  * 内容付费规则 (统一口径, 文章页/报告页共用)
  *
  * 规则 (2026-05-30 顾源源定):
- *   文章 — 未登录看 50%; 登录未付费每天免费看 1 篇(同一篇不扣额度,跨天重置); 终身会员无限.
- *   报告 — 未登录不可看(引导登录); 登录未付费看前 20%; 终身会员看全文 + 可下载.
- *   付费 = 终身会员(¥198, 一次性). 文案: 所有收入用于为行动者加电.
+ *   文章 — 未登录看 50%; 登录未付费每天免费看 1 篇(同一篇不扣额度,跨天重置); 一年会员无限.
+ *   报告 — 未登录不可看(引导登录); 登录未付费看前 20%; 一年会员看全文 + 可下载.
+ *   付费 = 一年会员(¥198, 一次性). 文案: 所有收入用于为行动者加电.
  *
  * 后端付费判定: member_type='gold'/'diamond' 即付费;
  *   paid_expires_at = NULL 视为永不过期(终身); 有值则需未过期.
@@ -132,4 +132,4 @@ export function resolveReportAccess(user: AccessUser | null): ReportAccess {
   return { tier: 'preview', ratio: 0.2 };
 }
 
-export const LIFETIME_MEMBER_TAGLINE = '成为终身会员 · 所有收入用于为行动者加电';
+export const LIFETIME_MEMBER_TAGLINE = '成为一年会员 · 所有收入用于为行动者加电';

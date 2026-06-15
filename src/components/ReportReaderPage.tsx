@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import type { User } from '../lib/dataService';
 
-// 三种成为终身会员的途径(对齐 BooksShowcase)
+// 三种成为一年会员的途径(对齐 BooksShowcase)
 type MemberPlanId = 'book_51' | 'book_org' | 'book_bundle';
 const MEMBER_PLANS: { id: MemberPlanId; title: Bilingual; price: number; note?: Bilingual }[] = [
   { id: 'book_51', title: { zh: '创业者应该回答的 51 个问题', en: '51 Questions Every Founder Should Answer' }, price: 198 },
@@ -88,10 +88,10 @@ function ReportChat({ t, messages, newMessage, setNewMessage, onSend, loading, e
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-os-violet to-os-indigo text-white">
             <Crown className="h-5 w-5" />
           </div>
-          <div className="font-serif-display text-[17px] font-semibold text-os-ink leading-snug">{t({ zh: '成为终身会员，与 AI 探讨这份报告', en: 'Become a member to chat with AI about this report' })}</div>
+          <div className="font-serif-display text-[17px] font-semibold text-os-ink leading-snug">{t({ zh: '成为一年会员，与 AI 探讨这份报告', en: 'Become a member to chat with AI about this report' })}</div>
           <p className="text-[13px] text-os-muted leading-6">{t({ zh: '会员可就报告内容随时提问，AI 只依据报告内容作答。', en: 'Members can ask anything about the report; AI answers only from its content.' })}</p>
           <button onClick={onUpgrade} className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-os-navy to-os-indigo px-6 py-2.5 text-[13.5px] font-semibold text-white shadow-os hover:brightness-110 transition">
-            <Crown className="w-4 h-4" />{t({ zh: '成为终身会员', en: 'Become a member' })}
+            <Crown className="w-4 h-4" />{t({ zh: '成为一年会员', en: 'Become a member' })}
           </button>
         </div>
       ) : (
@@ -158,7 +158,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const isVisitor = !isLoggedIn;
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false); // 由用户主动点「成为终身会员」触发, 不再自动盖屏
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false); // 由用户主动点「成为一年会员」触发, 不再自动盖屏
   const [showThanks, setShowThanks] = useState(false); // 彩蛋: "感谢你的喜欢, 送3篇文章" 小弹窗(UI占位, 后端额度待接)
   const [selectedPlan, setSelectedPlan] = useState<MemberPlanId>('book_bundle'); // 选中的购书途径(点击只选中, 不跳转)
   const [showSupportPool, setShowSupportPool] = useState(false); // "社会创新的支持者"就地盖一层(盖在支付弹窗上, 关掉即回支付)
@@ -607,9 +607,9 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
               <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-os-navy to-os-indigo text-white">
                 <Crown className="h-5 w-5" />
               </div>
-              <h3 className="font-serif-display text-[22px] font-semibold tracking-tight text-os-ink">{t({ zh: '成为终身会员，阅读报告全文', en: 'Become a lifetime member to read the full report' })}</h3>
+              <h3 className="font-serif-display text-[22px] font-semibold tracking-tight text-os-ink">{t({ zh: '成为一年会员，阅读报告全文', en: 'Become a one-year member to read the full report' })}</h3>
               <p className="mt-2 text-[14px] leading-7 text-os-muted">
-                {t({ zh: '你已看完目录与开篇，了解了这份报告在讲什么。成为终身会员，阅读全部章节，并下载 PDF 原件。', en: "You've seen the outline and opening — now you know what this report covers. Become a lifetime member to read every section and download the original PDF." })}
+                {t({ zh: '你已看完目录与开篇，了解了这份报告在讲什么。成为一年会员，阅读全部章节，并下载 PDF 原件。', en: "You've seen the outline and opening — now you know what this report covers. Become a one-year member to read every section and download the original PDF." })}
               </p>
               <p className="mt-3 text-[13px] font-medium text-os-violet">{LIFETIME_MEMBER_TAGLINE}</p>
               <button
@@ -621,7 +621,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
                 }}
                 className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-os-navy to-os-indigo px-7 py-3 text-[14px] font-medium text-white shadow-[0_10px_30px_-10px_rgba(22,38,94,0.6)] transition hover:brightness-110"
               >
-                <Crown className="h-4 w-4" />{t({ zh: '成为终身会员', en: 'Become a lifetime member' })}
+                <Crown className="h-4 w-4" />{t({ zh: '成为一年会员', en: 'Become a one-year member' })}
               </button>
             </div>
           </div>
@@ -745,7 +745,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
       )}
       <OpenSourceFooter />
 
-      {/* 成为终身会员弹窗 (左:三种购书途径 / 右:会员权益 / 底:彩蛋) */}
+      {/* 成为一年会员弹窗 (左:三种购书途径 / 右:会员权益 / 底:彩蛋) */}
       {showUpgradeModal && (
         <div className="fixed inset-0 bg-os-navy/45 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-os-paper rounded-[24px] w-full max-w-3xl overflow-hidden shadow-2xl ring-1 ring-os-line">
@@ -762,8 +762,8 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
                   <Crown className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="font-serif-display text-[22px] font-semibold leading-tight">{t({ zh: '成为益语智库终身会员', en: 'Become a Yiyu Institute lifetime member' })}</h3>
-                  <p className="text-white/80 text-[13px] mt-0.5">{t({ zh: '一次购书，终身畅读', en: 'Buy a book once, read for life' })}</p>
+                  <h3 className="font-serif-display text-[22px] font-semibold leading-tight">{t({ zh: '成为益语智库一年会员', en: 'Become a Yiyu Institute one-year member' })}</h3>
+                  <p className="text-white/80 text-[13px] mt-0.5">{t({ zh: '一次购书，畅读一年', en: 'Buy a book once, read for a year' })}</p>
                 </div>
               </div>
             </div>
@@ -772,7 +772,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
             <div className="grid md:grid-cols-2">
               {/* 左: 三种成为会员的途径 */}
               <div className="p-6 sm:p-7 border-b md:border-b-0 md:border-r border-os-line">
-                <div className="text-[12px] font-semibold tracking-[0.08em] text-os-muted uppercase mb-4">{t({ zh: '选一种方式 · 都含终身会员', en: 'Choose any option · all include lifetime membership' })}</div>
+                <div className="text-[12px] font-semibold tracking-[0.08em] text-os-muted uppercase mb-4">{t({ zh: '选一种方式 · 都含一年会员', en: 'Choose any option · all include one-year membership' })}</div>
                 <div className="space-y-3">
                   {MEMBER_PLANS.map((plan) => {
                     const active = selectedPlan === plan.id;
@@ -788,7 +788,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="text-[14px] font-semibold text-os-navy">{t(plan.title)}</div>
-                          <div className="text-[12px] text-os-muted mt-0.5">¥{plan.price} · {plan.note ? `${t(plan.note)} · ` : ''}{t({ zh: '含终身会员', en: 'includes lifetime membership' })}</div>
+                          <div className="text-[12px] text-os-muted mt-0.5">¥{plan.price} · {plan.note ? `${t(plan.note)} · ` : ''}{t({ zh: '含一年会员', en: 'includes one-year membership' })}</div>
                         </div>
                         {active
                           ? <CheckCircle className="w-5 h-5 text-os-navy flex-shrink-0" />
@@ -799,9 +799,9 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
                 </div>
               </div>
 
-              {/* 右: 终身会员权益 */}
+              {/* 右: 一年会员权益 */}
               <div className="p-6 sm:p-7 bg-os-canvas/40">
-                <div className="text-[12px] font-semibold tracking-[0.08em] text-os-muted uppercase mb-4">{t({ zh: '终身会员权益', en: 'Lifetime member benefits' })}</div>
+                <div className="text-[12px] font-semibold tracking-[0.08em] text-os-muted uppercase mb-4">{t({ zh: '一年会员权益', en: 'One-year member benefits' })}</div>
                 <ul className="space-y-3">
                   {([
                     { t: { zh: '无限量阅读最新文章', en: 'Unlimited access to the latest articles' } as Bilingual },
@@ -847,7 +847,7 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
                 {t({ zh: '已选', en: 'Selected' })} <span className="font-semibold text-os-ink">{t(MEMBER_PLANS.find((p) => p.id === selectedPlan)?.title ?? { zh: '' })}</span>
                 <span className="mx-1.5">·</span>
                 <span className="font-semibold text-os-ink">¥{MEMBER_PLANS.find((p) => p.id === selectedPlan)?.price}</span>
-                <span> {t({ zh: '含终身会员', en: 'includes lifetime membership' })}</span>
+                <span> {t({ zh: '含一年会员', en: 'includes one-year membership' })}</span>
               </div>
               <button
                 type="button"
