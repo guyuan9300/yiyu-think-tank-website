@@ -222,12 +222,12 @@ export function MobileHomeScreen({ onNavigate }: ScreenProps) {
                       </div>
                       <h3 className="mt-2.5 text-[13px] font-semibold leading-snug text-os-ink">{b.title}</h3>
                       <p className="mt-0.5 text-[11px] leading-snug text-os-muted/80">{b.tagline}</p>
-                      <p className="mt-1 text-[12px] font-semibold text-os-navy">¥{b.price}<span className="ml-1 text-[10.5px] font-normal text-os-muted">含终身会员</span></p>
+                      <p className="mt-1 text-[12px] font-semibold text-os-navy">¥{b.price}<span className="ml-1 text-[10.5px] font-normal text-os-muted">含一年会员</span></p>
                     </button>
                   ))}
                 </div>
                 <p className="px-4 pb-3 text-[11.5px] leading-relaxed text-os-muted">
-                  购买任意一本即成为益语智库<span className="font-medium text-os-ink/70">终身会员</span>，畅读全部文章与报告。
+                  购买任意一本即成为益语智库<span className="font-medium text-os-ink/70">一年会员</span>，畅读全部文章与报告。
                 </p>
                 <button onClick={() => onNavigate('book-detail', 'book_bundle')}
                   className="w-full flex items-center gap-2 border-t border-os-line/70 px-4 py-3.5 text-left active:bg-os-mist/40 transition-colors bg-gradient-to-r from-os-mist/30 to-transparent">
