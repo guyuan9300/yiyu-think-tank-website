@@ -4,7 +4,7 @@ import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { Pool } from 'pg';
@@ -68,8 +68,8 @@ const DEFAULT_ADMIN_EMAILS = new Set(
 );
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-File-Name',
 };
 
 const PAYMENT_PLANS = {
@@ -135,15 +135,35 @@ function initSesClient() {
 }
 
 const mailer = buildMailer();
+const PUBLIC_SITE_URL = (process.env.YIYU_SITE_URL || 'https://www.yiyu.love/').replace(/\/?$/, '/');
 const SITE_PUBLIC_ROOT = process.env.YIYU_SITE_ROOT || '/var/www/yiyu-site';
 const ADMIN_UPLOAD_ROOT = process.env.YIYU_UPLOAD_ROOT || '/var/www/yiyu-site/uploads';
+const RELEASE_ASSET_ROOT = process.env.YIYU_RELEASE_ASSET_ROOT || '/srv/yiyu-release-assets';
+const RELEASE_DOWNLOAD_TTL_SECONDS = Number(process.env.YIYU_RELEASE_DOWNLOAD_TTL_SECONDS || 600);
+const TOS_BUCKET = process.env.YIYU_TOS_BUCKET || '';
+const TOS_REGION = process.env.YIYU_TOS_REGION || 'cn-beijing';
+const TOS_ENDPOINT = (process.env.YIYU_TOS_ENDPOINT || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+const TOS_PUBLIC_BASE_URL = (process.env.YIYU_TOS_PUBLIC_BASE_URL || '').replace(/\/$/, '');
+const TOS_ACCESS_KEY_ID = process.env.YIYU_TOS_ACCESS_KEY_ID || '';
+const TOS_SECRET_ACCESS_KEY = process.env.YIYU_TOS_SECRET_ACCESS_KEY || '';
+const TOS_RELEASE_PREFIX = (process.env.YIYU_TOS_RELEASE_PREFIX || 'desktop').replace(/^\/+|\/+$/g, '');
+const TOSUTIL_BIN = process.env.YIYU_TOSUTIL_BIN || '';
+const TOSUTIL_HOME = process.env.YIYU_TOSUTIL_HOME || '';
+const WORKBENCH_CLOUD_API_BASE_URL = (process.env.YIYU_WORKBENCH_CLOUD_API_BASE_URL || '').replace(/\/$/, '');
+const WORKBENCH_CLOUD_API_TOKEN = process.env.YIYU_WORKBENCH_CLOUD_API_TOKEN || '';
+const AI_GENERATED_ROOT = process.env.YIYU_AI_GENERATED_ROOT || path.join(SITE_PUBLIC_ROOT, 'ai-generated');
+const AI_ARTICLE_ROOT = path.join(AI_GENERATED_ROOT, 'articles');
+const AI_MANIFEST_PATH = path.join(AI_GENERATED_ROOT, 'manifest.json');
 const ARK_BASE_URL = (process.env.ARK_BASE_URL || 'https://ark.cn-beijing.volces.com').replace(/\/$/, '');
 const ARK_MODEL = process.env.ARK_MODEL || 'doubao-seed-2-0-lite-260215';
+const ARK_TEXT_MODEL = process.env.ARK_TEXT_MODEL || ARK_MODEL;
+const ARK_IMAGE_MODEL = process.env.ARK_IMAGE_MODEL || 'doubao-seedream-4-0-250828';
 const YIYU_TONG_ARK_MODEL = process.env.YIYU_TONG_ARK_MODEL || 'doubao-seed-2-0-lite-260215';
 const AI_PREFILL_TOPIC_OPTIONS = ['战略', '业务设计', '组织', 'AI 技术'];
 const execFileAsync = promisify(execFile);
 let ocrCapabilityPromise = null;
 const WECHAT_API_BASE = 'https://api.mch.weixin.qq.com';
+const adminAiTasks = new Map();
 
 function isArkReady() {
   return Boolean(process.env.ARK_API_KEY && ARK_MODEL);
@@ -258,10 +278,24 @@ function resolveSiteFilePath(input) {
   if (!pathname.startsWith('/uploads/') && !pathname.startsWith('/docs/')) {
     throw new Error('当前仅支持解析站内已上传的文件');
   }
-  if (pathname.startsWith('/uploads/')) {
-    return path.join(ADMIN_UPLOAD_ROOT, pathname.replace(/^\/uploads\/+/, ''));
+
+  // 防路径穿越:落地后的绝对路径必须仍在允许的根目录内,
+  // 挡住 /uploads/../../etc/passwd 及 URL 编码(%2e%2e)等逃逸变体。
+  const isUploads = pathname.startsWith('/uploads/');
+  const root = path.resolve(isUploads ? ADMIN_UPLOAD_ROOT : SITE_PUBLIC_ROOT);
+  let rel;
+  try {
+    rel = decodeURIComponent(
+      isUploads ? pathname.replace(/^\/uploads\/+/, '') : pathname.replace(/^\/+/, ''),
+    );
+  } catch {
+    throw new Error('非法的文件路径');
   }
-  return path.join(SITE_PUBLIC_ROOT, pathname.replace(/^\/+/, ''));
+  const resolved = path.resolve(path.join(root, rel));
+  if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) {
+    throw new Error('非法的文件路径');
+  }
+  return resolved;
 }
 
 async function ensureReadableFile(filePath) {
@@ -1929,6 +1963,16 @@ function json(res, status, payload) {
   res.end(JSON.stringify(payload));
 }
 
+function httpStatusForError(error) {
+  const message = error instanceof Error ? error.message : String(error || '');
+  if (/请先登录|登录状态已失效|内测码无效/.test(message)) return 401;
+  if (/管理员权限不足/.test(message)) return 403;
+  if (/不存在|暂无可下载|not found/i.test(message)) return 404;
+  if (/不能为空|无效|必须|格式|扩展名|已过期|失效|邀请码/.test(message)) return 400;
+  if (error instanceof SyntaxError) return 400;
+  return 500;
+}
+
 function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     let body = '';
@@ -2090,6 +2134,1646 @@ function sanitizeUploadFilename(input, fallbackExt = '.pdf') {
   if (!safe) return `upload${fallbackExt}`;
   if (path.extname(safe)) return safe;
   return `${safe}${fallbackExt}`;
+}
+
+function normalizeReleasePlatform(input) {
+  return ['mac', 'windows', 'android', 'ios'].includes(input) ? input : 'mac';
+}
+
+function normalizeReleaseArch(input, platform = 'mac') {
+  const raw = safeText(input).toLowerCase();
+  if (['arm64', 'x64', 'universal', 'ia32'].includes(raw)) return raw;
+  if (platform === 'windows') return 'x64';
+  if (platform === 'android' || platform === 'ios') return 'universal';
+  return 'arm64';
+}
+
+function normalizeArtifactType(input) {
+  return ['installer', 'blockmap', 'manifest'].includes(input) ? input : 'installer';
+}
+
+function allowedInstallerExtensions(platform) {
+  if (platform === 'windows') return ['.exe', '.zip'];
+  if (platform === 'android') return ['.apk', '.aab'];
+  if (platform === 'ios') return ['.ipa'];
+  return ['.dmg', '.zip'];
+}
+
+function installerUploadError(platform) {
+  if (platform === 'windows') return 'Windows 安装包仅支持 .exe 或 .zip';
+  if (platform === 'android') return 'Android 安装包仅支持 .apk 或 .aab（当前仅预留入口）';
+  if (platform === 'ios') return 'iOS 安装包仅支持 .ipa（当前仅预留入口）';
+  return 'macOS 安装包仅支持 .dmg 或 .zip';
+}
+
+function normalizeReleaseStatus(input, fallback = 'draft') {
+  return ['draft', 'testing', 'published', 'rolled_back'].includes(input) ? input : fallback;
+}
+
+function normalizeCustomPackageStatus(input, fallback = 'testing') {
+  return ['testing', 'ready', 'paused', 'archived'].includes(input) ? input : fallback;
+}
+
+function normalizeOrgCode(input) {
+  return safeText(input)
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-')
+    .replace(/[^a-z0-9-\u4e00-\u9fa5]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function normalizeCanonicalOrgCode(input) {
+  return safeText(input)
+    .toLowerCase()
+    .replace(/\s+/g, '');
+}
+
+function orgAliasVariants(...values) {
+  const aliases = new Set();
+  for (const value of values.flat()) {
+    const raw = safeText(value);
+    if (!raw) continue;
+    aliases.add(raw.toLowerCase());
+    const normalized = normalizeOrgCode(raw);
+    if (normalized) aliases.add(normalized);
+    const canonical = normalizeCanonicalOrgCode(raw);
+    if (canonical) aliases.add(canonical);
+  }
+  return [...aliases].filter(Boolean);
+}
+
+function normalizeAssignmentTargetType(input) {
+  return input === 'org' || input === 'group' ? input : 'all';
+}
+
+function normalizeAssignmentStatus(input, fallback = 'active') {
+  return ['active', 'paused', 'rolled_back'].includes(input) ? input : fallback;
+}
+
+function normalizeFeedbackStatus(input, fallback = 'open') {
+  return ['open', 'confirmed', 'triaged', 'in_progress', 'resolved', 'next_release', 'wontfix', 'closed'].includes(input) ? input : fallback;
+}
+
+function normalizeFeedbackSeverity(input, fallback = 'minor') {
+  return ['blocker', 'impaired', 'minor'].includes(input) ? input : fallback;
+}
+
+function normalizeFeedbackKind(input, fallback = 'experience') {
+  return ['bug', 'lag', 'inaccurate', 'feature', 'experience'].includes(input) ? input : fallback;
+}
+
+function normalizeBetaUserType(input) {
+  return input === 'enterprise' || input === 'individual' ? input : 'nonprofit';
+}
+
+function normalizeBetaCode(input) {
+  return safeText(input).toUpperCase().replace(/\s+/g, '');
+}
+
+function generateBetaCode() {
+  return `YIYU-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+}
+
+function sha512Hex(buffer) {
+  return crypto.createHash('sha512').update(buffer).digest('hex');
+}
+
+function hmac(key, value, encoding) {
+  return crypto.createHmac('sha256', key).update(value).digest(encoding);
+}
+
+function yyyymmdd(date = new Date()) {
+  return date.toISOString().slice(0, 10).replace(/-/g, '');
+}
+
+function amzDate(date = new Date()) {
+  return date.toISOString().replace(/[:-]|\.\d{3}/g, '');
+}
+
+function tosSdkConfigured() {
+  return Boolean(TOS_BUCKET && TOS_ENDPOINT && TOS_ACCESS_KEY_ID && TOS_SECRET_ACCESS_KEY);
+}
+
+function tosutilConfigured() {
+  return Boolean(TOS_BUCKET && TOSUTIL_BIN);
+}
+
+function tosConfigured() {
+  return tosSdkConfigured() || tosutilConfigured();
+}
+
+function encodeTosKey(objectKey) {
+  return String(objectKey || '')
+    .split('/')
+    .map((part) => encodeURIComponent(part))
+    .join('/');
+}
+
+function releaseObjectKey(...parts) {
+  return [TOS_RELEASE_PREFIX, ...parts]
+    .map((part) => safeText(part).replace(/^\/+|\/+$/g, ''))
+    .filter(Boolean)
+    .join('/');
+}
+
+function tosPublicUrl(objectKey) {
+  if (!objectKey) return '';
+  if (TOS_PUBLIC_BASE_URL) return `${TOS_PUBLIC_BASE_URL}/${encodeTosKey(objectKey)}`;
+  if (!TOS_BUCKET || !TOS_ENDPOINT) return '';
+  return `https://${TOS_BUCKET}.${TOS_ENDPOINT}/${encodeTosKey(objectKey)}`;
+}
+
+let tosClientPromise = null;
+
+async function getTosSdkClient() {
+  if (!tosSdkConfigured()) return null;
+  if (!tosClientPromise) {
+    tosClientPromise = import('@volcengine/tos-sdk')
+      .then((mod) => {
+        const TosClient = mod.TosClient || mod.default?.TosClient || mod.default;
+        if (!TosClient) throw new Error('TOS SDK 未提供 TosClient');
+        return new TosClient({
+          accessKeyId: TOS_ACCESS_KEY_ID,
+          accessKeySecret: TOS_SECRET_ACCESS_KEY,
+          region: TOS_REGION,
+          endpoint: TOS_ENDPOINT,
+        });
+      })
+      .catch((error) => {
+        tosClientPromise = null;
+        throw error;
+      });
+  }
+  return tosClientPromise;
+}
+
+async function putTosObjectWithSdk(objectKey, buffer, contentType) {
+  const client = await getTosSdkClient();
+  if (!client) return null;
+  await client.putObject({
+    bucket: TOS_BUCKET,
+    key: objectKey,
+    body: buffer,
+    contentType,
+  });
+  return {
+    objectKey,
+    publicUrl: tosPublicUrl(objectKey),
+  };
+}
+
+async function putTosObjectWithTosutil(objectKey, buffer) {
+  if (!tosutilConfigured()) return null;
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'yiyu-tos-upload-'));
+  const tempFile = path.join(tempDir, 'object');
+  try {
+    await fs.writeFile(tempFile, buffer);
+    const env = { ...process.env };
+    if (TOSUTIL_HOME) env.HOME = TOSUTIL_HOME;
+    await new Promise((resolve, reject) => {
+      const child = spawn(TOSUTIL_BIN, ['cp', tempFile, `tos://${TOS_BUCKET}/${objectKey}`, '-fr'], {
+        env,
+        stdio: 'ignore',
+      });
+      const timer = setTimeout(() => {
+        child.kill('SIGTERM');
+        reject(new Error('TOS 上传超时'));
+      }, 60 * 60 * 1000);
+      child.once('error', (error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+      child.once('exit', (code, signal) => {
+        clearTimeout(timer);
+        if (code === 0) resolve();
+        else reject(new Error(`TOS 上传失败${signal ? `(${signal})` : code != null ? `(${code})` : ''}`));
+      });
+    });
+    return {
+      objectKey,
+      publicUrl: tosPublicUrl(objectKey),
+    };
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+async function putTosObject(objectKey, buffer, contentType = 'application/octet-stream') {
+  if (!tosConfigured()) return null;
+  if (tosutilConfigured()) {
+    return putTosObjectWithTosutil(objectKey, buffer);
+  }
+  try {
+    return await putTosObjectWithSdk(objectKey, buffer, contentType);
+  } catch (error) {
+    if (!String(error?.message || '').includes('Cannot find package')) {
+      throw new Error(`TOS 上传失败${error?.statusCode ? `(${error.statusCode})` : ''}，请检查服务端最小权限配置`);
+    }
+  }
+  const payloadHash = crypto.createHash('sha256').update(buffer).digest('hex');
+  const now = new Date();
+  const dateStamp = yyyymmdd(now);
+  const timestamp = amzDate(now);
+  const host = `${TOS_BUCKET}.${TOS_ENDPOINT}`;
+  const canonicalUri = `/${encodeTosKey(objectKey)}`;
+  const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
+  const canonicalHeaders = [
+    `host:${host}`,
+    `x-amz-content-sha256:${payloadHash}`,
+    `x-amz-date:${timestamp}`,
+    '',
+  ].join('\n');
+  const canonicalRequest = [
+    'PUT',
+    canonicalUri,
+    '',
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash,
+  ].join('\n');
+  const credentialScope = `${dateStamp}/${TOS_REGION}/s3/aws4_request`;
+  const stringToSign = [
+    'AWS4-HMAC-SHA256',
+    timestamp,
+    credentialScope,
+    crypto.createHash('sha256').update(canonicalRequest).digest('hex'),
+  ].join('\n');
+  const kDate = hmac(`AWS4${TOS_SECRET_ACCESS_KEY}`, dateStamp);
+  const kRegion = hmac(kDate, TOS_REGION);
+  const kService = hmac(kRegion, 's3');
+  const kSigning = hmac(kService, 'aws4_request');
+  const signature = hmac(kSigning, stringToSign, 'hex');
+  const authorization = `AWS4-HMAC-SHA256 Credential=${TOS_ACCESS_KEY_ID}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+  const response = await fetch(`https://${host}${canonicalUri}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: authorization,
+      'Content-Type': contentType,
+      'Content-Length': String(buffer.length),
+      'x-amz-content-sha256': payloadHash,
+      'x-amz-date': timestamp,
+    },
+    body: buffer,
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(`TOS 上传失败(${response.status})${detail ? '，请检查服务端最小权限配置' : ''}`);
+  }
+  return {
+    objectKey,
+    publicUrl: tosPublicUrl(objectKey),
+  };
+}
+
+function contentTypeForFilename(filename) {
+  const lower = safeText(filename).toLowerCase();
+  if (lower.endsWith('.yml') || lower.endsWith('.yaml')) return 'text/yaml; charset=utf-8';
+  if (lower.endsWith('.dmg')) return 'application/x-apple-diskimage';
+  if (lower.endsWith('.zip')) return 'application/zip';
+  if (lower.endsWith('.exe')) return 'application/vnd.microsoft.portable-executable';
+  if (lower.endsWith('.blockmap')) return 'application/octet-stream';
+  return 'application/octet-stream';
+}
+
+function mapRelease(row, packages = [], latestTosSyncJob = null) {
+  return {
+    id: row.id,
+    version: row.version,
+    gitTag: row.git_tag || null,
+    sourceCommit: row.source_commit || null,
+    status: row.status || 'draft',
+    platforms: Array.isArray(row.platforms) ? row.platforms : [],
+    mandatory: Boolean(row.mandatory),
+    userNotes: row.user_notes || {},
+    internalNotes: row.internal_notes || '',
+    screenshots: Array.isArray(row.screenshots) ? row.screenshots : [],
+    createdBy: row.created_by || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    publishedAt: row.published_at || null,
+    latestTosSyncJob,
+    packages,
+  };
+}
+
+function mapReleasePackage(row) {
+  return {
+    id: row.id,
+    releaseId: row.release_id,
+    platform: row.platform,
+    arch: row.arch || normalizeReleaseArch('', row.platform || 'mac'),
+    artifactType: row.artifact_type || 'installer',
+    fileName: row.file_name,
+    sizeBytes: Number(row.size_bytes || 0),
+    sha512: row.sha512 || '',
+    downloadUrl: row.download_url || '',
+    publicUrl: row.public_url || null,
+    tosObjectKey: row.tos_object_key || null,
+    tosBlockmapObjectKey: row.tos_blockmap_object_key || null,
+    blockmapUrl: row.blockmap_url || null,
+    downloadable: Boolean(row.downloadable),
+    publishedAt: row.published_at || null,
+  };
+}
+
+function mapCustomPackage(row) {
+  return {
+    id: row.id,
+    baseReleaseId: row.base_release_id,
+    baseVersion: row.base_version || null,
+    name: row.name || '',
+    versionLabel: row.version_label || '',
+    differenceNotes: row.difference_notes || '',
+    platform: row.platform || 'mac',
+    arch: row.arch || normalizeReleaseArch('', row.platform || 'mac'),
+    fileName: row.file_name || '',
+    sizeBytes: Number(row.size_bytes || 0),
+    sha512: row.sha512 || '',
+    downloadUrl: row.download_url || '',
+    publicUrl: row.public_url || null,
+    tosObjectKey: row.tos_object_key || null,
+    tosBlockmapObjectKey: row.tos_blockmap_object_key || null,
+    blockmapUrl: row.blockmap_url || null,
+    status: row.status || 'testing',
+    createdBy: row.created_by || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    readyAt: row.ready_at || null,
+  };
+}
+
+function mapAssignment(row) {
+  return {
+    id: row.id,
+    releaseId: row.release_id,
+    releaseVersion: row.release_version || null,
+    customPackageId: row.custom_package_id || null,
+    customPackageName: row.custom_package_name || null,
+    customPackageStatus: row.custom_package_status || null,
+    platform: row.platform || 'all',
+    targetType: row.target_type,
+    orgCode: row.org_code || null,
+    rolloutPct: Number(row.rollout_pct || 100),
+    mandatory: Boolean(row.mandatory),
+    status: row.status || 'active',
+    createdBy: row.created_by || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapFeedback(row) {
+  return {
+    id: row.id,
+    kind: row.kind || 'experience',
+    severity: row.severity || 'minor',
+    title: row.title || '',
+    description: row.description || '',
+    submitterUserId: row.submitter_user_id || null,
+    submitterName: row.submitter_name || '',
+    orgCode: row.org_code || null,
+    version: row.version || null,
+    page: row.page || null,
+    os: row.os || null,
+    screenshotUrl: row.screenshot_url || null,
+    logExcerpt: row.log_excerpt || null,
+    status: row.status || 'open',
+    dupOf: row.dup_of || null,
+    linkedTaskId: row.linked_task_id || null,
+    linkedReleaseId: row.linked_release_id || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapOrgSummary(row) {
+  const aliases = Array.isArray(row.aliases) ? row.aliases : [];
+  const canonicalOrgCode = normalizeCanonicalOrgCode(row.canonical_org_code || row.source_org_id || row.code);
+  const publicAliases = orgAliasVariants(aliases, row.code, row.source_org_id)
+    .filter((item) => item && item !== canonicalOrgCode);
+  return {
+    id: row.id,
+    name: row.name,
+    code: canonicalOrgCode || row.code,
+    canonicalOrgCode: canonicalOrgCode || null,
+    legacyCode: row.code || null,
+    aliases: [...new Set(publicAliases)],
+    source: row.source || 'manual',
+    sourceOrgId: row.source_org_id || null,
+    sourceCloudUrl: row.source_cloud_url || null,
+    departmentCount: Number(row.department_count || 0),
+    inviteCount: Number(row.invite_count || 0),
+    departments: Array.isArray(row.departments) ? row.departments : [],
+    memberCount: Number(row.member_count || 0),
+    installCount: Number(row.install_count || 0),
+    lastSeenAt: row.last_seen_at || null,
+    updatedAt: row.updated_at || null,
+  };
+}
+
+function mapBetaApplication(row) {
+  return {
+    id: row.id,
+    userName: row.user_name || '',
+    userEmail: row.user_email || '',
+    userType: row.user_type || 'nonprofit',
+    orgName: row.org_name || undefined,
+    purpose: row.purpose || undefined,
+    headcount: row.headcount || undefined,
+    focusIssue: row.focus_issue || undefined,
+    beneficiaryCount: row.beneficiary_count || undefined,
+    cloudCredit: row.cloud_credit || [],
+    status: row.status || 'pending',
+    code: row.code || undefined,
+    sentAt: row.sent_at || undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+async function listReleasePackages(releaseId) {
+  const q = await pool.query(
+    `SELECT * FROM release_packages WHERE release_id=$1 ORDER BY platform ASC, arch ASC, created_at DESC`,
+    [releaseId]
+  );
+  return q.rows.map(mapReleasePackage);
+}
+
+async function getReleaseById(releaseId) {
+  const q = await pool.query('SELECT * FROM release_versions WHERE id=$1 LIMIT 1', [releaseId]);
+  if (!q.rows[0]) return null;
+  return mapRelease(q.rows[0], await listReleasePackages(releaseId));
+}
+
+async function listReleaseRows() {
+  const q = await pool.query('SELECT * FROM release_versions ORDER BY created_at DESC, version DESC');
+  const packages = await pool.query('SELECT * FROM release_packages ORDER BY created_at DESC');
+  const jobs = await pool.query(
+    `SELECT DISTINCT ON (release_id) *
+     FROM release_tos_sync_jobs
+     ORDER BY release_id, updated_at DESC`
+  );
+  const byRelease = new Map();
+  for (const row of packages.rows) {
+    const list = byRelease.get(row.release_id) || [];
+    list.push(mapReleasePackage(row));
+    byRelease.set(row.release_id, list);
+  }
+  const jobByRelease = new Map(jobs.rows.map((row) => [row.release_id, mapTosSyncJob(row)]));
+  return q.rows.map((row) => mapRelease(row, byRelease.get(row.id) || [], jobByRelease.get(row.id) || null));
+}
+
+async function upsertReleasePackage(releaseId, platform, fileBuffer, filename, archInput = '') {
+  const normalizedPlatform = normalizeReleasePlatform(platform);
+  if (normalizedPlatform === 'android' || normalizedPlatform === 'ios') {
+    throw new Error('移动端安装包入口本轮仅预留，暂不开放上传');
+  }
+  const arch = normalizeReleaseArch(archInput, normalizedPlatform);
+  const safeFilename = sanitizeUploadFilename(filename, normalizedPlatform === 'windows' ? '.exe' : '.dmg');
+  const ext = path.extname(safeFilename).toLowerCase();
+  if (!allowedInstallerExtensions(normalizedPlatform).includes(ext)) {
+    throw new Error(installerUploadError(normalizedPlatform));
+  }
+  const release = await getReleaseById(releaseId);
+  if (!release) throw new Error('版本不存在');
+  const targetDir = path.join(RELEASE_ASSET_ROOT, normalizedPlatform, arch, release.version);
+  await fs.mkdir(targetDir, { recursive: true });
+  const storedName = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${safeFilename}`;
+  const targetPath = path.join(targetDir, storedName);
+  await fs.writeFile(targetPath, fileBuffer);
+  const id = crypto.randomUUID();
+  const downloadUrl = `/api/v1/downloads/package/${id}`;
+  const q = await pool.query(
+    `INSERT INTO release_packages(
+       id, release_id, platform, arch, artifact_type, file_name, storage_path,
+       tos_object_key, public_url, size_bytes, sha512, download_url, downloadable, published_at
+     ) VALUES ($1,$2,$3,$4,'installer',$5,$6,$7,$8,$9,$10,$11,true,NULL)
+     RETURNING *`,
+    [
+      id,
+      releaseId,
+      normalizedPlatform,
+      arch,
+      safeFilename,
+      targetPath,
+      null,
+      null,
+      fileBuffer.length,
+      sha512Hex(fileBuffer),
+      downloadUrl,
+    ]
+  );
+  await pool.query(
+    `UPDATE release_versions
+     SET platforms = (
+       SELECT ARRAY(SELECT DISTINCT unnest(array_append(platforms, $1)) ORDER BY 1)
+     ),
+     updated_at=now()
+     WHERE id=$2`,
+    [normalizedPlatform, releaseId]
+  );
+  return mapReleasePackage(q.rows[0]);
+}
+
+async function attachReleaseBlockmap(releaseId, packageId, fileBuffer, filename) {
+  const safeFilename = sanitizeUploadFilename(filename, '.blockmap');
+  if (!safeFilename.endsWith('.blockmap')) throw new Error('blockmap 文件扩展名必须是 .blockmap');
+  const q = await pool.query('SELECT * FROM release_packages WHERE id=$1 AND release_id=$2 LIMIT 1', [packageId, releaseId]);
+  const pkg = q.rows[0];
+  if (!pkg) throw new Error('安装包不存在');
+  const targetDir = path.dirname(pkg.storage_path);
+  await fs.mkdir(targetDir, { recursive: true });
+  const targetPath = path.join(targetDir, `${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${safeFilename}`);
+  await fs.writeFile(targetPath, fileBuffer);
+  const blockmapUrl = `/api/v1/downloads/package/${packageId}/blockmap`;
+  const objectKey = pkg.tos_object_key
+    ? `${pkg.tos_object_key}.blockmap`
+    : releaseObjectKey(pkg.platform || 'mac', pkg.arch || normalizeReleaseArch('', pkg.platform || 'mac'), 'blockmap', safeFilename);
+  let tosObject = null;
+  if (tosConfigured()) {
+    tosObject = await putTosObject(objectKey, fileBuffer, contentTypeForFilename(safeFilename));
+  }
+  const updated = await pool.query(
+    `UPDATE release_packages
+     SET blockmap_path=$1, blockmap_url=$2, tos_blockmap_object_key=$3, updated_at=now()
+     WHERE id=$4
+     RETURNING *`,
+    [targetPath, blockmapUrl, tosObject?.objectKey || null, packageId]
+  );
+  return mapReleasePackage(updated.rows[0]);
+}
+
+async function listCustomPackages() {
+  const q = await pool.query(
+    `SELECT cp.*, r.version AS base_version
+     FROM release_custom_packages cp
+     JOIN release_versions r ON r.id = cp.base_release_id
+     ORDER BY cp.created_at DESC`
+  );
+  return q.rows.map(mapCustomPackage);
+}
+
+async function createCustomPackage(payload, fileBuffer, filename) {
+  const baseReleaseId = safeText(payload.baseReleaseId);
+  const base = await getReleaseById(baseReleaseId);
+  if (!base) throw new Error('基准版本不存在');
+  const platform = normalizeReleasePlatform(payload.platform);
+  if (platform === 'android' || platform === 'ios') {
+    throw new Error('移动端定制包入口本轮仅预留，暂不开放上传');
+  }
+  const arch = normalizeReleaseArch(payload.arch, platform);
+  const safeFilename = sanitizeUploadFilename(filename, platform === 'windows' ? '.exe' : '.dmg');
+  const ext = path.extname(safeFilename).toLowerCase();
+  if (!allowedInstallerExtensions(platform).includes(ext)) throw new Error(installerUploadError(platform));
+  const name = safeText(payload.name);
+  if (!name) throw new Error('请填写定制版名称');
+  const versionLabel = safeText(payload.versionLabel, `${base.version}-custom.${new Date().toISOString().replace(/\D/g, '').slice(0, 12)}`);
+  const status = normalizeCustomPackageStatus(payload.status);
+  const targetDir = path.join(RELEASE_ASSET_ROOT, 'custom', platform, arch, versionLabel);
+  await fs.mkdir(targetDir, { recursive: true });
+  const storedName = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${safeFilename}`;
+  const targetPath = path.join(targetDir, storedName);
+  await fs.writeFile(targetPath, fileBuffer);
+  const id = crypto.randomUUID();
+  const downloadUrl = `/api/v1/updates/packages/custom/${id}`;
+  const objectKey = releaseObjectKey('custom', platform, arch, id, safeFilename);
+  let tosObject = null;
+  if (tosConfigured()) {
+    tosObject = await putTosObject(objectKey, fileBuffer, contentTypeForFilename(safeFilename));
+  }
+  const q = await pool.query(
+    `INSERT INTO release_custom_packages(
+       id, base_release_id, name, version_label, difference_notes, platform, arch,
+       file_name, storage_path, tos_object_key, public_url, size_bytes, sha512, download_url, status, created_by, ready_at
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+     RETURNING *`,
+    [
+      id,
+      baseReleaseId,
+      name,
+      versionLabel,
+      safeText(payload.differenceNotes),
+      platform,
+      arch,
+      safeFilename,
+      targetPath,
+      tosObject?.objectKey || null,
+      tosObject?.publicUrl || null,
+      fileBuffer.length,
+      sha512Hex(fileBuffer),
+      downloadUrl,
+      status,
+      safeText(payload.createdBy) || null,
+      status === 'ready' ? new Date().toISOString() : null,
+    ]
+  );
+  q.rows[0].base_version = base.version;
+  return mapCustomPackage(q.rows[0]);
+}
+
+async function attachCustomPackageBlockmap(customPackageId, fileBuffer, filename) {
+  const safeFilename = sanitizeUploadFilename(filename, '.blockmap');
+  if (!safeFilename.endsWith('.blockmap')) throw new Error('blockmap 文件扩展名必须是 .blockmap');
+  const q = await pool.query('SELECT * FROM release_custom_packages WHERE id=$1 LIMIT 1', [customPackageId]);
+  const pkg = q.rows[0];
+  if (!pkg) throw new Error('定制包不存在');
+  const targetDir = path.dirname(pkg.storage_path);
+  await fs.mkdir(targetDir, { recursive: true });
+  const targetPath = path.join(targetDir, `${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${safeFilename}`);
+  await fs.writeFile(targetPath, fileBuffer);
+  const blockmapUrl = `/api/v1/updates/packages/custom/${customPackageId}/blockmap`;
+  const objectKey = pkg.tos_object_key
+    ? `${pkg.tos_object_key}.blockmap`
+    : releaseObjectKey('custom', pkg.platform || 'mac', pkg.arch || normalizeReleaseArch('', pkg.platform || 'mac'), customPackageId, safeFilename);
+  let tosObject = null;
+  if (tosConfigured()) {
+    tosObject = await putTosObject(objectKey, fileBuffer, contentTypeForFilename(safeFilename));
+  }
+  const updated = await pool.query(
+    `UPDATE release_custom_packages
+     SET blockmap_path=$1, blockmap_url=$2, tos_blockmap_object_key=$3, updated_at=now()
+     WHERE id=$4
+     RETURNING *`,
+    [targetPath, blockmapUrl, tosObject?.objectKey || null, customPackageId]
+  );
+  const base = await pool.query('SELECT version FROM release_versions WHERE id=$1 LIMIT 1', [updated.rows[0].base_release_id]);
+  updated.rows[0].base_version = base.rows[0]?.version || null;
+  return mapCustomPackage(updated.rows[0]);
+}
+
+async function patchCustomPackage(customPackageId, payload) {
+  const fields = [];
+  const values = [];
+  const add = (sql, value) => { values.push(value); fields.push(`${sql}=$${values.length}`); };
+  if (payload.name != null) add('name', safeText(payload.name));
+  if (payload.versionLabel != null) add('version_label', safeText(payload.versionLabel));
+  if (payload.differenceNotes != null) add('difference_notes', safeText(payload.differenceNotes));
+  if (payload.status != null) {
+    const status = normalizeCustomPackageStatus(payload.status);
+    add('status', status);
+    if (status === 'ready') fields.push('ready_at=COALESCE(ready_at, now())');
+  }
+  if (!fields.length) throw new Error('没有可更新字段');
+  fields.push('updated_at=now()');
+  values.push(customPackageId);
+  const q = await pool.query(
+    `UPDATE release_custom_packages SET ${fields.join(', ')} WHERE id=$${values.length} RETURNING *`,
+    values
+  );
+  if (!q.rows[0]) throw new Error('定制包不存在');
+  const base = await pool.query('SELECT version FROM release_versions WHERE id=$1 LIMIT 1', [q.rows[0].base_release_id]);
+  q.rows[0].base_version = base.rows[0]?.version || null;
+  return mapCustomPackage(q.rows[0]);
+}
+
+function absolutizeSitePath(pathname) {
+  if (/^https?:\/\//i.test(String(pathname || ''))) return pathname;
+  return new URL(String(pathname || '/'), PUBLIC_SITE_URL).toString();
+}
+
+function sha512ForElectronUpdater(value) {
+  const raw = safeText(value);
+  return /^[a-f0-9]{128}$/i.test(raw) ? Buffer.from(raw, 'hex').toString('base64') : raw;
+}
+
+function packageDownloadPath(kind, id, blockmap = false) {
+  return `/api/v1/updates/packages/${kind}/${encodeURIComponent(id)}${blockmap ? '/blockmap' : ''}`;
+}
+
+function buildUpdatePayloadFromPackage(pkg, kind, releaseVersion, customPackage = null) {
+  const blockmapPath = pkg.blockmap_path || null;
+  const downloadUrl = pkg.public_url || absolutizeSitePath(packageDownloadPath(kind, pkg.id));
+  const blockmapUrl = pkg.tos_blockmap_object_key
+    ? tosPublicUrl(pkg.tos_blockmap_object_key)
+    : (blockmapPath ? absolutizeSitePath(packageDownloadPath(kind, pkg.id, true)) : null);
+  const rawDate = pkg.ready_at || pkg.published_at || pkg.updated_at || pkg.created_at || null;
+  const releaseDate = rawDate instanceof Date ? rawDate.toISOString() : safeText(rawDate, new Date().toISOString());
+  return {
+    version: customPackage?.version_label || releaseVersion,
+    displayVersion: customPackage?.version_label || releaseVersion,
+    updaterVersion: releaseVersion,
+    releaseVersion,
+    platform: pkg.platform || customPackage?.platform || 'mac',
+    arch: pkg.arch || customPackage?.arch || normalizeReleaseArch('', pkg.platform || 'mac'),
+    packageKind: kind,
+    customPackageId: customPackage?.id || null,
+    customPackageName: customPackage?.name || null,
+    fileName: pkg.file_name,
+    sizeBytes: Number(pkg.size_bytes || 0),
+    sha512: sha512ForElectronUpdater(pkg.sha512),
+    downloadUrl,
+    blockmapUrl,
+    releaseDate,
+  };
+}
+
+function renderLatestYml(update) {
+  const updaterVersion = update.updaterVersion || update.releaseVersion || update.version;
+  const lines = [
+    `version: ${JSON.stringify(updaterVersion)}`,
+    'files:',
+    `  - url: ${JSON.stringify(update.downloadUrl)}`,
+    `    sha512: ${JSON.stringify(update.sha512)}`,
+    `    size: ${Number(update.sizeBytes || 0)}`,
+    `path: ${JSON.stringify(update.downloadUrl)}`,
+    `sha512: ${JSON.stringify(update.sha512)}`,
+    `releaseDate: ${JSON.stringify(update.releaseDate)}`,
+  ];
+  return `${lines.join('\n')}\n`;
+}
+
+const renderLatestMacYml = renderLatestYml;
+
+function serializeTosSyncJob(job) {
+  return {
+    id: job.id,
+    releaseId: job.releaseId,
+    status: job.status,
+    stage: job.stage,
+    percent: job.percent,
+    message: job.message,
+    tosConfigured: job.tosConfigured,
+    manifests: job.manifests || [],
+    error: job.error || null,
+    startedAt: job.startedAt,
+    updatedAt: job.updatedAt,
+    completedAt: job.completedAt || null,
+  };
+}
+
+function mapTosSyncJob(row) {
+  if (!row) return null;
+  const startedAt = row.started_at instanceof Date ? row.started_at.toISOString() : safeText(row.started_at);
+  const updatedAt = row.updated_at instanceof Date ? row.updated_at.toISOString() : safeText(row.updated_at);
+  const completedAt = row.completed_at instanceof Date ? row.completed_at.toISOString() : (row.completed_at ? safeText(row.completed_at) : null);
+  return {
+    id: row.id,
+    releaseId: row.release_id,
+    status: row.status,
+    stage: row.stage,
+    percent: Number(row.percent || 0),
+    message: row.message || '',
+    tosConfigured: Boolean(row.tos_configured),
+    manifests: Array.isArray(row.manifests) ? row.manifests : [],
+    error: row.error || null,
+    startedAt,
+    updatedAt,
+    completedAt,
+  };
+}
+
+async function getTosSyncJob(jobId, releaseId = null) {
+  const params = releaseId ? [jobId, releaseId] : [jobId];
+  const q = await pool.query(
+    `SELECT * FROM release_tos_sync_jobs
+     WHERE id=$1${releaseId ? ' AND release_id=$2' : ''}
+     LIMIT 1`,
+    params
+  );
+  return mapTosSyncJob(q.rows[0]);
+}
+
+async function findRunningTosSyncJob(releaseId) {
+  const q = await pool.query(
+    `SELECT * FROM release_tos_sync_jobs
+     WHERE release_id=$1 AND status IN ('queued','running')
+     ORDER BY updated_at DESC
+     LIMIT 1`,
+    [releaseId]
+  );
+  return mapTosSyncJob(q.rows[0]);
+}
+
+async function createTosSyncJob(releaseId, adminId) {
+  const id = crypto.randomUUID();
+  const q = await pool.query(
+    `INSERT INTO release_tos_sync_jobs(
+       id, release_id, status, stage, percent, message, tos_configured, manifests, error, created_by
+     ) VALUES ($1,$2,'queued','queued',1,$3,$4,'[]'::jsonb,NULL,$5)
+     RETURNING *`,
+    [id, releaseId, '已创建 TOS 更新任务，等待服务器开始处理。', tosConfigured(), adminId || null]
+  );
+  return mapTosSyncJob(q.rows[0]);
+}
+
+async function updateTosSyncJob(job, patch) {
+  const next = { ...job, ...patch };
+  const q = await pool.query(
+    `UPDATE release_tos_sync_jobs
+     SET status=$2,
+         stage=$3,
+         percent=$4,
+         message=$5,
+         tos_configured=$6,
+         manifests=$7::jsonb,
+         error=$8,
+         updated_at=now(),
+         completed_at=$9
+     WHERE id=$1
+     RETURNING *`,
+    [
+      job.id,
+      next.status,
+      next.stage,
+      Math.max(0, Math.min(100, Number(next.percent || 0))),
+      next.message || '',
+      Boolean(next.tosConfigured),
+      JSON.stringify(next.manifests || []),
+      next.error || null,
+      next.completedAt || null,
+    ]
+  );
+  const mapped = mapTosSyncJob(q.rows[0]);
+  if (mapped) Object.assign(job, mapped);
+  return mapped || job;
+}
+
+async function startReleaseTosSyncJob(releaseId, adminId) {
+  const existing = await findRunningTosSyncJob(releaseId);
+  if (existing) return existing;
+
+  const job = await createTosSyncJob(releaseId, adminId);
+
+  setImmediate(async () => {
+    try {
+      await updateTosSyncJob(job, {
+        status: 'running',
+        stage: 'preparing',
+        percent: 5,
+        message: '正在读取版本与安装包信息。',
+      });
+      const manifests = await publishReleaseManifests(releaseId, (progress) => {
+        return updateTosSyncJob(job, {
+          status: 'running',
+          ...progress,
+        });
+      });
+      if (!manifests.length) {
+        throw new Error('至少上传一个 Mac 或 Windows 安装包后才能同步 TOS 更新源');
+      }
+      await updateTosSyncJob(job, {
+        status: 'succeeded',
+        stage: 'completed',
+        percent: 100,
+        message: `TOS 更新完成，已更新 ${manifests.length} 个平台 latest 清单。`,
+        manifests,
+        completedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      await updateTosSyncJob(job, {
+        status: 'failed',
+        stage: 'failed',
+        percent: Math.max(Number(job.percent || 0), 1),
+        message: 'TOS 更新失败。',
+        error: error?.message || String(error),
+        completedAt: new Date().toISOString(),
+      });
+      console.warn('[release] TOS sync job failed:', error?.message || error);
+    }
+  });
+
+  return job;
+}
+
+async function publishReleaseManifests(releaseId, onProgress = null) {
+  const release = await getReleaseById(releaseId);
+  if (!release) throw new Error('版本不存在');
+  const platforms = [...new Set((release.platforms || ['mac']).map(normalizeReleasePlatform))];
+  const activePlatforms = platforms.filter((platform) => platform !== 'android' && platform !== 'ios');
+  const published = [];
+  for (const [index, platform] of activePlatforms.entries()) {
+    if (platform === 'android' || platform === 'ios') continue;
+    const basePercent = 10 + Math.floor((index / Math.max(activePlatforms.length, 1)) * 80);
+    const nextPercent = 10 + Math.floor(((index + 1) / Math.max(activePlatforms.length, 1)) * 80);
+    const pkgQ = await pool.query(
+      `SELECT p.*, r.version
+       FROM release_packages p
+       JOIN release_versions r ON r.id = p.release_id
+       WHERE p.release_id=$1 AND p.platform=$2 AND p.downloadable=true
+       ORDER BY p.created_at DESC
+       LIMIT 1`,
+      [releaseId, platform]
+    );
+    const pkg = pkgQ.rows[0];
+    if (!pkg) continue;
+    await onProgress?.({
+      stage: `uploading-${platform}`,
+      percent: basePercent,
+      message: `正在同步 ${platform === 'windows' ? 'Windows' : 'Mac'} 安装包到 TOS。`,
+    });
+    const syncedPkg = await ensureReleasePackageOnTos(pkg, release.version, onProgress, {
+      platform,
+      basePercent,
+      nextPercent: Math.max(basePercent + 35, nextPercent - 10),
+    });
+    if (tosConfigured() && !syncedPkg.public_url) {
+      throw new Error(`${platform === 'windows' ? 'Windows' : 'Mac'} 安装包尚未成功上传到 TOS，已停止写入 latest 清单`);
+    }
+    const update = buildUpdatePayloadFromPackage(syncedPkg, 'release', release.version, null);
+    const manifest = renderLatestYml(update);
+    const manifestFileName = platform === 'windows' ? 'latest.yml' : 'latest-mac.yml';
+    const manifestKey = releaseObjectKey(platform, manifestFileName);
+    if (tosConfigured()) {
+      try {
+        await onProgress?.({
+          stage: `manifest-${platform}`,
+          percent: Math.max(basePercent + 35, nextPercent - 10),
+          message: `正在写入 ${platform === 'windows' ? 'Windows' : 'Mac'} latest 清单。`,
+        });
+        await putTosObject(manifestKey, Buffer.from(manifest, 'utf8'), contentTypeForFilename(manifestFileName));
+      } catch (error) {
+        console.warn('[release] TOS manifest upload skipped:', error?.message || error);
+      }
+    }
+    await pool.query(
+      `UPDATE release_packages
+       SET published_at=COALESCE(published_at, now()), updated_at=now()
+       WHERE id=$1`,
+      [pkg.id]
+    );
+    await onProgress?.({
+      stage: `done-${platform}`,
+      percent: nextPercent,
+      message: `${platform === 'windows' ? 'Windows' : 'Mac'} TOS 清单已处理。`,
+    });
+    published.push({ platform, manifestKey: tosConfigured() ? manifestKey : null, packageId: syncedPkg.id });
+  }
+  return published;
+}
+
+async function ensureReleasePackageOnTos(pkg, version, onProgress = null, progressContext = {}) {
+  if (!tosConfigured()) return pkg;
+  let next = { ...pkg };
+  const updates = {};
+  if (!next.tos_object_key || !next.public_url) {
+    const objectKey = releaseObjectKey(
+      next.platform || 'mac',
+      next.arch || normalizeReleaseArch('', next.platform || 'mac'),
+      version || 'unknown',
+      next.file_name
+    );
+    const buffer = await fs.readFile(next.storage_path);
+    try {
+      await onProgress?.({
+        stage: `uploading-${next.platform || 'package'}`,
+        percent: progressContext.basePercent || 20,
+        message: `正在上传 ${next.file_name} 到 TOS。`,
+      });
+      const uploaded = await putTosObject(objectKey, buffer, contentTypeForFilename(next.file_name));
+      updates.tos_object_key = uploaded.objectKey;
+      updates.public_url = uploaded.publicUrl;
+      next.tos_object_key = uploaded.objectKey;
+      next.public_url = uploaded.publicUrl;
+      await onProgress?.({
+        stage: `uploaded-${next.platform || 'package'}`,
+        percent: progressContext.nextPercent || 70,
+        message: `${next.file_name} 已上传到 TOS，准备写入 latest 清单。`,
+      });
+    } catch (error) {
+      console.warn('[release] TOS package sync skipped:', error?.message || error);
+      throw error;
+    }
+  }
+  if (next.blockmap_path && !next.tos_blockmap_object_key) {
+    const blockmapKey = `${next.tos_object_key || releaseObjectKey(next.platform || 'mac', next.arch || normalizeReleaseArch('', next.platform || 'mac'), version || 'unknown', next.file_name)}.blockmap`;
+    await onProgress?.({
+      stage: `blockmap-${next.platform || 'package'}`,
+      percent: Math.max(progressContext.basePercent || 20, (progressContext.nextPercent || 70) - 5),
+      message: `正在上传 ${next.file_name}.blockmap 到 TOS。`,
+    });
+    await putTosObject(blockmapKey, await fs.readFile(next.blockmap_path), contentTypeForFilename(`${next.file_name}.blockmap`));
+    updates.tos_blockmap_object_key = blockmapKey;
+    next.tos_blockmap_object_key = blockmapKey;
+  }
+  const keys = Object.keys(updates);
+  if (keys.length) {
+    const values = keys.map((key) => updates[key]);
+    const sets = keys.map((key, index) => `${key}=$${index + 1}`);
+    values.push(next.id);
+    const q = await pool.query(
+      `UPDATE release_packages SET ${sets.join(', ')}, updated_at=now() WHERE id=$${values.length} RETURNING *`,
+      values
+    );
+    next = q.rows[0] || next;
+  }
+  return next;
+}
+
+async function fetchWorkbenchCloudJson(pathname) {
+  if (!WORKBENCH_CLOUD_API_BASE_URL || !WORKBENCH_CLOUD_API_TOKEN) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(`${WORKBENCH_CLOUD_API_BASE_URL}${pathname}`, {
+      headers: { Authorization: `Bearer ${WORKBENCH_CLOUD_API_TOKEN}` },
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function findOrganizationByAnyCode(code, aliases = []) {
+  const variants = orgAliasVariants(code, aliases);
+  if (!variants.length) return null;
+  const q = await pool.query(
+    `SELECT *
+     FROM organizations
+     WHERE lower(coalesce(canonical_org_code,'')) = ANY($1::text[])
+        OR lower(coalesce(code,'')) = ANY($1::text[])
+        OR lower(coalesce(source_org_id,'')) = ANY($1::text[])
+        OR EXISTS (
+          SELECT 1
+          FROM jsonb_array_elements_text(coalesce(aliases, '[]'::jsonb)) AS alias(value)
+          WHERE lower(alias.value) = ANY($1::text[])
+        )
+     ORDER BY source_updated_at DESC NULLS LAST, updated_at DESC
+     LIMIT 1`,
+    [variants]
+  );
+  return q.rows[0] || null;
+}
+
+function deriveOrgSummaryFromProfile(profile, employees = []) {
+  const org = profile?.organization || profile?.data?.organization || null;
+  if (!org) return null;
+  const sourceOrgId = safeText(org.organizationId || org.id || org.sourceOrgId || 'org_yiyu_default');
+  const name = safeText(org.name || org.organizationName, '益语智库');
+  const code = normalizeOrgCode(org.slug || org.code || org.organizationCode || sourceOrgId || name);
+  const canonicalOrgCode = normalizeCanonicalOrgCode(sourceOrgId || code);
+  const aliases = orgAliasVariants(code, org.slug, org.code, org.organizationCode, sourceOrgId);
+  const departments = Array.isArray(profile?.departments) ? profile.departments : [];
+  const activeDepartments = departments.filter((dept) => dept && dept.active !== false);
+  const activeEmployees = Array.isArray(employees)
+    ? employees.filter((employee) => employee && employee.accountStatus !== 'disabled')
+    : [];
+  return {
+    name,
+    code: canonicalOrgCode || code || 'yiyu',
+    canonicalOrgCode: canonicalOrgCode || code || 'yiyu',
+    aliases,
+    sourceOrgId,
+    sourceCloudUrl: WORKBENCH_CLOUD_API_BASE_URL,
+    memberCount: activeEmployees.length,
+    departmentCount: activeDepartments.length,
+    inviteCount: activeDepartments.filter((dept) => safeText(dept.inviteCode)).length,
+    departments: activeDepartments.map((dept) => ({
+      id: safeText(dept.id || dept.departmentId),
+      name: safeText(dept.name || dept.departmentName),
+      leaderName: safeText(dept.leaderName),
+    })).filter((dept) => dept.name),
+  };
+}
+
+async function upsertOrganizationCache(summary, source = 'workbench-cloud') {
+  if (!summary?.code || !summary?.name) return null;
+  const canonicalOrgCode = normalizeCanonicalOrgCode(summary.canonicalOrgCode || summary.sourceOrgId || summary.code);
+  const aliases = orgAliasVariants(summary.aliases, summary.code, summary.sourceOrgId, canonicalOrgCode)
+    .filter((item) => item !== canonicalOrgCode);
+  const code = canonicalOrgCode || normalizeOrgCode(summary.code);
+  const existing = await findOrganizationByAnyCode(code, aliases);
+  const values = [
+    summary.name,
+    code,
+    source,
+    summary.sourceOrgId || null,
+    canonicalOrgCode || null,
+    JSON.stringify([...new Set(aliases)]),
+    safeText(summary.sourceCloudUrl) || null,
+    Number(summary.memberCount || 0),
+    Number(summary.departmentCount || 0),
+    Number(summary.inviteCount || 0),
+    JSON.stringify(summary.departments || []),
+  ];
+  if (existing) {
+    const q = await pool.query(
+      `UPDATE organizations
+       SET name=$1, code=$2, source=$3, source_org_id=$4, canonical_org_code=$5,
+           aliases=$6::jsonb, source_cloud_url=COALESCE($7, source_cloud_url),
+           member_count=$8, department_count=$9, invite_count=$10, departments=$11::jsonb,
+           source_updated_at=now(), updated_at=now()
+       WHERE id=$12
+       RETURNING *`,
+      [...values, existing.id]
+    );
+    return mapOrgSummary(q.rows[0]);
+  }
+  const q = await pool.query(
+    `INSERT INTO organizations(
+       id, name, code, source, source_org_id, canonical_org_code, aliases, source_cloud_url,
+       member_count, department_count, invite_count, departments, source_updated_at, updated_at
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12::jsonb,now(),now())
+     RETURNING *`,
+    [
+      crypto.randomUUID(),
+      summary.name,
+      code,
+      source,
+      summary.sourceOrgId || null,
+      canonicalOrgCode || null,
+      JSON.stringify([...new Set(aliases)]),
+      safeText(summary.sourceCloudUrl) || null,
+      Number(summary.memberCount || 0),
+      Number(summary.departmentCount || 0),
+      Number(summary.inviteCount || 0),
+      JSON.stringify(summary.departments || []),
+    ]
+  );
+  return mapOrgSummary(q.rows[0]);
+}
+
+async function seedKnownYiyuOrganizationIfEmpty() {
+  await upsertOrganizationCache({
+    name: '益语智库',
+    code: 'org_yiyu_default',
+    canonicalOrgCode: 'org_yiyu_default',
+    aliases: ['yiyu', 'yiyu-thinktank', 'org_yiyu_default'],
+    sourceOrgId: 'org_yiyu_default',
+    memberCount: 0,
+    departmentCount: 3,
+    inviteCount: 0,
+    departments: [
+      { id: 'department_gq160gdz', name: '战略发展部', leaderName: '顾源源' },
+      { id: 'department_b3zvoei7', name: '合作发展部', leaderName: '乐乐' },
+      { id: '', name: '技术创新部', leaderName: '林佳维' },
+    ],
+  }, 'workbench-known-cache');
+}
+
+async function syncOrganizationsFromWorkbenchCloud() {
+  const profile = await fetchWorkbenchCloudJson('/api/v1/settings/org-model/profile');
+  if (!profile) {
+    await seedKnownYiyuOrganizationIfEmpty();
+    return;
+  }
+  const employees = await fetchWorkbenchCloudJson('/api/v1/employees/directory') || [];
+  const summary = deriveOrgSummaryFromProfile(profile, employees);
+  if (summary) await upsertOrganizationCache(summary, 'workbench-cloud');
+}
+
+async function listOrganizationSummaries() {
+  await syncOrganizationsFromWorkbenchCloud();
+  const q = await pool.query('SELECT * FROM organizations ORDER BY source_updated_at DESC NULLS LAST, created_at DESC');
+  return q.rows.map(mapOrgSummary);
+}
+
+async function resolveOrgCodeAliases(orgCode) {
+  const aliases = new Set(orgAliasVariants(orgCode));
+  const row = await findOrganizationByAnyCode(orgCode, [...aliases]);
+  if (row) {
+    for (const item of orgAliasVariants(row.canonical_org_code, row.code, row.source_org_id, row.aliases)) {
+      aliases.add(item);
+    }
+  }
+  return [...aliases].map((item) => item.toLowerCase());
+}
+
+async function resolveCanonicalOrgCode(orgCode) {
+  const row = await findOrganizationByAnyCode(orgCode);
+  if (row) {
+    return normalizeCanonicalOrgCode(row.canonical_org_code || row.source_org_id || row.code);
+  }
+  return normalizeCanonicalOrgCode(orgCode) || normalizeOrgCode(orgCode);
+}
+
+async function resolveReleaseOrgIdentity(payload = {}) {
+  const organizationId = safeText(payload.organizationId);
+  const organizationSlug = safeText(payload.organizationSlug);
+  const organizationName = safeText(payload.organizationName, organizationId || organizationSlug || '未知组织');
+  const cloudBackendUrl = normalizePublicLink(payload.cloudBackendUrl) || safeText(payload.cloudBackendUrl);
+  const platform = normalizeReleasePlatform(payload.platform);
+  const canonicalOrgCode = normalizeCanonicalOrgCode(organizationId || payload.canonicalOrgCode || organizationSlug);
+  const aliases = orgAliasVariants(organizationId, organizationSlug, payload.organizationCode, payload.legacyCode, canonicalOrgCode);
+  if (!canonicalOrgCode) {
+    return {
+      canonicalOrgCode: '',
+      matchedAliases: [],
+      updateFeedBaseUrl: new URL(`/api/v1/updates/public/${platform}/`, PUBLIC_SITE_URL).toString(),
+    };
+  }
+  const existing = await findOrganizationByAnyCode(canonicalOrgCode, aliases);
+  let org = existing;
+  if (existing) {
+    const mergedAliases = orgAliasVariants(existing.aliases, existing.code, existing.source_org_id, aliases, canonicalOrgCode)
+      .filter((item) => item !== canonicalOrgCode);
+    const q = await pool.query(
+      `UPDATE organizations
+       SET name=COALESCE(NULLIF($1,''), name),
+           code=$2,
+           canonical_org_code=$3,
+           aliases=$4::jsonb,
+           source=CASE WHEN source='manual' THEN 'client-report' ELSE source END,
+           source_org_id=COALESCE(NULLIF($5,''), source_org_id),
+           source_cloud_url=COALESCE(NULLIF($6,''), source_cloud_url),
+           last_seen_at=now(),
+           updated_at=now()
+       WHERE id=$7
+       RETURNING *`,
+      [
+        organizationName,
+        canonicalOrgCode,
+        canonicalOrgCode,
+        JSON.stringify([...new Set(mergedAliases)]),
+        organizationId || canonicalOrgCode,
+        cloudBackendUrl || '',
+        existing.id,
+      ]
+    );
+    org = q.rows[0];
+  } else {
+    const q = await pool.query(
+      `INSERT INTO organizations(
+         id, name, code, source, source_org_id, canonical_org_code, aliases, source_cloud_url, last_seen_at, updated_at
+       ) VALUES ($1,$2,$3,'client-report',$4,$5,$6::jsonb,$7,now(),now())
+       RETURNING *`,
+      [
+        crypto.randomUUID(),
+        organizationName,
+        canonicalOrgCode,
+        organizationId || canonicalOrgCode,
+        canonicalOrgCode,
+        JSON.stringify([...new Set(aliases.filter((item) => item !== canonicalOrgCode))]),
+        cloudBackendUrl || null,
+      ]
+    );
+    org = q.rows[0];
+  }
+  const mapped = mapOrgSummary(org);
+  return {
+    canonicalOrgCode: mapped.canonicalOrgCode || canonicalOrgCode,
+    matchedAliases: mapped.aliases || [],
+    updateFeedBaseUrl: new URL(`/api/v1/updates/${encodeURIComponent(mapped.canonicalOrgCode || canonicalOrgCode)}/${platform}/`, PUBLIC_SITE_URL).toString(),
+    organization: mapped,
+  };
+}
+
+async function packageForAssignment(assignment, platform) {
+  if (assignment.custom_package_id) {
+    const q = await pool.query(
+      `SELECT cp.*, r.version AS base_version
+       FROM release_custom_packages cp
+       JOIN release_versions r ON r.id = cp.base_release_id
+       WHERE cp.id=$1 AND cp.platform=$2 AND cp.status='ready'
+       LIMIT 1`,
+      [assignment.custom_package_id, platform]
+    );
+    if (q.rows[0]) {
+      return {
+        package: q.rows[0],
+        kind: 'custom',
+        releaseVersion: q.rows[0].version_label || q.rows[0].base_version,
+        customPackage: q.rows[0],
+      };
+    }
+  }
+  const q = await pool.query(
+    `SELECT p.*, r.version
+     FROM release_packages p
+     JOIN release_versions r ON r.id = p.release_id
+     WHERE p.release_id=$1 AND p.platform=$2 AND p.downloadable=true AND r.status='published'
+     ORDER BY p.created_at DESC
+     LIMIT 1`,
+    [assignment.release_id, platform]
+  );
+  if (!q.rows[0]) return null;
+  return { package: q.rows[0], kind: 'release', releaseVersion: q.rows[0].version, customPackage: null };
+}
+
+async function resolveAssignedPackage(orgCode, platform) {
+  const aliases = await resolveOrgCodeAliases(orgCode);
+  const exact = aliases.length
+    ? await pool.query(
+      `SELECT * FROM release_assignments
+       WHERE status='active' AND target_type='org' AND lower(coalesce(org_code,'')) = ANY($1::text[])
+       ORDER BY updated_at DESC, created_at DESC`,
+      [aliases]
+    )
+    : { rows: [] };
+  for (const assignment of exact.rows) {
+    const resolved = await packageForAssignment(assignment, platform);
+    if (resolved) return resolved;
+  }
+
+  const all = await pool.query(
+    `SELECT * FROM release_assignments
+     WHERE status='active' AND target_type='all'
+     ORDER BY updated_at DESC, created_at DESC`,
+    []
+  );
+  for (const assignment of all.rows) {
+    const resolved = await packageForAssignment(assignment, platform);
+    if (resolved) return resolved;
+  }
+  return null;
+}
+
+async function resolveUpdateTarget(orgCode, platform = 'mac') {
+  await syncOrganizationsFromWorkbenchCloud();
+  const normalizedPlatform = normalizeReleasePlatform(platform);
+  const assigned = await resolveAssignedPackage(orgCode, normalizedPlatform);
+  if (assigned) {
+    return buildUpdatePayloadFromPackage(assigned.package, assigned.kind, assigned.releaseVersion, assigned.customPackage);
+  }
+  const latest = await getLatestPackage(normalizedPlatform);
+  if (!latest) return null;
+  return buildUpdatePayloadFromPackage(latest, 'release', latest.version, null);
+}
+
+async function getLatestPackage(platform = 'mac') {
+  const q = await pool.query(
+    `SELECT p.*, r.version, r.status
+     FROM release_packages p
+     JOIN release_versions r ON r.id = p.release_id
+     WHERE r.status='published' AND p.platform=$1 AND p.downloadable=true
+     ORDER BY r.published_at DESC NULLS LAST, r.updated_at DESC, p.created_at DESC
+     LIMIT 1`,
+    [normalizeReleasePlatform(platform)]
+  );
+  return q.rows[0] || null;
+}
+
+async function createDownloadTokenForCode(code, platform = 'mac') {
+  const normalized = normalizeBetaCode(code);
+  const app = await pool.query(
+    `SELECT * FROM beta_applications
+     WHERE upper(regexp_replace(coalesce(code,''), '\\s+', '', 'g'))=$1
+       AND status='approved'
+     LIMIT 1`,
+    [normalized]
+  );
+  if (!app.rows[0]) throw new Error('内测码无效或尚未审核通过');
+  const normalizedPlatform = normalizeReleasePlatform(platform);
+  const pkg = await getLatestPackage(normalizedPlatform);
+  if (!pkg) throw new Error(`当前暂无可下载的 ${normalizedPlatform === 'windows' ? 'Windows' : 'macOS'} 安装包`);
+  const token = crypto.randomBytes(32).toString('hex');
+  await pool.query(
+    `INSERT INTO beta_download_tokens(id, token_hash, beta_application_id, release_id, package_id, platform, expires_at)
+     VALUES ($1,$2,$3,$4,$5,$6, now() + ($7::text || ' second')::interval)`,
+    [crypto.randomUUID(), hashToken(token), app.rows[0].id, pkg.release_id, pkg.id, normalizedPlatform, RELEASE_DOWNLOAD_TTL_SECONDS]
+  );
+  return { token, package: mapReleasePackage(pkg), application: mapBetaApplication(app.rows[0]) };
+}
+
+// 内测公开统计(官网计数器用): 申请人数=beta_applications 全量; 下载人数=真实领过安装包的人
+// (beta_download_tokens.used_at 非空, 按申请人去重; 申请被删后 token 退化为按 token 计 1 人)。
+// 公开无鉴权端点, 60s 内存缓存挡刷库。
+let betaStatsCache = { at: 0, data: null };
+async function getBetaStats() {
+  if (betaStatsCache.data && Date.now() - betaStatsCache.at < 60_000) return betaStatsCache.data;
+  const q = await pool.query(
+    `SELECT
+       (SELECT count(*) FROM beta_applications) AS application_count,
+       (SELECT count(DISTINCT COALESCE(beta_application_id, id)) FROM beta_download_tokens WHERE used_at IS NOT NULL) AS download_count`
+  );
+  const row = q.rows[0] || {};
+  const data = {
+    applicationCount: Number(row.application_count || 0),
+    downloadCount: Number(row.download_count || 0),
+  };
+  betaStatsCache = { at: Date.now(), data };
+  return data;
+}
+
+function parseByteRange(rangeHeader, size) {
+  if (!rangeHeader) return null;
+  const match = /^bytes=(\d*)-(\d*)$/.exec(String(rangeHeader).trim());
+  if (!match) return { invalid: true };
+  let start;
+  let end;
+  if (match[1] === '' && match[2] === '') return { invalid: true };
+  if (match[1] === '') {
+    const suffixLength = Number(match[2]);
+    if (!Number.isFinite(suffixLength) || suffixLength <= 0) return { invalid: true };
+    start = Math.max(size - suffixLength, 0);
+    end = size - 1;
+  } else {
+    start = Number(match[1]);
+    end = match[2] === '' ? size - 1 : Number(match[2]);
+  }
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end < start || start >= size) {
+    return { invalid: true };
+  }
+  return { start, end: Math.min(end, size - 1) };
+}
+
+async function streamReleaseFile(req, res, pkg, kind = 'installer') {
+  const filePath = kind === 'blockmap' ? pkg.blockmap_path : pkg.storage_path;
+  if (!filePath || !fsSync.existsSync(filePath)) {
+    return json(res, 404, { ok: false, error: '安装包文件不存在' });
+  }
+  try {
+    fsSync.accessSync(filePath, fsSync.constants.R_OK);
+  } catch {
+    return json(res, 500, { ok: false, error: '安装包文件暂时无法读取，请联系管理员检查发布文件权限' });
+  }
+  const filename = kind === 'blockmap'
+    ? `${pkg.file_name}.blockmap`
+    : pkg.file_name;
+  const stat = fsSync.statSync(filePath);
+  const contentType = filename.endsWith('.dmg')
+    ? 'application/x-apple-diskimage'
+    : 'application/octet-stream';
+  const range = parseByteRange(req.headers.range, stat.size);
+  if (range?.invalid) {
+    res.writeHead(416, {
+      ...corsHeaders,
+      'Content-Range': `bytes */${stat.size}`,
+      'Cache-Control': 'private, max-age=0, no-store',
+    });
+    return res.end();
+  }
+  const start = range ? range.start : 0;
+  const end = range ? range.end : stat.size - 1;
+  const contentLength = end - start + 1;
+  res.writeHead(range ? 206 : 200, {
+    ...corsHeaders,
+    'Content-Type': contentType,
+    'Content-Length': String(contentLength),
+    'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+    'Cache-Control': 'private, max-age=0, no-store',
+    'Accept-Ranges': 'bytes',
+    ...(range ? { 'Content-Range': `bytes ${start}-${end}/${stat.size}` } : {}),
+  });
+  if (req.method === 'HEAD') return res.end();
+  const stream = fsSync.createReadStream(filePath, { start, end });
+  stream.on('error', () => {
+    if (!res.headersSent) {
+      json(res, 500, { ok: false, error: '安装包读取失败，请稍后重试' });
+    } else {
+      res.destroy();
+    }
+  });
+  stream.pipe(res);
+}
+
+async function arkProxy(apiPath, payload) {
+  if (!process.env.ARK_API_KEY) throw new Error('模型服务未配置');
+  const upstream = await fetch(`${ARK_BASE_URL}${apiPath}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.ARK_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload || {}),
+  });
+  const data = await upstream.json().catch(() => ({}));
+  if (!upstream.ok) {
+    const message = data?.error?.message || data?.message || `模型服务请求失败(${upstream.status})`;
+    const error = new Error(message);
+    error.status = upstream.status;
+    throw error;
+  }
+  return data;
+}
+
+async function readAiManifest() {
+  try {
+    return JSON.parse(await fs.readFile(AI_MANIFEST_PATH, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+async function writeAiManifest(manifest) {
+  await fs.mkdir(path.dirname(AI_MANIFEST_PATH), { recursive: true });
+  await fs.writeFile(AI_MANIFEST_PATH, JSON.stringify(manifest, null, 2), 'utf8');
+}
+
+function stripHtmlText(html) {
+  return String(html || '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<\/?(p|h[1-6]|li|tr|td|br|div)[^>]*>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function articleText(article) {
+  if (safeText(article.content_text).length > 50) return safeText(article.content_text).slice(0, 4000);
+  if (safeText(article.content).length > 50) return safeText(article.content).slice(0, 4000);
+  if (safeText(article.content_html)) return stripHtmlText(article.content_html).slice(0, 4000);
+  return safeText(article.excerpt);
+}
+
+async function listPublishedAiArticles() {
+  const q = await pool.query(
+    `SELECT id,title,excerpt,topics,to_char(publish_date,'YYYY-MM-DD') AS publish_date,cover_image,content_html,content_text,status
+     FROM insights
+     WHERE status='published'
+     ORDER BY publish_date DESC NULLS LAST, created_at DESC`
+  );
+  return q.rows;
+}
+
+async function processAiArticle(article, task, force = false) {
+  const safeId = safeText(article.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+  const dir = path.join(AI_ARTICLE_ROOT, safeId);
+  await fs.mkdir(dir, { recursive: true });
+  const manifest = await readAiManifest();
+  const entry = manifest[article.id] || { id: article.id, title: article.title, illustrations: [] };
+  entry.title = article.title;
+
+  const coverPath = path.join(dir, 'cover.jpg');
+  if (force || !fsSync.existsSync(coverPath)) {
+    task.currentStep = '生成封面';
+    const prompt = [
+      'Create a premium textless editorial cover image for a Chinese strategy think tank article.',
+      `Title meaning: ${article.title}.`,
+      `Topics: ${(article.topics || []).join(', ')}.`,
+      'Style: abstract, deep navy and refined purple, cinematic light, no words, no letters, no logos, no UI.',
+    ].join(' ');
+    const image = await arkProxy('/api/v3/images/generations', {
+      model: ARK_IMAGE_MODEL,
+      prompt,
+      negative_prompt: 'text, letters, chinese characters, logo, watermark, UI, captions',
+      size: '1080x1440',
+      n: 1,
+      response_format: 'url',
+    });
+    const url = image?.data?.[0]?.url;
+    if (!url) throw new Error('模型未返回图片 URL');
+    const img = await fetch(url);
+    if (!img.ok) throw new Error(`图片下载失败(${img.status})`);
+    await fs.writeFile(coverPath, Buffer.from(await img.arrayBuffer()));
+    entry.cover = { filename: 'cover.jpg', prompt };
+  }
+
+  const text = articleText(article);
+  entry.illustrations = Array.isArray(entry.illustrations) ? entry.illustrations : [];
+  if (text.length > 80 && entry.illustrations.length === 0) {
+    task.currentStep = '生成章节配图';
+    const prompt = [
+      'Create one textless abstract editorial illustration for this article section.',
+      `Article: ${article.title}.`,
+      `Content: ${text.slice(0, 360)}.`,
+      'No words, no letters, no logos, no UI. Premium navy and purple editorial style.',
+    ].join(' ');
+    const image = await arkProxy('/api/v3/images/generations', {
+      model: ARK_IMAGE_MODEL,
+      prompt,
+      negative_prompt: 'text, letters, chinese characters, logo, watermark, UI, captions',
+      size: '1792x1024',
+      n: 1,
+      response_format: 'url',
+    });
+    const url = image?.data?.[0]?.url;
+    if (url) {
+      const img = await fetch(url);
+      if (img.ok) {
+        const filename = 'illustration-1.jpg';
+        await fs.writeFile(path.join(dir, filename), Buffer.from(await img.arrayBuffer()));
+        entry.illustrations = [{ filename, prompt, title: article.title }];
+      }
+    }
+  }
+
+  manifest[article.id] = entry;
+  await writeAiManifest(manifest);
+}
+
+async function runAdminAiTask(taskId, ids = [], force = false) {
+  const task = adminAiTasks.get(taskId);
+  try {
+    let articles = await listPublishedAiArticles();
+    if (Array.isArray(ids) && ids.length) {
+      const wanted = new Set(ids.map(String));
+      articles = articles.filter((article) => wanted.has(String(article.id)));
+    }
+    task.total = articles.length;
+    for (const article of articles) {
+      if (task.status === 'cancelled') break;
+      task.currentArticleId = article.id;
+      task.currentArticleTitle = article.title;
+      try {
+        await processAiArticle(article, task, force);
+        task.done += 1;
+        task.log.push(`完成: ${article.title}`);
+      } catch (error) {
+        task.errors += 1;
+        task.log.push(`失败: ${article.title} - ${error?.message || error}`);
+      }
+    }
+    if (task.status !== 'cancelled') task.status = 'completed';
+  } catch (error) {
+    task.status = 'failed';
+    task.log.push(error?.message || String(error));
+  } finally {
+    task.currentStep = undefined;
+    task.currentArticleId = undefined;
+    task.currentArticleTitle = undefined;
+    task.finishedAt = Date.now();
+  }
 }
 
 function normalizeCoverPresetContentType(input) {
@@ -2508,6 +4192,30 @@ function getClientIp(req) {
   return req.socket.remoteAddress || '127.0.0.1';
 }
 
+// ===== 登录失败限流(内存滑动窗口) =====
+// 按【账号】键(channel:target),不依赖可伪造的 X-Forwarded-For,挡定向暴力破解。
+const LOGIN_FAIL_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_FAIL_MAX = 8;
+const loginFailures = new Map();
+
+function pruneLoginFailures(key, now) {
+  const arr = (loginFailures.get(key) || []).filter((t) => now - t < LOGIN_FAIL_WINDOW_MS);
+  if (arr.length) loginFailures.set(key, arr);
+  else loginFailures.delete(key);
+  return arr;
+}
+function isLoginRateLimited(key, now) {
+  return pruneLoginFailures(key, now).length >= LOGIN_FAIL_MAX;
+}
+function recordLoginFailure(key, now) {
+  const arr = pruneLoginFailures(key, now);
+  arr.push(now);
+  loginFailures.set(key, arr);
+}
+function clearLoginFailures(key) {
+  loginFailures.delete(key);
+}
+
 function buildWechatSignatureMessage(method, pathnameWithQuery, timestamp, nonce, body) {
   return `${method.toUpperCase()}\n${pathnameWithQuery}\n${timestamp}\n${nonce}\n${body}\n`;
 }
@@ -2796,6 +4504,232 @@ async function ensureSchema() {
     );
     CREATE INDEX IF NOT EXISTS idx_project_learning_resources_project_sort
       ON project_learning_resources(project_id, sort_order, created_at DESC);
+    CREATE TABLE IF NOT EXISTS organizations (
+      id UUID PRIMARY KEY,
+      name TEXT NOT NULL,
+      code TEXT NOT NULL UNIQUE,
+      canonical_org_code TEXT,
+      aliases JSONB NOT NULL DEFAULT '[]'::jsonb,
+      source TEXT NOT NULL DEFAULT 'manual',
+      source_org_id TEXT,
+      source_cloud_url TEXT,
+      member_count INT NOT NULL DEFAULT 0,
+      install_count INT NOT NULL DEFAULT 0,
+      department_count INT NOT NULL DEFAULT 0,
+      invite_count INT NOT NULL DEFAULT 0,
+      departments JSONB NOT NULL DEFAULT '[]'::jsonb,
+      source_updated_at TIMESTAMPTZ,
+      last_seen_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS release_versions (
+      id UUID PRIMARY KEY,
+      version TEXT NOT NULL UNIQUE,
+      git_tag TEXT,
+      source_commit TEXT,
+      status TEXT NOT NULL DEFAULT 'draft',
+      platforms TEXT[] NOT NULL DEFAULT ARRAY['mac']::text[],
+      mandatory BOOLEAN NOT NULL DEFAULT false,
+      user_notes JSONB NOT NULL DEFAULT '{}'::jsonb,
+      internal_notes TEXT NOT NULL DEFAULT '',
+      screenshots TEXT[] NOT NULL DEFAULT '{}'::text[],
+      created_by TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      published_at TIMESTAMPTZ
+    );
+    CREATE TABLE IF NOT EXISTS release_packages (
+      id UUID PRIMARY KEY,
+      release_id UUID NOT NULL REFERENCES release_versions(id) ON DELETE CASCADE,
+      platform TEXT NOT NULL DEFAULT 'mac',
+      arch TEXT NOT NULL DEFAULT 'arm64',
+      artifact_type TEXT NOT NULL DEFAULT 'installer',
+      file_name TEXT NOT NULL,
+      storage_path TEXT NOT NULL,
+      tos_object_key TEXT,
+      tos_blockmap_object_key TEXT,
+      public_url TEXT,
+      size_bytes BIGINT NOT NULL DEFAULT 0,
+      sha512 TEXT NOT NULL,
+      download_url TEXT NOT NULL,
+      blockmap_path TEXT,
+      blockmap_url TEXT,
+      downloadable BOOLEAN NOT NULL DEFAULT true,
+      published_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS release_tos_sync_jobs (
+      id UUID PRIMARY KEY,
+      release_id UUID NOT NULL REFERENCES release_versions(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'queued',
+      stage TEXT NOT NULL DEFAULT 'queued',
+      percent INT NOT NULL DEFAULT 0,
+      message TEXT NOT NULL DEFAULT '',
+      tos_configured BOOLEAN NOT NULL DEFAULT false,
+      manifests JSONB NOT NULL DEFAULT '[]'::jsonb,
+      error TEXT,
+      created_by TEXT,
+      started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      completed_at TIMESTAMPTZ
+    );
+    CREATE TABLE IF NOT EXISTS release_custom_packages (
+      id UUID PRIMARY KEY,
+      base_release_id UUID NOT NULL REFERENCES release_versions(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      version_label TEXT NOT NULL,
+      difference_notes TEXT NOT NULL DEFAULT '',
+      platform TEXT NOT NULL DEFAULT 'mac',
+      arch TEXT NOT NULL DEFAULT 'arm64',
+      file_name TEXT NOT NULL,
+      storage_path TEXT NOT NULL,
+      tos_object_key TEXT,
+      tos_blockmap_object_key TEXT,
+      public_url TEXT,
+      size_bytes BIGINT NOT NULL DEFAULT 0,
+      sha512 TEXT NOT NULL,
+      download_url TEXT NOT NULL,
+      blockmap_path TEXT,
+      blockmap_url TEXT,
+      status TEXT NOT NULL DEFAULT 'testing',
+      created_by TEXT,
+      ready_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS release_assignments (
+      id UUID PRIMARY KEY,
+      release_id UUID NOT NULL REFERENCES release_versions(id) ON DELETE CASCADE,
+      custom_package_id UUID REFERENCES release_custom_packages(id) ON DELETE SET NULL,
+      platform TEXT NOT NULL DEFAULT 'mac',
+      target_type TEXT NOT NULL DEFAULT 'all',
+      org_code TEXT,
+      rollout_pct INT NOT NULL DEFAULT 100,
+      mandatory BOOLEAN NOT NULL DEFAULT false,
+      status TEXT NOT NULL DEFAULT 'active',
+      created_by TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS release_feedback (
+      id UUID PRIMARY KEY,
+      kind TEXT NOT NULL DEFAULT 'experience',
+      severity TEXT NOT NULL DEFAULT 'minor',
+      title TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      submitter_user_id TEXT,
+      submitter_name TEXT,
+      org_code TEXT,
+      version TEXT,
+      page TEXT,
+      os TEXT,
+      screenshot_url TEXT,
+      log_excerpt TEXT,
+      status TEXT NOT NULL DEFAULT 'open',
+      dup_of TEXT,
+      linked_task_id TEXT,
+      linked_release_id UUID REFERENCES release_versions(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS beta_applications (
+      id UUID PRIMARY KEY,
+      user_id UUID REFERENCES auth_users(id) ON DELETE SET NULL,
+      user_name TEXT NOT NULL,
+      user_email TEXT NOT NULL,
+      user_type TEXT NOT NULL DEFAULT 'nonprofit',
+      org_name TEXT,
+      purpose TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      code TEXT UNIQUE,
+      sent_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS beta_download_tokens (
+      id UUID PRIMARY KEY,
+      token_hash TEXT NOT NULL UNIQUE,
+      beta_application_id UUID REFERENCES beta_applications(id) ON DELETE SET NULL,
+      release_id UUID REFERENCES release_versions(id) ON DELETE SET NULL,
+      package_id UUID REFERENCES release_packages(id) ON DELETE SET NULL,
+      platform TEXT NOT NULL DEFAULT 'mac',
+      expires_at TIMESTAMPTZ NOT NULL,
+      used_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_release_versions_status_updated ON release_versions(status, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_release_packages_release_platform ON release_packages(release_id, platform, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_release_tos_sync_jobs_release_updated ON release_tos_sync_jobs(release_id, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_release_custom_packages_base_status ON release_custom_packages(base_release_id, platform, status, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_release_assignments_release_status ON release_assignments(release_id, status, target_type, org_code);
+    CREATE INDEX IF NOT EXISTS idx_release_feedback_status_created ON release_feedback(status, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_organizations_code ON organizations(code);
+    CREATE INDEX IF NOT EXISTS idx_beta_applications_status_created ON beta_applications(status, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_beta_applications_email ON beta_applications(lower(user_email));
+    CREATE INDEX IF NOT EXISTS idx_beta_download_tokens_hash ON beta_download_tokens(token_hash);
+  `);
+
+  await pool.query(`
+    UPDATE release_tos_sync_jobs
+    SET status='failed',
+        stage='interrupted',
+        percent=GREATEST(percent, 1),
+        message='后端服务重启，TOS 更新任务已中断，请重新点击自动更新 TOS。',
+        error='后端服务重启导致任务中断',
+        updated_at=now(),
+        completed_at=COALESCE(completed_at, now())
+    WHERE status IN ('queued','running')
+  `);
+
+  await pool.query(`
+    ALTER TABLE organizations
+      ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'manual',
+      ADD COLUMN IF NOT EXISTS source_org_id TEXT,
+      ADD COLUMN IF NOT EXISTS canonical_org_code TEXT,
+      ADD COLUMN IF NOT EXISTS aliases JSONB NOT NULL DEFAULT '[]'::jsonb,
+      ADD COLUMN IF NOT EXISTS source_cloud_url TEXT,
+      ADD COLUMN IF NOT EXISTS department_count INT NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS invite_count INT NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS departments JSONB NOT NULL DEFAULT '[]'::jsonb,
+      ADD COLUMN IF NOT EXISTS source_updated_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
+
+    ALTER TABLE release_assignments
+      ADD COLUMN IF NOT EXISTS custom_package_id UUID REFERENCES release_custom_packages(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS platform TEXT NOT NULL DEFAULT 'mac';
+
+    ALTER TABLE release_assignments
+      ALTER COLUMN platform SET DEFAULT 'all';
+
+    ALTER TABLE release_versions
+      ADD COLUMN IF NOT EXISTS git_tag TEXT,
+      ADD COLUMN IF NOT EXISTS source_commit TEXT;
+
+    ALTER TABLE release_packages
+      ADD COLUMN IF NOT EXISTS arch TEXT NOT NULL DEFAULT 'arm64',
+      ADD COLUMN IF NOT EXISTS artifact_type TEXT NOT NULL DEFAULT 'installer',
+      ADD COLUMN IF NOT EXISTS tos_object_key TEXT,
+      ADD COLUMN IF NOT EXISTS tos_blockmap_object_key TEXT,
+      ADD COLUMN IF NOT EXISTS public_url TEXT;
+
+    ALTER TABLE release_custom_packages
+      ADD COLUMN IF NOT EXISTS arch TEXT NOT NULL DEFAULT 'arm64',
+      ADD COLUMN IF NOT EXISTS tos_object_key TEXT,
+      ADD COLUMN IF NOT EXISTS tos_blockmap_object_key TEXT,
+      ADD COLUMN IF NOT EXISTS public_url TEXT;
+
+    CREATE INDEX IF NOT EXISTS idx_release_assignments_custom_status
+      ON release_assignments(custom_package_id, status, platform, target_type, org_code);
+    CREATE INDEX IF NOT EXISTS idx_release_assignments_org_platform_status
+      ON release_assignments(target_type, org_code, platform, status, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_organizations_source_org_id
+      ON organizations(source_org_id);
+    CREATE INDEX IF NOT EXISTS idx_organizations_canonical_org_code
+      ON organizations(canonical_org_code);
+    CREATE INDEX IF NOT EXISTS idx_organizations_aliases
+      ON organizations USING GIN (aliases);
   `);
 
   await pool.query(`
@@ -2852,8 +4786,6 @@ async function ensureSchema() {
       ADD COLUMN IF NOT EXISTS cover_preset_id TEXT,
       ADD COLUMN IF NOT EXISTS favorites_count INT NOT NULL DEFAULT 0;
     ALTER TABLE reports
-      ADD COLUMN IF NOT EXISTS markdown_content TEXT,
-      ADD COLUMN IF NOT EXISTS markdown_url TEXT,
       ADD COLUMN IF NOT EXISTS likes INT NOT NULL DEFAULT 0,
       ADD COLUMN IF NOT EXISTS favorites_count INT NOT NULL DEFAULT 0;
     ALTER TABLE books
@@ -3026,7 +4958,100 @@ async function sendEmailCode(email, scene, code) {
   });
 }
 
-async function checkSendLimit(db, target, scene) {
+async function sendBetaInviteEmail(app) {
+  const from = process.env.AUTH_EMAIL_FROM;
+  if (!from) throw new Error('未配置发件人');
+  const email = safeText(app.user_email || app.userEmail).toLowerCase();
+  const name = safeText(app.user_name || app.userName, '你好');
+  const code = normalizeBetaCode(app.code);
+  if (!email) throw new Error('申请人邮箱为空，无法发送内测码');
+  if (!code) throw new Error('内测码为空，无法发送邮件');
+  const downloadPage = `${PUBLIC_SITE_URL}?page=workbench`;
+  const subject = '【益语智库 AI】您的内测邀请码';
+  const text = [
+    `${name}，`,
+    '',
+    '你的益语智库 AI 内测申请已通过。',
+    `内测邀请码：${code}`,
+    '',
+    '请回到益语智库官网，点击“下载开源版”，输入邀请码后下载 macOS 安装包。',
+    `下载入口：${downloadPage}`,
+    '',
+    '如果不是你本人申请，请忽略这封邮件。',
+    '',
+    '益语智库',
+  ].join('\n');
+  const html = `
+    <p>${escapeHtml(name)}，</p>
+    <p>你的益语智库 AI 内测申请已通过。</p>
+    <p>内测邀请码：<b style="font-size:20px;letter-spacing:1px">${escapeHtml(code)}</b></p>
+    <p>请回到益语智库官网，点击“下载开源版”，输入邀请码后下载 macOS 安装包。</p>
+    <p><a href="${escapeHtml(downloadPage)}">打开益语智库 AI 下载入口</a></p>
+    <p style="color:#666">如果不是你本人申请，请忽略这封邮件。</p>
+    <p>益语智库</p>
+  `;
+
+  if (mailer) {
+    try {
+      await mailer.sendMail({ from, to: email, subject, text, html });
+      return;
+    } catch (_) {
+      // continue to SES fallback when a dedicated template is configured
+    }
+  }
+
+  const client = sesClient || initSesClient();
+  if (!client) {
+    throw new Error('内测邮件发送失败：SMTP 投递失败，且邮件推送服务未配置');
+  }
+  try {
+    await client.SendEmail({
+      FromEmailAddress: from,
+      Destination: [email],
+      Subject: subject,
+      Simple: {
+        Text: Buffer.from(text, 'utf8').toString('base64'),
+        Html: Buffer.from(html, 'utf8').toString('base64'),
+      },
+    });
+    return;
+  } catch (_) {
+    // Some SES accounts require approved templates for all sends; try a dedicated template when configured.
+  }
+
+  const betaTemplateId = Number(process.env.TC_SES_TEMPLATE_ID_BETA_INVITE || 0);
+  const fallbackTemplateId = Number(process.env.TC_SES_TEMPLATE_ID_RESET || process.env.TC_SES_TEMPLATE_ID_REGISTER || 0);
+  const sendTemplate = (templateId) => client.SendEmail({
+    FromEmailAddress: from,
+    Destination: [email],
+    Subject: subject,
+    Template: {
+      TemplateID: templateId,
+      TemplateData: JSON.stringify({
+        name,
+        code,
+        site_url: PUBLIC_SITE_URL,
+        download_url: downloadPage,
+        expire_min: String(Math.ceil(RELEASE_DOWNLOAD_TTL_SECONDS / 60)),
+        minutes: String(Math.ceil(RELEASE_DOWNLOAD_TTL_SECONDS / 60)),
+      }),
+    },
+  });
+  if (betaTemplateId) {
+    try {
+      await sendTemplate(betaTemplateId);
+      return;
+    } catch (_) {
+      // Newly created templates can stay unavailable until Tencent Cloud review is complete.
+    }
+  }
+  if (!fallbackTemplateId) {
+    throw new Error('内测邮件发送失败：SMTP 与 SES 普通邮件均不可用，且未配置可用邮件模板');
+  }
+  await sendTemplate(fallbackTemplateId);
+}
+
+async function checkSendLimit(db, target, scene, ip) {
   const intervalRes = await db.query(
     `SELECT count(*)::int AS c
      FROM auth_verification_codes
@@ -3045,10 +5070,12 @@ async function checkSendLimit(db, target, scene) {
   if ((dayRes.rows[0]?.c || 0) >= MAX_PER_TARGET_PER_DAY) {
     throw new Error('今日发送次数已达上限');
   }
+  // 注:未加 per-IP 上限。本服务在 nginx 之后,request_ip 多为恒定代理 IP,
+  // 按 IP 限会变成全站全局闸门误伤所有用户;待 nginx 配置可信 real-IP 后再补。
 }
 
 async function createCode(db, channel, target, scene, ip) {
-  await checkSendLimit(db, target, scene);
+  await checkSendLimit(db, target, scene, ip);
   const code = generateCode();
   await db.query(
     `INSERT INTO auth_verification_codes(id, channel, target, scene, code_hash, expires_at, request_ip)
@@ -7810,7 +9837,6 @@ const server = http.createServer(async (req, res) => {
       const isCoverPreset = kind === 'cover-preset';
       const isCaseLogo = kind === 'case-logo';
       const isCasePpt = kind === 'case-ppt';
-      const isReportAsset = kind === 'report';
       const isInsightAsset = kind === 'insight';
       const isMethodologyAsset = kind === 'methodology';
       const contentType = isCoverPreset ? normalizeCoverPresetContentType(url.searchParams.get('contentType')) : null;
@@ -7835,10 +9861,6 @@ const server = http.createServer(async (req, res) => {
         if (!['.ppt', '.pptx'].includes(ext)) {
           return json(res, 400, { ok: false, error: '案例展示仅支持上传 PPT/PPTX 文件' });
         }
-      } else if (isReportAsset) {
-        if (!['.pdf', '.md', '.markdown', '.txt'].includes(ext)) {
-          return json(res, 400, { ok: false, error: '报告仅支持上传 PDF 或 Markdown/TXT 文件' });
-        }
       } else if (isInsightAsset || isMethodologyAsset) {
         if (!['.pdf', '.docx'].includes(ext)) {
           return json(res, 400, { ok: false, error: '文章与方法论仅支持上传 PDF 或 DOCX 文件' });
@@ -7855,9 +9877,7 @@ const server = http.createServer(async (req, res) => {
       const targetDir = path.join(
         ADMIN_UPLOAD_ROOT,
         kind === 'report'
-          ? ['.md', '.markdown', '.txt'].includes(ext)
-            ? 'report-markdowns'
-            : 'reports'
+          ? 'reports'
           : kind === 'book'
             ? 'books'
             : kind === 'insight'
@@ -7887,9 +9907,7 @@ const server = http.createServer(async (req, res) => {
           slides = await convertPresentationToSlides(targetPath, savedName);
         } else {
           const uploadFolder = kind === 'report'
-            ? ['.md', '.markdown', '.txt'].includes(ext)
-              ? 'report-markdowns'
-              : 'reports'
+            ? 'reports'
             : kind === 'book'
               ? 'books'
               : kind === 'insight'
@@ -8114,6 +10132,654 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { code: 'SUCCESS', message: '成功' });
     }
 
+    const packageDownloadMatch = url.pathname.match(/^\/api\/v1\/downloads\/package\/([^/]+)(?:\/blockmap)?$/);
+    if (packageDownloadMatch && (req.method === 'GET' || req.method === 'HEAD')) {
+      await requireAdmin(req);
+      const packageId = decodeURIComponent(packageDownloadMatch[1]);
+      const q = await pool.query('SELECT * FROM release_packages WHERE id=$1 LIMIT 1', [packageId]);
+      if (!q.rows[0]) return json(res, 404, { ok: false, error: '安装包不存在' });
+      return streamReleaseFile(req, res, q.rows[0], url.pathname.endsWith('/blockmap') ? 'blockmap' : 'installer');
+    }
+
+    const updatePackageDownloadMatch = url.pathname.match(/^\/api\/v1\/updates\/packages\/(release|custom)\/([^/]+)(?:\/blockmap)?$/);
+    if (updatePackageDownloadMatch && (req.method === 'GET' || req.method === 'HEAD')) {
+      const kind = updatePackageDownloadMatch[1];
+      const packageId = decodeURIComponent(updatePackageDownloadMatch[2]);
+      const table = kind === 'custom' ? 'release_custom_packages' : 'release_packages';
+      const q = await pool.query(`SELECT * FROM ${table} WHERE id=$1 LIMIT 1`, [packageId]);
+      if (!q.rows[0]) return json(res, 404, { ok: false, error: '安装包不存在' });
+      return streamReleaseFile(req, res, q.rows[0], url.pathname.endsWith('/blockmap') ? 'blockmap' : 'installer');
+    }
+
+    const tokenDownloadMatch = url.pathname.match(/^\/api\/v1\/downloads\/([^/]+)$/);
+    if (tokenDownloadMatch && (req.method === 'GET' || req.method === 'HEAD')) {
+      const token = decodeURIComponent(tokenDownloadMatch[1]);
+      const q = await pool.query(
+        `SELECT t.*, p.*
+         FROM beta_download_tokens t
+         JOIN release_packages p ON p.id = t.package_id
+         WHERE t.token_hash=$1 AND t.expires_at > now()
+         LIMIT 1`,
+        [hashToken(token)]
+      );
+      if (!q.rows[0]) return json(res, 404, { ok: false, error: '下载链接已失效，请重新输入内测码' });
+      if (req.method === 'GET') {
+        await pool.query('UPDATE beta_download_tokens SET used_at=COALESCE(used_at, now()) WHERE token_hash=$1', [hashToken(token)]);
+      }
+      return streamReleaseFile(req, res, q.rows[0]);
+    }
+
+    if (url.pathname === '/api/v1/release-orgs/resolve' && req.method === 'POST') {
+      const payload = await readJsonBody(req);
+      return json(res, 200, await resolveReleaseOrgIdentity(payload));
+    }
+
+    const updateResolveMatch = url.pathname.match(/^\/api\/v1\/updates\/([^/]+)\/([^/]+)\/(latest|latest-mac\.yml|latest\.yml)$/);
+    if (updateResolveMatch && (req.method === 'GET' || req.method === 'HEAD')) {
+      const orgCode = decodeURIComponent(updateResolveMatch[1]);
+      const platform = normalizeReleasePlatform(decodeURIComponent(updateResolveMatch[2]));
+      const update = await resolveUpdateTarget(orgCode, platform);
+      if (!update) return json(res, 404, { ok: false, error: '当前暂无可用更新包' });
+      if (updateResolveMatch[3] === 'latest-mac.yml' || updateResolveMatch[3] === 'latest.yml') {
+        const body = req.method === 'HEAD' ? '' : renderLatestYml(update);
+        res.writeHead(200, {
+          'Content-Type': 'text/yaml; charset=utf-8',
+          'Cache-Control': 'no-store',
+          'Content-Length': Buffer.byteLength(body),
+        });
+        return res.end(body);
+      }
+      return json(res, 200, update);
+    }
+
+    if (url.pathname === '/api/v1/releases/latest' && req.method === 'GET') {
+      const platform = normalizeReleasePlatform(url.searchParams.get('platform'));
+      const latest = await getLatestPackage(platform);
+      if (!latest) return json(res, 200, null);
+      const rel = await pool.query('SELECT * FROM release_versions WHERE id=$1 LIMIT 1', [latest.release_id]);
+      if (!rel.rows[0]) return json(res, 200, null);
+      return json(res, 200, mapRelease(rel.rows[0], await listReleasePackages(rel.rows[0].id)));
+    }
+
+    if (url.pathname === '/api/v1/admin/custom-packages' && req.method === 'GET') {
+      await requireAdmin(req);
+      return json(res, 200, await listCustomPackages());
+    }
+
+    if (url.pathname === '/api/v1/admin/custom-packages' && req.method === 'POST') {
+      const admin = await requireAdmin(req);
+      const bodyBuffer = await readRawBody(req, 900 * 1024 * 1024);
+      if (!bodyBuffer.length) return json(res, 400, { detail: '上传内容为空' });
+      const pkg = await createCustomPackage({
+        baseReleaseId: url.searchParams.get('baseReleaseId'),
+        platform: url.searchParams.get('platform'),
+        arch: url.searchParams.get('arch'),
+        name: url.searchParams.get('name'),
+        versionLabel: url.searchParams.get('versionLabel'),
+        differenceNotes: url.searchParams.get('differenceNotes'),
+        status: url.searchParams.get('status'),
+        createdBy: admin.id,
+      }, bodyBuffer, url.searchParams.get('filename') || req.headers['x-file-name'] || '');
+      return json(res, 200, pkg);
+    }
+
+    const customPackageMatch = url.pathname.match(/^\/api\/v1\/admin\/custom-packages\/([^/]+)$/);
+    if (customPackageMatch && req.method === 'PATCH') {
+      await requireAdmin(req);
+      const payload = await readJsonBody(req);
+      return json(res, 200, await patchCustomPackage(decodeURIComponent(customPackageMatch[1]), payload));
+    }
+
+    const customBlockmapMatch = url.pathname.match(/^\/api\/v1\/admin\/custom-packages\/([^/]+)\/blockmap$/);
+    if (customBlockmapMatch && req.method === 'POST') {
+      await requireAdmin(req);
+      const bodyBuffer = await readRawBody(req, 20 * 1024 * 1024);
+      if (!bodyBuffer.length) return json(res, 400, { detail: '上传内容为空' });
+      return json(res, 200, await attachCustomPackageBlockmap(
+        decodeURIComponent(customBlockmapMatch[1]),
+        bodyBuffer,
+        url.searchParams.get('filename') || req.headers['x-file-name'] || ''
+      ));
+    }
+
+    if (url.pathname === '/api/v1/admin/assignments' && req.method === 'GET') {
+      await requireAdmin(req);
+      const q = await pool.query(
+        `SELECT a.*, r.version AS release_version, cp.name AS custom_package_name, cp.status AS custom_package_status
+         FROM release_assignments a
+         JOIN release_versions r ON r.id = a.release_id
+         LEFT JOIN release_custom_packages cp ON cp.id = a.custom_package_id
+         ORDER BY a.updated_at DESC, a.created_at DESC`
+      );
+      return json(res, 200, q.rows.map(mapAssignment));
+    }
+
+    if (url.pathname === '/api/v1/admin/releases' && req.method === 'GET') {
+      await requireAdmin(req);
+      return json(res, 200, await listReleaseRows());
+    }
+
+    if (url.pathname === '/api/v1/admin/releases' && req.method === 'POST') {
+      const admin = await requireAdmin(req);
+      const payload = await readJsonBody(req);
+      const version = safeText(payload.version);
+      if (!version) return json(res, 400, { detail: '请填写版本号' });
+      const platforms = Array.isArray(payload.platforms) && payload.platforms.length
+        ? payload.platforms.map(normalizeReleasePlatform)
+        : ['mac', 'windows'];
+      const q = await pool.query(
+        `INSERT INTO release_versions(id, version, git_tag, source_commit, status, platforms, mandatory, user_notes, internal_notes, screenshots, created_by)
+         VALUES ($1,$2,$3,$4,'draft',$5,$6,$7,$8,$9,$10)
+         ON CONFLICT (version) DO UPDATE SET
+           git_tag=EXCLUDED.git_tag,
+           source_commit=EXCLUDED.source_commit,
+           platforms=EXCLUDED.platforms,
+           mandatory=EXCLUDED.mandatory,
+           user_notes=EXCLUDED.user_notes,
+           internal_notes=EXCLUDED.internal_notes,
+           screenshots=EXCLUDED.screenshots,
+           updated_at=now()
+         RETURNING *`,
+        [
+          crypto.randomUUID(),
+          version,
+          safeText(payload.gitTag) || null,
+          safeText(payload.sourceCommit) || null,
+          platforms,
+          Boolean(payload.mandatory),
+          JSON.stringify(payload.userNotes || {}),
+          safeText(payload.internalNotes),
+          Array.isArray(payload.screenshots) ? payload.screenshots.map(safeText).filter(Boolean) : [],
+          admin.id,
+        ]
+      );
+      return json(res, 200, mapRelease(q.rows[0], await listReleasePackages(q.rows[0].id)));
+    }
+
+    const releaseMatch = url.pathname.match(/^\/api\/v1\/admin\/releases\/([^/]+)$/);
+    if (releaseMatch && req.method === 'PATCH') {
+      await requireAdmin(req);
+      const releaseId = decodeURIComponent(releaseMatch[1]);
+      const payload = await readJsonBody(req);
+      const fields = [];
+      const values = [];
+      const add = (sql, value) => { values.push(value); fields.push(`${sql}=$${values.length}`); };
+      if (payload.status != null) {
+        const status = normalizeReleaseStatus(payload.status);
+        if (status === 'published') {
+          const pkgCount = await pool.query(
+            `SELECT COUNT(*)::int AS count
+             FROM release_packages
+             WHERE release_id=$1 AND platform IN ('mac','windows') AND downloadable=true`,
+            [releaseId]
+          );
+          if (!Number(pkgCount.rows[0]?.count || 0)) {
+            return json(res, 400, { detail: '至少上传一个 Mac 或 Windows 安装包后才能正式发布' });
+          }
+        }
+        add('status', status);
+        if (status === 'published') fields.push('published_at=COALESCE(published_at, now())');
+      }
+      if (payload.platforms != null) add('platforms', Array.isArray(payload.platforms) ? payload.platforms.map(normalizeReleasePlatform) : ['mac']);
+      if (payload.gitTag != null) add('git_tag', safeText(payload.gitTag) || null);
+      if (payload.sourceCommit != null) add('source_commit', safeText(payload.sourceCommit) || null);
+      if (payload.mandatory != null) add('mandatory', Boolean(payload.mandatory));
+      if (payload.userNotes != null) add('user_notes', JSON.stringify(payload.userNotes || {}));
+      if (payload.internalNotes != null) add('internal_notes', safeText(payload.internalNotes));
+      if (payload.screenshots != null) add('screenshots', Array.isArray(payload.screenshots) ? payload.screenshots.map(safeText).filter(Boolean) : []);
+      if (!fields.length) return json(res, 400, { detail: '没有可更新字段' });
+      fields.push('updated_at=now()');
+      values.push(releaseId);
+      const q = await pool.query(`UPDATE release_versions SET ${fields.join(', ')} WHERE id=$${values.length} RETURNING *`, values);
+      if (!q.rows[0]) return json(res, 404, { detail: '版本不存在' });
+      return json(res, 200, mapRelease(q.rows[0], await listReleasePackages(releaseId)));
+    }
+
+    if (releaseMatch && req.method === 'DELETE') {
+      await requireAdmin(req);
+      const releaseId = decodeURIComponent(releaseMatch[1]);
+      const existing = await pool.query('SELECT * FROM release_versions WHERE id=$1 LIMIT 1', [releaseId]);
+      if (!existing.rows[0]) return json(res, 404, { detail: '版本不存在' });
+
+      const artifacts = await pool.query(
+        `SELECT storage_path, blockmap_path FROM release_packages WHERE release_id=$1
+         UNION ALL
+         SELECT storage_path, blockmap_path FROM release_custom_packages WHERE base_release_id=$1`,
+        [releaseId]
+      );
+      await pool.query('DELETE FROM release_versions WHERE id=$1', [releaseId]);
+
+      const releaseRoot = path.resolve(RELEASE_ASSET_ROOT);
+      for (const row of artifacts.rows) {
+        for (const filePath of [row.storage_path, row.blockmap_path]) {
+          if (!filePath) continue;
+          const resolvedPath = path.resolve(String(filePath));
+          if (!resolvedPath.startsWith(`${releaseRoot}${path.sep}`)) continue;
+          try {
+            await fs.rm(resolvedPath, { force: true });
+          } catch (error) {
+            console.warn('[release] artifact cleanup skipped:', error?.message || error);
+          }
+        }
+      }
+
+      return json(res, 200, { ok: true, deleted: true, id: releaseId });
+    }
+
+    const releaseTosSyncJobMatch = url.pathname.match(/^\/api\/v1\/admin\/releases\/([^/]+)\/tos-sync\/([^/]+)$/);
+    if (releaseTosSyncJobMatch && req.method === 'GET') {
+      await requireAdmin(req);
+      const releaseId = decodeURIComponent(releaseTosSyncJobMatch[1]);
+      const jobId = decodeURIComponent(releaseTosSyncJobMatch[2]);
+      const job = await getTosSyncJob(jobId, releaseId);
+      if (!job || job.releaseId !== releaseId) return json(res, 404, { detail: 'TOS 更新任务不存在或已过期' });
+      return json(res, 200, serializeTosSyncJob(job));
+    }
+
+    const releaseTosSyncMatch = url.pathname.match(/^\/api\/v1\/admin\/releases\/([^/]+)\/tos-sync$/);
+    if (releaseTosSyncMatch && req.method === 'POST') {
+      const admin = await requireAdmin(req);
+      const releaseId = decodeURIComponent(releaseTosSyncMatch[1]);
+      const release = await getReleaseById(releaseId);
+      if (!release) return json(res, 404, { detail: '版本不存在' });
+      const pkgCount = await pool.query(
+        `SELECT COUNT(*)::int AS count
+         FROM release_packages
+         WHERE release_id=$1 AND platform IN ('mac','windows') AND downloadable=true`,
+        [releaseId]
+      );
+      if (!Number(pkgCount.rows[0]?.count || 0)) {
+        return json(res, 400, { detail: '至少上传一个 Mac 或 Windows 安装包后才能同步 TOS 更新源' });
+      }
+      const job = await startReleaseTosSyncJob(releaseId, admin.id);
+      return json(res, 202, serializeTosSyncJob(job));
+    }
+
+    const releasePackagesMatch = url.pathname.match(/^\/api\/v1\/admin\/releases\/([^/]+)\/packages$/);
+    if (releasePackagesMatch && req.method === 'GET') {
+      await requireAdmin(req);
+      return json(res, 200, await listReleasePackages(decodeURIComponent(releasePackagesMatch[1])));
+    }
+
+    if (releasePackagesMatch && req.method === 'POST') {
+      await requireAdmin(req);
+      const releaseId = decodeURIComponent(releasePackagesMatch[1]);
+      const platform = normalizeReleasePlatform(url.searchParams.get('platform'));
+      const arch = normalizeReleaseArch(url.searchParams.get('arch'), platform);
+      const filename = url.searchParams.get('filename') || req.headers['x-file-name'] || '';
+      const bodyBuffer = await readRawBody(req, 900 * 1024 * 1024);
+      if (!bodyBuffer.length) return json(res, 400, { detail: '上传内容为空' });
+      const pkg = await upsertReleasePackage(releaseId, platform, bodyBuffer, filename, arch);
+      return json(res, 200, pkg);
+    }
+
+    const blockmapMatch = url.pathname.match(/^\/api\/v1\/admin\/releases\/([^/]+)\/packages\/([^/]+)\/blockmap$/);
+    if (blockmapMatch && req.method === 'POST') {
+      await requireAdmin(req);
+      const releaseId = decodeURIComponent(blockmapMatch[1]);
+      const packageId = decodeURIComponent(blockmapMatch[2]);
+      const filename = url.searchParams.get('filename') || req.headers['x-file-name'] || '';
+      const bodyBuffer = await readRawBody(req, 20 * 1024 * 1024);
+      if (!bodyBuffer.length) return json(res, 400, { detail: '上传内容为空' });
+      return json(res, 200, await attachReleaseBlockmap(releaseId, packageId, bodyBuffer, filename));
+    }
+
+    const assignmentsMatch = url.pathname.match(/^\/api\/v1\/admin\/releases\/([^/]+)\/assignments$/);
+    if (assignmentsMatch && req.method === 'GET') {
+      await requireAdmin(req);
+      const q = await pool.query(
+        `SELECT a.*, r.version AS release_version, cp.name AS custom_package_name, cp.status AS custom_package_status
+         FROM release_assignments a
+         JOIN release_versions r ON r.id = a.release_id
+         LEFT JOIN release_custom_packages cp ON cp.id = a.custom_package_id
+         WHERE a.release_id=$1
+         ORDER BY a.created_at DESC`,
+        [decodeURIComponent(assignmentsMatch[1])]
+      );
+      return json(res, 200, q.rows.map(mapAssignment));
+    }
+
+    if (assignmentsMatch && req.method === 'POST') {
+      const admin = await requireAdmin(req);
+      const releaseId = decodeURIComponent(assignmentsMatch[1]);
+      const payload = await readJsonBody(req);
+      const customPackageId = safeText(payload.customPackageId) || null;
+      const targetType = normalizeAssignmentTargetType(payload.targetType);
+      const orgCode = targetType === 'org' ? await resolveCanonicalOrgCode(payload.orgCode) : null;
+      if (targetType === 'org' && !orgCode) return json(res, 400, { detail: '请先选择组织' });
+      const platform = 'all';
+      if (customPackageId) {
+        const custom = await pool.query(
+          'SELECT id, platform FROM release_custom_packages WHERE id=$1 AND base_release_id=$2 LIMIT 1',
+          [customPackageId, releaseId]
+        );
+        if (!custom.rows[0]) return json(res, 400, { detail: '定制包不存在或不属于该基准版本' });
+      }
+      await pool.query(
+        `UPDATE release_assignments
+         SET status='rolled_back', updated_at=now()
+         WHERE status='active' AND target_type=$1
+           AND (($1='org' AND org_code=$2) OR ($1='all' AND org_code IS NULL))`,
+        [targetType, orgCode]
+      );
+      const q = await pool.query(
+        `INSERT INTO release_assignments(id, release_id, custom_package_id, platform, target_type, org_code, rollout_pct, mandatory, status, created_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'active',$9)
+         RETURNING *`,
+        [
+          crypto.randomUUID(),
+          releaseId,
+          customPackageId,
+          platform,
+          targetType,
+          orgCode,
+          Math.min(100, Math.max(0, toPositiveInt(payload.rolloutPct, 100))),
+          Boolean(payload.mandatory),
+          admin.id,
+        ]
+      );
+      return json(res, 200, mapAssignment(q.rows[0]));
+    }
+
+    const assignmentMatch = url.pathname.match(/^\/api\/v1\/admin\/releases\/([^/]+)\/assignments\/([^/]+)$/);
+    if (assignmentMatch && req.method === 'PATCH') {
+      await requireAdmin(req);
+      const pathReleaseId = decodeURIComponent(assignmentMatch[1]);
+      const assignmentId = decodeURIComponent(assignmentMatch[2]);
+      const payload = await readJsonBody(req);
+      const targetReleaseId = safeText(payload.releaseId) || pathReleaseId;
+      const currentAssignmentQ = await pool.query('SELECT * FROM release_assignments WHERE id=$1 AND release_id=$2 LIMIT 1', [assignmentId, pathReleaseId]);
+      const currentAssignment = currentAssignmentQ.rows[0];
+      if (!currentAssignment) return json(res, 404, { detail: '指派不存在' });
+      const releaseExists = await pool.query('SELECT id FROM release_versions WHERE id=$1 LIMIT 1', [targetReleaseId]);
+      if (!releaseExists.rows[0]) return json(res, 404, { detail: '版本不存在' });
+      const customPackageId = payload.customPackageId === undefined ? undefined : (safeText(payload.customPackageId) || null);
+      const targetType = payload.targetType ? normalizeAssignmentTargetType(payload.targetType) : normalizeAssignmentTargetType(currentAssignment.target_type);
+      const orgCode = targetType === 'org'
+        ? (payload.orgCode == null ? currentAssignment.org_code : await resolveCanonicalOrgCode(payload.orgCode))
+        : null;
+      if (targetType === 'org' && !orgCode) return json(res, 400, { detail: '请先选择组织' });
+      const nextCustomPackageId = customPackageId === undefined ? currentAssignment.custom_package_id : customPackageId;
+      const nextPlatform = 'all';
+      if (nextCustomPackageId) {
+        const custom = await pool.query(
+          'SELECT id, platform FROM release_custom_packages WHERE id=$1 AND base_release_id=$2 LIMIT 1',
+          [nextCustomPackageId, targetReleaseId]
+        );
+        if (!custom.rows[0]) return json(res, 400, { detail: '定制包不存在或不属于该基准版本' });
+      }
+      const nextStatus = normalizeAssignmentStatus(payload.status, currentAssignment.status || 'active');
+      const nextRolloutPct = payload.rolloutPct == null
+        ? Number(currentAssignment.rollout_pct || 100)
+        : Math.min(100, Math.max(0, toPositiveInt(payload.rolloutPct, 100)));
+      const nextMandatory = payload.mandatory == null ? Boolean(currentAssignment.mandatory) : Boolean(payload.mandatory);
+      if (nextStatus === 'active') {
+        await pool.query(
+          `UPDATE release_assignments
+           SET status='rolled_back', updated_at=now()
+           WHERE id<>$1 AND status='active' AND target_type=$2
+             AND (($2='org' AND org_code=$3) OR ($2='all' AND org_code IS NULL))`,
+          [assignmentId, targetType, orgCode]
+        );
+      }
+      const q = await pool.query(
+        `UPDATE release_assignments
+         SET release_id=$1, status=$2, target_type=$3, org_code=$4,
+             rollout_pct=$5, mandatory=$6, custom_package_id=$7, platform=$8, updated_at=now()
+         WHERE id=$9 AND release_id=$10
+         RETURNING *`,
+        [
+          targetReleaseId,
+          nextStatus,
+          targetType,
+          orgCode,
+          nextRolloutPct,
+          nextMandatory,
+          nextCustomPackageId,
+          nextPlatform,
+          assignmentId,
+          pathReleaseId,
+        ]
+      );
+      return json(res, 200, mapAssignment(q.rows[0]));
+    }
+
+    if (url.pathname === '/api/v1/admin/feedback' && req.method === 'GET') {
+      await requireAdmin(req);
+      const clauses = [];
+      const values = [];
+      for (const [key, column] of [['status', 'status'], ['kind', 'kind'], ['severity', 'severity']]) {
+        const value = safeText(url.searchParams.get(key));
+        if (value && value !== 'all') {
+          values.push(value);
+          clauses.push(`${column}=$${values.length}`);
+        }
+      }
+      const limit = Math.min(200, Math.max(1, toPositiveInt(url.searchParams.get('limit'), 100)));
+      const offset = toPositiveInt(url.searchParams.get('offset'), 0);
+      values.push(limit, offset);
+      const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+      const q = await pool.query(
+        `SELECT * FROM release_feedback ${where} ORDER BY created_at DESC LIMIT $${values.length - 1} OFFSET $${values.length}`,
+        values
+      );
+      return json(res, 200, q.rows.map(mapFeedback));
+    }
+
+    const feedbackMatch = url.pathname.match(/^\/api\/v1\/admin\/feedback\/([^/]+)$/);
+    if (feedbackMatch && req.method === 'PATCH') {
+      await requireAdmin(req);
+      const payload = await readJsonBody(req);
+      const q = await pool.query(
+        `UPDATE release_feedback
+         SET status=COALESCE($1,status), severity=COALESCE($2,severity), dup_of=$3,
+             linked_task_id=$4, linked_release_id=$5, updated_at=now()
+         WHERE id=$6
+         RETURNING *`,
+        [
+          payload.status ? normalizeFeedbackStatus(payload.status) : null,
+          payload.severity ? normalizeFeedbackSeverity(payload.severity) : null,
+          payload.dupOf == null ? null : safeText(payload.dupOf),
+          payload.linkedTaskId == null ? null : safeText(payload.linkedTaskId),
+          payload.linkedReleaseId == null ? null : safeText(payload.linkedReleaseId),
+          decodeURIComponent(feedbackMatch[1]),
+        ]
+      );
+      if (!q.rows[0]) return json(res, 404, { detail: '反馈不存在' });
+      return json(res, 200, mapFeedback(q.rows[0]));
+    }
+
+    if (url.pathname === '/api/v1/feedback' && req.method === 'POST') {
+      const session = await getOptionalSession(req);
+      const payload = await readJsonBody(req);
+      const title = safeText(payload.title, '用户反馈');
+      const q = await pool.query(
+        `INSERT INTO release_feedback(
+          id, kind, severity, title, description, submitter_user_id, submitter_name, org_code, version, page, os, screenshot_url, log_excerpt
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+        RETURNING *`,
+        [
+          crypto.randomUUID(),
+          normalizeFeedbackKind(payload.kind),
+          normalizeFeedbackSeverity(payload.severity),
+          title,
+          safeText(payload.description),
+          session?.id || null,
+          safeText(payload.submitterName, session?.nickname || session?.email || '匿名用户'),
+          safeText(payload.orgCode) || null,
+          safeText(payload.version) || null,
+          safeText(payload.page) || null,
+          safeText(payload.os) || null,
+          safeText(payload.screenshotUrl) || null,
+          safeText(payload.logExcerpt).slice(0, 4000) || null,
+        ]
+      );
+      return json(res, 200, mapFeedback(q.rows[0]));
+    }
+
+    if (url.pathname === '/api/v1/admin/organizations' && req.method === 'GET') {
+      await requireAdmin(req);
+      return json(res, 200, await listOrganizationSummaries());
+    }
+
+    if (url.pathname === '/api/v1/beta/applications' && req.method === 'POST') {
+      const session = await requireSession(req);
+      const payload = await readJsonBody(req);
+      const userEmail = safeText(payload.userEmail || session.email).toLowerCase();
+      if (!userEmail || isPhoneLocalEmail(userEmail)) return json(res, 400, { detail: '请先绑定邮箱后再申请内测' });
+      const userName = safeText(payload.userName || session.nickname || session.email || session.phone, '用户');
+      const userType = normalizeBetaUserType(payload.userType);
+      const orgName = safeText(payload.orgName);
+      const purpose = safeText(payload.purpose);
+      const ALLOWED_HEADCOUNT = ['5人以内','6-20人','21-50人','50人以上'];
+      const headcount = ALLOWED_HEADCOUNT.includes(payload.headcount) ? payload.headcount : '';
+      const focusIssue = safeText(payload.focusIssue);
+      const beneficiaryCount = safeText(payload.beneficiaryCount);
+      const ALLOWED_CLOUD = ['tencent','volcano','self','none'];
+      const cloudCredit = Array.isArray(payload.cloudCredit) ? payload.cloudCredit.filter(v => ALLOWED_CLOUD.includes(v)) : [];
+      if ((userType === 'nonprofit' || userType === 'enterprise') && !orgName) return json(res, 400, { detail: '请填写机构名称' });
+      if (userType === 'individual' && !purpose) return json(res, 400, { detail: '请填写使用用途' });
+      const existing = await pool.query('SELECT id FROM beta_applications WHERE lower(user_email)=lower($1) LIMIT 1', [userEmail]);
+      const q = existing.rows[0]
+        ? await pool.query(
+          `UPDATE beta_applications
+           SET user_id=$1, user_name=$2, user_type=$3, org_name=$4, purpose=$5, headcount=$6, focus_issue=$7, beneficiary_count=$8, cloud_credit=$9::jsonb, updated_at=now()
+           WHERE id=$10
+           RETURNING *`,
+          [session.id, userName, userType, orgName || null, purpose || null, headcount || null, focusIssue || null, beneficiaryCount || null, JSON.stringify(cloudCredit), existing.rows[0].id]
+        )
+        : await pool.query(
+          `INSERT INTO beta_applications(id, user_id, user_name, user_email, user_type, org_name, purpose, headcount, focus_issue, beneficiary_count, cloud_credit)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb)
+           RETURNING *`,
+          [crypto.randomUUID(), session.id, userName, userEmail, userType, orgName || null, purpose || null, headcount || null, focusIssue || null, beneficiaryCount || null, JSON.stringify(cloudCredit)]
+        );
+      return json(res, 200, mapBetaApplication(q.rows[0]));
+    }
+
+    if (url.pathname === '/api/v1/admin/beta/applications' && req.method === 'GET') {
+      await requireAdmin(req);
+      const q = await pool.query('SELECT * FROM beta_applications ORDER BY created_at DESC');
+      return json(res, 200, q.rows.map(mapBetaApplication));
+    }
+
+    const betaAppMatch = url.pathname.match(/^\/api\/v1\/admin\/beta\/applications\/([^/]+)$/);
+    if (betaAppMatch && req.method === 'PATCH') {
+      await requireAdmin(req);
+      const payload = await readJsonBody(req);
+      const requestedCode = normalizeBetaCode(payload.code);
+      const fallbackCode = generateBetaCode();
+      const markSent = Boolean(payload.sent);
+      const q = await pool.query(
+        `UPDATE beta_applications
+         SET status='approved',
+             code=COALESCE(NULLIF($1, ''), code, $2),
+             updated_at=now()
+         WHERE id=$3
+         RETURNING *`,
+        [requestedCode, fallbackCode, decodeURIComponent(betaAppMatch[1])]
+      );
+      if (!q.rows[0]) return json(res, 404, { detail: '申请不存在' });
+      let row = q.rows[0];
+      if (markSent) {
+        await sendBetaInviteEmail(row);
+        const sent = await pool.query(
+          `UPDATE beta_applications
+           SET sent_at=now(), updated_at=now()
+           WHERE id=$1
+           RETURNING *`,
+          [row.id]
+        );
+        row = sent.rows[0] || row;
+      }
+      return json(res, 200, mapBetaApplication(row));
+    }
+
+    if (betaAppMatch && req.method === 'DELETE') {
+      await requireAdmin(req);
+      await pool.query('DELETE FROM beta_applications WHERE id=$1', [decodeURIComponent(betaAppMatch[1])]);
+      return json(res, 200, { ok: true });
+    }
+
+    if (url.pathname === '/api/v1/beta/stats' && req.method === 'GET') {
+      return json(res, 200, await getBetaStats());
+    }
+
+    if (url.pathname === '/api/v1/beta/verify-code' && req.method === 'POST') {
+      const payload = await readJsonBody(req);
+      const result = await createDownloadTokenForCode(payload.code, payload.platform || 'mac');
+      return json(res, 200, {
+        ok: true,
+        downloadUrl: `/api/v1/downloads/${result.token}`,
+        package: result.package,
+        application: result.application,
+      });
+    }
+
+    if (url.pathname.startsWith('/api/admin/ai/') && req.method === 'POST') {
+      const apiPath = url.pathname.replace(/^\/api\/admin\/ai/, '/api/v3');
+      if (apiPath.includes('/images/')) await requireAdmin(req);
+      else await requireSession(req);
+      const payload = await readJsonBody(req);
+      const data = await arkProxy(apiPath, payload);
+      return json(res, 200, data);
+    }
+
+    if (url.pathname === '/api/admin-ai/manifest' && req.method === 'GET') {
+      return json(res, 200, await readAiManifest());
+    }
+
+    if (url.pathname === '/api/admin-ai/list-articles' && req.method === 'GET') {
+      await requireAdmin(req);
+      const articles = await listPublishedAiArticles();
+      const manifest = await readAiManifest();
+      return json(res, 200, {
+        articles: articles.map((article) => ({
+          id: article.id,
+          title: article.title,
+          excerpt: article.excerpt,
+          topics: article.topics || [],
+          publishDate: article.publish_date,
+          originalCoverImage: article.cover_image || null,
+          hasAiCover: Boolean(manifest[article.id]?.cover),
+          aiIllustrationCount: manifest[article.id]?.illustrations?.length || 0,
+        })),
+        manifest,
+        total: articles.length,
+      });
+    }
+
+    if ((url.pathname === '/api/admin-ai/regenerate' || url.pathname === '/api/admin-ai/generate-summaries') && req.method === 'POST') {
+      await requireAdmin(req);
+      const payload = await readJsonBody(req);
+      const taskId = `${url.pathname.includes('summaries') ? 'sum' : 'task'}_${Date.now()}_${crypto.randomUUID().slice(0, 6)}`;
+      const task = { id: taskId, status: 'running', total: 0, done: 0, errors: 0, startedAt: Date.now(), log: [] };
+      adminAiTasks.set(taskId, task);
+      runAdminAiTask(taskId, payload.ids || [], Boolean(payload.force)).catch((error) => {
+        task.status = 'failed';
+        task.log.push(error?.message || String(error));
+        task.finishedAt = Date.now();
+      });
+      return json(res, 200, { taskId });
+    }
+
+    const adminAiTaskMatch = url.pathname.match(/^\/api\/admin-ai\/task\/([^/]+)$/);
+    if (adminAiTaskMatch && req.method === 'GET') {
+      await requireAdmin(req);
+      const task = adminAiTasks.get(decodeURIComponent(adminAiTaskMatch[1]));
+      if (!task) return json(res, 404, { error: 'task not found' });
+      return json(res, 200, task);
+    }
+
+    const adminAiCancelMatch = url.pathname.match(/^\/api\/admin-ai\/cancel\/([^/]+)$/);
+    if (adminAiCancelMatch && req.method === 'POST') {
+      await requireAdmin(req);
+      const task = adminAiTasks.get(decodeURIComponent(adminAiCancelMatch[1]));
+      if (!task) return json(res, 404, { error: 'task not found' });
+      if (task.status === 'running') task.status = 'cancelled';
+      return json(res, 200, { ok: true, status: task.status });
+    }
+
     if (req.method !== 'POST' && req.method !== 'DELETE') {
       return json(res, 404, { ok: false, error: 'not found' });
     }
@@ -8254,16 +10920,24 @@ const server = http.createServer(async (req, res) => {
       if (!channel || !target || !password) {
         return json(res, 400, { ok: false, error: '参数不完整' });
       }
+      const loginKey = `${channel}:${target}`;
+      const loginNow = Date.now();
+      if (isLoginRateLimited(loginKey, loginNow)) {
+        return json(res, 429, { ok: false, error: '登录尝试过于频繁，请约 15 分钟后再试' });
+      }
       const row = await findUserByChannel(pool, channel, target);
       if (!row) {
+        recordLoginFailure(loginKey, loginNow);
         return json(res, 400, { ok: false, error: '账号或密码错误' });
       }
       if (row.status !== 'active') {
         return json(res, 403, { ok: false, error: '账号不可用，请联系管理员' });
       }
       if (!verifyPassword(password, row.password_hash)) {
+        recordLoginFailure(loginKey, loginNow);
         return json(res, 400, { ok: false, error: '账号或密码错误' });
       }
+      clearLoginFailures(loginKey);
       await pool.query(
         'UPDATE auth_users SET last_login_at=now(), login_count=COALESCE(login_count, 0) + 1 WHERE id=$1',
         [row.id]
@@ -8999,7 +11673,7 @@ const server = http.createServer(async (req, res) => {
 
     return json(res, 404, { ok: false, error: 'not found' });
   } catch (error) {
-    return json(res, 500, { ok: false, error: error instanceof Error ? error.message : String(error) });
+    return json(res, httpStatusForError(error), { ok: false, error: error instanceof Error ? error.message : String(error) });
   }
 });
 

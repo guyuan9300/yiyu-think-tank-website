@@ -337,9 +337,13 @@ export const schedulePgSync = (key: string, data: any) => {
 
   const timer = window.setTimeout(async () => {
     try {
+      // content-sync 现需管理员鉴权:带上官网登录 token(与 authHttp 一致)。
+      const token = localStorage.getItem('yiyu_auth_token') ?? sessionStorage.getItem('yiyu_auth_token') ?? '';
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
       const res = await fetch('/api/content-sync', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ key, data }),
       });
       if (!res.ok) {

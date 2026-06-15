@@ -53,6 +53,14 @@ const server = http.createServer(async (req, res) => {
 
   const url = new URL(req.url || '/', `http://127.0.0.1:${PORT}`);
 
+  // 可选共享密钥闸门:设置了 ARK_PROXY_TOKEN 就强制校验,挡住未授权调用刷火山账单。
+  const requiredToken = process.env.ARK_PROXY_TOKEN;
+  if (requiredToken && req.headers['x-ark-proxy-token'] !== requiredToken) {
+    res.writeHead(401, { 'Content-Type': 'application/json', ...corsHeaders });
+    res.end(JSON.stringify({ error: 'unauthorized' }));
+    return;
+  }
+
   try {
     // 1) 视觉理解（原有）
     if (url.pathname === '/api/ark/vision' && req.method === 'POST') {
@@ -125,7 +133,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '127.0.0.1', () => {
   console.log(`[ark-proxy] listening on http://127.0.0.1:${PORT}`);
   console.log(`[ark-proxy] video create path: ${VIDEO_CREATE_PATH}`);
   console.log(`[ark-proxy] video status path: ${VIDEO_STATUS_PATH}`);

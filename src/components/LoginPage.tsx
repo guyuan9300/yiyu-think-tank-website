@@ -106,10 +106,8 @@ export function LoginPage({ onNavigate, onLoginSuccess, onAdminLogin }: LoginPag
         return;
       }
 
-      const user = {
-        ...normalizeLoginUser(result.data.user),
-        plainPassword: password,
-      };
+      // 安全:绝不把明文密码写入 localStorage(原 plainPassword 字段已移除)
+      const user = normalizeLoginUser(result.data.user);
       saveUserRaw(JSON.stringify(user), rememberMe);
       if (result.data.token) {
         saveAuthToken(result.data.token, rememberMe);

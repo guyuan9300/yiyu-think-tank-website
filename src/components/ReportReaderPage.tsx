@@ -3,7 +3,7 @@ import { Header } from './Header';
 import { OpenSourceFooter } from './open-source-home/OpenSourceFooter';
 import { SupportPoolDrawer } from './open-source-home/sections/SupportPoolProjects';
 import { CommentSection } from './CommentSection';
-import { getReports, saveReport, type Report } from '../lib/dataService';
+import { getReports, type Report } from '../lib/dataService';
 import {
   FileText,
   Bookmark,
@@ -297,11 +297,12 @@ export function ReportReaderPage({ reportId }: ReportReaderPageProps) {
       return;
     }
 
-    // 下载计数 +1
+    // 下载计数 +1:走公开的原子端点(服务端 downloads+1),不再用 saveReport 全量上行覆盖整表
     try {
       const next = (report.downloads ?? 0) + 1;
-      setReport({ ...report, downloads: next });
-      saveReport({ id: report.id, downloads: next });
+      setReport({ ...report, downloads: next }); // 乐观更新 UI
+      void fetch(`/api/content/report/${encodeURIComponent(report.id)}/download`, { method: 'POST' })
+        .catch((e) => console.warn('Failed to bump downloads counter', e));
     } catch (e) {
       console.warn('Failed to bump downloads counter', e);
     }

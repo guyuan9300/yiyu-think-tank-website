@@ -132,12 +132,11 @@ export function Header({ isLoggedIn: propIsLoggedIn = false, userType = 'visitor
     }
   };
 
-  // 是否管理员(决定「我的」菜单里是否出现「进入管理后台」入口)。
-  // DEV 下放行, 与 LocalAdminGate/AdminAccessGate 的 DEV 直通一致, 断网也能进后台优化。
+  // 是否管理员(仅决定「我的」菜单里是否出现「进入管理后台」入口,纯展示用;
+  // 真正的后台访问由服务端校验的 LocalAdminGate 把关)。
+  // 不再读可伪造的 yiyu_is_admin 本地 flag;adminRole 来自服务端登录响应。
   const isAdminUser = import.meta.env.DEV
-    || (currentUser as any)?.adminRole === 'admin'
-    || localStorage.getItem('yiyu_is_admin') === 'true'
-    || sessionStorage.getItem('yiyu_is_admin') === 'true';
+    || (currentUser as any)?.adminRole === 'admin';
 
   // 跳转到指定页面(优先 onNavigate, 否则改 URL); 顺带关闭菜单
   const goPage = (page: string) => {
