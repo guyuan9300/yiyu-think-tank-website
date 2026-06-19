@@ -75,6 +75,9 @@ const corsHeaders = {
 const PAYMENT_PLANS = {
   monthly_trial: { id: 'monthly_trial', name: '月包试用', amountFen: 1980, currency: 'CNY', durationDays: 30 },
   yearly: { id: 'yearly', name: '年包会员', amountFen: 19800, currency: 'CNY', durationDays: 365 },
+  book_51: { id: 'book_51', name: '《创业者应该回答的51个问题》(含一年会员)', amountFen: 19800, currency: 'CNY', durationDays: 365 },
+  book_org: { id: 'book_org', name: '《学习型组织笔记》(含一年会员)', amountFen: 13800, currency: 'CNY', durationDays: 365 },
+  book_bundle: { id: 'book_bundle', name: '两本合购套装(51个问题+学习型组织笔记,含一年会员)', amountFen: 28600, currency: 'CNY', durationDays: 365 },
 };
 
 const PAYMENT_PREP_CHECKS = [
