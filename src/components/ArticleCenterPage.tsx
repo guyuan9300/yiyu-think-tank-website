@@ -9,7 +9,7 @@ import {
   List,
   ChevronRight,
 } from 'lucide-react';
-import { getInsights, type InsightArticle } from '../lib/dataService';
+import { getInsights, getAiManifest, type InsightArticle } from '../lib/dataService';
 import { aiArticleDir } from '../lib/aiAssets';
 import { ContentResourceCard } from './ContentResourceCard';
 import { getYiyuPageAttrs, getYiyuSectionAttrs } from '../lib/yiyuTongSiteMap';
@@ -32,10 +32,12 @@ export function ArticleCenterPage({
   const [isLoading, setIsLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  // AI 封面 manifest (从 vite plugin /api/admin-ai/manifest 拉, 命中的文章用 AI 封面替换原 coverImage)
-  const aiManifestRef = useRef<Record<string, { cover?: any; illustrations?: any[] }>>({});
+  // AI 封面 manifest: ref 初值直接取模块级同步缓存(bootstrap 已填), 首屏即命中 AI 封面、不跳;
+  // 再异步 fetch 兜底刷新(冷加载/缓存未就绪时自愈)。不改文章 coverImage 字段(防后台回写污染)。
+  const aiManifestRef = useRef<Record<string, { cover?: any; illustrations?: any[] }>>(
+    getAiManifest() as Record<string, { cover?: any; illustrations?: any[] }>
+  );
 
-  // 拉 AI manifest (异步, 命中即覆盖)
   useEffect(() => {
     fetch('/api/admin-ai/manifest', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : {}))

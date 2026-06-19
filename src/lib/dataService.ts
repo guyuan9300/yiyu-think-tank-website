@@ -4,6 +4,7 @@
  */
 
 import { httpRequest } from './httpClient';
+import { aiArticleDir } from './aiAssets';
 
 // 数据类型定义
 export type ResourceTopic = '战略' | '业务设计' | '组织' | 'AI 技术';
@@ -1187,8 +1188,39 @@ export const resetSystemSettings = (): SystemSettings => {
   return resetSettings;
 };
 
+// AI 封面清单结构: { [articleId]: { cover?: {...}, illustrations?: [...] } }
+type AiManifestEntry = { cover?: unknown; illustrations?: unknown };
+type AiManifest = Record<string, AiManifestEntry | undefined>;
+
+// 显示层根治"先旧封面→后新封面"跳动: bootstrap 时把 AI 封面清单存进模块级同步缓存,
+// 详情页/列表页显示时【同步读取】, 首屏即拿到最终封面, 不再依赖各组件挂载后异步 fetch 才知道。
+// ⚠️ 关键: 不改文章 canonical coverImage 字段 —— 后台编辑器会把缓存里的 coverImage 原样回写后端
+// (ON CONFLICT DO UPDATE SET cover_image), 改它会污染预设封面。详见 docs/INVESTIGATION/排查线索台账.md C5/T1。
+let aiManifestCache: AiManifest | null = null;
+
+/** 整份 AI 清单(供列表页 ref 初值同步读取); 未就绪返回空对象。 */
+export const getAiManifest = (): AiManifest => aiManifestCache || {};
+
+/** 同步读取某文章的 AI 清单条目(cover/illustrations); bootstrap 后即可用, 未就绪返回 null。 */
+export const getAiManifestEntry = (id: string): AiManifestEntry | null => {
+  if (!aiManifestCache || !id) return null;
+  return aiManifestCache[id] || null;
+};
+
+/** 同步取某文章最终 AI 封面 URL(命中清单且有 cover 时); 否则 null。与详情页/列表页拼法一致。 */
+export const getAiCoverUrl = (id: string): string | null => {
+  const entry = getAiManifestEntry(id);
+  return entry && entry.cover ? `${aiArticleDir(id)}/cover.jpg` : null;
+};
+
 export const bootstrapFromPgApi = async (): Promise<boolean> => {
   if (typeof window === 'undefined') return false;
+
+  // 与内容快照并行拉取 AI 封面清单(失败/超时返回 null, 不阻塞内容呈现)。
+  const aiManifestPromise: Promise<AiManifest | null> = httpRequest('/api/admin-ai/manifest', { cache: 'no-store' }, 6000)
+    .then((r) => (r.ok ? r.json() : null))
+    .then((m) => (m && typeof m === 'object' ? (m as AiManifest) : null))
+    .catch(() => null);
 
   try {
     const res = await httpRequest('/api/content-snapshot', { cache: 'no-store' });
@@ -1222,6 +1254,10 @@ export const bootstrapFromPgApi = async (): Promise<boolean> => {
       (r) => r && r.id && !backendIds.has(r.id) && !isStaleReport(r),
     );
     const mergedReports = [...localOnlyReports, ...backendReports];
+
+    // 等并行的 AI 封面清单, 存进模块级同步缓存供显示层首屏同步读取(不改 coverImage 字段)。
+    const aiManifest = await aiManifestPromise;
+    if (aiManifest) aiManifestCache = aiManifest;
 
     const writes: Array<[string, any]> = [
       [STORAGE_KEYS.reports, mergedReports],

@@ -14,7 +14,7 @@ import {
 import { Header } from './Header';
 import { OpenSourceFooter } from './open-source-home/OpenSourceFooter';
 import { CommentSection } from './CommentSection';
-import { getInsights, type InsightArticle } from '../lib/dataService';
+import { getInsights, getAiManifestEntry, type InsightArticle } from '../lib/dataService';
 import { aiArticleDir } from '../lib/aiAssets';
 import { generateHTML } from '@tiptap/html';
 import DOMPurify from 'dompurify';
@@ -47,7 +47,8 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [article, setArticle] = useState<InsightArticle | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [aiEntry, setAiEntry] = useState<AiManifestEntry | null>(null);
+  // 首屏即从模块级同步缓存读取 AI 封面/插图(bootstrap 已填), 避免挂载后异步替换造成封面跳动。
+  const [aiEntry, setAiEntry] = useState<AiManifestEntry | null>(() => getAiManifestEntry(articleId) as AiManifestEntry | null);
   const [access, setAccess] = useState<ArticleAccess | null>(null);
   const { engagement, toggleLike, toggleFavorite } = useContentEngagement('insight', articleId);
 
@@ -59,9 +60,10 @@ export function ArticleDetailPage({ articleId, onNavigate }: ArticleDetailPagePr
     setIsLoading(false);
   }, [articleId]);
 
-  // 加载 AI manifest, 命中此文章则取出对应 cover + illustrations
+  // 加载 AI manifest: 先用同步缓存秒回(无跳), 再异步 fetch 兜底刷新(冷加载/缓存未就绪时自愈)。
   useEffect(() => {
     let mounted = true;
+    setAiEntry(getAiManifestEntry(articleId) as AiManifestEntry | null);
     fetch('/api/admin-ai/manifest', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : {}))
       .then((m: Record<string, AiManifestEntry> | null) => {
