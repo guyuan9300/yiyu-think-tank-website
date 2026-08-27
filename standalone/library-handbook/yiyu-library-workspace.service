@@ -1,0 +1,25 @@
+[Unit]
+Description=Yiyu hidden library handbook workspace API
+After=network.target yiyu-auth-api.service
+Wants=yiyu-auth-api.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/yiyu-library-workspace
+Environment=PORT=8792
+Environment=LIBRARY_DATA_ROOT=/var/www/yiyu-site-data/library-handbook
+Environment=LIBRARY_UPLOAD_ROOT=/var/www/yiyu-site-data/uploads/library-handbook
+Environment=AUTH_SESSION_URL=http://127.0.0.1:8791/api/auth/session
+ExecStart=/usr/bin/node /srv/yiyu-library-workspace/server.mjs
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/yiyu-site-data/library-handbook /var/www/yiyu-site-data/uploads/library-handbook
+
+[Install]
+WantedBy=multi-user.target

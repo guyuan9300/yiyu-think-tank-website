@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#f5f1e7" />
+    <title>公共图书馆运营手册知识库</title>
+    <link rel="stylesheet" href="./styles.css?v=1" />
+  </head>
+  <body>
+    <div class="grain" aria-hidden="true"></div>
+    <header class="topbar">
+      <button class="brand" type="button" data-mobile-panel="books" aria-label="打开分册目录">
+        <span class="leaf-mark" aria-hidden="true"></span>
+        <span><b>公共图书馆运营手册</b><small>LIBRARY OPERATIONS HANDBOOK</small></span>
+      </button>
+      <div class="top-actions">
+        <span class="private-mark">隐蔽工作页 · 不进入官网导航</span>
+        <button class="outline-button" id="manageButton" type="button">管理资料</button>
+      </div>
+    </header>
+
+    <main class="reader-grid">
+      <aside class="library-panel" aria-label="总纲与十个分册">
+        <div class="panel-kicker"><span>全部手册</span><b>十一</b></div>
+        <nav class="book-nav" id="bookNav"></nav>
+        <p class="panel-note">总纲与十个分册<br />在同一知识边界中持续更新</p>
+      </aside>
+
+      <article class="reading-panel" id="readingPanel">
+        <div class="article-shell">
+          <header class="book-hero">
+            <div class="hero-index"><span id="heroNumber">总</span><i></i></div>
+            <div class="hero-copy">
+              <p id="heroLabel">总纲 · 使用总指引</p>
+              <h1 id="heroTitle">拟建公共图书馆建设与可持续运营体系</h1>
+              <blockquote id="heroQuestion">从建设决策到持续运营，一套手册如何协同工作？</blockquote>
+              <p id="heroDescription"></p>
+              <div class="keyword-list" id="keywordList"></div>
+            </div>
+          </header>
+
+          <section class="chapter-section" aria-labelledby="chapterHeading">
+            <div class="section-heading">
+              <div><small>阅读路径</small><h2 id="chapterHeading">本册内容结构</h2></div>
+              <span id="chapterCount">05 个主题</span>
+            </div>
+            <ol class="chapter-list" id="chapterList"></ol>
+          </section>
+
+          <section class="document-section" aria-labelledby="documentHeading">
+            <div class="section-heading">
+              <div><small>云端资料</small><h2 id="documentHeading">本册已上传文件</h2></div>
+              <button class="text-button" id="uploadInlineButton" type="button">上传本册资料 ＋</button>
+            </div>
+            <div class="document-list" id="documentList"></div>
+          </section>
+
+          <section class="viewer-section" id="viewerSection" hidden>
+            <div class="viewer-toolbar">
+              <div><small>正在阅读</small><b id="viewerTitle"></b></div>
+              <a id="viewerOpen" target="_blank" rel="noopener">新窗口打开 ↗</a>
+            </div>
+            <iframe id="documentViewer" title="手册文件阅读器"></iframe>
+          </section>
+        </div>
+      </article>
+
+      <aside class="agent-panel" aria-label="分册讨论助手">
+        <div class="agent-inner">
+          <div class="agent-heading">
+            <div class="agent-seal">问</div>
+            <div><h2>随册讨论</h2><p><span class="status-dot"></span> 知识库准备中 · 模型尚未接入</p></div>
+          </div>
+          <div class="agent-basis"><small>当前讨论依据</small><b id="agentBasis"></b></div>
+          <div class="messages" id="messages" aria-live="polite"></div>
+          <div class="prompt-list" id="promptList"></div>
+          <form class="agent-form" id="agentForm">
+            <label class="sr-only" for="agentQuery">输入问题</label>
+            <textarea id="agentQuery" rows="3" placeholder="围绕本册提出一个问题……"></textarea>
+            <div><small>当前为结构演示，不会调用真实模型</small><button type="submit">发送</button></div>
+          </form>
+        </div>
+      </aside>
+    </main>
+
+    <nav class="mobile-bar" aria-label="移动端工具栏">
+      <button type="button" data-mobile-panel="books"><span>册</span>分册</button>
+      <button type="button" id="mobileFilesButton"><span>文</span>资料</button>
+      <button type="button" class="primary" data-mobile-panel="agent"><span>问</span>讨论</button>
+    </nav>
+
+    <div class="sheet-wrap" id="mobileSheet" hidden>
+      <button class="sheet-backdrop" type="button" aria-label="关闭"></button>
+      <section class="mobile-sheet" role="dialog" aria-modal="true">
+        <header><div><small id="sheetKicker">全部手册</small><h2 id="sheetTitle">总纲与十个分册</h2></div><button class="sheet-close" type="button" aria-label="关闭">×</button></header>
+        <div id="sheetContent"></div>
+      </section>
+    </div>
+
+    <dialog class="manage-dialog" id="manageDialog">
+      <button class="dialog-close" type="button" aria-label="关闭">×</button>
+      <section class="login-view" id="loginView">
+        <small>益语智库管理员验证</small>
+        <h2>进入云端资料管理</h2>
+        <p>上传操作沿用益语智库现有管理员账号。阅读页本身不进入官网导航。</p>
+        <form id="loginForm">
+          <label>手机号或邮箱<input id="loginTarget" autocomplete="username" required /></label>
+          <label>密码<input id="loginPassword" type="password" autocomplete="current-password" required /></label>
+          <p class="form-error" id="loginError" role="alert"></p>
+          <button class="solid-button" type="submit">验证并进入</button>
+        </form>
+      </section>
+      <section class="upload-view" id="uploadView" hidden>
+        <small>云端资料管理</small>
+        <h2>上传手册与相关内容</h2>
+        <p>文件会保存到益语智库腾讯云的独立手册目录，并自动归入指定分册。</p>
+        <form id="uploadForm">
+          <label>归属分册<select id="uploadVolume"></select></label>
+          <label>资料标题<input id="uploadTitle" placeholder="未填写时使用文件名" /></label>
+          <label class="drop-zone" id="dropZone">
+            <input id="uploadFiles" type="file" multiple accept=".pdf,.docx,.md,.txt,.png,.jpg,.jpeg,.webp" />
+            <b>选择文件，或拖放到这里</b>
+            <span>支持 PDF、Word、Markdown、文本与常用图片；单个文件不超过 64 MB</span>
+          </label>
+          <div class="upload-queue" id="uploadQueue"></div>
+          <p class="form-error" id="uploadError" role="alert"></p>
+          <div class="form-actions"><button class="text-button" id="logoutButton" type="button">退出管理</button><button class="solid-button" type="submit">开始上传</button></div>
+        </form>
+      </section>
+    </dialog>
+
+    <script src="./app.js?v=1" defer></script>
+  </body>
+</html>
