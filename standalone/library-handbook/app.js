@@ -279,7 +279,7 @@ function setup() {
   $('agentForm').addEventListener('submit', (event) => { event.preventDefault(); ask($('agentQuery').value); $('agentQuery').value = ''; });
   document.querySelectorAll('[data-mobile-panel]').forEach((button) => button.addEventListener('click', () => { if (window.innerWidth <= 920) openSheet(button.dataset.mobilePanel); }));
   $('mobileFilesButton').addEventListener('click', () => $('documentHeading').scrollIntoView({ behavior: 'smooth' }));
-  $('sheet-backdrop').addEventListener('click', closeSheet);
+  $('.sheet-backdrop').addEventListener('click', closeSheet);
   $('.sheet-close').addEventListener('click', closeSheet);
   $('manageButton').addEventListener('click', openManager);
   $('uploadInlineButton').addEventListener('click', openManager);

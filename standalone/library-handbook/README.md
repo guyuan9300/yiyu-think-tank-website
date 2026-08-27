@@ -9,6 +9,8 @@
 - `yiyu-library-workspace.service`：端口 `8792` 的隔离 systemd 服务。
 - `nginx-location.conf`：隐藏页面、资料 API 和健康检查三个独立路由。
 
+静态页面部署到 `/srv/yiyu-library-workspace/public/`，与官网发布目录隔离，避免官网版本切换时被清理。
+
 ## 数据边界
 
 - 资料清单：`/var/www/yiyu-site-data/library-handbook/manifest.json`
