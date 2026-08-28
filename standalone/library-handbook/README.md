@@ -20,6 +20,8 @@
 - 支持：PDF、DOCX、Markdown、TXT、PNG、JPG、WEBP；单文件不超过 64 MB。
 - Agent 仅保留界面与结构化演示，尚未连接模型或全文检索，不能对外宣称已经具备真实问答能力。
 
+章节 Agent 的接口、协作、鉴权、部署和验收约定见 [`AGENT_HANDOFF.md`](./AGENT_HANDOFF.md)。接手方必须先阅读该文档，不得直接在生产环境替换模拟聊天。
+
 ## 生成原生网页正文
 
 源文件顺序由 `output/pdf/source-map.tsv` 指定，生成目录默认为 `output/library-web-content/`：
