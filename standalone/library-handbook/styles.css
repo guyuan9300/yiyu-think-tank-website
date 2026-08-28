@@ -69,15 +69,65 @@ button { cursor: pointer; }
 .keyword-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
 .keyword-list span { background: var(--jade); border-radius: 999px; color: var(--forest); font-size: 10px; letter-spacing: .06em; padding: 7px 11px; }
 
-.chapter-section, .document-section { border-top: 1px solid var(--line); padding: 46px 0 56px; }
+.chapter-section, .native-reader-section, .document-section { border-top: 1px solid var(--line); padding: 46px 0 56px; }
 .section-heading { align-items: end; display: flex; justify-content: space-between; margin-bottom: 28px; }
 .section-heading small { color: var(--green); display: block; font-size: 9px; letter-spacing: .25em; margin-bottom: 7px; }
 .section-heading h2 { font-family: var(--serif); font-size: 23px; font-weight: 500; letter-spacing: .08em; margin: 0; }
 .section-heading > span { color: var(--muted); font-size: 10px; letter-spacing: .12em; }
 .chapter-list { counter-reset: chapter; display: grid; gap: 1px; list-style: none; margin: 0; padding: 0; }
-.chapter-list li { align-items: center; background: var(--paper); display: grid; gap: 16px; grid-template-columns: 45px 1fr; min-height: 68px; padding: 12px 18px; }
+.chapter-list li { margin: 0; min-width: 0; }
+.chapter-list button { align-items: center; background: var(--paper); border: 0; display: grid; gap: 14px; grid-template-columns: 36px minmax(0, 1fr) auto; min-height: 68px; padding: 12px 18px; text-align: left; transition: background 140ms ease, color 140ms ease; width: 100%; }
+.chapter-list button:hover { background: var(--jade); }
+.chapter-list button.active { background: var(--forest); color: var(--paper); }
 .chapter-list span { color: var(--green); font-family: var(--serif); font-size: 12px; }
 .chapter-list b { font-family: var(--serif); font-size: 15px; font-weight: 500; letter-spacing: .04em; }
+.chapter-list small { color: var(--muted); font-size: 9px; white-space: nowrap; }
+.chapter-list button.active span, .chapter-list button.active small { color: rgba(255,253,248,.68); }
+.native-reader-section { padding-top: 0; scroll-margin-top: 88px; }
+.reader-toolbar { align-items: center; backdrop-filter: blur(12px); background: rgba(255,253,248,.96); border-bottom: 1px solid var(--line); display: grid; gap: 18px; grid-template-columns: auto minmax(0, 1fr) auto; margin: 0 -18px 36px; padding: 18px; position: sticky; top: 0; z-index: 12; }
+.reader-toolbar > button, .reader-toolbar-actions button, .reader-footer button { background: transparent; border: 1px solid var(--line); color: var(--forest); font-size: 10px; min-height: 34px; padding: 7px 11px; }
+.reader-toolbar button:hover, .reader-footer button:hover { background: var(--jade); border-color: var(--moss); }
+.reader-toolbar button:disabled, .reader-footer button:disabled { cursor: default; opacity: .3; }
+.reader-toolbar small { color: var(--green); display: block; font-size: 9px; letter-spacing: .15em; }
+.reader-toolbar h2 { font-family: var(--serif); font-size: 19px; font-weight: 500; letter-spacing: .04em; line-height: 1.45; margin: 5px 0 0; }
+.reader-toolbar-actions { display: flex; gap: 7px; }
+.native-loading { color: var(--muted); font-family: var(--serif); line-height: 2; min-height: 120px; padding: 42px 0; text-align: center; }
+.manual-article { color: #29362e; font-family: var(--sans); font-size: 15px; line-height: 2.05; overflow-wrap: anywhere; user-select: text; }
+.manual-block { content-visibility: auto; contain-intrinsic-size: auto 96px; }
+.manual-heading { color: var(--forest); font-family: var(--serif); font-weight: 600; letter-spacing: .035em; line-height: 1.55; }
+.manual-heading.level-2 { border-top: 1px solid var(--line); font-size: 25px; margin: 72px 0 25px; padding-top: 30px; }
+.manual-heading.level-3 { font-size: 20px; margin: 52px 0 19px; }
+.manual-heading.level-4 { font-size: 17px; margin: 38px 0 14px; }
+.manual-article > .manual-heading:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
+.manual-paragraph { margin: 0 0 1.35em; }
+.manual-paragraph strong { font-weight: 600; }
+.manual-paragraph.caption { color: var(--muted); font-size: 11px; letter-spacing: .03em; margin: -12px 0 32px; text-align: center; }
+.manual-paragraph.lead-title { color: var(--forest); font-family: var(--serif); font-size: 24px; line-height: 1.6; margin: 36px 0 18px; }
+.manual-paragraph.lead-subtitle { color: var(--green); font-family: var(--serif); font-size: 18px; margin: -9px 0 28px; }
+.manual-paragraph.callout, .manual-paragraph.quote { background: var(--paper); border-left: 2px solid var(--green); color: var(--forest); margin: 30px 0; padding: 18px 22px; }
+.manual-paragraph.small { color: var(--muted); font-size: 12px; }
+.manual-paragraph.align-center { text-align: center; }
+.manual-paragraph.align-right { text-align: right; }
+.manual-list { margin: 20px 0 30px; padding-left: 1.5em; }
+.manual-list li { margin: .55em 0; padding-left: .35em; }
+.manual-list li::marker { color: var(--green); }
+.manual-figure { margin: 34px auto; max-width: 100%; text-align: center; }
+.manual-figure img { background: var(--paper); display: block; height: auto; margin: 0 auto; max-width: 100%; width: auto; }
+.manual-figure figcaption { color: var(--muted); font-size: 11px; line-height: 1.75; margin: 12px auto 0; max-width: 90%; }
+.manual-table { margin: 30px 0 38px; max-width: 100%; }
+.table-scroll { -webkit-overflow-scrolling: touch; max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
+.manual-table table { border-collapse: collapse; font-size: 12px; line-height: 1.65; min-width: 100%; width: max-content; }
+.manual-table th, .manual-table td { border: 1px solid var(--line); max-width: 310px; min-width: 88px; padding: 11px 13px; text-align: left; vertical-align: top; }
+.manual-table th { background: var(--jade); color: var(--forest); font-weight: 600; }
+.manual-table td { background: rgba(255,253,248,.68); }
+.manual-table p { margin: 0 0 .55em; }
+.manual-table p:last-child { margin-bottom: 0; }
+.manual-table img { display: block; height: auto; max-width: 100%; }
+.manual-note { border-top: 1px solid var(--line); color: var(--muted); display: grid; font-size: 11px; gap: 10px; grid-template-columns: 58px 1fr; line-height: 1.75; margin: 24px 0; padding-top: 14px; }
+.manual-note b { color: var(--green); font-weight: 500; }
+.manual-note p { margin: 0; }
+.reader-footer { align-items: center; border-top: 1px solid var(--line); display: flex; justify-content: space-between; margin-top: 70px; padding-top: 22px; }
+.reader-footer span { color: var(--muted); font-size: 9px; letter-spacing: .08em; text-align: center; }
 .text-button { background: none; border: 0; color: var(--green); font-size: 11px; padding: 8px 0; }
 .document-list { display: grid; gap: 10px; }
 .empty-documents { background: var(--paper); border: 1px dashed var(--line); color: var(--muted); padding: 34px; text-align: center; }
@@ -92,13 +142,6 @@ button { cursor: pointer; }
 .document-actions { align-items: center; display: flex; gap: 7px; }
 .document-actions button, .document-actions a { background: none; border: 0; color: var(--green); font-size: 10px; padding: 7px; text-decoration: none; }
 .document-actions .remove { color: #8a4f43; }
-.viewer-section { border-top: 1px solid var(--line); padding-top: 34px; }
-.viewer-toolbar { align-items: center; display: flex; justify-content: space-between; margin-bottom: 12px; }
-.viewer-toolbar small, .viewer-toolbar b { display: block; }
-.viewer-toolbar small { color: var(--green); font-size: 9px; letter-spacing: .2em; }
-.viewer-toolbar b { font-family: var(--serif); font-size: 14px; margin-top: 4px; }
-.viewer-toolbar a { color: var(--green); font-size: 10px; text-decoration: none; }
-#documentViewer { background: var(--paper); border: 1px solid var(--line); height: 72vh; width: 100%; }
 
 .agent-panel { border-left: 1px solid var(--line); }
 .agent-inner { display: flex; flex-direction: column; min-height: 100%; padding: 28px 22px; }
@@ -166,9 +209,26 @@ button { cursor: pointer; }
   .hero-index i { height: 110px; }
   .hero-copy h1 { font-size: clamp(29px, 8.7vw, 42px); overflow-wrap: anywhere; }
   .hero-copy blockquote { font-size: 16px; margin-top: 28px; }
-  .chapter-section, .document-section { padding: 38px 0 45px; }
+  .chapter-section, .native-reader-section, .document-section { padding: 38px 0 45px; }
   .section-heading { align-items: start; gap: 14px; }
   .section-heading h2 { font-size: 20px; }
+  .chapter-list button { grid-template-columns: 30px minmax(0, 1fr); padding: 12px 13px; }
+  .chapter-list button small { display: none; }
+  .native-reader-section { margin-left: -2px; margin-right: -2px; scroll-margin-top: 66px; }
+  .reader-toolbar { gap: 9px; grid-template-columns: 1fr auto; margin-left: -20px; margin-right: -20px; padding: 14px 20px; top: 60px; }
+  .reader-toolbar > button { display: none; }
+  .reader-toolbar h2 { font-size: 16px; }
+  .reader-toolbar-actions { align-self: center; }
+  .reader-toolbar-actions button { min-height: 32px; padding: 6px 9px; }
+  .manual-article { font-size: 15px; line-height: 1.95; }
+  .manual-heading.level-2 { font-size: 22px; margin-top: 58px; padding-top: 25px; }
+  .manual-heading.level-3 { font-size: 19px; margin-top: 44px; }
+  .manual-paragraph { margin-bottom: 1.25em; }
+  .manual-table { margin-left: -6px; margin-right: -6px; }
+  .manual-table table { font-size: 11px; }
+  .manual-table th, .manual-table td { min-width: 104px; padding: 9px 10px; }
+  .reader-footer { gap: 8px; margin-top: 54px; }
+  .reader-footer span { font-size: 8px; }
   .document-card { grid-template-columns: 38px 1fr; }
   .document-actions { grid-column: 2; }
   .mobile-bar { background: rgba(245,241,231,.97); border-top: 1px solid var(--line); bottom: 0; display: grid; grid-template-columns: repeat(3, 1fr); height: 64px; left: 0; position: fixed; right: 0; z-index: 60; }
@@ -184,6 +244,7 @@ button { cursor: pointer; }
   .sheet-close { background: none; border: 0; font-family: var(--serif); font-size: 26px; }
   .mobile-sheet .agent-inner { padding: 4px; }
   .mobile-sheet .messages { min-height: 180px; }
+  .mobile-chapter-list { max-height: 66vh; overflow-y: auto; }
   .manage-dialog { padding: 34px 22px 24px; }
 }
 

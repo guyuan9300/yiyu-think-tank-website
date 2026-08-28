@@ -7,7 +7,7 @@
     <meta name="color-scheme" content="light" />
     <meta name="theme-color" content="#f5f1e7" />
     <title>公共图书馆运营手册知识库</title>
-    <link rel="stylesheet" href="./styles.css?v=1" />
+    <link rel="stylesheet" href="./styles.css?v=3" />
   </head>
   <body>
     <div class="grain" aria-hidden="true"></div>
@@ -44,26 +44,39 @@
 
           <section class="chapter-section" aria-labelledby="chapterHeading">
             <div class="section-heading">
-              <div><small>阅读路径</small><h2 id="chapterHeading">本册内容结构</h2></div>
-              <span id="chapterCount">05 个主题</span>
+              <div><small>章节导航</small><h2 id="chapterHeading">本册完整目录</h2></div>
+              <span id="chapterCount">正在读取</span>
             </div>
             <ol class="chapter-list" id="chapterList"></ol>
           </section>
 
-          <section class="document-section" aria-labelledby="documentHeading">
-            <div class="section-heading">
-              <div><small>云端资料</small><h2 id="documentHeading">本册已上传文件</h2></div>
-              <button class="text-button" id="uploadInlineButton" type="button">上传本册资料 ＋</button>
+          <section class="native-reader-section" id="nativeReaderSection" aria-labelledby="nativeReaderHeading">
+            <div class="reader-toolbar">
+              <button id="previousSection" type="button" aria-label="上一章">← 上一章</button>
+              <div>
+                <small id="sectionProgress">正在准备正文</small>
+                <h2 id="nativeReaderHeading">手册正文</h2>
+              </div>
+              <div class="reader-toolbar-actions">
+                <button id="copySection" type="button">复制本章</button>
+                <button id="nextSection" type="button" aria-label="下一章">下一章 →</button>
+              </div>
             </div>
-            <div class="document-list" id="documentList"></div>
+            <div class="native-loading" id="nativeLoading" role="status">正在载入本章内容……</div>
+            <article class="manual-article" id="manualArticle" aria-live="polite" aria-busy="true"></article>
+            <div class="reader-footer">
+              <button id="previousSectionFooter" type="button">← 上一章</button>
+              <span id="sectionStats"></span>
+              <button id="nextSectionFooter" type="button">下一章 →</button>
+            </div>
           </section>
 
-          <section class="viewer-section" id="viewerSection" hidden>
-            <div class="viewer-toolbar">
-              <div><small>正在阅读</small><b id="viewerTitle"></b></div>
-              <a id="viewerOpen" target="_blank" rel="noopener">新窗口打开 ↗</a>
+          <section class="document-section" aria-labelledby="documentHeading">
+            <div class="section-heading">
+              <div><small>补充资料</small><h2 id="documentHeading">与本册相关的附件</h2></div>
+              <button class="text-button" id="uploadInlineButton" type="button">上传补充资料 ＋</button>
             </div>
-            <iframe id="documentViewer" title="手册文件阅读器"></iframe>
+            <div class="document-list" id="documentList"></div>
           </section>
         </div>
       </article>
@@ -88,7 +101,7 @@
 
     <nav class="mobile-bar" aria-label="移动端工具栏">
       <button type="button" data-mobile-panel="books"><span>册</span>分册</button>
-      <button type="button" id="mobileFilesButton"><span>文</span>资料</button>
+      <button type="button" id="mobileChaptersButton"><span>章</span>章节</button>
       <button type="button" class="primary" data-mobile-panel="agent"><span>问</span>讨论</button>
     </nav>
 
@@ -132,6 +145,6 @@
       </section>
     </dialog>
 
-    <script src="./app.js?v=2" defer></script>
+    <script src="./app.js?v=4" defer></script>
   </body>
 </html>
